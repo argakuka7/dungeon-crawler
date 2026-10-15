@@ -1,9 +1,9 @@
 # Playing together
 
-Status: implemented: walking around together, fighting together, sharing the rewards, being
-helped up and getting back in. Two players, co-op.
+Status: implemented: exploring together or apart, fighting together, sharing the rewards,
+being helped up and getting back in. Two players, co-op.
 
-## Connecting and staying together
+## Connecting
 
 - **O** opens the "Play together" panel (`src/net/lobby.js`). The host gets a four letter
   room code (no I or O) and a link (`?join=CODE`); the guest types the code or opens the link.
@@ -13,8 +13,8 @@ helped up and getting back in. Two players, co-op.
   ordered, JSON). `?net=local` uses a BroadcastChannel between tabs of one browser instead:
   for testing without a network.
 - `src/net/session.js`: the guest says `hello`, the host answers `welcome` with its world
-  seed. The guest starts that world and keeps its character (level, bag, gear). The world's
-  progress (gates, floor loot, chests) starts fresh, as in any new world. Every world is the
+  seed, with what it defeated and opened so far. The guest starts that world and keeps its
+  character (level, bag, gear); floor loot and chests are its own. Every world is the
   same for the same seed, whatever the order cubes are visited in (`world/wfc.js`), so no
   map goes over the wire. Only the host starts new worlds (N); the guest follows.
 - Both send `me` 20 times a second: cube, position, the character's 14 bone rotations
@@ -22,12 +22,9 @@ helped up and getting back in. Two players, co-op.
   other side draws them as a tinted figure, ~110 ms in the past, blending the two messages
   around that moment (`src/net/sync.js Timeline`). Animation, attacks, ragdolls and get-ups
   all come along with the bones; nothing is animated twice.
-- Both always stay in the same cube. Every trip of your own (portal, door, town portal, an
-  open face) counts one more than any trip before; when the two are in different cubes, the
-  one with the lower count fades over to the other (`sync.js shouldFollow`), beside them and
-  locked out of any portal they arrive in (`game/portals.js lockPortalsHere`). On the same
-  count the guest gives way. Nobody follows while the other is travelling, generating or
-  falling.
+- Each explores where they like. The friend is a blue dot on the minimap (or a line under
+  it: another depth, in a house). **F** fades you over to them, beside them and locked out of
+  any portal you arrive in (`session.js goToFriend`, `game/portals.js lockPortalsHere`).
 - A second guest is turned away (`full`), another version too (`version`, `PROTOCOL` in
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for a new guest.
@@ -36,15 +33,27 @@ helped up and getting back in. Two players, co-op.
   of the same player, it swaps it for the new one instead of turning it away. Same seed:
   the guest keeps its world and goes on where it was.
 
+## Who runs the enemies
+
+- A cube's enemies are run by one game: the host's while the host is in it, else the game of
+  whoever is there (each explores with its own enemies, like playing alone).
+- When the host comes into the guest's cube (the guest was there first, a second or more),
+  the guest hands its enemies over as they are (`handover`: positions, health, fighting or
+  not) and is shown the host's from then on; the host's freshly spawned ones take those over
+  (`game/enemies.js adoptEnemies`). When the host leaves the guest in a cube (or the
+  connection goes), the guest takes them over the same way, from what it was shown.
+- A kill apart tells the other game the enemy is gone (`defeated`), and a guardian's gate opens
+  for both; the XP and loot are only the killer's.
+
 ## Fighting together
 
-- The enemies live on the host. Its AI goes after either player (`game/party.js`): each
+- In a cube together the enemies live on the host. Its AI goes after either player (`game/party.js`): each
   enemy picks the nearer one that can be hurt (`chooseTarget`), keeps it unless the other is
   clearly nearer (2 cells) and never switches in the middle of an attack; whoever hits it
   becomes its target. Unaware enemies notice either player. A guardian's room and a horde mind
   the player nearer to them. The guest is a stand-in body on the host (`friend` in
   `session.js`), updated from its latest `me` (position, floor, down or not).
-- The guest has no enemies of its own while together (`game/enemies.js mirrorEnemies`). The
+- The guest has no enemies of its own while the host is here (`game/enemies.js mirrorEnemies`). The
   host sends a `roster` of its cube's enemies (ids, levels, profiles: plain data) when they
   change or the guest asks (`want`, after coming into a cube or dying), and `foes` 15 times a
   second: one row per enemy (`protocol.js rowOf`). The guest shows them ~110 ms in the past,
@@ -63,7 +72,7 @@ helped up and getting back in. Two players, co-op.
 
 ## Rewards
 
-- Every kill gives both players its XP (scaled by their own level) and its coins and drops:
+- Every kill in a cube together gives both players its XP (scaled by their own level) and its coins and drops:
   each side sees the enemy die and runs its own `awardKills` (`game/enemies.js`). Loot is
   rolled and dropped on each side for that player alone, so it never goes over the wire and
   nobody takes the other's. A guardian killed opens its gate on both sides.

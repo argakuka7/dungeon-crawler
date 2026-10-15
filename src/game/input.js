@@ -26,6 +26,7 @@ import { allEnemies } from './enemies.js';
 import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
 import { lobbyOpen, setLobbyOpen, toggleLobby } from '../net/lobby.js';
+import { goToFriend } from '../net/session.js';
 export { clearInput };
 
 const { keys } = controls;
@@ -69,6 +70,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') { spawnEntry(); setStatus('Respawned where you came in'); }
   if (e.code === 'KeyN') nextCube();
   if (e.code === 'KeyX') toggleLabels();
+  if (e.code === 'KeyF') goToFriend();   // playing together: over to the friend
   if (e.code === 'KeyK' || e.code === 'KeyL') { view.zoomTarget = stepZoom(view.zoomTarget, e.code === 'KeyK' ? -1 : 1); e.preventDefault(); }
   if (e.code === 'KeyB' && !player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: 'Whoops!' });
   if (e.code === 'KeyP') { state.showPath = !state.showPath; if (state.world) state.world.pathLine.visible = state.showPath; }

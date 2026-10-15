@@ -5,8 +5,8 @@ export const online = {
   role: null,
   code: null,       // the room code (host: while the room is open)
   partner: null,    // the other player once connected: { name, pid }
-  // the other player as of their last word (null alone): here (in our cube, not travelling),
-  // x, y, z, out (downed: game/downed.js)
+  // the other player as of their last word (null alone): cube, here (in our cube, not
+  // travelling), x, y, z (in their cube), hp, out (downed: game/downed.js)
   buddy: null,
 };
 export const isGuest = () => online.role === 'guest' && !!online.partner;
@@ -21,4 +21,6 @@ export const isGuest = () => online.role === 'guest' && !!online.partner;
 // and both ways, so the friend sees them fly (only the thrower's side hurts anything with them):
 //   shoot(shot)                               we shot an arrow, a bolt or a spell (game/shots.js)
 //   toss(flask)                               we threw a flask (game/throws.js)
-export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null };
+//   defeated(e)                               we got the reward for e (game/enemies.js): apart,
+//                                             it stays defeated for the friend
+export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null };

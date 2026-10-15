@@ -30,6 +30,9 @@ import { drawMinimap } from './minimap.js';
 import { refreshOpenFaces } from './flow.js';
 import { sfx } from '../audio/sfx.js';
 import { party, nearestTo } from './party.js';
+import { relay } from '../net/online.js';
+import { groundAt } from '../physics/collide.js';
+import { walkable } from '../physics/enemynav.js';
 
 let defenceThink = 0, hordeGroups = [];
 
@@ -83,6 +86,7 @@ function awardKills(list) {
     if (reward) {
       xp += reward.xp; levels += reward.levels; killed++; dropLoot(e, reward.coins);
       if (e.guardianGate) unlocked = true;
+      relay.defeated?.(e);
     }
   }
   if (killed) setStatus(`${unlocked ? 'Guardian defeated · Gate unlocked!' : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
@@ -90,6 +94,36 @@ function awardKills(list) {
   if (levels) sfx('levelUp');
   return unlocked;
 }
+// Playing together, the friend defeated enemy `id` somewhere else (net/session.js): it stays
+// defeated here too (no reward: that was theirs), and a guardian's gate opens. One that is
+// here with us we see die ourselves.
+export function shareDefeat(id, gate) {
+  if (allEnemies().some(e => e.id === id)) return;
+  state.run.defeated.add(id);
+  if (!gate || state.run.unlockedGates.has(gate)) return;
+  state.run.unlockedGates.add(gate);
+  if (gate === state.cubeKey) setGuardianGate(state.world, false);
+  refreshOpenFaces(); drawMinimap();
+}
+
+// Playing together, a cube's enemies change hands when the two players meet or part
+// (net/session.js): the other game's enemies as they were ({ id, x, y, z, yaw, hp, mode }).
+// Ours (just come into the cube) take their places, health and fight; any the other game
+// does not have any more went there (no reward: their health is not 0).
+export function adoptEnemies(states) {
+  const byId = new Map(states.map(s => [s.id, s]));
+  for (const e of allEnemies()) {
+    if (!e.id || e.mode === 'dead') continue;
+    const s = byId.get(e.id);
+    if (!s || s.mode === 'dead' || s.hp <= 0) { e.mode = 'dead'; e.deadT = Infinity; continue; }
+    e.hp = Math.min(e.hp, s.hp);
+    const f = groundAt(s.x, s.z, s.y + 0.3, 0).s;
+    if (f && walkable(f, e.profile.height)) Object.assign(e, { x: s.x, y: s.y, z: s.z, f });
+    e.yaw = s.yaw; e.path = null;
+    if (['chase', 'attack', 'alert'].includes(s.mode)) { e.mode = 'chase'; e.think = 0; }
+  }
+}
+
 // learn: architecture.html#swing-journey (see learn/README.md)
 export function updateEnemies(dt) {
   if (worldPaused() || state.transitioning) return;

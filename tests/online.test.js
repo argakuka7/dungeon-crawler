@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { roomCode, readCode, CODE_LETTERS, CODE_LENGTH, cleanName, packPose, isPose, isMe, BONES, Q } from '../src/net/protocol.js';
-import { Timeline, shouldFollow, nextTrip, lerpAngle, DELAY } from '../src/net/sync.js';
+import { Timeline, lerpAngle, DELAY } from '../src/net/sync.js';
 
 test('room codes are four letters without I and O', () => {
   assert.ok(!CODE_LETTERS.includes('I') && !CODE_LETTERS.includes('O'));
@@ -40,7 +40,7 @@ test('a pose packs into whole numbers and checks out', () => {
   assert.ok(isPose(pose));
   assert.ok(!isPose({ ...pose, q: pose.q.slice(1) }));
   assert.ok(!isPose({ ...pose, p: [1, 2, NaN] }));
-  const me = { t: 'me', ts: 1, seed: 7, cube: '0,0,0', trip: 0, pose, body: [1, 2, 3, 0, 0], hp: 10, maxHp: 10 };
+  const me = { t: 'me', ts: 1, seed: 7, cube: '0,0,0', pose, body: [1, 2, 3, 0, 0], hp: 10, maxHp: 10 };
   assert.ok(isMe(me));
   assert.ok(!isMe({ ...me, cube: 3 }));
   assert.ok(!isMe({ ...me, pose: null }));
@@ -70,27 +70,6 @@ test('the timeline holds the newest message when nothing newer came, and drops l
   // jitter: a message that took longer does not move the clock offset
   tl.push(me(100), 180);
   assert.equal(tl.offset, 10);
-});
-
-test('the one who travelled last takes the other along', () => {
-  const at = (cube, trip, busy = false, seed = 1) => ({ seed, cube, trip, busy });
-  // same cube: nobody follows
-  assert.equal(shouldFollow(at('a', 1), at('a', 2), 'host'), false);
-  // they went somewhere after us: follow
-  assert.equal(shouldFollow(at('a', 1), at('b', 2), 'host'), true);
-  assert.equal(shouldFollow(at('b', 2), at('a', 1), 'guest'), false);
-  // the same count (both moved at once): the guest gives way
-  assert.equal(shouldFollow(at('a', 3), at('b', 3), 'guest'), true);
-  assert.equal(shouldFollow(at('b', 3), at('a', 3), 'host'), false);
-  // not while either is on the way, nor across worlds
-  assert.equal(shouldFollow(at('a', 1), at('b', 2, true), 'guest'), false);
-  assert.equal(shouldFollow(at('a', 1, true), at('b', 2), 'guest'), false);
-  assert.equal(shouldFollow(at('a', 1), at('b', 2, false, 2), 'guest'), false);
-  assert.equal(shouldFollow(at('a', 1), null, 'guest'), false);
-  // a trip of your own counts past everything before it
-  assert.equal(nextTrip(1, 4), 5);
-  assert.equal(nextTrip(6, 4), 7);
-  assert.equal(nextTrip(0), 1);
 });
 
 test('angles blend the short way round', () => {

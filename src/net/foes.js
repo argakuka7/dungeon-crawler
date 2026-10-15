@@ -1,5 +1,7 @@
-// The enemies when playing together (net/session.js wires this up). They live on the host:
-// its AI moves them and goes after either player (game/party.js). The guest is shown them:
+// The enemies when playing together (net/session.js wires this up). In a cube with the host
+// they live on the host: its AI moves them and goes after either player (game/party.js). A
+// guest exploring on its own runs its cube's enemies itself, like any game. With the host the
+// guest is shown them:
 //   roster  the host's enemies in its cube, once (and again when they change): who they are
 //           and what they are like, so the guest can draw and fight them (`replicas`)
 //   foes    about 15 times a second, where each is and what it does (one row each)
@@ -8,7 +10,7 @@
 // and a predicted death stays dead). Kills give both players XP and loot of their own
 // (game/enemies.js awardKills), because each side sees its enemies die.
 import { player, state } from '../game/state.js';
-import { allEnemies, mirrorEnemies } from '../game/enemies.js';
+import { allEnemies, mirrorEnemies, adoptEnemies } from '../game/enemies.js';
 import { mirrorBeam } from '../game/beams.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { guardianId } from '../core/guardians.js';
@@ -50,18 +52,28 @@ function replica(entry, profile, i) {
     phase: (i * 0.37) % 1, shownHp: entry.hp };
 }
 
-// The guest's side: the host's enemies in this cube, kept where the host says they are.
-// ask(): request this cube's roster from the host.
+// The guest's side: the host's enemies in this cube, kept where the host says they are, while
+// the host is here (active). ask(): request this cube's roster from the host.
 export class Guest {
   constructor(ask) {
     this.ask = ask;
+    this.active = false;
     this.timeline = new Timeline();
     this.byIndex = [];
     this.cube = null;
     this.mirror = { list: [], apply: dt => this.apply(dt), reset: () => this.reset() };
   }
-  start() { mirrorEnemies(this.mirror); }
-  stop() { mirrorEnemies(null); this.timeline.clear(); this.byIndex = []; }
+  start() { this.active = true; mirrorEnemies(this.mirror); }
+  // keep: the host left us in this cube, its enemies go on here as we were shown them
+  stop(keep = false) {
+    if (!this.active) return;
+    const states = keep ? this.mirror.list.filter(e => e.mode !== 'dead')
+      .map(e => ({ id: e.id, x: e.x, y: e.y, z: e.z, yaw: e.yaw, hp: e.hp, mode: e.mode })) : null;
+    this.active = false;
+    mirrorEnemies(null);
+    if (states) adoptEnemies(states);
+    this.timeline.clear(); this.byIndex = []; this.cube = null;
+  }
   // our cube's enemies went (we came into a cube, died, the world changed): ask for them again
   reset() { this.timeline.clear(); this.byIndex = []; this.cube = null; this.ask(); }
 

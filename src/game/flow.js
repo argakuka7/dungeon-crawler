@@ -13,7 +13,7 @@ import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { showStats, flash, fadeOut, fadeIn, whenReady } from './hud.js';
 import { resetCut } from './cut.js';
-import { resetEnemies } from './enemies.js';
+import { resetEnemies, mirroring } from './enemies.js';
 import { cancelSword } from './sword.js';
 import { drawMinimap } from './minimap.js';
 import { whenPropsReady } from '../render/props.js';
@@ -82,9 +82,9 @@ function restoreVisit(v) {
 export function die() {
   sfx('death');
   if (state.fallFrom) { returnFromFall(true); return; }
-  // playing together the cube stays as it is: the friend fights on in it (and the guest's
-  // enemies are the host's anyway, src/net/foes.js)
-  if (online.role === 'guest' && online.partner || online.buddy?.here && !online.buddy.out && online.buddy.hp > 0) { spawnEntry(); return; }
+  // playing together the cube stays as it is while the friend fights on in it (and the enemies
+  // the guest is shown are the host's anyway, src/net/foes.js)
+  if (mirroring() || online.buddy?.here && !online.buddy.out && online.buddy.hp > 0) { spawnEntry(); return; }
   restoreVisit(state.visit);
   resetEnemies();
   spawnEntry();

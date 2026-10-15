@@ -1,7 +1,8 @@
 // Overview of the cubes visited at the current depth, centred on the current cube. Cubes are
 // coloured by their WFC tile; edges show rivers (blue) and portals (gold: leads somewhere new,
 // cyan: explored); triangles are wells / rings; a violet dot is the open town portal. Inside a
-// house it shows the cube outside, with the house's door marked.
+// house it shows the cube outside, with the house's door marked. Playing together, a blue dot
+// is where the friend is (src/net/session.js redraws it as they move).
 import { KIND_COLOR } from '../world/tiles.js';
 import { key, parse, step } from '../world/coords.js';
 import { state } from './state.js';
@@ -9,9 +10,10 @@ import { isFaceOpen } from '../core/boundaries.js';
 import { gateLocked, portalLocked } from '../core/guardians.js';
 import { N } from '../core/constants.js';
 import { TOWN_KEY, isInterior } from '../world/town.js';
+import { online } from '../net/online.js';
 
 const R = 3, CELL = 24, PAD = 6, SIZE = (2 * R + 1) * CELL + PAD * 2;
-const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 28 });
+const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 42 });
 document.body.appendChild(canvas);
 const g = canvas.getContext('2d');
 
@@ -67,4 +69,16 @@ export function drawMinimap() {
   const count = [...W.cubes.values()].filter(c => c.visits && !isInterior(c.key)).length;
   g.fillText(`depth ${-Y}   ${count} cubes visited${inside ? '   (inside)' : ''}`, PAD, SIZE + 10);
   if (tp) { g.fillStyle = '#c9a8ff'; g.fillText(`portal open: depth ${tp.depth}`, PAD, SIZE + 24); }
+  // the friend: a dot in their cube, or where they are when not on this depth's map
+  const b = online.buddy, name = online.partner?.name;
+  if (!b?.cube) return;
+  const [bx, by, bz] = isInterior(b.cube) ? [NaN, NaN, NaN] : parse(b.cube);
+  if (by === Y && Math.abs(bx - X0) <= R && Math.abs(bz - Z0) <= R) {
+    g.fillStyle = '#6fb4e8'; g.strokeStyle = '#0b0d12'; g.lineWidth = 1.5; g.beginPath();
+    g.arc(PAD + (bx - X0 + R) * CELL + b.x / N * CELL, PAD + (bz - Z0 + R) * CELL + b.z / N * CELL, 4, 0, Math.PI * 2);
+    g.fill(); g.stroke();
+  } else {
+    g.fillStyle = '#9fcdf0';
+    g.fillText(`${name}: ${isInterior(b.cube) ? 'in a house' : by === Y ? 'far away' : `depth ${-by}`} (F: go)`, PAD, SIZE + (tp ? 38 : 24));
+  }
 }

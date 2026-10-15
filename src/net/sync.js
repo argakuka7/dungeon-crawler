@@ -37,18 +37,5 @@ export class Timeline {
   }
 }
 
-// Both players stay in the same cube. Whoever went somewhere last takes the other along:
-// every trip of your own (a portal, a door, a fall that ended somewhere else) counts one more
-// than any trip either of you made before. When you are in different cubes, the one with the
-// lower count follows; on the same count the guest does. me / them: { seed, cube, busy, trip };
-// busy: travelling, generating or falling (the cube may still change).
-export function shouldFollow(me, them, role) {
-  if (!them || them.seed !== me.seed || them.busy || me.busy || them.cube === me.cube) return false;
-  return them.trip > me.trip || (them.trip === me.trip && role === 'guest');
-}
-
-// the count for a trip of your own
-export const nextTrip = (mine, theirs = 0) => Math.max(mine, theirs) + 1;
-
 // the shortest turn from angle a to angle b, k of the way
 export const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
