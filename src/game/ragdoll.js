@@ -15,6 +15,7 @@ import { takeDamage } from '../core/progression.js';
 import { flash } from './hud.js';
 import { hurt, die, recover } from './flow.js';
 import { cancelSword } from './sword.js';
+import { goDown, tickDown } from './downed.js';
 
 // respawn: 'safe' (last safe spot, game/flow.js recover), or null (get up where you lie)
 export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, hop = 0 } = {}) {
@@ -57,6 +58,7 @@ function sink(r, fluid) {
 }
 
 export function stepRagdoll(dt) {
+  if (player.down) { tickDown(dt); return; }   // playing together: lying there (game/downed.js)
   const r = player.ragdoll, pel = r.p[0];
   r.step(dt);
   player.x = pel[0]; player.z = pel[2]; player.y = pel[1] - 0.35;
@@ -65,11 +67,17 @@ export function stepRagdoll(dt) {
   if (player.fluidDeath) { sink(r, player.fluidDeath); if (r.t < FLUID_DEATH_TIME) r.done = false; }
   if (pel[1] < -3) r.done = true;
   if (!r.done) return;
+  // a fatal blow on dry land, playing together: lie there for the friend to help you up
+  if (player.hp <= 0 && !player.fluidDeath && pel[1] >= -3 && !state.fallFrom && goDown()) return;
   player.ragdoll = null; player.fluidDeath = 0;
   if (player.hp <= 0) { setStatus('You died - back to the entry'); die(); return; }
   if (player.ragdollThen === 'safe' || pel[1] < -3 || state.fallFrom) { recover(); return; }
-  // get up where the body came to rest
-  const g = groundAt(pel[0], pel[2], pel[1] + 0.3, 0);
+  standUp(r);
+}
+
+// get up where the ragdoll r came to rest
+export function standUp(r) {
+  const pel = r.p[0], g = groundAt(pel[0], pel[2], pel[1] + 0.3, 0);
   Object.assign(player, { y: g.h, visY: g.h, vx: 0, vy: 0, vz: 0, grounded: true, swimming: false, support: g.s });
   startGetUp(r.p);
 }

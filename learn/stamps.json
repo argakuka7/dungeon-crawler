@@ -100,7 +100,7 @@
     "src/game/enemyai.js#stepEnemies": "00c6dbc3",
     "src/game/enemyai.js#turn": "3b0bb33f",
     "src/game/flow.js#beginVisit": "2536a197",
-    "src/game/flow.js#die": "e02b9b39",
+    "src/game/flow.js#die": "3d7650a1",
     "src/game/flow.js#enterCube": "92761646",
     "src/game/flow.js#settleIn": "d744dc75",
     "src/game/footsteps.js#header": "b3d1aba8",

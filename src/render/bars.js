@@ -49,6 +49,28 @@ export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title 
   return sprite;
 }
 
+// a line of text floating over a figure (drawn over the world); setText(text, color) redraws it
+// when it changed, null hides it
+export function makeNote() {
+  const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), texture = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false, depthTest: false }));
+  sprite.renderOrder = 1202; sprite.visible = false;
+  let shown = null;
+  sprite.setText = (text, color = '#ffe4ae') => {
+    sprite.visible = !!text;
+    if (!text || text + color === shown) return;
+    shown = text + color;
+    ctx.font = 'bold 44px monospace';
+    canvas.width = Math.ceil(ctx.measureText(text).width + 24); canvas.height = 64;
+    ctx.font = 'bold 44px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, canvas.width / 2, 32);
+    ctx.fillStyle = color; ctx.fillText(text, canvas.width / 2, 32);
+    texture.needsUpdate = true;
+    sprite.scale.set(canvas.width / 256 * .8 * INDICATOR_SCALE, .2 * INDICATOR_SCALE, 1);
+  };
+  return sprite;
+}
+
 // the "!" over an enemy that has just noticed the player (one texture for all of them)
 let alertMaterial = null;
 export function makeAlertMark() {

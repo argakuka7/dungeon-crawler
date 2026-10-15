@@ -4,7 +4,10 @@
 export const online = {
   role: null,
   code: null,       // the room code (host: while the room is open)
-  partner: null,    // the other player once connected: { name }
+  partner: null,    // the other player once connected: { name, pid }
+  // the other player as of their last word (null alone): here (in our cube, not travelling),
+  // x, y, z, out (downed: game/downed.js)
+  buddy: null,
 };
 export const isGuest = () => online.role === 'guest' && !!online.partner;
 

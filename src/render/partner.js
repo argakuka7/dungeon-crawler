@@ -13,7 +13,7 @@ import { scene, camera } from './scene.js';
 import { character, mountWeapon } from './character.js';
 import { rig, createFigure, loadThing, thingLoaded, wear, takeOff } from './figure.js';
 import { trackLight, untrackLight } from './lightpool.js';
-import { makeBar, makeLevelLabel } from './bars.js';
+import { makeBar, makeLevelLabel, makeNote } from './bars.js';
 
 const TINT = '#a9c8ff', GHOST = 0xa9d4ff;
 const SNAP = 2;   // cells: a jump further than this between two messages is not blended
@@ -55,11 +55,13 @@ function build(name) {
   const tag = new THREE.Group(), bars = new THREE.Group(), hp = makeBar({ color: 0x6fb4e8, onTop: true });
   const label = makeLevelLabel(1, { onTop: true, color: '#cfe2ff', title: name });
   label.position.y = 0.16;
+  const note = makeNote();
+  note.position.y = 0.36;
   bars.add(hp.group);
-  tag.add(bars, label);
+  tag.add(bars, label, note);
   scene.add(group, tag);
   group.visible = tag.visible = false;
-  return { f, group, ghost, light, tag, bars, hp, label, name, weapon: { url: null, object: null, want: null }, worn: '' };
+  return { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url: null, object: null, want: null }, worn: '' };
 }
 
 export function removePartner() {
@@ -135,6 +137,13 @@ export function showPartner(span, name) {
   fig.bars.quaternion.copy(camera.quaternion);
   fig.hp.set(b.hp / (b.maxHp || 1));
   fig.label.setLevel(Number.isFinite(b.level) ? b.level : 1);
+}
+
+// over the partner while they lie downed (game/downed.js): ko [helped up %, s left], or null
+export function showHelp(ko, name) {
+  if (!fig) return;
+  if (!ko) { fig.note.setText(null); return; }
+  fig.note.setText(ko[0] > 0 ? `Helping ${name} up ${ko[0]}%` : `${name} is down! Stand next to them`, ko[0] > 0 ? '#9be05a' : '#ff9a8a');
 }
 
 // where the partner is drawn (null: not shown)

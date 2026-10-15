@@ -28,7 +28,7 @@ import { setInventoryOpen } from '../game/inventory.js';
 import { lockPortalsHere } from '../game/portals.js';
 import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
-import { capturePose, capturedLook, showPartner, removePartner } from '../render/partner.js';
+import { capturePose, capturedLook, showPartner, showHelp, removePartner } from '../render/partner.js';
 import { openRoom, joinRoom } from './transport.js';
 import { PROTOCOL, roomCode, cleanName, isMe } from './protocol.js';
 import { Timeline, shouldFollow, nextTrip } from './sync.js';
@@ -45,16 +45,20 @@ import { ghostFlask } from '../game/throws.js';
 import { damageEnemy } from '../core/combat.js';
 import { CHAR_R, CHAR_H } from '../core/constants.js';
 import { groundAt } from '../physics/collide.js';
+import { downInfo } from '../game/downed.js';
 
 const SEND_EVERY = 50;   // ms between `me` messages
 const PING_EVERY = 1000; // ms between pings (timers still run, slowly, in a background tab)
 const LOST = 12000;      // ms without a word: the other side is gone
+const REJOIN_EVERY = 3000, REJOIN_TRIES = 10;   // the guest tries to get back in after losing the connection
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the partner where following puts you
 const FOES_EVERY = 66;   // ms between the host's enemy messages (net/foes.js)
 const AFFLICT_EVERY = 500;   // ms: the guest tells the host about a status at most this often
 
-let room = null, link = null, myName = 'Friend', local = false;
+let room = null, link = null, myName = 'Friend', local = false, rejoin = null;
+// this page's player: getting back in after a lost connection, the host knows it is still us
+const pid = Math.random().toString(36).slice(2, 12);
 let lastSend = 0, lastHeard = 0, ping = null;
 const timeline = new Timeline();
 // trips (sync.js shouldFollow): my count, the cube I was in last frame, the world it is in;
@@ -115,24 +119,37 @@ export async function hostGame({ name, local: viaTabs = false } = {}) {
 }
 function cryptoRandom() { return crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32; }
 
+// resolves true once connected (the host still has to welcome us)
 export async function joinGame(code, { name, local: viaTabs = false } = {}) {
-  if (online.role) return;
+  if (online.role) return false;
   myName = cleanName(name); local = viaTabs;
   online.role = 'guest'; online.code = code;
-  setPhase('joining', `Joining ${code}...`);
+  if (!rejoin) setPhase('joining', `Joining ${code}...`);
   try {
     const l = await joinRoom(code, { local });
-    if (online.role !== 'guest') { l.close(); return; }   // left while joining
+    if (online.role !== 'guest') { l.close(); return false; }   // left while joining
     attach(l);
-    l.send({ t: 'hello', v: PROTOCOL, name: myName });
+    l.send({ t: 'hello', v: PROTOCOL, name: myName, pid });
+    return true;
   } catch (e) {
     console.warn('could not join', e);
     online.role = null; online.code = null;
-    setPhase('idle', reason(e));
+    if (!rejoin) setPhase('idle', reason(e));
+    return false;
   }
 }
 
+// the guest lost the connection (not a goodbye): try to get back in a few times
+function retry() {
+  if (!rejoin) return;
+  if (rejoin.tries++ >= REJOIN_TRIES) { rejoin = null; setPhase('idle', 'The connection was lost'); return; }
+  setPhase('joining', `Connection lost. Trying again (${rejoin.tries}/${REJOIN_TRIES})...`);
+  const r = rejoin;
+  joinGame(r.code, { name: myName, local }).then(ok => { if (!ok && rejoin === r) r.timer = setTimeout(retry, REJOIN_EVERY); });
+}
+
 export function leaveGame() {
+  if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
   link?.send({ t: 'bye' });
   const l = link;
   detach();
@@ -144,8 +161,15 @@ export function leaveGame() {
 }
 
 function guestArrived(l) {
-  if (link) { l.send({ t: 'full' }); setTimeout(() => l.close(), 300); return; }
-  attach(l);
+  if (!link) { attach(l); return; }
+  // the friend we have, getting back in over a new connection (the old one broke): swap it
+  l.onmessage = m => {
+    if (m?.t === 'hello' && m.pid && m.pid === online.partner?.pid) {
+      const old = link;
+      detach(); old.close();
+      attach(l); receive(m);
+    } else { l.send({ t: 'full' }); setTimeout(() => l.close(), 300); }
+  };
 }
 
 function attach(l) {
@@ -168,18 +192,23 @@ function detach() {
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = null;
   friend.here = false; setOthers([]);
   clearInterval(ping); ping = null;
-  online.partner = null;
+  online.partner = null; online.buddy = null;
   timeline.clear();
   removePartner();
 }
 
-// the other side is gone (left, closed the tab, lost the connection)
-function lost() {
-  const name = online.partner?.name;
+// the other side is gone: it said goodbye (bye), or the connection broke (the guest then tries
+// to get back in)
+function lost(bye = false) {
+  const name = online.partner?.name, code = online.code, guest = online.role === 'guest' && !!name;
   detach();
   if (online.role === 'host' && room) setPhase('waiting', `${name ?? 'Your friend'} left. Room ${online.code} is still open.`);
-  else { online.role = null; online.code = null; setPhase('idle', name ? `${name} left the game` : 'The connection was lost'); }
-  if (name) say(`${name} left`);
+  else {
+    online.role = null; online.code = null;
+    if (guest && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', 'Connection lost. Trying again...'); }
+    else setPhase('idle', name ? `${name} left the game` : 'The connection was lost');
+  }
+  if (name) say(bye || !guest ? `${name} left` : 'Connection lost');
 }
 
 // --- messages --------------------------------------------------------------------------------
@@ -189,12 +218,12 @@ function receive(m) {
   if (!m || typeof m !== 'object') return;
   if (m.t === 'me') { if (online.partner && isMe(m)) timeline.push(m, performance.now()); return; }
   if (m.t === 'ping') return;
-  if (m.t === 'bye') { const l = link; lost(); l?.close(); return; }
+  if (m.t === 'bye') { const l = link; lost(true); l?.close(); return; }
   if (online.role === 'host') {
     if (foes) { hostReceive(m); return; }
     if (m.t !== 'hello' || online.partner) return;
     if (m.v !== PROTOCOL) { refuse(); return; }
-    online.partner = { name: cleanName(m.name) };
+    online.partner = { name: cleanName(m.name), pid: typeof m.pid === 'string' ? m.pid : null };
     announced = state.cubes?.seed ?? null;
     link.send({ t: 'welcome', v: PROTOCOL, name: myName, seed: announced });
     startHost();
@@ -206,6 +235,7 @@ function receive(m) {
   if (m.t === 'welcome' && !online.partner) {
     if (m.v !== PROTOCOL) { refuse(); return; }
     online.partner = { name: cleanName(m.name) };
+    if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
     if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) pendingSeed = m.seed;
     startGuest();
     setPhase('connected', `Playing with ${online.partner.name}`);
@@ -355,7 +385,7 @@ function send(now) {
   const p = player, r = x => Math.round(x * 1000) / 1000;
   link.send({ t: 'me', ts: now, seed: state.cubes.seed, cube: state.cubeKey, busy: busy(), trip, pose,
     body: [p.x, p.y, p.z, p.vx, p.vz].map(r), ground: p.grounded ? 1 : 0, swim: p.swimming ? 1 : 0, down: p.ragdoll ? 1 : 0,
-    hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() });
+    ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() });
 }
 
 // a spot a step away from p on the same level, in a straight line from it (null: none)
@@ -410,6 +440,9 @@ export function updateOnline() {
     link.send({ t: 'world', seed: announced });
   }
   countTrips(them);
+  // the friend as of their last word, for the rest of the game (net/online.js buddy)
+  online.buddy = online.partner && them ? { here: them.seed === state.cubes?.seed && them.cube === state.cubeKey && !them.busy && !state.transitioning,
+    x: them.body[0], y: them.body[1], z: them.body[2], hp: them.hp, out: !!them.ko } : null;
   if (online.partner && now - lastSend >= SEND_EVERY) { lastSend = now; send(now); }
   if (foes instanceof Host) {
     updateFriend();
@@ -418,11 +451,13 @@ export function updateOnline() {
       for (const msg of foes.messages(now)) link.send(msg);
     }
   }
-  if (online.partner && shouldFollow(mine(), them, online.role)) follow(them);
+  // (lying downed we stay: getting up or giving up comes first, game/downed.js)
+  if (online.partner && !player.down && shouldFollow(mine(), them, online.role)) follow(them);
   // the partner, if they are here (as they were DELAY ago)
   const span = online.partner && timeline.at(now), b = span?.b;
   const here = b && !b.busy && b.seed === state.cubes?.seed && b.cube === state.cubeKey && !state.transitioning;
   showPartner(here ? span : null, online.partner?.name);
+  showHelp(here && Array.isArray(b.ko) && finite(...b.ko) ? b.ko : null, online.partner?.name);
 }
 
 addEventListener('pagehide', () => link?.send({ t: 'bye' }));

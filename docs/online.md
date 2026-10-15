@@ -1,7 +1,7 @@
 # Playing together
 
-Status: steps 1 to 3 of 4 are implemented: walking around together, fighting together and
-sharing the rewards. Two players, co-op.
+Status: implemented: walking around together, fighting together, sharing the rewards, being
+helped up and getting back in. Two players, co-op.
 
 ## Connecting and staying together
 
@@ -31,6 +31,10 @@ sharing the rewards. Two players, co-op.
 - A second guest is turned away (`full`), another version too (`version`, `PROTOCOL` in
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for a new guest.
+- A guest that lost the connection (no `bye`) tries to get back in, every 3 s, ten times.
+  Its `hello` carries the page's `pid`: when the host still holds the old, broken connection
+  of the same player, it swaps it for the new one instead of turning it away. Same seed:
+  the guest keeps its world and goes on where it was.
 
 ## Fighting together
 
@@ -64,11 +68,23 @@ sharing the rewards. Two players, co-op.
   rolled and dropped on each side for that player alone, so it never goes over the wire and
   nobody takes the other's. A guardian killed opens its gate on both sides.
 - Chests are each player's own too: both can open each chest once.
-- When the host's cube comes back (the host died, step 4), the guest forgets those kills as
-  well, so both can earn them again.
+- When the host's cube comes back (the host died alone, see below), the guest forgets those
+  kills as well, so both can earn them again.
 
-## Next step
+## Downed and helped up
 
-4. **Rounding off.** Downed and revive instead of `die()`: when the host dies its cube resets
-   for both. The Guide's pause still stops only the one side. Reconnecting. Dev-spawned enemies
-   and enemies in other cubes are only the host's.
+- A fatal blow on dry land, with the friend in the cube and on their feet, leaves you lying
+  where you fell (`game/downed.js`): the ragdoll stays, enemies leave you be. The friend
+  helps you up by standing within 1.3 cells for 2 s; you get up with 30% of your health.
+  After 30 s, or when the friend leaves the cube or goes down too, you are back at the
+  entry (R gives up at once). Notes over both figures say what is going on (`me.ko`).
+- Playing together a death never resets the cube (`game/flow.js die`): the friend is still
+  fighting in it, and the guest's enemies are the host's anyway. Only the host dying with
+  nobody on their feet beside them resets it, for both.
+- Time runs alike for both: the Guide cannot pause or slow it while together
+  (`game/pace.js`).
+
+## Not done
+
+- Dev-spawned enemies come along, enemies in a cube the friend is not in do not matter.
+- More than two players.

@@ -2,12 +2,16 @@
 // Guide, through game/teach.js) and tests. The frame loop (main.js) asks gameTime how much game
 // time a frame of real time is worth; while paused everything stands still but is still drawn,
 // and the camera can still turn and zoom.
+import { online } from '../net/online.js';
+
 export const STEP = 1 / 60;   // s of game time in one step
 export const pace = { paused: false, speed: 1 };
 let steps = 0, waiting = [];
 
 // the game time `elapsed` real seconds are worth this frame
 export function gameTime(elapsed) {
+  // playing together, time runs for both alike: one side cannot stop or slow it (src/net/)
+  if (online.partner) { if (steps) release(); return elapsed; }
   if (!pace.paused) return elapsed * pace.speed;
   if (steps <= 0) return 0;
   // the frame runs once this returns; whoever waits for the steps goes on after it (a microtask)

@@ -3,7 +3,9 @@
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
 import { character } from './character.js';
-import { makeBar, makeLevelLabel } from './bars.js';
+import { makeBar, makeLevelLabel, makeNote } from './bars.js';
+import { online } from '../net/online.js';
+import { REVIVE_TIME, BLEED_OUT } from '../game/downed.js';
 import { player } from '../game/state.js';
 import { xpProgress } from '../core/progression.js';
 import { CHAR_H } from '../core/constants.js';
@@ -16,7 +18,10 @@ hp.group.position.y = 0.04; xp.group.position.y = -0.04;
 const bars = new THREE.Group();
 bars.add(hp.group, xp.group);
 label.position.y = 0.2;
-group.add(bars, label);
+// lying downed, playing together (game/downed.js): who can help and how long is left
+const note = makeNote();
+note.position.y = 0.42;
+group.add(bars, label, note);
 group.visible = false;
 scene.add(group);
 
@@ -30,4 +35,7 @@ export function updatePlayerBar() {
   const p = xpProgress(player);
   xp.set(p.current / p.required);
   label.setLevel(player.level);
+  const d = player.down, name = online.partner?.name ?? 'Your friend';
+  note.setText(!d ? null : d.revive > 0 ? `${name} is helping you up ${Math.round(100 * d.revive / REVIVE_TIME)}%`
+    : `Down! ${name} can help you up · ${Math.ceil(BLEED_OUT - d.t)}s · R: give up`, d?.revive > 0 ? '#9be05a' : '#ff9a8a');
 }

@@ -2,13 +2,16 @@
 // no game state, so it can be tested in node.
 //
 // Messages are plain JSON objects with a type `t`:
-//   hello   { v, name }                guest -> host, first thing after connecting
+//   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
+//                                      page's player; the same pid again is the friend getting
+//                                      back in after a lost connection)
 //   welcome { v, name, seed }          host -> guest: play in this world
 //   world   { seed }                   host -> guest: the host started a new world
-//   me      { ts, seed, cube, busy, trip, pose, body, ground, swim, down, hp, maxHp, level,
+//   me      { ts, seed, cube, busy, trip, pose, body, ground, swim, down, ko, hp, maxHp, level,
 //             weapon, armed, worn }    both ways, about 20 times a second: where I am and how
 //                                      I look (`ts`: the sender's clock, ms; body: [x, y, z, vx,
-//                                      vz], what the host's enemies go after)
+//                                      vz], what the host's enemies go after; ko: lying downed,
+//                                      [helped up %, s left], game/downed.js)
 //   roster  { cube, seed, profiles, list }  host -> guest: the enemies in its cube (net/foes.js)
 //   foes    { ts, cube, list }         host -> guest, about 15 times a second: where they are
 //   want    {}                         guest -> host: send the roster again (we came into a cube)
@@ -25,7 +28,7 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 
 // Room codes: four letters, without I and O (they look like 1 and 0). Easy to read out loud.
 export const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';

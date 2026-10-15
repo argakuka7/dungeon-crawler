@@ -32,7 +32,7 @@ import { online } from '../net/online.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
-  Object.assign(player, { x, y, z, vy: 0, vx: 0, vz: 0, visY: y, grounded: true, swimming: false, support: null, ragdoll: null, getUp: null, fluidDeath: 0, stun: 0, climb: null, burning: null, chilled: null, toxic: null });
+  Object.assign(player, { x, y, z, vy: 0, vx: 0, vz: 0, visY: y, grounded: true, swimming: false, support: null, ragdoll: null, down: null, getUp: null, fluidDeath: 0, stun: 0, climb: null, burning: null, chilled: null, toxic: null });
   player.safe = respawnPoint({ x, y, z });
   const gr = groundAt(x, z, y + 0.05, 0);
   player.support = gr.s;
@@ -82,6 +82,9 @@ function restoreVisit(v) {
 export function die() {
   sfx('death');
   if (state.fallFrom) { returnFromFall(true); return; }
+  // playing together the cube stays as it is: the friend fights on in it (and the guest's
+  // enemies are the host's anyway, src/net/foes.js)
+  if (online.role === 'guest' && online.partner || online.buddy?.here && !online.buddy.out && online.buddy.hp > 0) { spawnEntry(); return; }
   restoreVisit(state.visit);
   resetEnemies();
   spawnEntry();
