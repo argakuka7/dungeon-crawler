@@ -11,10 +11,12 @@
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
-//   welcome { v, slot, players, seed, defeated, gates, visited, faces }  host -> guest: you
-//                                      are player `slot`, with players ([{ slot, name }], the
-//                                      host too); play in this world (and what was defeated,
-//                                      opened and discovered in it so far)
+//   welcome { v, slot, players, seed, defeated, gates, visited, faces, loot, dropped, chests }
+//                                      host -> guest: you are player `slot`, with players
+//                                      ([{ slot, name }], the host too); play in this world
+//                                      (and what was defeated, opened and discovered in it so
+//                                      far, the loot on its floors: [[cube, pickups]], the
+//                                      sources that dropped, the chests open)
 //   joined  { slot, name }             host -> guests: someone came (or got back in)
 //   left    { slot }                   host -> guests: someone went
 //   visited { keys }                   to all: I discovered these cubes (yours too now)
@@ -42,6 +44,17 @@
 //   landed  { n, end }                 runner -> viewers: ... and it ended
 //   arrow   { kind, stats, at, origin }  to those here: I shot (it only looks, net/session.js)
 //   flask   { flask }                  to those here: I threw a flask (it only looks)
+// The floor loot is shared and the host decides (game/loot.js). A pickup: { id, itemId, count,
+// gen?, x, y, z, from: [x, y, z], toss, kept? }; its id is `<source>#<i>`, the source the
+// enemy, chest or bag drop it came from:
+//   drop    { cube, source, list }     guest -> host: I dropped these (killed, opened, put down)
+//   loot    { cube, source, list }     host -> guests: what source dropped (the first drop of it
+//                                      stands; to a guest whose drop did not: what stands, or
+//                                      null: nothing, it is not dead)
+//   take    { cube, id }               guest -> host: may I have it?
+//   took    { cube, id, by }           host -> guests: player `by` has it
+//   forget  { cube, sources }          guest -> host: a death put my cube back, undo these drops
+//   gone    { cube, sources }          host -> guests: these drops are undone
 // and between a guest and the host only:
 //   ping    {}                         both ways, every second, also from a background tab
 //   full    {}                         host -> a guest too many: this game is full
@@ -49,12 +62,12 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 6;
+export const PROTOCOL = 7;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
 export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
-  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask']);
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget']);
 // is a message addressed `to` (undefined: everyone) for player `slot`?
 export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
 // a valid `to` from a guest: a slot, a list of slots, or none (everyone)
@@ -154,12 +167,13 @@ export function rosterOf(list, cube, seed) {
   return { t: 'roster', cube, seed, profiles, list: entries };
 }
 
-// one row per enemy: [index, x, y, z, yaw, mode, t, attacks, attack, speed, hp, statuses, beam]
-// (t: how far into its attack, or how long dead; beam: [t, ex, ey, ez] while its laser shines)
-export function rowOf(e, i) {
+// one row per enemy: [index, x, y, z, yaw, mode, t, attacks, attack, speed, hp, statuses, beam,
+// by] (t: how far into its attack, or how long dead; beam: [t, ex, ey, ez] while its laser
+// shines; by: the number of the player who hit it last, `runner` when nobody else did)
+export function rowOf(e, i, runner = 0) {
   const b = e.beam;
   return [i, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), Math.max(0, MODES.indexOf(e.mode)), r2(e.mode === 'dead' ? e.deadT : e.t),
     e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0),
-    b ? [r2(b.t), r2(b.ex), r2(b.ey), r2(b.ez)] : 0];
+    b ? [r2(b.t), r2(b.ex), r2(b.ey), r2(b.ez)] : 0, e.lastHit ?? runner];
 }
 

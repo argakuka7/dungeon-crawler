@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { coinDrops, inCollectReach, inMagnetReach, inFloorReach, steppedOn, stackable, walkTakes, labelled, COLLECT_RADIUS, MAGNET_RADIUS, COLLECT_HEIGHT } from '../src/core/loot.js';
 import { ITEMS, WEAPONS } from '../src/core/items.js';
-import { createInventory, addItem, copperTotal } from '../src/core/inventory.js';
+import { createInventory, addItem, copperTotal, fits } from '../src/core/inventory.js';
 
 test('coin drops hold exactly the amount, in a few piles per coin kind', () => {
   assert.deepEqual(coinDrops(0), []);
@@ -42,4 +42,17 @@ test('coins pull themselves in from half as far as C, other pickups do not', () 
   assert.ok(!inMagnetReach(coin, 5 + MAGNET_RADIUS + 0.01, 1, 5));
   assert.ok(!inMagnetReach(coin, 5, 3, 5), 'not from a different level');
   assert.ok(!inMagnetReach({ ...coin, itemId: 'item_crystal_ruby' }, 5, 1, 5), 'only coins');
+});
+
+test('a pickup is only reached for when it fits the bag (coins always do)', () => {
+  const inv = createInventory(), sword = { itemId: 'weapon_sword_short', count: 1, gen: { rarity: 'common', ilvl: 1, affixes: [], name: 'Sword' } };
+  const potion = { itemId: 'item_potion_health', count: 3 };
+  assert.ok(fits(inv, sword) && fits(inv, potion));
+  for (let i = 0; i < inv.slots.length; i++) if (!inv.slots[i]) inv.slots[i] = { instanceId: `x${i}`, itemId: 'weapon_sword_short', count: 1 };
+  assert.ok(!fits(inv, sword));                                        // no free slot
+  assert.ok(!fits(inv, potion));                                       // no stack of it to add to either
+  assert.ok(fits(inv, { itemId: 'item_coin_gold', count: 5 }));      // coins go in the purse
+  inv.slots[0] = { instanceId: 'p', itemId: 'item_potion_health', count: 97 };
+  assert.ok(fits(inv, { itemId: 'item_potion_health', count: 2 }) && !fits(inv, potion));   // room for two more in the stack
+  assert.ok(!fits(inv, { itemId: 'nothing' }));
 });

@@ -12,6 +12,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ITEMS } from '../core/items.js';
 import { RARITIES, rarityOf } from '../core/gear/rarities.js';
 import { player } from '../game/state.js';
+import { partnerAt } from './partner.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { emit, glow as glowLayer, rand } from './particles.js';
 
@@ -195,14 +196,18 @@ export function drawLoot(list, world, time, dt = 0) {
       views.set(p.id, view);
     }
     const { o, model, fx } = view, half = model.userData.half, base = model.userData.scale;
-    o.visible = p.toss >= 0;
+    // flying to another player (playing together), there if we see them; taken and waiting to be
+    // ours (game/loot.js claim): out of sight
+    const friend = p.fly?.to != null ? partnerAt(p.fly.to) : null;
+    o.visible = p.toss >= 0 && !(p.claim && (!p.fly || p.fly.t >= p.fly.dur || (p.fly.to != null && !friend)));
     o.position.set(p.x, p.y, p.z);
     rest(p, half, time, v);
     let spin = p.gen ? 0 : 1.8, scale = base, yaw = p.phase;
     if (p.toss < 1) { spin = 9; if (p.gen) { spin = 0; yaw += (1 - p.toss) * 7; } }   // tumbling out, a weapon unwinding into place
     if (p.fly) {
       const u = Math.min(1, Math.max(0, p.fly.t / p.fly.dur)), e = u * u;   // accelerate into the player
-      target.set(player.x - off.x, player.visY + 0.55 - off.y, player.z - off.z);
+      if (friend) target.set(friend.x - off.x, friend.y + 0.55 - off.y, friend.z - off.z);
+      else target.set(player.x - off.x, player.visY + 0.55 - off.y, player.z - off.z);
       const lift = p.fly.t < 0 ? 0.12 * Math.min(1, (p.fly.t + 0.15) / 0.15) : 0;   // a little hop before it goes
       v.lerp(target, e).y += Math.sin(u * Math.PI) * 0.35 + Math.max(0, lift);
       spin = 4 + 14 * e; scale = base * (1 - 0.65 * e);

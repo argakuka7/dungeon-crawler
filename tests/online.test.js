@@ -141,13 +141,16 @@ test('a projectile hits whichever player it touches first', () => {
   assert.equal(pr.victim, near);
 });
 
-test('the host describes its enemies compactly for the guest', () => {
+test('the runner describes its enemies compactly for the others', () => {
   const profile = { type: 'snake', hp: 48, corpseTime: 3 };
   const e = { id: 'k:snake:1', profile, level: 2, coinDrop: 5, kind: { xp: 10, dropXP: undefined, dropScale: 1 },
     x: 1.23456, y: 2, z: 3, yaw: 0.5, hp: 40, mode: 'attack', t: 0.333, attacks: 3, attack: 1, speed: 0,
     burning: {}, toxic: null, beam: { t: 0.2, ex: 4, ey: 1, ez: 5 } };
   const row = rowOf(e, 7);
-  assert.deepEqual(row, [7, 1.23, 2, 3, 0.5, MODES.indexOf('attack'), 0.33, 3, 1, 0, 40, 1, [0.2, 4, 1, 5]]);
+  assert.deepEqual(row, [7, 1.23, 2, 3, 0.5, MODES.indexOf('attack'), 0.33, 3, 1, 0, 40, 1, [0.2, 4, 1, 5], 0]);
+  // who hit it last: the runner (player 2 here) unless a friend did
+  assert.equal(rowOf(e, 7, 2)[13], 2);
+  assert.equal(rowOf({ ...e, lastHit: 3 }, 7, 2)[13], 3);
   const roster = rosterOf([e, { ...e, id: 'k:snake:2' }], 'k', 9);
   assert.equal(roster.profiles.length, 1);   // a pack shares its profile
   assert.deepEqual(roster.list.map(x => x.p), [0, 0]);

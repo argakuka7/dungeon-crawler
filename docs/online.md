@@ -22,7 +22,8 @@ being helped up and getting back in. Up to four players, co-op.
 - `src/net/session.js`: a guest says `hello`, the host answers `welcome` with the guest's
   number, the players there, its world seed, and what it defeated and opened so far, and
   tells the others (`joined`; `left` when one goes). The guest starts that world and keeps
-  its character (level, bag, gear); floor loot and chests are its own. Every world is the
+  its character (level, bag, gear); the floor loot and opened chests come in the `welcome`
+  too (a guest getting back in takes the host's instead of its own). Every world is the
   same for the same seed, whatever the order cubes are visited in (`world/wfc.js`), so no
   map goes over the wire. Only the host starts new worlds (N); the guests follow.
 - Everyone sends `me` 20 times a second: cube, position, the character's 14 bone rotations
@@ -104,14 +105,35 @@ being helped up and getting back in. Up to four players, co-op.
 
 ## Rewards
 
-- Every kill in a cube together gives each player there its XP (scaled by their own level) and
-  its coins and drops: each game sees the enemy die and runs its own `awardKills`
-  (`game/enemies.js`). Loot is rolled and dropped in each game for that player alone, so it
-  never goes over the wire and nobody takes another's. A guardian killed opens its gate for
-  everyone.
-- Chests are each player's own too: each can open each chest once.
-- When a runner's cube comes back (it died with nobody else there on their feet, see below),
-  its viewers forget those kills as well, so they can be earned again.
+- Every kill in a cube together gives each player there its XP (scaled by their own level):
+  each game sees the enemy die and runs its own `awardKills` (`game/enemies.js`).
+- The floor loot is **shared** (`game/loot.js`): one copy of every pickup, for whoever takes
+  it first. Coins go to whoever runs over them, weapons to whoever clicks them first.
+- **Drops:** only the killer's game drops an enemy's loot: whoever hit it last (`lastHit`,
+  set by `game/sword.js hitEnemy` and statuses; the runner sends it in the `foes` rows). The
+  runner drops it for a killer who is no longer in the cube. Loot is seeded (world seed,
+  enemy, the killer's weapon kind), so the killer's game rolls it and shows it at once, no
+  waiting: it is a guess the host confirms. A guest sends its drop (`drop`); the host keeps
+  the first drop of each source (`run.dropped`) and tells everyone (`loot`). A guest whose
+  guess did not stand gets what stands instead (another's drop of the same source) or `null`
+  (the host runs that cube and the enemy is still alive there: the guest's killing `hit`
+  reaches the host before its `drop`, over the same ordered line).
+- Sources and ids: an enemy `e:<id>`, a chest `c:<site id>`, something put down from the bag
+  `b:<player>:<n>`; a pickup is `<source>#<i>`, so a guessed drop and the one that stands
+  line up pickup by pickup (`acceptDrop` keeps what matches, swaps what does not).
+- **Taking** is a claim (`claim`): the host's stand at once (it tells the others `took`); a
+  guest's pickup flies in at once, the guest asks (`take`) and credits it once the host's
+  `took` names it. If someone else was first, it turns and flies to them. A claim is only
+  made when the item fits the bag; if the bag filled up meanwhile, it lands at the feet
+  again. Alone again, whatever a guest was still waiting for is its own (`settleClaims`).
+- **Chests** open for everyone: the opener's game rolls the spill (leaning to its weapons) and
+  sends it like any drop; the others see the lid open (`game/chests.js shareChest`). Two
+  players opening one chest at once: the first drop stands, the other's is swapped for it.
+- **Putting something down** (the V panel) drops it for everyone: a way to hand a friend a
+  weapon.
+- **A death that puts a cube back** (the runner dying with nobody on their feet beside them)
+  undoes the drops since it came in for everyone (`forget` to the host, `gone` to all): those
+  enemies are back and can drop them again. What was put down or spilled by a chest stays.
 
 ## Downed and helped up
 

@@ -30,4 +30,10 @@ export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];
 //   defeated(e)                               we got the reward for e (game/enemies.js): apart,
 //                                             it stays defeated for the others
 //   visited(key)                              we discovered a cube (game/flow.js): theirs too
-export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null };
+// and the shared floor loot (game/loot.js; the host decides):
+//   drop(key, source, pickups)                we dropped these in cube key (killed, opened, put down)
+//   take(key, pickup)                         we reach for it: 'mine' (the host's word, or we are
+//                                             the host) or 'asked' (the host will say)
+//   forget(key, sources)                      a death put our cube back: those drops are undone
+export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null,
+  drop: null, take: null, forget: null };

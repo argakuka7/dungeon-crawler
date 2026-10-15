@@ -61,6 +61,7 @@ export function updateSword(dt) {
 // hits on enemies another player runs go to that player too (net/online.js relay).
 // learn: network.html#boss, space.html#unit (see learn/README.md)
 export function hitEnemy(e, hit, before, dx, dz, knockback = 1, by = player) {
+  e.lastHit = by === player ? null : by.slot;   // who struck last (null: we did): its loot is theirs (game/enemies.js)
   state.enemyGrace = 0;   // you started it
   const l = Math.hypot(dx, dz) || 1;
   const push = (e.hp ? e.staggered ? 2.6 : 0.6 : 3.6) * knockback / e.profile.mass;

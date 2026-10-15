@@ -147,6 +147,9 @@ export function showPartner(slot, span, name) {
   fig.label.setLevel(Number.isFinite(b.level) ? b.level : 1);
 }
 
+// where player `slot` is drawn (null: not shown)
+export const partnerAt = slot => { const f = figs.get(slot); return f?.group.visible ? f.group.position : null; };
+
 // over player `slot` while they lie downed (game/downed.js): ko [helped up %, s left], or null
 export function showHelp(slot, ko, name) {
   const fig = figs.get(slot);

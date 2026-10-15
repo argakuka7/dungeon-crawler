@@ -56,8 +56,9 @@ export function createPlayerStats(dev = false) {
 // defeated: enemy IDs; loot: cube key -> pickups lying there (game/loot.js); chests: the reward
 // sites whose chests are open (game/chests.js); townPortal: the open town portal, if any
 // (game/townportal.js)
+// loot: the pickups on the floor per cube (game/loot.js); dropped: the drops (their sources) that came
 // learn: memory.html#notes (see learn/README.md)
-export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), chests: new Set(), townPortal: null });
+export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), dropped: new Set(), chests: new Set(), townPortal: null });
 // learn: stronger.html#xp-code (see learn/README.md)
 export function awardXP(p, amount) {
   whole(amount);

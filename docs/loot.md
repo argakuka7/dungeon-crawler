@@ -33,6 +33,9 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
   cannot attack ("No weapon equipped") until you pick one up and equip it.
 - Items you put down are `kept`: a death leaves them on the floor, while weapons enemies dropped
   during that visit go with the rest of the visit (see `docs/progression.md`).
+- Playing together the floor loot and the chests are shared: one copy of every pickup, for
+  whoever takes it first; the killer's or opener's game rolls the drop (see `docs/online.md`,
+  Rewards).
 
 ## Item data
 

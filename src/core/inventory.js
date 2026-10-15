@@ -104,6 +104,15 @@ export function addInstance(inv, item) {
   inv.version++;
   return instanceId;
 }
+// would item ({ itemId, count, gen? }) go into the bag now? (coins always do)
+export function fits(inv, item) {
+  const def = ITEMS[item?.itemId];
+  if (!def) return false;
+  if (def.category === 'currency') return true;
+  if (item.gen) return hasRoom(inv);
+  const capacity = inv.slots.reduce((n, s) => n + (!s ? def.stackLimit : s.itemId === item.itemId ? def.stackLimit - s.count : 0), 0);
+  return capacity >= (item.count ?? 1);
+}
 // a bound item (the town portal scroll) never leaves the bag
 export const isBound = itemId => !!ITEMS[itemId]?.bound;
 // the whole slot out of the bag (unequipping it): { itemId, count, gen? }, or null (also for

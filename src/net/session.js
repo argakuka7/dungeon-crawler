@@ -12,11 +12,16 @@
 // after any player there; the others are shown them and fight them, blows on them are sent
 // over as `hurt`. When players meet or part, the enemies change hands as they are
 // (`handover`, game/enemies.js adoptEnemies). In a cube together every kill gives each player
-// XP and loot of their own (the loot never goes over the wire); apart, a kill only tells the
-// others the enemy is gone (`defeated`). F fades you over to a friend (goToFriend).
+// XP; apart, a kill only tells the others the enemy is gone (`defeated`). F fades you over to
+// a friend (goToFriend).
 //
-// A guest keeps their character (level, bag, gear) when they join; the world's progress
-// (opened gates, loot on the floor, chests) starts fresh, as with any new world. Only the host
+// The floor loot and the chests are shared (game/loot.js): the killer's or opener's game rolls
+// a drop and shows it at once (`drop`), the host keeps the first drop of each source and tells
+// everyone (`loot`). Whoever reaches a pickup first gets it: a guest asks (`take`), the host
+// says who got it (`took`).
+//
+// A guest keeps their character (level, bag, gear) when they join and plays on with the
+// host's world as it is: what was defeated and opened, the loot on the floor. Only the host
 // starts new worlds; the guests come along.
 import { player, state, setStatus } from '../game/state.js';
 import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
@@ -51,6 +56,10 @@ import { damageEnemy } from '../core/combat.js';
 import { CHAR_R, CHAR_H } from '../core/constants.js';
 import { groundAt } from '../physics/collide.js';
 import { downInfo } from '../game/downed.js';
+import { packPickup, acceptDrop, takenBy, grant, forgetDrops, dropOf, allLoot, takeLoot, settleClaims } from '../game/loot.js';
+import { shareChest } from '../game/chests.js';
+import { ITEMS } from '../core/items.js';
+import { RARITY } from '../core/gear/rarities.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -244,6 +253,8 @@ function apart() {
   if (foes instanceof Viewer) foes.stop(foes.cube === state.cubeKey);   // the runner's enemies here are ours now
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
+  relay.drop = relay.take = relay.forget = null;
+  settleClaims();   // what we reached for is ours: nobody else is left to have it
   setOthers([]);
   online.buddies = [];
   removePartner();
@@ -281,7 +292,8 @@ function welcome(l, slot, name, id, again) {
   announced = state.cubes?.seed ?? null;
   const players = [{ slot: 0, name: myName }, ...[...peers.values()].filter(o => o !== p).map(o => ({ slot: o.slot, name: o.name }))];
   l.send({ t: 'welcome', v: PROTOCOL, slot, players, seed: announced,
-    defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces] });
+    defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces],
+    loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests] });
   facesSent = state.openedFaces.size;
   deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
   together();
@@ -350,7 +362,10 @@ function welcomed(m) {
   if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
   // the host's world, and its progress so far: what it defeated stays defeated for us too
   const list = x => Array.isArray(x) ? x.filter(k => typeof k === 'string') : [];
-  const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces) };
+  const loot = (Array.isArray(m.loot) ? m.loot : []).filter(c => Array.isArray(c) && typeof c[0] === 'string' && Array.isArray(c[1]))
+    .map(([k, items]) => [k, items.filter(p => typeof p?.source === 'string' && validPickup(p))]);
+  const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces),
+    loot, dropped: list(m.dropped), chests: list(m.chests) };
   if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
   else {
     takeRun(run);
@@ -435,6 +450,15 @@ function together() {
     post({ t: 'afflict', id: e.id, status, spec }, foes.runner);
   };
   // running the enemies: our enemies' projectiles fly for those here too
+  // the shared floor loot (game/loot.js): the host decides, a guest asks
+  const host = online.role === 'host';
+  relay.drop = (key, source, list) => post({ t: host ? 'loot' : 'drop', cube: key, source, list: list.map(packPickup) }, host ? undefined : 0);
+  relay.take = (key, p) => {
+    if (host) { post({ t: 'took', cube: key, id: p.id, by: 0 }); return 'mine'; }
+    post({ t: 'take', cube: key, id: p.id }, 0);
+    return 'asked';
+  };
+  relay.forget = (key, sources) => post({ t: host ? 'gone' : 'forget', cube: key, sources }, host ? undefined : 0);
   relay.launch = (pr, e) => { const to = hereSlots(); if (to.length) post({ t: 'shot', n: pr.n, id: e.id, spec: pr.spec, at: [pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz] }, to); };
   relay.landed = (pr, end) => { const to = hereSlots(); if (to.length) post({ t: 'landed', n: pr.n, end }, to); };
 }
@@ -449,7 +473,7 @@ const finite = (...xs) => xs.every(Number.isFinite);
 // a message from another player (not `me`; the host's own word was handled before)
 function handle(m) {
   const p = peers.get(m.from);
-  if (!p || shared(m, p)) return;
+  if (!p || shared(m, p) || lootReceive(m, p)) return;
   if (foes instanceof Runner) runnerReceive(m, p);
   else if (foes instanceof Viewer && m.from === foes.runner) viewerReceive(m);
 }
@@ -470,6 +494,53 @@ function shared(m, p) {
   return true;
 }
 
+// A pickup as it came over the wire (game/loot.js packPickup), and a generated weapon's data
+const validGen = g => !!g && typeof g === 'object' && Object.hasOwn(RARITY, g.rarity) && Number.isFinite(g.ilvl)
+  && Array.isArray(g.affixes) && typeof g.name === 'string';
+function validPickup(m) {
+  return !!m && typeof m.id === 'string' && typeof m.itemId === 'string' && Object.hasOwn(ITEMS, m.itemId)
+    && Number.isInteger(m.count) && m.count > 0 && finite(m.x, m.y, m.z, m.toss)
+    && Array.isArray(m.from) && m.from.length === 3 && finite(...m.from) && (m.gen === undefined || validGen(m.gen));
+}
+const strings = xs => Array.isArray(xs) && xs.every(x => typeof x === 'string');
+
+// The shared floor loot (game/loot.js). The host decides: a guest's drop stands if it is the
+// first of its source (and, where the host runs the enemies, the enemy is dead there: the
+// guest's killing hit came before its drop); else the guest gets what stands (or null: no
+// drop). A pickup goes to whoever asks first. Guests hear what the host decided.
+// learn: network.html#loot (see learn/README.md)
+function lootReceive(m, p) {
+  if (typeof m.cube !== 'string') return false;
+  if (online.role === 'host') {
+    if (m.t === 'drop' && typeof m.source === 'string' && Array.isArray(m.list) && m.list.every(validPickup)) {
+      if (state.run.dropped.has(m.source)) post({ t: 'loot', cube: m.cube, source: m.source, list: dropOf(m.cube, m.source).map(packPickup) }, p.slot);
+      else if (aliveHere(m.cube, m.source)) post({ t: 'loot', cube: m.cube, source: m.source, list: null }, p.slot);
+      else {
+        acceptDrop(m.cube, m.source, m.list);
+        if (m.source.startsWith('c:')) shareChest(m.source.slice(2));
+        post({ t: 'loot', cube: m.cube, source: m.source, list: m.list });   // everyone: it stands
+      }
+    } else if (m.t === 'take' && typeof m.id === 'string') {
+      if (grant(m.cube, m.id, p.here ? p.slot : null)) post({ t: 'took', cube: m.cube, id: m.id, by: p.slot });
+    } else if (m.t === 'forget' && strings(m.sources)) {
+      forgetDrops(m.cube, new Set(m.sources));
+      post({ t: 'gone', cube: m.cube, sources: m.sources });
+    } else return false;
+    return true;
+  }
+  if (m.from !== 0) return false;
+  if (m.t === 'loot' && typeof m.source === 'string' && (m.list === null || Array.isArray(m.list) && m.list.every(validPickup))) {
+    acceptDrop(m.cube, m.source, m.list);
+    if (m.list && m.source.startsWith('c:')) shareChest(m.source.slice(2));
+  } else if (m.t === 'took' && typeof m.id === 'string' && Number.isInteger(m.by))
+    takenBy(m.cube, m.id, m.by === online.slot, peers.get(m.by)?.here ? m.by : null);
+  else if (m.t === 'gone' && strings(m.sources)) forgetDrops(m.cube, new Set(m.sources));
+  else return false;
+  return true;
+}
+// is the enemy that dropped `source` still alive here, where we run the enemies?
+const aliveHere = (key, source) => source.startsWith('e:') && key === state.cubeKey && foes instanceof Runner && !!enemy(source.slice(2));
+
 // we run the enemies here: those shown them ask for them, hand theirs over, and hit them
 function runnerReceive(m, p) {
   if (m.t === 'want') { foes.forget(p.slot); return; }
@@ -483,7 +554,7 @@ function runnerReceive(m, p) {
     if (damageEnemy(e, m.damage)) hitEnemy(e, { damage: before - e.hp, crit: !!m.crit }, before, m.dx, m.dz, m.kb, p.body);
   } else if (m.t === 'afflict' && (m.status === 'burning' || m.status === 'toxic') && m.spec && typeof m.spec === 'object') {
     const e = enemy(m.id);
-    if (e && afflictEnemy(e, m.status, m.spec)) e.target = p.body;
+    if (e && afflictEnemy(e, m.status, m.spec)) { e.target = p.body; e.lastHit = p.slot; }
   }
 }
 
@@ -523,6 +594,10 @@ function updateRunner(now) {
 function takeRun(run) {
   for (const id of run.defeated) state.run.defeated.add(id);
   for (const k of run.gates) state.run.unlockedGates.add(k);
+  // the floor loot is the host's (also after getting back in: what we dropped meanwhile went)
+  takeLoot(run.loot);
+  state.run.dropped = new Set(run.dropped);
+  for (const id of run.chests) shareChest(id);
   for (const k of run.visited) shareVisit(k);
   shareFaces(run.faces);
   facesSent = state.openedFaces.size;

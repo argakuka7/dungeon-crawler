@@ -11,6 +11,7 @@
 // health, and a predicted death stays dead). Kills give every player there XP and loot of
 // their own (game/enemies.js awardKills), because each side sees its enemies die.
 import { player, state } from '../game/state.js';
+import { online } from './online.js';
 import { allEnemies, mirrorEnemies, adoptEnemies } from '../game/enemies.js';
 import { mirrorBeam } from '../game/beams.js';
 import { clearProjectiles } from '../game/projectiles.js';
@@ -45,7 +46,7 @@ export class Runner {
       for (const s of fresh) this.told.add(s);
     }
     const rows = [];
-    for (const e of list) { const i = this.sent.index.get(e); if (i !== undefined) rows.push(rowOf(e, i)); }
+    for (const e of list) { const i = this.sent.index.get(e); if (i !== undefined) rows.push(rowOf(e, i, online.slot)); }
     out.push([{ t: 'foes', ts: now, cube: state.cubeKey, list: rows }, viewers]);
     return out;
   }
@@ -135,6 +136,8 @@ export class Viewer {
       if (b[10] < e.shownHp) e.hurtT = 0.22;   // someone else hurt it
       e.shownHp = b[10];
       e.hp = hp;
+      // who hit it last (our own hit stands for a moment, like its health)
+      e.lastHit = e.predUntil > now ? null : Number.isInteger(b[13]) ? b[13] : null;
       e.burning = b[11] & BURNING ? e.burning || { shown: true } : null;
       e.toxic = b[11] & TOXIC ? e.toxic || { shown: true } : null;
       if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.beam && mirrorBeam(e, null); return; }
@@ -148,7 +151,7 @@ export class Viewer {
     }
   }
   // our own hit on e: our result stands for a moment against older word from the runner
-  predicted(e) { e.predHp = e.hp; e.predUntil = performance.now() + PREDICT; }
+  predicted(e) { e.predHp = e.hp; e.predUntil = performance.now() + PREDICT; e.lastHit = null; }
 }
 
 // is the player able to take a blow from the runner's enemies now?

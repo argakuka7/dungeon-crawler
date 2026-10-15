@@ -12,6 +12,7 @@ import { relay } from '../net/online.js';
 export function afflictEnemy(e, status, spec) {
   if (!spec || e.mode === 'dead' || immuneTo(e, status)) return false;
   e[status] = afflict(spec);
+  e.lastHit = null;   // ours (the session says when it was a friend's)
   relay.afflict?.(e, status, spec);
   return true;
 }

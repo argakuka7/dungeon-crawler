@@ -217,13 +217,14 @@
       <pre data-src="src/game/enemies.js#awardKills"><code>for (const e of list) {
   const reward = awardKill(player, state.run, e);
   if (reward) {
-    xp += reward.xp; levels += reward.levels; killed++; dropLoot(e, reward.coins);
+    xp += reward.xp; levels += reward.levels; killed++;
+    if (droppedHere(e)) dropLoot(e, reward.coins);
     if (e.guardianGate) unlocked = true;
     relay.defeated?.(e);
   }
 }</code></pre>
-      <p class="small muted" lang="en"><code>relay.defeated?.(e)</code> tells the friends you play together with; the <code>?.</code> means: only if there are any.</p>
-      <p class="small muted" lang="de"><code>relay.defeated?.(e)</code> sagt es den Freunden, mit denen du zusammen spielst; das <code>?.</code> heißt: nur, wenn es welche gibt.</p>
+      <p class="small muted" lang="en"><code>droppedHere(e)</code>: playing together, only the game of whoever struck the last blow drops the loot. <code>relay.defeated?.(e)</code> tells the friends you play together with; the <code>?.</code> means: only if there are any.</p>
+      <p class="small muted" lang="de"><code>droppedHere(e)</code>: Beim Zusammenspielen lässt nur das Spiel dessen, der zuletzt zugeschlagen hat, die Beute fallen. <code>relay.defeated?.(e)</code> sagt es den Freunden, mit denen du zusammen spielst; das <code>?.</code> heißt: nur, wenn es welche gibt.</p>
       <p lang="en">Read it as: "<b>for</b> each monster <code>e</code> <b>of</b> the <code>list</code>, do what's in the curly brackets". The first time round, <code>e</code> is the first monster, then the second, and so on, until the list is done.</p>
       <p lang="de">Lies es so: "<b>Für</b> (for) jedes Monster <code>e</code> <b>aus</b> (of) der <code>list</code>e, mach, was in den geschweiften Klammern steht." Beim ersten Durchlauf ist <code>e</code> das erste Monster, dann das zweite, und so weiter, bis die Liste fertig ist.</p>
       <p class="small muted" lang="en"><code>xp += reward.xp</code> is short for <code>xp = xp + reward.xp</code>: add to what's there. <code>killed++</code> adds one.</p>

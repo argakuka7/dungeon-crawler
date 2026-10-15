@@ -31,7 +31,7 @@ import { drawMinimap } from './minimap.js';
 import { refreshOpenFaces } from './flow.js';
 import { sfx } from '../audio/sfx.js';
 import { party, nearestTo } from './party.js';
-import { relay } from '../net/online.js';
+import { relay, online } from '../net/online.js';
 import { groundAt } from '../physics/collide.js';
 import { walkable } from '../physics/enemynav.js';
 
@@ -77,15 +77,17 @@ export function resetEnemies() {
   coordinateDefence(state.map, state.run, allEnemies(), player);
 }
 // Every enemy that died since the last look: its XP, and its loot dropped. Playing together,
-// every player there gets it, whoever struck the blow: each game looks at its own enemies (or
-// at the ones it is shown) and rolls its own loot. true: a guardian's gate opened.
+// every player there gets the XP, whoever struck the blow: each game looks at its own enemies
+// (or at the ones it is shown). The loot is shared: only the killer's game drops it
+// (droppedHere). true: a guardian's gate opened.
 // learn: architecture.html#swing-journey, code.html#loops (see learn/README.md)
 function awardKills(list) {
   let xp = 0, levels = 0, killed = 0, unlocked = false;
   for (const e of list) {
     const reward = awardKill(player, state.run, e);
     if (reward) {
-      xp += reward.xp; levels += reward.levels; killed++; dropLoot(e, reward.coins);
+      xp += reward.xp; levels += reward.levels; killed++;
+      if (droppedHere(e)) dropLoot(e, reward.coins);
       if (e.guardianGate) unlocked = true;
       relay.defeated?.(e);
     }
@@ -95,7 +97,14 @@ function awardKills(list) {
   if (levels) sfx('levelUp');
   return unlocked;
 }
-// Playing together, the friend defeated enemy `id` somewhere else (net/session.js): it stays
+// Does this game drop e's loot? Its killer's does: whoever hit it last (game/sword.js; null:
+// we did). The game that runs the enemies drops it for a killer who is not here any more.
+function droppedHere(e) {
+  const k = e.lastHit;
+  return k == null || k === online.slot || !mirror && !online.buddies.some(b => b.slot === k && b.here);
+}
+
+// Playing together, another player defeated enemy `id` somewhere else (net/session.js): it stays
 // defeated here too (no reward: that was theirs), and a guardian's gate opens. One that is
 // here with us we see die ourselves.
 // learn: network.html#apart (see learn/README.md)

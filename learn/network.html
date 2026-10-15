@@ -84,8 +84,8 @@
       <a class="portal" href="random.html#try-seeds" lang="de">Seeds, in Zauberzahlen</a>
     </div>
     <div>
-      <p lang="en">What the seed can't know is what you <b>changed</b>: the monsters already beaten, the gates opened, the cubes found. That's the notebook from the memory room, and the host sends that along too.</p>
-      <p lang="de">Was der Seed nicht wissen kann, ist, was ihr <b>verändert</b> habt: die schon besiegten Monster, die geöffneten Tore, die gefundenen Würfel. Das ist das Notizbuch aus dem Gedächtnis-Raum, und das schickt der Gastgeber mit.</p>
+      <p lang="en">What the seed can't know is what you <b>changed</b>: the monsters already beaten, the gates and chests opened, the cubes found, the loot lying around. That's the notebook from the memory room, and the host sends that along too.</p>
+      <p lang="de">Was der Seed nicht wissen kann, ist, was ihr <b>verändert</b> habt: die schon besiegten Monster, die geöffneten Tore und Truhen, die gefundenen Würfel, die herumliegende Beute. Das ist das Notizbuch aus dem Gedächtnis-Raum, und das schickt der Gastgeber mit.</p>
       <p lang="en">Your own character comes with you: your level, your bag, your sword. Only the world is the host's.</p>
       <p lang="de">Deine eigene Figur nimmst du mit: deine Stufe, deine Tasche, dein Schwert. Nur die Welt gehört dem Gastgeber.</p>
       <a class="portal" href="memory.html#notes" lang="en">The notebook</a>
@@ -160,8 +160,8 @@
       <p lang="de">Darum hat jedes Monster <b>einen Chef</b>: von den Spielern in seinem Würfel den mit der <b>kleinsten Nummer</b>. Das ist der Gastgeber, sobald er da ist. Das Spiel des Chefs entscheidet, wohin die Monster gehen und wen sie beißen. Die Spiele der anderen <b>zeigen</b> sie nur, so wie der Chef es ihnen sagt.</p>
       <p lang="en">Monsters go after whoever is nearest, and switch only when another one is clearly nearer. Whoever hits a monster becomes its target.</p>
       <p lang="de">Monster gehen auf den los, der am nächsten ist, und wechseln erst, wenn ein anderer deutlich näher ist. Wer ein Monster trifft, wird sein Ziel.</p>
-      <p lang="en">A kill gives <b>everyone</b> there the experience. The loot is rolled on each computer for its own player, so nobody steals another's sword.</p>
-      <p lang="de">Ein besiegtes Monster gibt <b>allen</b>, die dabei sind, die Erfahrung. Die Beute wird auf jedem Computer für den eigenen Spieler ausgewürfelt, so klaut keiner einem anderen das Schwert.</p>
+      <p lang="en">A kill gives <b>everyone</b> there the experience. The loot is <b>shared</b>: one sword on the floor, for whoever gets there first.</p>
+      <p lang="de">Ein besiegtes Monster gibt <b>allen</b>, die dabei sind, die Erfahrung. Die Beute wird <b>geteilt</b>: ein Schwert auf dem Boden, für den, der zuerst da ist.</p>
     </div>
     <div>
       <p lang="en">Follow Ben's sword hit on Anna's spider:</p>
@@ -233,6 +233,37 @@
       <p lang="de">Deinen eigenen Helden muss das Spiel gar nicht raten: Jeder Computer bewegt seinen eigenen Spieler selbst, darum ruckeln Laufen und Springen nie.</p>
       <p lang="en">Big online games do the same, just more of it. It's always a trade: what may each computer decide alone, so it feels quick, and what must one boss decide, so the story stays one?</p>
       <p lang="de">Große Online-Spiele machen dasselbe, nur mehr davon. Es ist immer ein Abwägen: Was darf jeder Computer allein entscheiden, damit es sich schnell anfühlt, und was muss ein Chef entscheiden, damit die Geschichte eine bleibt?</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="loot" data-lv="2" data-src="src/game/loot.js#acceptDrop,takenBy src/net/session.js#lootReceive">
+  <h2 lang="en">One sword, first come</h2>
+  <h2 lang="de">Ein Schwert: Wer zuerst kommt</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">The loot is shared: if it's on the floor for you, it's on the floor for everyone, and once someone picks it up, it's gone for all. So one computer must decide who got it: the <b>host</b>.</p>
+      <p lang="de">Die Beute wird geteilt: Liegt sie für dich auf dem Boden, liegt sie für alle da, und hebt sie jemand auf, ist sie für alle weg. Also muss ein Computer entscheiden, wer sie bekommen hat: der <b>Gastgeber</b>.</p>
+      <p lang="en">But again, waiting is no fun. Here a trick from the Magic Numbers room helps: loot comes from a seed. The same monster always drops the same sword. So whoever struck the last blow doesn't wait: their game rolls the drop and shows it at once, and tells the host (<code>drop</code>).</p>
+      <p lang="de">Aber auch hier macht Warten keinen Spaß. Da hilft ein Trick aus dem Zauberzahlen-Raum: Beute kommt aus einem Seed. Dasselbe Monster lässt immer dasselbe Schwert fallen. Darum wartet der, der zuletzt zugeschlagen hat, nicht: Sein Spiel würfelt die Beute aus, zeigt sie sofort und sagt es dem Gastgeber (<code>drop</code>).</p>
+      <p lang="en">The host keeps the first drop of each monster and tells everyone (<code>loot</code>). If two guessed at once, the second one's drop is swapped for the first one's.</p>
+      <p lang="de">Der Gastgeber behält den ersten Drop jedes Monsters und sagt es allen (<code>loot</code>). Haben zwei gleichzeitig geraten, wird der Drop des zweiten gegen den des ersten getauscht.</p>
+    </div>
+    <div>
+      <p lang="en">Picking up works the same way:</p>
+      <p lang="de">Aufheben geht genauso:</p>
+      <ol class="steps small">
+        <li lang="en">Ben runs over a coin. It flies to him at once, and his game asks the host: <code>take</code>.</li>
+        <li lang="de">Ben läuft über eine Münze. Sie fliegt sofort zu ihm, und sein Spiel fragt den Gastgeber: <code>take</code>.</li>
+        <li lang="en">Nobody had it yet, so the host says to everyone: <code>took</code>, Ben has it.</li>
+        <li lang="de">Niemand hatte sie bisher, also sagt der Gastgeber allen: <code>took</code>, Ben hat sie.</li>
+        <li lang="en">Ben's game puts it in his bag. On the others' screens it flies to Ben.</li>
+        <li lang="de">Bens Spiel legt sie in seine Tasche. Auf den Bildschirmen der anderen fliegt sie zu Ben.</li>
+        <li lang="en">Had Cleo been a moment faster, the host would have said "Cleo", and Ben's coin would have turned round and flown to her.</li>
+        <li lang="de">Wäre Cleo einen Moment schneller gewesen, hätte der Gastgeber "Cleo" gesagt, und Bens Münze wäre umgekehrt und zu ihr geflogen.</li>
+      </ol>
+      <a class="portal" href="random.html#try-seeds" lang="en">Seeds, in Magic Numbers</a>
+      <a class="portal" href="random.html#try-seeds" lang="de">Seeds, in Zauberzahlen</a>
     </div>
   </div>
 </section>

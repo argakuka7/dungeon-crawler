@@ -4,11 +4,26 @@
 // its label) to walk there and pick it up, or use the V panel (game/inventory.js), which also
 // puts things from the bag back on the floor. Pickups stay where they fell (per cube, for the
 // whole run) until collected. They are credited when they reach the player.
-// A pickup: { id, itemId, count, gen?, x, y, z, from, toss, phase, fly, refused, kept? };
-// gen: a generated weapon's own data; kept: put down by the player (a death leaves it).
+//
+// Every drop has a source: an enemy (`e:<id>`), a chest (`c:<site id>`) or something put down
+// from the bag (`b:<player>:<n>`), and each pickup is `<source>#<i>`. A source drops once per
+// run (run.dropped), until a death puts its enemy back (forgetLoot).
+//
+// Playing together the floor loot is shared: one copy of every pickup, for whoever takes it
+// first. Whoever killed the enemy or opened the chest rolls the drop (it leans towards their
+// weapons) and sees it at once; the host decides (net/session.js): the first drop of a source
+// stands, and the others get that one instead of their own. Taking a pickup is a claim: the
+// host's and a lone player's stand at once, a guest's flies in at once but is only credited
+// once the host says it is theirs (or flies on to whoever got it first).
+//
+// A pickup: { id, source, seq, itemId, count, gen?, x, y, z, from, toss, phase, fly, claim,
+// refused, kept? }; gen: a generated weapon's own data; kept: put down by the player or
+// spilled by a chest (a death leaves it); seq: the order they came onto this game's floors;
+// claim: null, 'mine' (it is ours), 'asked' (the host has not answered yet) or 'other' (going
+// to another player); fly: { t, dur, to? (the player number it flies to, not us) }.
 import { player, state, setStatus } from './state.js';
 import { coinDrops, inCollectReach, inMagnetReach, inFloorReach, steppedOn, walkTakes } from '../core/loot.js';
-import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar } from '../core/inventory.js';
+import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar, fits } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { RARITY, rarityOf } from '../core/gear/rarities.js';
 import { enemyDrops } from '../core/gear/drops.js';
@@ -19,20 +34,31 @@ import { inFluid } from '../physics/fluid.js';
 import { drawLoot, lootLanded } from '../render/loot.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
+import { online, relay } from '../net/online.js';
 
 export const TOSS_TIME = 0.55;   // the arc out of the body
 const TAKE_REACH = 0.6;          // a clicked pickup is taken from this close (cells)
-let nextId = 1, collectRequested = false;
+const TO_FRIEND = 0.3;           // s a pickup takes to fly to the friend who got it
+let seq = 1, bagDrops = 0, collectRequested = false;
 let gained = null, quiet = 0;      // pickups credited recently, shown together
 
 export const lootHere = () => state.run.loot.get(state.cubeKey) || [];
+const lootIn = key => { let l = state.run.loot.get(key); if (!l) state.run.loot.set(key, l = []); return l; };
 export function requestCollect() { collectRequested = true; }
-// pickups dropped from now on have ids >= lootMark(); forgetLoot takes them out of a cube again
-// (except what the player put down)
-export const lootMark = () => nextId;
+// pickups dropped from now on have seq >= lootMark(); forgetLoot takes their drops out of a
+// cube again (except what is kept)
+export const lootMark = () => seq;
 export function forgetLoot(key, mark) {
+  const sources = new Set((state.run.loot.get(key) ?? []).filter(p => p.seq >= mark && !p.kept && !p.claim).map(p => p.source));
+  if (!sources.size) return;
+  forgetDrops(key, sources);
+  relay.forget?.(key, [...sources]);
+}
+// the drops of `sources` (a Set) in cube key are undone: they can drop again
+export function forgetDrops(key, sources) {
   const list = state.run.loot.get(key);
-  if (list) state.run.loot.set(key, list.filter(p => p.id < mark || p.fly || p.kept));
+  if (list) state.run.loot.set(key, list.filter(p => !sources.has(p.source) || p.claim));
+  for (const s of sources) state.run.dropped.delete(s);
 }
 
 // a dry landing spot near (x, y, z) on about the same level, between near and far away; the
@@ -46,29 +72,40 @@ function landing(x, y, z, near = 0.3, far = 0.8) {
   return { x, y, z };
 }
 
-function place(item, at, from, extra = {}) {
-  const list = state.run.loot.get(state.cubeKey) || [];
-  state.run.loot.set(state.cubeKey, list);
-  const p = { id: nextId++, itemId: item.itemId, count: item.count ?? 1, ...item.gen ? { gen: item.gen } : {},
-    ...at, from, toss: 0, phase: Math.random() * Math.PI * 2, fly: null, refused: false, ...extra };
+function place(list, item, id, source, at, from, extra = {}) {
+  const p = { id, source, seq: seq++, itemId: item.itemId, count: item.count ?? 1, ...item.gen ? { gen: item.gen } : {},
+    ...at, from, toss: 0, phase: Math.random() * Math.PI * 2, fly: null, claim: null, refused: false, ...extra };
   list.push(p);
   return p;
 }
 
-// what enemy e leaves behind: its coins and its seeded weapon and potion drops (core/gear/drops.js)
-export function dropLoot(e, copper) { spill(e, copper, enemyDrops(e, state.map?.seed ?? 0, favoredKind(player))); }
-// coins and items bursting out of a body (or a chest: `from`) and landing around `at`; extra:
-// what every pickup carries; delay: seconds before the first one comes out (hidden till then)
-export function spill(at, copper, items, extra = {}, from = { x: at.x, y: at.y + 0.4, z: at.z }, delay = 0) {
-  const wait = delay / TOSS_TIME;
-  coinDrops(copper).forEach((d, i) => place(d, landing(at.x, at.y, at.z), from, { toss: -wait - i * 0.06, ...extra }));   // one after another
-  items.forEach((item, i) => place(item, landing(at.x, at.y, at.z, 0.5, 1.1), from, { toss: -wait - 0.15 - i * 0.18, ...extra }));
+// what enemy e leaves behind: its coins and its seeded weapon and potion drops (core/gear/drops.js),
+// leaning towards our weapons (we killed it)
+export function dropLoot(e, copper) {
+  const source = `e:${e.id}`;
+  if (!state.run.dropped.has(source)) spill(source, e, copper, enemyDrops(e, state.map?.seed ?? 0, favoredKind(player)));
+}
+// coins and items of drop `source` bursting out of a body (or a chest: `from`) and landing
+// around `at`; extra: what every pickup carries; delay: seconds before the first one comes out
+// (hidden till then)
+export function spill(source, at, copper, items, extra = {}, from = { x: at.x, y: at.y + 0.4, z: at.z }, delay = 0) {
+  const wait = delay / TOSS_TIME, list = lootIn(state.cubeKey), out = [];
+  const id = () => `${source}#${out.length}`;
+  coinDrops(copper).forEach((d, i) => out.push(place(list, d, id(), source, landing(at.x, at.y, at.z), from, { toss: -wait - i * 0.06, ...extra })));   // one after another
+  items.forEach((item, i) => out.push(place(list, item, id(), source, landing(at.x, at.y, at.z, 0.5, 1.1), from, { toss: -wait - 0.15 - i * 0.18, ...extra })));
+  state.run.dropped.add(source);
+  relay.drop?.(state.cubeKey, source, out);
+  return out;
 }
 
 // put item ({ itemId, count, gen? }) down at the player's feet; it stays there through a death
 export function dropAtFeet(item) {
-  return place(item, landing(player.x, player.y, player.z, 0.35, 0.8), { x: player.x, y: player.y + 0.5, z: player.z },
-    { kept: true, refused: true });   // refused: not straight back in when walking over it
+  const source = `b:${online.slot ?? 0}:${++bagDrops}`;
+  const p = place(lootIn(state.cubeKey), item, `${source}#0`, source, landing(player.x, player.y, player.z, 0.35, 0.8),
+    { x: player.x, y: player.y + 0.5, z: player.z }, { kept: true, refused: true });   // refused: not straight back in when walking over it
+  state.run.dropped.add(source);
+  relay.drop?.(state.cubeKey, source, [p]);
+  return p;
 }
 // a bag item onto the floor (the V panel): false when there is no such item
 export function dropFromBag(instanceId) {
@@ -81,8 +118,15 @@ export function dropFromBag(instanceId) {
   return true;
 }
 
-// start pulling p towards the player: delay before it lifts off, dur of the flight
-function pull(p, delay, dur) { p.fly = { t: -delay, dur }; }
+// Take p: claim it and pull it towards the player (delay before it lifts off, dur of the
+// flight; none: it goes straight into the bag once it is ours, the V panel). Playing together
+// as a guest the host says whether it is ours.
+function claim(p, delay = null, dur = 0) {
+  p.claim = relay.take ? relay.take(state.cubeKey, p) : 'mine';
+  if (delay !== null) p.fly = { t: -delay, dur };
+}
+// would p go into the bag? (asked before claiming: what we claim we can take)
+const room = p => fits(player.inventory, p);
 
 function credit(p) {
   if (p.gen ? !addInstance(player.inventory, p) : !addItem(player.inventory, p.itemId, p.count)) return false;
@@ -99,6 +143,12 @@ function credit(p) {
   quiet = 0;
   return true;
 }
+// ours now, into the bag; no room after all (it filled up meanwhile): down at our feet again
+function receive(p) {
+  if (credit(p)) return;
+  setStatus('Inventory is full');
+  dropAtFeet({ itemId: p.itemId, count: p.count, ...p.gen ? { gen: p.gen } : {} });
+}
 
 function announce(dt) {
   if (!gained || (quiet += dt) < 0.25) return;
@@ -109,27 +159,29 @@ function announce(dt) {
   gained = null;
 }
 
-const available = p => p.toss >= 1 && !p.fly && lootHere().includes(p);
+const available = p => p.toss >= 1 && !p.fly && !p.claim && lootHere().includes(p);
 // the clicked pickup p: the player is at it (game/orders.js); fly it in, or say why not
 export function takePickup(p) {
   if (!available(p)) return false;
-  if (p.gen && !player.inventory.slots.includes(null)) { setStatus('Inventory is full'); return false; }
-  pull(p, 0, 0.22);
+  if (!room(p)) { setStatus('Inventory is full'); return false; }
+  claim(p, 0, 0.22);
   return true;
 }
 export const canReachPickup = p => Math.hypot(p.x - player.x, p.z - player.z) <= TAKE_REACH && Math.abs(p.y - player.y) <= 0.8;
-// straight into the bag (the V panel, game paused): false when there is no room
+// straight into the bag (the V panel): false when there is no room (a guest's waits for the
+// host's word, hidden meanwhile)
 export function takeNow(p) {
   const list = lootHere(), i = list.indexOf(p);
-  if (i < 0 || p.fly) return false;
-  if (!credit(p)) { setStatus('Inventory is full'); return false; }
-  list.splice(i, 1);
+  if (i < 0 || p.fly || p.claim) return false;
+  if (!room(p)) { setStatus('Inventory is full'); return false; }
+  claim(p);
+  if (p.claim === 'mine') { list.splice(list.indexOf(p), 1); receive(p); }
   return true;
 }
 // labelled pickups within C's reach, best first, then nearest: what the V panel lists
 export function floorItems() {
   const d = p => Math.hypot(p.x - player.x, p.z - player.z);
-  return lootHere().filter(p => !p.fly && p.toss >= 0 && inFloorReach(p, player.x, player.y, player.z))
+  return lootHere().filter(p => !p.fly && !p.claim && p.toss >= 0 && inFloorReach(p, player.x, player.y, player.z))
     .sort((a, b) => (b.gen ? rarityOf(b).rank : -1) - (a.gen ? rarityOf(a).rank : -1) || d(a) - d(b));
 }
 
@@ -138,19 +190,17 @@ export function updateLoot(dt, time) {
   collectRequested = false;
   if (!state.transitioning && !player.ragdoll && player.hp > 0 && dt > 0) {
     for (const p of list) {
-      if (p.fly || p.toss < 0 || !walkTakes(p)) continue;   // not out yet
+      if (p.fly || p.claim || p.toss < 0 || !walkTakes(p)) continue;   // not out yet, or going
       const settled = p.toss >= 1;
       // a refused pickup waits until the player has moved out of its reach again
       const near = steppedOn(p, player.x, player.y, player.z) || inMagnetReach(p, player.x, player.y, player.z);
       if (p.refused) { p.refused = near; continue; }
-      if (settled && near) {
-        const d = Math.hypot(p.x - player.x, p.z - player.z);
-        pull(p, 0, 0.16 + d * 0.12);
-      }
-      else if (collect && inCollectReach(p, player.x, player.y, player.z)) {
-        const d = Math.hypot(p.x - player.x, p.z - player.z);
-        pull(p, d * 0.07 + Math.random() * 0.05, 0.28 + d * 0.1);   // the near ones first
-      }
+      const take = settled && near ? 'walk' : collect && inCollectReach(p, player.x, player.y, player.z) ? 'collect' : null;
+      if (!take) continue;
+      if (!room(p)) { p.refused = true; setStatus('Inventory is full'); continue; }
+      const d = Math.hypot(p.x - player.x, p.z - player.z);
+      if (take === 'walk') claim(p, 0, 0.16 + d * 0.12);
+      else claim(p, d * 0.07 + Math.random() * 0.05, 0.28 + d * 0.1);   // the near ones first
     }
   }
   for (let i = list.length - 1; i >= 0; i--) {
@@ -161,9 +211,9 @@ export function updateLoot(dt, time) {
     }
     if (!p.fly) continue;
     p.fly.t += dt;
-    if (p.fly.t < p.fly.dur) continue;
-    if (credit(p)) list.splice(i, 1);
-    else { p.fly = null; p.refused = true; setStatus('Inventory is full'); }
+    if (p.fly.t < p.fly.dur || p.claim === 'asked') continue;   // on the way, or waiting for the host's word
+    list.splice(i, 1);
+    if (p.claim === 'mine') receive(p);
   }
   announce(dt);
   drawLoot(list, state.world, time, dt);
@@ -175,4 +225,87 @@ function landed(p) {
   if (r.rank >= RARITY.rare.rank) sfx('drop', { at: p, pitch: 1 + 0.12 * (r.rank - RARITY.rare.rank), volume: 0.5 + 0.12 * r.rank });
   else sfx('clink', { at: p, volume: 0.6 });
   lootLanded(p, state.world);
+}
+
+// --- playing together (net/session.js) ---------------------------------------------------------
+
+// a pickup as it goes over the wire, and back
+const r3 = x => Math.round(x * 1000) / 1000;
+export const packPickup = p => ({ id: p.id, itemId: p.itemId, count: p.count, ...p.gen ? { gen: p.gen } : {},
+  x: r3(p.x), y: r3(p.y), z: r3(p.z), from: [r3(p.from.x), r3(p.from.y), r3(p.from.z)], toss: r3(p.toss), ...p.kept ? { kept: true } : {} });
+function unpack(m, source) {
+  const [fx, fy, fz] = m.from;
+  return { id: m.id, source, seq: seq++, itemId: m.itemId, count: m.count, ...m.gen ? { gen: m.gen } : {},
+    x: m.x, y: m.y, z: m.z, from: { x: fx, y: fy, z: fz }, toss: m.toss, phase: Math.random() * Math.PI * 2,
+    fly: null, claim: null, refused: false, ...m.kept ? { kept: true } : {} };
+}
+// the pickups of `source` in cube key (as they lie, not the ones going to someone)
+export const dropOf = (key, source) => (state.run.loot.get(key) ?? []).filter(p => p.source === source && !p.claim);
+
+// What the host says source dropped in cube key: `list` (packed pickups; null: it did not drop
+// after all). What we have of it already (we dropped it ourselves) stays as it is where it
+// matches; the rest goes or comes. true: something changed.
+// learn: network.html#loot (see learn/README.md)
+export function acceptDrop(key, source, list) {
+  const here = lootIn(key), mine = here.filter(p => p.source === source);
+  if (!list) {   // our guess was wrong: it is not dead there
+    state.run.loot.set(key, here.filter(p => p.source !== source || p.claim === 'mine'));
+    state.run.dropped.delete(source);
+    return mine.length > 0;
+  }
+  state.run.dropped.add(source);
+  const same = (p, m) => p.itemId === m.itemId && p.count === m.count && JSON.stringify(p.gen ?? null) === JSON.stringify(m.gen ?? null);
+  const keep = new Set();
+  for (const m of list) {
+    const p = mine.find(q => q.id === m.id);
+    if (p && same(p, m)) { keep.add(p); continue; }
+    const q = unpack(m, source);
+    if (p) { q.fly = p.fly; q.claim = p.claim; }   // ours went another way: what we reached for is this
+    here.push(q); keep.add(q);
+  }
+  // ours that the host does not have: someone else's drop of it stood (or it was taken already)
+  const out = mine.filter(p => !keep.has(p) && p.claim !== 'mine');
+  if (out.length) state.run.loot.set(key, lootIn(key).filter(p => !out.includes(p)));
+  return out.length > 0 || keep.size > mine.length;
+}
+
+// Another player got pickup `id` in cube key (the host says so; `mine`: no, we did). Ours goes
+// into the bag; another's flies to them if they are here (to: their number), else goes.
+// learn: network.html#loot (see learn/README.md)
+export function takenBy(key, id, mine, to = null) {
+  const list = state.run.loot.get(key) ?? [], p = list.find(q => q.id === id);
+  if (!p) return;
+  if (mine) {
+    if (p.claim === 'mine') return;
+    p.claim = 'mine';
+    if (!p.fly) { list.splice(list.indexOf(p), 1); receive(p); }   // the V panel: straight into the bag
+    return;
+  }
+  if (p.claim === 'mine') return;   // (never: the host does not give away what it gave us)
+  if (key === state.cubeKey && to !== null) { p.claim = 'other'; p.fly = { t: Math.min(p.fly?.t ?? 0, 0), dur: TO_FRIEND, to }; }
+  else list.splice(list.indexOf(p), 1);
+}
+// the host: may another player have pickup `id` in cube key? It may when nobody has claimed
+// it yet (then it flies to them, if they are here: to, their number)
+export function grant(key, id, to = null) {
+  const list = state.run.loot.get(key) ?? [], p = list.find(q => q.id === id);
+  if (!p || p.claim) return false;
+  takenBy(key, id, false, to);
+  return true;
+}
+// the host's floor loot, for a guest who comes ([[cube, packed pickups]])
+export const allLoot = () => [...state.run.loot].map(([k, list]) => [k, list.filter(p => !p.claim).map(p => ({ ...packPickup(p), source: p.source }))])
+  .filter(([, list]) => list.length);
+// a guest coming into the host's world: its floor loot instead of ours
+export function takeLoot(cubes) {
+  state.run.loot.clear();
+  for (const [k, list] of cubes) state.run.loot.set(k, list.map(m => unpack(m, m.source)));
+}
+// alone again (net/session.js): what we reached for and the host did not answer is ours
+export function settleClaims() {
+  for (const list of state.run.loot.values()) for (const p of [...list]) {
+    if (p.claim !== 'asked') continue;
+    p.claim = 'mine';
+    if (!p.fly) { list.splice(list.indexOf(p), 1); receive(p); }
+  }
 }
