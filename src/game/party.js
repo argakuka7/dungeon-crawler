@@ -18,6 +18,7 @@ export const reach = (b, x, y, z) => Math.hypot(b.x - x, b.z - z) + Math.abs(b.y
 // other is not clearly nearer (SWITCH cells), so two players side by side do not make it
 // dither; it never turns away in the middle of an attack.
 export const SWITCH = 2;
+// learn: network.html#boss (see learn/README.md)
 export function chooseTarget(e, bodies = party()) {
   const cur = bodies.includes(e.target) ? e.target : null;
   if (bodies.length === 1) return bodies[0];

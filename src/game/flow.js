@@ -130,6 +130,7 @@ export function discover(c) {
 
 // Playing together, the friend discovered cube k (net/session.js): it is discovered here too,
 // on the minimap and for the faces it opens (once its map is here: it may still have to be made)
+// learn: network.html#apart (see learn/README.md)
 export function shareVisit(k) {
   const cubes = state.cubes;
   cubes.get(k).then(c => {
@@ -143,6 +144,7 @@ export const visitedKeys = () => [...state.cubes.cubes.values()].filter(c => c.v
 
 // Playing together, the friend opened these side faces (a gate they went through, a portal
 // that became an open wall): open here too, so either can walk across where the other did
+// learn: network.html#apart (see learn/README.md)
 export function shareFaces(keys) {
   const before = state.openedFaces.size;
   for (const k of keys) state.openedFaces.add(k);

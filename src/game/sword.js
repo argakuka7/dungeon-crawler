@@ -59,7 +59,7 @@ export function updateSword(dt) {
 // blow off barely moves), with the hit's effects. `before`: its health before the hit. by: who
 // hit it (playing together, the friend's stand-in, game/party.js): it goes after them now. The
 // guest's hits on the host's enemies go to the host too (net/online.js relay).
-// learn: space.html#unit (see learn/README.md)
+// learn: network.html#boss, space.html#unit (see learn/README.md)
 export function hitEnemy(e, hit, before, dx, dz, knockback = 1, by = player) {
   state.enemyGrace = 0;   // you started it
   const l = Math.hypot(dx, dz) || 1;

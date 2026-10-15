@@ -8,7 +8,7 @@ import { html, loop, t as tr } from '../deck.js';
 
 // where each known part sits; new folders get a place in an extra row
 const POS = {
-  main: [365, 40], vendor: [100, 140], game: [365, 140], world: [720, 140],
+  main: [365, 40], net: [620, 40], vendor: [100, 140], game: [365, 140], world: [720, 140],
   physics: [85, 250], render: [250, 250], audio: [480, 250], cubegen: [650, 250], themes: [810, 250],
   core: [450, 360],
 };
@@ -44,9 +44,12 @@ const ABOUT = {
   themes: [tr('the looks', 'das Aussehen'), tr(
     'For every depth: its colours, light and fog, its song, and settings for the cube factory.',
     'Für jede Tiefe: ihre Farben, Licht und Nebel, ihr Lied und Einstellungen für die Würfelfabrik.')],
+  net: [tr('the messenger', 'der Bote'), tr(
+    'Playing together with a friend: finds the friend\'s computer, and sends and reads the little messages that keep both games telling one story.',
+    'Zusammen spielen mit einem Freund: findet den Computer des Freundes und schickt und liest die kleinen Nachrichten, durch die beide Spiele eine Geschichte erzählen.')],
   vendor: [tr('borrowed helpers', 'geliehene Helfer'), tr(
-    'Code other people wrote: three.js draws 3D, Scrimshaw plays the music. The game uses it, but does not change it.',
-    'Code, den andere geschrieben haben: three.js malt 3D, Scrimshaw spielt die Musik. Das Spiel benutzt ihn, ändert ihn aber nicht.')],
+    'Code other people wrote: three.js draws 3D, Scrimshaw plays the music, PeerJS connects two computers. The game uses it, but does not change it.',
+    'Code, den andere geschrieben haben: three.js malt 3D, Scrimshaw spielt die Musik, PeerJS verbindet zwei Computer. Das Spiel benutzt ihn, ändert ihn aber nicht.')],
 };
 const label = p => p === 'main' ? 'main.js' : p === 'vendor' ? 'vendor/' : p + '/';
 

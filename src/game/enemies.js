@@ -97,6 +97,7 @@ function awardKills(list) {
 // Playing together, the friend defeated enemy `id` somewhere else (net/session.js): it stays
 // defeated here too (no reward: that was theirs), and a guardian's gate opens. One that is
 // here with us we see die ourselves.
+// learn: network.html#apart (see learn/README.md)
 export function shareDefeat(id, gate) {
   if (allEnemies().some(e => e.id === id)) return;
   state.run.defeated.add(id);
@@ -110,6 +111,7 @@ export function shareDefeat(id, gate) {
 // (net/session.js): the other game's enemies as they were ({ id, x, y, z, yaw, hp, mode }).
 // Ours (just come into the cube) take their places, health and fight; any the other game
 // does not have any more went there (no reward: their health is not 0).
+// learn: network.html#apart (see learn/README.md)
 export function adoptEnemies(states) {
   const byId = new Map(states.map(s => [s.id, s]));
   for (const e of allEnemies()) {

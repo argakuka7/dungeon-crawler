@@ -31,7 +31,7 @@ import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
 import { capturePose, capturedLook, showPartner, showHelp, removePartner } from '../render/partner.js';
 import { openRoom, joinRoom } from './transport.js';
-import { PROTOCOL, roomCode, cleanName, isMe } from './protocol.js';
+import { PROTOCOL, roomCode, cleanName, isMe, SEND_EVERY, FOES_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES } from './protocol.js';
 import { Timeline } from './sync.js';
 import { online, relay } from './online.js';
 import { Host, Guest, canBeHit } from './foes.js';
@@ -49,15 +49,10 @@ import { CHAR_R, CHAR_H } from '../core/constants.js';
 import { groundAt } from '../physics/collide.js';
 import { downInfo } from '../game/downed.js';
 
-const SEND_EVERY = 50;   // ms between `me` messages
-const PING_EVERY = 1000; // ms between pings (timers still run, slowly, in a background tab)
-const LOST = 12000;      // ms without a word: the other side is gone
-const REJOIN_EVERY = 3000, REJOIN_TRIES = 10;   // the guest tries to get back in after losing the connection
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the partner where going to them puts you
 const SETTLED = 1000;    // ms in a cube: then a friend coming in is the one who arrived (handover)
 const MAP_EVERY = 500;   // ms between redraws of the minimap's dot for the friend
-const FOES_EVERY = 66;   // ms between the host's enemy messages (net/foes.js)
 const AFFLICT_EVERY = 500;   // ms: the guest tells the host about a status at most this often
 
 let room = null, link = null, myName = 'Friend', local = false, rejoin = null;
@@ -146,6 +141,7 @@ export async function joinGame(code, { name, local: viaTabs = false } = {}) {
 }
 
 // the guest lost the connection (not a goodbye): try to get back in a few times
+// learn: network.html#broken (see learn/README.md)
 function retry() {
   if (!rejoin) return;
   if (rejoin.tries++ >= REJOIN_TRIES) { rejoin = null; setPhase('idle', 'The connection was lost'); return; }
@@ -205,6 +201,7 @@ function detach() {
 
 // the other side is gone: it said goodbye (bye), or the connection broke (the guest then tries
 // to get back in)
+// learn: network.html#broken (see learn/README.md)
 function lost(bye = false) {
   const name = online.partner?.name, code = online.code, guest = online.role === 'guest' && !!name;
   detach();
@@ -378,6 +375,7 @@ function updateFriend() {
 }
 
 // the host's progress in its world (welcome): its kills and opened gates are ours too
+// learn: network.html#seed (see learn/README.md)
 function takeRun(run) {
   for (const id of run.defeated) state.run.defeated.add(id);
   for (const k of run.gates) state.run.unlockedGates.add(k);
@@ -398,6 +396,7 @@ function refuse() {
 
 const busy = () => !state.map || state.transitioning || !!state.fallFrom || following;
 
+// learn: network.html#send-code (see learn/README.md)
 function send(now) {
   const pose = capturePose();
   if (!pose || !state.cubes || !state.cubeKey) return;

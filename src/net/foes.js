@@ -14,10 +14,8 @@ import { allEnemies, mirrorEnemies, adoptEnemies } from '../game/enemies.js';
 import { mirrorBeam } from '../game/beams.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { guardianId } from '../core/guardians.js';
-import { Timeline, lerpAngle } from './sync.js';
+import { Timeline, lerpAngle, PREDICT } from './sync.js';
 import { MODES, BURNING, TOXIC, rosterOf, rowOf } from './protocol.js';
-
-const PREDICT = 1500;   // ms the guest's own result stands against older word from the host
 
 // --- host ------------------------------------------------------------------------------------
 
@@ -54,6 +52,7 @@ function replica(entry, profile, i) {
 
 // The guest's side: the host's enemies in this cube, kept where the host says they are, while
 // the host is here (active). ask(): request this cube's roster from the host.
+// learn: network.html#guess (see learn/README.md)
 export class Guest {
   constructor(ask) {
     this.ask = ask;

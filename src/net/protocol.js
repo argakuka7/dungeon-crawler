@@ -38,10 +38,23 @@
 // raised whenever two versions of the game could no longer understand each other
 export const PROTOCOL = 5;
 
+// How often (ms) the games talk (net/session.js)
+// learn: network.html#messages (see learn/README.md)
+export const SEND_EVERY = 50;     // `me`: where I am and how I stand
+export const FOES_EVERY = 66;     // `foes`: the host's enemies
+// learn: network.html#broken (see learn/README.md)
+export const PING_EVERY = 1000;   // `ping` (timers still run, slowly, in a background tab)
+// learn: network.html#broken (see learn/README.md)
+export const LOST = 12000;        // without a word this long, the other side is gone
+export const REJOIN_EVERY = 3000, REJOIN_TRIES = 10;   // a guest that lost the connection tries to get back in
+
 // Room codes: four letters, without I and O (they look like 1 and 0). Easy to read out loud.
+// learn: network.html#code-code (see learn/README.md)
 export const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+// learn: network.html#code-code (see learn/README.md)
 export const CODE_LENGTH = 4;
 
+// learn: network.html#code-code (see learn/README.md)
 export function roomCode(random = Math.random) {
   let code = '';
   for (let i = 0; i < CODE_LENGTH; i++) code += CODE_LETTERS[Math.floor(random() * CODE_LETTERS.length)];
@@ -56,6 +69,7 @@ export function readCode(text) {
 }
 
 // the name a room goes by on the PeerJS broker (one namespace for everyone using it)
+// learn: network.html#code-code (see learn/README.md)
 export const peerId = code => `cube-crawler-${code}`;
 
 // names are shown over the character: short, plain text
@@ -67,8 +81,10 @@ export const BONES = ['root', 'hips', 'spine', 'head', 'upper_arm.L', 'forearm.L
 
 // A pose: where the figure stands (p, yaw), where its hips are in it (hips) and how every bone
 // is turned (q: BONES.length quaternions as x, y, z, w, times Q). Whole numbers keep it short.
+// learn: network.html#send-code (see learn/README.md)
 export const Q = 10000;
 const r3 = x => Math.round(x * 1000) / 1000;
+// learn: network.html#send-code (see learn/README.md)
 export function packPose(position, yaw, hips, quats) {
   return { p: position.map(r3), yaw: r3(yaw), hips: hips.map(r3), q: quats.map(x => Math.round(x * Q)) };
 }

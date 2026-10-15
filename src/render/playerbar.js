@@ -5,7 +5,7 @@ import { scene, camera } from './scene.js';
 import { character } from './character.js';
 import { makeBar, makeLevelLabel, makeNote } from './bars.js';
 import { online } from '../net/online.js';
-import { REVIVE_TIME, BLEED_OUT } from '../game/downed.js';
+import { REVIVE_TIME, BLEED_OUT } from '../core/downed.js';
 import { player } from '../game/state.js';
 import { xpProgress } from '../core/progression.js';
 import { CHAR_H } from '../core/constants.js';

@@ -3,12 +3,18 @@
 // How far in the past the other player is shown (ms). Their messages come about every 50 ms
 // and not evenly: showing them a little late leaves two messages to blend between, so they
 // move smoothly instead of jumping 20 times a second.
+// learn: network.html#lag (see learn/README.md)
 export const DELAY = 110;
 const KEEP = 2000;   // ms of messages kept
+// ms our own result stands against older word from the other side: the guest's hit shows at
+// once, before the host has heard of it (net/foes.js)
+// learn: network.html#guess (see learn/README.md)
+export const PREDICT = 1500;
 
 // The other player's messages, in the order they were sent. `ts` is the sender's clock; the
 // smallest (arrival - ts) seen recently is the clocks' difference plus the fastest trip over
 // the network, so (now - offset) is the sender's clock as of the newest possible message.
+// learn: network.html#lag #timeline-code (see learn/README.md)
 export class Timeline {
   constructor() { this.list = []; this.offset = null; }
 

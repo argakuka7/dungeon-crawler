@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title data-de="Zusammen spielen · Kinderführer zu Cube Crawler">Playing Together · Kids' Guide to Cube Crawler</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="kids.css">
+<script src="lang.js"></script>
+</head>
+<body data-theme="ruins">
+<main class="deck">
+
+<section class="slide" id="two-games" data-lv="1" data-src="src/net/session.js#header">
+  <h2 lang="en">Two computers, one adventure</h2>
+  <h2 lang="de">Zwei Computer, ein Abenteuer</h2>
+  <div class="cols">
+    <div>
+      <p class="lead" lang="en">Press <kbd>O</kbd> in the game and you can play together with a friend, each on your own computer.</p>
+      <p class="lead" lang="de">Drück im Spiel <kbd>O</kbd>, und du kannst mit einem Freund zusammen spielen, jeder an seinem eigenen Computer.</p>
+      <p lang="en">Here is the surprise: there is no "big game in the middle". <b>Each computer runs the whole game</b>, its own copy. They keep each other up to date by sending little <a class="w" href="words.html#message">messages</a> over the <a class="w" href="words.html#network">network</a>.</p>
+      <p lang="de">Jetzt kommt die Überraschung: Es gibt kein "großes Spiel in der Mitte". <b>Jeder Computer lässt das ganze Spiel laufen</b>, seine eigene Kopie. Sie halten sich gegenseitig auf dem Laufenden, indem sie sich kleine <a class="w" href="words.html#message">Nachrichten</a> über das <a class="w" href="words.html#network">Netzwerk</a> schicken.</p>
+      <p lang="en">Like two friends building the same Lego castle in two houses, on the phone: "I just put a red brick on the tower." The other one puts a red brick on their tower too.</p>
+      <p lang="de">Wie zwei Freunde, die in zwei Häusern dieselbe Lego-Burg bauen und dabei telefonieren: "Ich hab gerade einen roten Stein auf den Turm gesetzt." Der andere setzt auch einen roten Stein auf seinen Turm.</p>
+    </div>
+    <div>
+      <p lang="en">The hard part is not sending messages. It is that messages <b>take time</b>, and that the two copies must never start telling two different stories. This room is about how the game handles both.</p>
+      <p lang="de">Das Schwierige ist nicht, Nachrichten zu schicken. Es ist, dass Nachrichten <b>Zeit brauchen</b>, und dass die beiden Kopien nie anfangen dürfen, zwei verschiedene Geschichten zu erzählen. In diesem Raum geht es darum, wie das Spiel mit beidem umgeht.</p>
+      <p lang="en">One of you is the <a class="w" href="words.html#host">host</a>: it is the host's world you play in. The other one is the <b>guest</b>.</p>
+      <p lang="de">Einer von euch ist der <a class="w" href="words.html#host">Gastgeber</a> (Host): Ihr spielt in seiner Welt. Der andere ist der <b>Gast</b>.</p>
+      <figure><img class="shot" src="img/together.jpg" alt="Two heroes side by side in town, the friend tinted blue with their name over the head" data-de-alt="Zwei Helden nebeneinander in der Stadt, der Freund blau getönt, mit seinem Namen über dem Kopf"><figcaption lang="en">Ben's screen: Anna is the blue one. Her computer told his where she stands and how.</figcaption> <figcaption lang="de">Bens Bildschirm: Anna ist die Blaue. Ihr Computer hat seinem gesagt, wo und wie sie steht.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="finding" data-lv="1" data-src="src/net/transport.js#header">
+  <h2 lang="en">Finding each other: the room code</h2>
+  <h2 lang="de">Sich finden: der Raumcode</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">Every computer on the internet has an address, but at home it hides behind your router, like a flat behind a front door with many bells. Two computers can't simply find each other.</p>
+      <p lang="de">Jeder Computer im Internet hat eine Adresse, aber zu Hause versteckt er sich hinter dem Router, wie eine Wohnung hinter einer Haustür mit vielen Klingeln. Zwei Computer können sich nicht einfach so finden.</p>
+      <p lang="en">So they ask a <b>matchmaker</b> first, a server on the internet (the game uses one called PeerJS). The host tells it: "I am room <b>ABCD</b>". The guest asks: "Where is room ABCD?" The matchmaker introduces them.</p>
+      <p lang="de">Darum fragen sie zuerst einen <b>Vermittler</b>, einen Server im Internet (das Spiel benutzt einen namens PeerJS). Der Gastgeber sagt ihm: "Ich bin Raum <b>ABCD</b>." Der Gast fragt: "Wo ist Raum ABCD?" Der Vermittler stellt sie einander vor.</p>
+    </div>
+    <div>
+      <p lang="en">From then on the two computers talk <b>directly</b> to each other (<a class="w" href="words.html#peer-to-peer">peer to peer</a>), not through the matchmaker. That's faster, and nobody in the middle reads along: the line is encrypted.</p>
+      <p lang="de">Ab dann reden die beiden Computer <b>direkt</b> miteinander (<a class="w" href="words.html#peer-to-peer">Peer-to-Peer</a>), nicht über den Vermittler. Das ist schneller, und niemand in der Mitte liest mit: Die Leitung ist verschlüsselt.</p>
+      <p lang="en">The code has only letters, and never I or O: read out loud on the phone, an I looks like a 1 and an O like a 0.</p>
+      <p lang="de">Der Code hat nur Buchstaben, und nie I oder O: Am Telefon vorgelesen sieht ein I aus wie eine 1 und ein O wie eine 0.</p>
+      <a class="deeper" data-lv="3" href="#code-code" lang="en">How a code is made</a>
+      <a class="deeper" data-lv="3" href="#code-code" lang="de">Wie ein Code entsteht</a>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="code-code" data-lv="3" data-src="src/net/protocol.js#CODE_LETTERS,roomCode,peerId">
+  <h2 lang="en">The real code: a room code</h2>
+  <h2 lang="de">Der echte Code: ein Raumcode</h2>
+  <div class="cols wide-left">
+    <pre data-code="src/net/protocol.js#CODE_LETTERS,roomCode,peerId"></pre>
+    <div>
+      <p lang="en"><code>roomCode</code> picks <b data-val="src/net/protocol.js#CODE_LENGTH">4</b> letters at random from <code>CODE_LETTERS</code>. That makes about 330,000 different codes: plenty, since a room only lives while you play.</p>
+      <p lang="de"><code>roomCode</code> wählt <b data-val="src/net/protocol.js#CODE_LENGTH">4</b> zufällige Buchstaben aus <code>CODE_LETTERS</code>. Das gibt ungefähr 330.000 verschiedene Codes: genug, denn ein Raum lebt nur, solange ihr spielt.</p>
+      <p lang="en"><code>peerId</code> is the name the host gives the matchmaker. Everyone in the world shares the matchmaker, so the game puts its own name in front: <code>cube-crawler-ABCD</code>.</p>
+      <p lang="de"><code>peerId</code> ist der Name, unter dem sich der Gastgeber beim Vermittler meldet. Den Vermittler teilen sich alle auf der Welt, darum setzt das Spiel seinen eigenen Namen davor: <code>cube-crawler-ABCD</code>.</p>
+      <p lang="en">If the code is taken already, the game simply tries another one.</p>
+      <p lang="de">Ist der Code schon vergeben, probiert das Spiel einfach einen anderen.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="seed" data-lv="2" data-src="src/net/session.js#takeRun">
+  <h2 lang="en">Don't send the world, send the seed</h2>
+  <h2 lang="de">Schick nicht die Welt, schick den Seed</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">A whole world is thousands of cubes with millions of triangles. Sending that would take ages.</p>
+      <p lang="de">Eine ganze Welt sind Tausende Würfel mit Millionen Dreiecken. Das zu schicken würde ewig dauern.</p>
+      <p lang="en">But you already know the trick: the same <a class="w" href="words.html#seed">seed</a> always builds the same world. So the host sends <b>one number</b>, and the guest's computer builds the very same world by itself, cube by cube, hill by hill.</p>
+      <p lang="de">Aber du kennst den Trick schon: Derselbe <a class="w" href="words.html#seed">Seed</a> baut immer dieselbe Welt. Also schickt der Gastgeber <b>eine einzige Zahl</b>, und der Computer des Gastes baut ganz von selbst genau dieselbe Welt, Würfel für Würfel, Hügel für Hügel.</p>
+      <a class="portal" href="random.html#try-seeds" lang="en">Seeds, in Magic Numbers</a>
+      <a class="portal" href="random.html#try-seeds" lang="de">Seeds, in Zauberzahlen</a>
+    </div>
+    <div>
+      <p lang="en">What the seed can't know is what you <b>changed</b>: the monsters already beaten, the gates opened, the cubes found. That's the notebook from the memory room, and the host sends that along too.</p>
+      <p lang="de">Was der Seed nicht wissen kann, ist, was ihr <b>verändert</b> habt: die schon besiegten Monster, die geöffneten Tore, die gefundenen Würfel. Das ist das Notizbuch aus dem Gedächtnis-Raum, und das schickt der Gastgeber mit.</p>
+      <p lang="en">Your own character comes with you: your level, your bag, your sword. Only the world is the host's.</p>
+      <p lang="de">Deine eigene Figur nimmst du mit: deine Stufe, deine Tasche, dein Schwert. Nur die Welt gehört dem Gastgeber.</p>
+      <a class="portal" href="memory.html#notes" lang="en">The notebook</a>
+      <a class="portal" href="memory.html#notes" lang="de">Das Notizbuch</a>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="messages" data-lv="2" data-src="src/net/protocol.js#header">
+  <h2 lang="en">Little letters</h2>
+  <h2 lang="de">Kleine Briefe</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">A message is an <a class="w" href="words.html#object">object</a>, turned into text to travel and back into an object on the other side. Each one says what kind it is (<code>t</code>) and what it's about. A few of them:</p>
+      <p lang="de">Eine Nachricht ist ein <a class="w" href="words.html#object">Objekt</a>, das für die Reise in Text verwandelt wird und auf der anderen Seite wieder in ein Objekt. Jede sagt, welche Art sie ist (<code>t</code>) und worum es geht. Ein paar davon:</p>
+      <ul>
+        <li lang="en"><code>me</code>: "Here I am, and this is how I stand." Both send it <b>20 times a second</b> (every <b data-val="src/net/protocol.js#SEND_EVERY">50</b> ms).</li>
+        <li lang="de"><code>me</code>: "Hier bin ich, und so stehe ich." Beide schicken sie <b>20-mal pro Sekunde</b> (alle <b data-val="src/net/protocol.js#SEND_EVERY">50</b> ms).</li>
+        <li lang="en"><code>hit</code>: "I hit spider number 7 for 12."</li>
+        <li lang="de"><code>hit</code>: "Ich habe Spinne Nummer 7 mit 12 getroffen."</li>
+        <li lang="en"><code>hurt</code>: "A spider bit you for 8."</li>
+        <li lang="de"><code>hurt</code>: "Eine Spinne hat dich mit 8 gebissen."</li>
+        <li lang="en"><code>visited</code>: "I found this cube." Now it's on both maps.</li>
+        <li lang="de"><code>visited</code>: "Ich habe diesen Würfel gefunden." Jetzt ist er auf beiden Karten.</li>
+        <li lang="en"><code>bye</code>: "I'm leaving."</li>
+        <li lang="de"><code>bye</code>: "Ich gehe."</li>
+      </ul>
+    </div>
+    <div>
+      <pre data-label="a me message (shortened)">{ t: 'me', cube: '-3,0,-2',
+  body: [8.12, 2, 11.5, 0.4, -2.7],
+  hp: 84, maxHp: 100, level: 3,
+  weapon: 'assets/items/weapon_bow_long.glb',
+  pose: { p: [...], yaw: 1.57, q: [...] } }</pre>
+      <p lang="en">The very first message is a version check. If your friend has an older version of the game, the two copies might not understand each other's letters, so the game says "both reload the page" instead.</p>
+      <p lang="de">Die allererste Nachricht ist ein Versions-Check. Hat dein Freund eine ältere Version des Spiels, verstehen sich die beiden Kopien vielleicht nicht, darum sagt das Spiel stattdessen "beide die Seite neu laden".</p>
+      <a class="deeper" data-lv="3" href="#send-code" lang="en">The real code that sends <code>me</code></a>
+      <a class="deeper" data-lv="3" href="#send-code" lang="de">Der echte Code, der <code>me</code> schickt</a>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="send-code" data-lv="3" data-src="src/net/session.js#send src/net/protocol.js#packPose">
+  <h2 lang="en">The real code: "here I am"</h2>
+  <h2 lang="de">Der echte Code: "hier bin ich"</h2>
+  <div class="cols wide-left">
+    <div>
+      <pre class="wrap" data-code="src/net/session.js#send"></pre>
+      <pre class="wrap" data-code="src/net/protocol.js#packPose"></pre>
+    </div>
+    <div>
+      <p lang="en"><code>capturePose</code> reads how all <b>14 bones</b> of your hero are turned right now. Each turn is 4 numbers (a quaternion), so 56 numbers. The other game puts its copy of your hero in exactly that pose: walking, swinging, falling over, everything.</p>
+      <p lang="de"><code>capturePose</code> liest, wie alle <b>14 Knochen</b> deines Helden gerade gedreht sind. Jede Drehung sind 4 Zahlen (ein Quaternion), also 56 Zahlen. Das andere Spiel bringt seine Kopie deines Helden genau in diese Pose: Gehen, Zuschlagen, Umfallen, alles.</p>
+      <p lang="en"><code>packPose</code> makes the message short: <code>0.70710678</code> times <b data-val="src/net/protocol.js#Q">10000</b> is <code>7071</code>, four digits instead of ten. Nobody can see the difference.</p>
+      <p lang="de"><code>packPose</code> macht die Nachricht kurz: <code>0.70710678</code> mal <b data-val="src/net/protocol.js#Q">10000</b> ist <code>7071</code>, vier Ziffern statt zehn. Den Unterschied sieht niemand.</p>
+      <p lang="en"><code>body</code> is where you really are and how fast you go. That's what the host's monsters chase.</p>
+      <p lang="de"><code>body</code> ist, wo du wirklich bist und wie schnell du läufst. Dem jagen die Monster des Gastgebers hinterher.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="boss" data-lv="2" data-src="src/net/foes.js#header src/game/party.js#chooseTarget src/game/sword.js#hitEnemy">
+  <h2 lang="en">Who is the boss of a monster?</h2>
+  <h2 lang="de">Wer bestimmt über ein Monster?</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">If both computers moved the same spider, each would throw its own dice ("turn left or right?") and soon there would be two spiders, in two different places. Two stories.</p>
+      <p lang="de">Würden beide Computer dieselbe Spinne bewegen, würfelte jeder selbst ("links oder rechts abbiegen?"), und bald gäbe es zwei Spinnen an zwei verschiedenen Orten. Zwei Geschichten.</p>
+      <p lang="en">So every monster has <b>one boss</b>. When you're in the same cube, it's the host: its game decides where the monsters go and whom they bite. The guest's game only <b>shows</b> them, as the host tells it.</p>
+      <p lang="de">Darum hat jedes Monster <b>einen Chef</b>. Seid ihr im selben Würfel, ist das der Gastgeber: Sein Spiel entscheidet, wohin die Monster gehen und wen sie beißen. Das Spiel des Gastes <b>zeigt</b> sie nur, so wie der Gastgeber es ihm sagt.</p>
+      <p lang="en">Monsters go after whichever of you is nearer, and switch only when the other one is clearly nearer. Whoever hits a monster becomes its target.</p>
+      <p lang="de">Monster gehen auf den los, der näher ist, und wechseln erst, wenn der andere deutlich näher ist. Wer ein Monster trifft, wird sein Ziel.</p>
+      <p lang="en">A kill gives <b>both</b> of you the experience. The loot is rolled on each computer for its own player, so nobody steals the other's sword.</p>
+      <p lang="de">Ein besiegtes Monster gibt <b>euch beiden</b> die Erfahrung. Die Beute wird auf jedem Computer für den eigenen Spieler ausgewürfelt, so klaut keiner dem anderen das Schwert.</p>
+    </div>
+    <div>
+      <p lang="en">Follow Ben's sword hit on Anna's spider:</p>
+      <p lang="de">Folge Bens Schwerthieb auf Annas Spinne:</p>
+      <ol class="steps small">
+        <li lang="en">Ben swings. His game sees the blade touch the spider it shows him, and shows the hit right away.</li>
+        <li lang="de">Ben schlägt zu. Sein Spiel sieht, dass die Klinge die Spinne berührt, die es ihm zeigt, und zeigt den Treffer sofort.</li>
+        <li lang="en">It sends <code>hit</code>: "spider 7, 12 damage".</li>
+        <li lang="de">Es schickt <code>hit</code>: "Spinne 7, 12 Schaden".</li>
+        <li lang="en">Anna's game takes the health off the real spider. The spider now goes after Ben.</li>
+        <li lang="de">Annas Spiel zieht der echten Spinne die Gesundheit ab. Die Spinne geht jetzt auf Ben los.</li>
+        <li lang="en">15 times a second Anna's game sends <code>foes</code>: where every monster is, and how much health it has.</li>
+        <li lang="de">15-mal pro Sekunde schickt Annas Spiel <code>foes</code>: wo jedes Monster ist und wie viel Gesundheit es hat.</li>
+        <li lang="en">The spider bites Ben's stand-in on Anna's computer. Her game sends <code>hurt</code>, and Ben's hero tumbles.</li>
+        <li lang="de">Die Spinne beißt Bens Stellvertreter auf Annas Computer. Ihr Spiel schickt <code>hurt</code>, und Bens Held taumelt.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="lag" data-lv="2" data-src="src/net/sync.js#DELAY,Timeline">
+  <h2 lang="en">Try it: messages take time</h2>
+  <h2 lang="de">Probier es: Nachrichten brauchen Zeit</h2>
+  <div class="cols wide-right">
+    <div>
+      <p lang="en">A message needs a few hundredths of a second to arrive, and never exactly the same. That's called <a class="w" href="words.html#lag">lag</a>.</p>
+      <p lang="de">Eine Nachricht braucht ein paar Hundertstelsekunden, bis sie ankommt, und nie genau gleich lang. Das nennt man <a class="w" href="words.html#lag">Lag</a>.</p>
+      <p lang="en">If Ben's game put Anna wherever the newest message says, she would hop 20 times a second, and stand still when a message is late.</p>
+      <p lang="de">Würde Bens Spiel Anna immer dahin setzen, wo die neueste Nachricht sagt, würde sie 20-mal pro Sekunde hüpfen und stehen bleiben, wenn eine Nachricht zu spät kommt.</p>
+      <p lang="en">So the game shows her a little <b>in the past</b>, <b data-val="src/net/sync.js#DELAY">110</b> ms ago. By then it has the messages from just before and just after that moment, and blends between them, like the smoothing in the heartbeat room.</p>
+      <p lang="de">Darum zeigt das Spiel sie ein bisschen <b>in der Vergangenheit</b>, vor <b data-val="src/net/sync.js#DELAY">110</b> ms. Bis dahin hat es die Nachrichten von kurz davor und kurz danach und mischt zwischen ihnen, wie beim Glätten im Herzschlag-Raum.</p>
+      <p lang="en">Make the messages slow and wobbly. When does blue start to stumble too?</p>
+      <p lang="de">Mach die Nachrichten langsam und wackelig. Wann fängt auch Blau an zu stolpern?</p>
+      <a class="portal" href="loop.html#smoothing" lang="en">Smoothing, in The Heartbeat</a>
+      <a class="portal" href="loop.html#smoothing" lang="de">Glätten, im Herzschlag</a>
+    </div>
+    <div class="demo real" data-demo="lag"></div>
+  </div>
+</section>
+
+<section class="slide" id="timeline-code" data-lv="3" data-src="src/net/sync.js#Timeline">
+  <h2 lang="en">The real code: a little in the past</h2>
+  <h2 lang="de">Der echte Code: ein bisschen in der Vergangenheit</h2>
+  <div class="cols wide-left">
+    <pre data-code="src/net/sync.js#Timeline"></pre>
+    <div>
+      <p lang="en">Every message carries the time on the sender's clock (<code>ts</code>). But the two computers' clocks don't agree!</p>
+      <p lang="de">Jede Nachricht trägt die Uhrzeit von der Uhr des Absenders (<code>ts</code>). Aber die Uhren der beiden Computer stimmen nicht überein!</p>
+      <p lang="en">The trick: <code>offset</code> is the smallest "arrival time minus sent time" seen recently. It's the clocks' difference plus the fastest trip. With it, <code>at</code> works out what the sender's clock said <code>DELAY</code> ago.</p>
+      <p lang="de">Der Trick: <code>offset</code> ist das kleinste "Ankunftszeit minus Sendezeit", das zuletzt vorkam. Das ist der Unterschied der Uhren plus die schnellste Reise. Damit rechnet <code>at</code> aus, was die Uhr des Absenders vor <code>DELAY</code> gezeigt hat.</p>
+      <p lang="en">Then it finds the two messages around that moment and says how far between them it is: <code>k</code> from 0 to 1. The painter blends position and bones by <code>k</code>.</p>
+      <p lang="de">Dann sucht es die beiden Nachrichten um diesen Moment und sagt, wie weit dazwischen er liegt: <code>k</code> von 0 bis 1. Der Maler mischt Position und Knochen mit <code>k</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="guess" data-lv="2" data-src="src/net/foes.js#Guest src/net/sync.js#PREDICT">
+  <h2 lang="en">Not waiting for the answer</h2>
+  <h2 lang="de">Nicht auf die Antwort warten</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">When the guest hits a monster, the host decides. But waiting for its answer would feel like hitting through jelly: swing, wait, then the spark.</p>
+      <p lang="de">Wenn der Gast ein Monster trifft, entscheidet der Gastgeber. Aber auf seine Antwort zu warten würde sich anfühlen wie durch Wackelpudding schlagen: zuschlagen, warten, dann der Funke.</p>
+      <p lang="en">So the guest's game <b>guesses</b>: it shows the hit at once, with its own result. For <b data-val="src/net/sync.js#PREDICT">1500</b> ms its own guess counts more than older news from the host, which hasn't heard of the hit yet. After that, the host's word counts again.</p>
+      <p lang="de">Darum <b>rät</b> das Spiel des Gastes: Es zeigt den Treffer sofort, mit seinem eigenen Ergebnis. <b data-val="src/net/sync.js#PREDICT">1500</b> ms lang zählt seine eigene Vermutung mehr als ältere Nachrichten vom Gastgeber, der von dem Treffer noch nichts weiß. Danach zählt wieder das Wort des Gastgebers.</p>
+    </div>
+    <div>
+      <p lang="en">Your own hero isn't guessed at all: each computer moves its own player itself, so running and jumping never lag.</p>
+      <p lang="de">Deinen eigenen Helden muss das Spiel gar nicht raten: Jeder Computer bewegt seinen eigenen Spieler selbst, darum ruckeln Laufen und Springen nie.</p>
+      <p lang="en">Big online games do the same, just more of it. It's always a trade: what may each computer decide alone, so it feels quick, and what must one boss decide, so the story stays one?</p>
+      <p lang="de">Große Online-Spiele machen dasselbe, nur mehr davon. Es ist immer ein Abwägen: Was darf jeder Computer allein entscheiden, damit es sich schnell anfühlt, und was muss ein Chef entscheiden, damit die Geschichte eine bleibt?</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="apart" data-lv="2" data-src="src/game/enemies.js#adoptEnemies,shareDefeat src/game/flow.js#shareVisit,shareFaces">
+  <h2 lang="en">Exploring apart</h2>
+  <h2 lang="de">Getrennt erkunden</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">You don't have to stay together. The blue dot on the map is your friend; <kbd>F</kbd> takes you to them.</p>
+      <p lang="de">Ihr müsst nicht zusammenbleiben. Der blaue Punkt auf der Karte ist dein Freund; <kbd>F</kbd> bringt dich zu ihm.</p>
+      <p lang="en">Alone in a cube, your own game is the boss of its monsters. When the host walks in, the monsters <b>change hands</b>: the guest's game sends them over exactly as they are (where they stand, how hurt they are, whether they're fighting) and the host's game takes them over. When the host leaves, the guest takes them back.</p>
+      <p lang="de">Allein in einem Würfel ist dein eigenes Spiel der Chef seiner Monster. Kommt der Gastgeber herein, <b>wechseln</b> die Monster <b>den Besitzer</b>: Das Spiel des Gastes schickt sie genau so, wie sie sind (wo sie stehen, wie verletzt sie sind, ob sie kämpfen), und das Spiel des Gastgebers übernimmt sie. Geht der Gastgeber, übernimmt der Gast sie wieder.</p>
+    </div>
+    <div>
+      <p lang="en">Some things are shared even apart:</p>
+      <p lang="de">Manches wird auch getrennt geteilt:</p>
+      <ul>
+        <li lang="en">a beaten monster stays beaten for both (but the experience is only the winner's),</li>
+        <li lang="de">ein besiegtes Monster bleibt für beide besiegt (aber die Erfahrung bekommt nur der Sieger),</li>
+        <li lang="en">a guardian's gate opens for both,</li>
+        <li lang="de">das Tor eines Wächters geht für beide auf,</li>
+        <li lang="en">every cube either of you found is on both maps, and every open wall is open for both.</li>
+        <li lang="de">jeder Würfel, den einer von euch gefunden hat, ist auf beiden Karten, und jede offene Wand ist für beide offen.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="help-up" data-lv="2" data-src="src/game/downed.js#goDown,tickDown src/core/downed.js">
+  <h2 lang="en">Help me up!</h2>
+  <h2 lang="de">Hilf mir hoch!</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">Alone, a fatal blow sends you back to the entrance. Together, you stay lying where you fell. The monsters leave you be.</p>
+      <p lang="de">Allein schickt dich ein tödlicher Treffer zurück zum Eingang. Zusammen bleibst du liegen, wo du hingefallen bist. Die Monster lassen dich in Ruhe.</p>
+      <p lang="en">Your friend stands next to you for <b data-val="src/core/downed.js#REVIVE_TIME">2</b> seconds, and you get up again. Nobody comes? After <b data-val="src/core/downed.js#BLEED_OUT">30</b> seconds you're back at the entrance.</p>
+      <p lang="de">Dein Freund stellt sich <b data-val="src/core/downed.js#REVIVE_TIME">2</b> Sekunden neben dich, und du stehst wieder auf. Kommt keiner? Nach <b data-val="src/core/downed.js#BLEED_OUT">30</b> Sekunden bist du wieder am Eingang.</p>
+    </div>
+    <div>
+      <p lang="en">Who decides that you're helped up? <b>You</b>: your game knows where your friend is (from their <code>me</code> messages) and counts. It tells them how far along it is, so their screen can say "Helping Ben up 60%".</p>
+      <p lang="de">Wer entscheidet, dass dir aufgeholfen wird? <b>Du</b>: Dein Spiel weiß aus den <code>me</code>-Nachrichten, wo dein Freund ist, und zählt mit. Es sagt ihm, wie weit es ist, damit auf seinem Bildschirm "Helping Ben up 60%" stehen kann.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="broken" data-lv="2" data-src="src/net/session.js#lost,retry src/net/protocol.js#PING_EVERY,LOST">
+  <h2 lang="en">When the line breaks</h2>
+  <h2 lang="de">Wenn die Leitung reißt</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">Networks break: the WiFi drops, someone closes the laptop. A computer that's gone can't say "I'm gone"!</p>
+      <p lang="de">Netzwerke gehen kaputt: Das WLAN fällt aus, jemand klappt den Laptop zu. Ein Computer, der weg ist, kann nicht sagen "Ich bin weg"!</p>
+      <p lang="en">So both games send a tiny <code>ping</code> every <b data-val="src/net/protocol.js#PING_EVERY">1000</b> ms, even when nothing happens: "still here". No word at all for <b data-val="src/net/protocol.js#LOST">12000</b> ms means: gone.</p>
+      <p lang="de">Darum schicken beide Spiele jede <b data-val="src/net/protocol.js#PING_EVERY">1000</b> ms ein winziges <code>ping</code>, auch wenn nichts passiert: "bin noch da". <b data-val="src/net/protocol.js#LOST">12000</b> ms lang gar kein Wort heißt: weg.</p>
+    </div>
+    <div>
+      <p lang="en">The guest then knocks again, a few times. Each page has its own secret player name (<code>pid</code>), so the host knows: "that's Ben again", and lets him back into the same world, where he was.</p>
+      <p lang="de">Dann klopft der Gast noch ein paarmal an. Jede Seite hat ihren eigenen geheimen Spielernamen (<code>pid</code>), darum weiß der Gastgeber: "Das ist wieder Ben", und lässt ihn zurück in dieselbe Welt, wo er war.</p>
+      <p lang="en">A friend who said <code>bye</code> on purpose doesn't knock again.</p>
+      <p lang="de">Ein Freund, der absichtlich <code>bye</code> gesagt hat, klopft nicht wieder an.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="together" data-lv="1">
+  <h2 lang="en">What to remember</h2>
+  <h2 lang="de">Was du dir merken kannst</h2>
+  <ol class="steps">
+    <li lang="en"><b>Each computer runs the whole game.</b> They keep each other up to date with little messages.</li>
+    <li lang="de"><b>Jeder Computer lässt das ganze Spiel laufen.</b> Sie halten sich mit kleinen Nachrichten auf dem Laufenden.</li>
+    <li lang="en"><b>Send the seed, not the world</b>, and only what changed.</li>
+    <li lang="de"><b>Schick den Seed, nicht die Welt</b>, und nur, was sich geändert hat.</li>
+    <li lang="en"><b>Every monster has one boss</b>, so there is only ever one story.</li>
+    <li lang="de"><b>Jedes Monster hat einen Chef</b>, damit es immer nur eine Geschichte gibt.</li>
+    <li lang="en"><b>Messages take time.</b> Show the friend a little in the past, and guess your own hits.</li>
+    <li lang="de"><b>Nachrichten brauchen Zeit.</b> Zeig den Freund ein bisschen in der Vergangenheit, und rate deine eigenen Treffer.</li>
+  </ol>
+</section>
+
+</main>
+<script type="module" src="deck.js"></script>
+</body>
+</html>
