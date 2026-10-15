@@ -1,7 +1,7 @@
 // Stepping into a portal: through the face for side portals, onto the centre of a well or ring.
 // Vertical portals charge while standing in the circle: 0.75s down, 1.5s up; the town portal
 // (game/townportal.js) for 1s.
-import { N } from '../core/constants.js';
+import { N, DIRS } from '../core/constants.js';
 import { isFaceOpen, approachingFace, faceDistance } from '../core/boundaries.js';
 import { player, state, setStatus } from './state.js';
 import { portalLocked, guardianLockMessage } from '../core/guardians.js';
@@ -21,6 +21,14 @@ function inside(q) {
   const along = q.dir < 2 ? p.z - q.z - 0.5 : p.x - q.x - 0.5;
   const out = [p.x - N, -p.x, p.z - N, -p.z][q.dir];   // distance past the face (negative inside)
   return Math.abs(along) < 1.5 && out > -0.4;
+}
+
+// Arriving somewhere other than through a portal (following a friend, src/net/session.js):
+// a portal or an open face we happen to stand in does not take us on until we step out of it.
+export function lockPortalsHere() {
+  state.portalLock = state.map.portals.find(q => q.kind !== 'spawn' && inside(q))?.id ?? 0;
+  state.boundaryLock = DIRS.findIndex((_, d) => faceDistance(player, d) <= player.r + 0.25);
+  state.portalCharge = null;
 }
 
 // dt: time spent this step (charges vertical portals); charge: carried over from the last

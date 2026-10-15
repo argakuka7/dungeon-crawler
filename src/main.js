@@ -58,6 +58,8 @@ import { updateSounds } from './game/sounds.js';
 import { updateAmbience } from './game/ambience.js';
 import { musicInfo } from './audio/music.js';
 import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
+import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
+import { online } from './net/online.js';
 
 const clock = new THREE.Clock();
 
@@ -99,6 +101,7 @@ function frame() {
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   cullNeighbors(player.x, player.z, !state.transitioning, state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));
   updatePlayerBar();
+  updateOnline();   // playing together: send our pose, follow, show the partner (net/session.js)
   updatePortalBar();
   updateCastBar();
   updateMusic(elapsed);
@@ -118,6 +121,7 @@ window.__game = {
   get projectiles() { return projectiles; }, get beams() { return beams; },
   get enemies() { return allEnemies(); }, updateEnemies,
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go
+  net: { online, hostGame, joinGame, leaveGame, status: sessionStatus },   // playing together (net/session.js)
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,
   devWear: state.dev ? devWear : undefined,   // devWear('wear_wizard_hat'), devWear(null)

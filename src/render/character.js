@@ -29,14 +29,20 @@ export function equipSword(weapon) {
   character.sword = weapon;
   character.held = null;
   if (!weapon) return;
+  character.held = prepareHeld(weapon, mountWeapon(character.bones, weapon));
+}
+
+// put a weapon model in its socket among `bones` (the player's or another figure's), sitting
+// as its extras say; returns its item node
+export function mountWeapon(bones, weapon) {
   const item = itemNode(weapon), d = item?.userData ?? {};
-  character.bones[d.socket ?? 'hand.R'].add(weapon);
+  bones[d.socket ?? 'hand.R'].add(weapon);
   weapon.position.fromArray(d.mount_offset_gltf ?? [0, 0, 0]);   // glTF bone origins are socket heads, not Blender tails
   weapon.scale.setScalar(d.mount_scale ?? 1);
   if (d.mount_quat_gltf) weapon.quaternion.fromArray(d.mount_quat_gltf);
   else weapon.rotation.set(Math.PI / 3, 0, 0);   // +Y blade axis -> 60 degrees from forearm
   weapon.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  character.held = prepareHeld(weapon, item);
+  return item;
 }
 
 export async function prepareSword(url = SWORD_URL) {

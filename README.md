@@ -27,6 +27,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
+  - `src/net/`: playing together (O in the game): a room code, PeerJS between the two browsers,
+    the partner's pose and following each other through portals (`docs/online.md`).
 - `assets/`: exported game data (GLB models, item icons, manifests). The game
   loads assets only from here (and music from `music/`). These files are generated; do not edit them by hand.
 - `music/`: hand-written Scrimshaw scores the game plays (`docs/music.md`). Before writing
@@ -47,6 +49,7 @@ docs that explain how the game works, from the big ideas down to the real code:
   `npm run learn` (`npm test` runs it too): it names the slides to review; then
   `npm run learn -- --stamp`, or `-- --defer` to note them as outdated. See `learn/README.md`.
 - `vendor/three/`: three.js and the addons in use; `vendor/scrimshaw/`: the music score parser and synth;
+  `vendor/peerjs/`: PeerJS for playing together, loaded only when someone hosts or joins;
   `vendor/pi-durable/`: Pi's durable agent harness and model access for the tutor, one bundle built
   by `node tools/vendor-pi-durable.mjs <pi checkout>`.
 

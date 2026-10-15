@@ -43,6 +43,7 @@
       <dt><kbd>N</kbd></dt><dd>new world</dd>
       <dt><kbd>P</kbd></dt><dd>show the generator path</dd>
       <dt><kbd>M</kbd></dt><dd>music on / off</dd>
+      <dt><kbd>O</kbd></dt><dd>play together with a friend</dd>
       <dt><kbd>?</kbd></dt><dd>this help</dd>
     </dl>
     <div class="dev-only" hidden>
@@ -67,6 +68,25 @@
       <div><i style="background:#c9bfae"></i>stairs</div>
       <div><i style="background:#a0703f"></i>bridge / fence</div>
     </div>
+  </section>
+</div>
+<div id="online-overlay" hidden>
+  <section id="online-panel" role="dialog" aria-labelledby="online-title">
+    <header><h1 id="online-title">Play together</h1><button id="online-close" aria-label="Close">O / Esc</button></header>
+    <label class="online-field">Your name <input id="online-name" type="text" maxlength="16" placeholder="Friend" autocomplete="off" spellcheck="false"></label>
+    <div id="online-start">
+      <button id="online-host" class="online-big">Host a game</button>
+      <p>or join a friend's game with their code:</p>
+      <div class="online-row"><input id="online-code" type="text" maxlength="40" placeholder="CODE" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="online-join">Join</button></div>
+    </div>
+    <div id="online-room" hidden>
+      <p>Tell your friend this code:</p>
+      <div id="online-room-code"></div>
+      <button id="online-copy">Copy link</button>
+    </div>
+    <p id="online-status" role="status" aria-live="polite"></p>
+    <button id="online-leave" hidden>Leave</button>
+    <p class="online-note">You play in the host's world and keep your own character. Whoever goes through a portal takes the other along. Needs the internet: the two browsers find each other through the PeerJS service and then talk directly.</p>
   </section>
 </div>
 <div id="loot-labels"></div>

@@ -1,0 +1,2 @@
+PeerJS (https://peerjs.com), MIT licensed: peerjs@1.5.5 from npm, dist/peerjs.min.js
+without its source map comment; do not edit. Loaded by src/net/transport.js only when playing online.

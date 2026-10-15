@@ -122,7 +122,7 @@
     "src/game/sword.js#updateSword": "c63bdb32",
     "src/game/update.js#lunge": "9120b7a5",
     "src/game/update.js#updatePlayer": "96b7505d",
-    "src/main.js#frame": "75e7a60d",
+    "src/main.js#frame": "5c85312d",
     "src/physics/enemynav.js#clearLine": "4f7677b3",
     "src/physics/enemynav.js#findPath": "b71d5599",
     "src/physics/move.js#horizontal": "6adc5f0c",

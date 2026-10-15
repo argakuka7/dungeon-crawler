@@ -28,6 +28,7 @@ import { lootMark, forgetLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
+import { online } from '../net/online.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -209,7 +210,9 @@ whenPropsReady(() => {
   cancelSword(); resetEnemies();
 });
 
-export function newWorld(seed = (Math.random() * 1e9) >>> 0) {
+// keepPlayer: the player keeps their character (level, bag, gear); joining a friend's world
+// (src/net/session.js)
+export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = false } = {}) {
   clearNeighbors(); clearNeighborCache();
   state.cubes?.dispose();
   state.cubes = new WorldClient(seed, { arche: state.dev && new URLSearchParams(location.search).get('arche') });
@@ -217,7 +220,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0) {
   state.transitioning = true;
   cancelSword(true);
   clearInput();
-  Object.assign(player, createPlayerStats(state.dev));
+  if (!keepPlayer) Object.assign(player, createPlayerStats(state.dev));
   state.run = createRun(); state.inventoryOpen = false;
   // the villagers are a nicety: a failure to load them (logged) does not hold the game up
   return whenReady(Promise.all([state.cubes.get(state.cubes.start), townAssetsReady, syncEquippedWeapon(),
@@ -227,6 +230,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0) {
 
 export function nextCube() {
   if (state.transitioning) return;
+  if (online.role === 'guest') { setStatus('Only the host starts a new world'); return; }
   state.transitioning = true;
   fadeOut();
   setTimeout(() => newWorld().then(() => setStatus('A new world')), 380);

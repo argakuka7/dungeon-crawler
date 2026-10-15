@@ -25,6 +25,7 @@ import { clearLine } from '../physics/enemynav.js';
 import { allEnemies } from './enemies.js';
 import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
+import { lobbyOpen, setLobbyOpen, toggleLobby } from '../net/lobby.js';
 export { clearInput };
 
 const { keys } = controls;
@@ -33,6 +34,11 @@ const WALK = ['ControlLeft', 'ControlRight'], ATTACK = ['ShiftLeft', 'ShiftRight
 
 addEventListener('keydown', e => {
   if (e.metaKey || e.altKey) return;
+  // typing a name or a code (the play together panel): only Escape is ours
+  if (e.target?.tagName === 'INPUT' && e.target.type === 'text') {
+    if (e.code === 'Escape' && lobbyOpen()) { setLobbyOpen(false); e.preventDefault(); }
+    return;
+  }
   // Ctrl is the walk modifier: track it and the movement keys (and keep Ctrl+S / Ctrl+D /
   // Ctrl+A from saving, bookmarking or selecting), leave every other Ctrl shortcut alone
   if (e.ctrlKey) {
@@ -49,6 +55,8 @@ addEventListener('keydown', e => {
   // by key, not code: ? and / sit on different keys across layouts
   if (e.key === '?' || e.key === '/') { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
   if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }
+  if (e.code === 'Escape' && lobbyOpen()) { setLobbyOpen(false); e.preventDefault(); return; }
+  if (e.code === 'KeyO') { if (!e.repeat) { setHelpOpen(false); toggleLobby(); } e.preventDefault(); return; }
   keys.add(e.code);
   if (e.repeat) return;
   if (e.code === 'Space') { controls.jumpPressed = true; e.preventDefault(); }
