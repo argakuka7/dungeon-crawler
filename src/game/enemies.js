@@ -1,4 +1,6 @@
 // Every species participates in combat, collision, loading and portal travel.
+// Playing together, the host's enemies go after either player (game/party.js); the guest has
+// none of its own, it is shown the host's (mirrorEnemies) and fights those.
 import { spiders, resetSpiders, updateSpiders, detachSpiders } from './spiders.js';
 import { stunders, resetStunders, updateStunders, detachStunders } from './stunders.js';
 import { snakes, resetSnakes, updateSnakes, detachSnakes } from './snakes.js';
@@ -18,7 +20,7 @@ import { updateShots, drawAllShots, clearShots } from './shots.js';
 import { updateThrows, drawThrows, clearThrows } from './throws.js';
 import { updateEnemyStatuses } from './statuses.js';
 import { animateEnemies } from '../render/enemies.js';
-import { player, state, setStatus } from './state.js';
+import { player, state, setStatus, worldPaused } from './state.js';
 import { awardKill } from '../core/progression.js';
 import { dropLoot } from './loot.js';
 import { coordinateDefence } from './defence.js';
@@ -27,6 +29,7 @@ import { setGuardianGate } from '../render/world.js';
 import { drawMinimap } from './minimap.js';
 import { refreshOpenFaces } from './flow.js';
 import { sfx } from '../audio/sfx.js';
+import { party, nearestTo } from './party.js';
 
 let defenceThink = 0, hordeGroups = [];
 
@@ -39,25 +42,41 @@ export const ENTRY_GRACE = 1.2;
 let spawned = [];
 export function addEnemies(list) { spawned.push(...list); }
 
-export const allEnemies = () => [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...spawned];
+// Playing as the guest (net/session.js): { list, apply(dt), reset() }. `list` is the host's
+// enemies in this cube, shown here; apply puts them where the host says they are (a little in
+// the past, like the friend), reset asks the host for this cube's list again.
+let mirror = null;
+export const mirroring = () => !!mirror;
+export function mirrorEnemies(m) {
+  if (m && !mirror) {   // our own go
+    const own = detachEnemies();
+    removeEnemyViews(own);
+    mirror = m;
+    resetEnemies();
+  } else if (!m && mirror) {   // and come back
+    removeEnemyViews(mirror.list);
+    clearProjectiles(); clearBeams();
+    mirror = null;
+    if (state.map) resetEnemies();
+  }
+}
+
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...spawned];
 export function resetEnemies() {
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
+  if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
   resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies();
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
   coordinateDefence(state.map, state.run, allEnemies(), player);
 }
+// Every enemy that died since the last look: its XP, and its loot dropped. Playing together,
+// both players get it, whoever struck the blow: each side looks at its own enemies (the
+// guest at the ones it is shown) and rolls its own loot. true: a guardian's gate opened.
 // learn: architecture.html#swing-journey, code.html#loops (see learn/README.md)
-export function updateEnemies(dt) {
-  if (state.inventoryOpen || state.transitioning) return;
-  state.enemyGrace = Math.max(0, state.enemyGrace - dt);
-  const list = allEnemies();
-  hitWithSword(list); // a connecting sword strike can interrupt an enemy's wind-up
-  updateShots(dt, list);   // and so can the player's arrows, bolts and spells
-  updateThrows(dt, list);  // and flasks; their fire and poison burn on (game/statuses.js)
-  updateEnemyStatuses(list, dt);
+function awardKills(list) {
   let xp = 0, levels = 0, killed = 0, unlocked = false;
   for (const e of list) {
     const reward = awardKill(player, state.run, e);
@@ -69,11 +88,26 @@ export function updateEnemies(dt) {
   if (killed) setStatus(`${unlocked ? 'Guardian defeated · Gate unlocked!' : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
   if (unlocked) { setGuardianGate(state.world, false); refreshOpenFaces(); drawMinimap(); sfx('unlock'); }
   if (levels) sfx('levelUp');
+  return unlocked;
+}
+// learn: architecture.html#swing-journey (see learn/README.md)
+export function updateEnemies(dt) {
+  if (worldPaused() || state.transitioning) return;
+  if (mirror) { followEnemies(dt); return; }
+  state.enemyGrace = Math.max(0, state.enemyGrace - dt);
+  const list = allEnemies();
+  hitWithSword(list); // a connecting sword strike can interrupt an enemy's wind-up
+  updateShots(dt, list);   // and so can the player's arrows, bolts and spells
+  updateThrows(dt, list);  // and flasks; their fire and poison burn on (game/statuses.js)
+  updateEnemyStatuses(list, dt);
+  const unlocked = awardKills(list);
   if ((defenceThink -= dt) <= 0 || unlocked) {
     defenceThink = .25;
-    coordinateDefence(state.map, state.run, list, player);
+    // a guardian's room and a horde mind whichever player is nearer
+    coordinateDefence(state.map, state.run, list, state.map.guardian ? nearestTo(state.map.guardian.x, state.map.guardian.z) : player);
   }
-  if (coordinateHordes(hordeGroups, player, dt)) setStatus('Horde awakened!');
+  const horde = hordeGroups[0], bodies = party();
+  if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) setStatus('Horde awakened!');
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
   updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt);
@@ -82,11 +116,22 @@ export function updateEnemies(dt) {
   updateProjectiles(dt); updateBeams(dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(allEnemies(), dt);
 }
+// the guest's side: the host moves its enemies; we fight them (our hits go to the host, game/
+// sword.js) and get our XP and loot from those that die
+function followEnemies(dt) {
+  mirror.apply(dt);
+  const list = mirror.list;
+  hitWithSword(list); updateShots(dt, list); updateThrows(dt, list);
+  awardKills(list);
+  updateProjectiles(dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  contactEnemies(list, dt, false);
+}
 export function drawEnemies(dt, off) { animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawAllShots(dt, off); drawThrows(dt, off); }
 function detachSpawned() { const list = spawned; spawned = []; return list; }
 // projectiles and shots in flight do not travel along
 export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
+  if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
     ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachSpawned()];
 }

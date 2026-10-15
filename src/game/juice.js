@@ -23,9 +23,10 @@ export function cameraKick(dx, dz, amount, dy = 0) {
 }
 
 // the player's blade hit enemy e for dmg (killed: that was the last of its health);
-// (dx, dz): the direction of the blow; crit: a critical hit (a bigger, golden number)
+// (dx, dz): the direction of the blow; crit: a critical hit (a bigger, golden number); felt:
+// our own hit (a friend's has no hit pause and does not nudge our camera)
 // learn: architecture.html#swing-journey, combat.html#juice, loop.html#pause (see learn/README.md)
-export function enemyHitFx(e, dmg, killed, dx, dz, crit = false) {
+export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   const l = Math.hypot(dx, dz) || 1, nx = dx / l, nz = dz / l;
   const x = e.x - nx * e.profile.radius * 0.5, y = e.y + Math.min(e.profile.bodyHeight * 0.6, 0.7), z = e.z - nz * e.profile.radius * 0.5;
   const [c1, c2] = e.profile.ichor ?? ['#a6d84e', '#5f8f22'], n = killed ? 16 : 9;
@@ -43,8 +44,7 @@ export function enemyHitFx(e, dmg, killed, dx, dz, crit = false) {
   const top = { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z };
   floatText(crit ? dmg + '!' : String(dmg), top, { color: crit ? '#ffd23a' : killed ? '#ffb347' : '#ffffff',
     size: crit ? 0.36 : killed ? 0.3 : 0.24, life: 0.8, rise: 0.9, drift: rand(-0.35, 0.35), pop: crit ? 1.1 : 0.7 });
-  hitstop(killed ? 0.09 : 0.055);
-  cameraKick(nx, nz, killed ? 0.16 : 0.08);
+  if (felt) { hitstop(killed ? 0.09 : 0.055); cameraKick(nx, nz, killed ? 0.16 : 0.08); }
   sfx(killed ? 'kill' : 'hit', { at: e, pitch: e.profile.pitch ?? 1.1 });
 }
 
@@ -61,7 +61,7 @@ export function swingFx(kind = 'sword') {
 // in their colour wherever they end. A crossbow's reload: 'reload'
 export function shotFx(shot, what) {
   const { x, y, z } = shot, spell = shot.kind === 'spell', color = shot.stats.color ?? '#c48cff';
-  if (what === 'launch') { sfx(spell ? 'spell' : shot.kind === 'bolt' ? 'crossbow' : 'twang', { at: player }); return; }
+  if (what === 'launch') { sfx(spell ? 'spell' : shot.kind === 'bolt' ? 'crossbow' : 'twang', { at: shot.ghost ? shot : player }); return; }
   if (what === 'reload') { sfx('reload', { at: player, volume: 0.8 }); return; }
   if (spell) {
     const r = Math.max(0.4, shot.stats.burst ?? 0.5), n = what === 'spent' ? 10 : 22;
@@ -163,7 +163,7 @@ export function statusHurtFx(e, dmg, status, killed) {
 // a blast flask explodes, a fire flask bursts into flames, a toxic one into a green cloud
 export function flaskFx(f, what) {
   const s = f.stats, { x, y, z } = f;
-  if (what === 'launch') { sfx('lob', { at: player }); return; }
+  if (what === 'launch') { sfx('lob', { at: f.ghost ? f : player }); return; }
   const r = s.radius, color = s.color;
   sfx('glass', { at: f, volume: 0.8 });
   emit(glow, x, y + 0.2, z, { life: 0.2, size: r * 1.4, grow: 1.4, color, alpha: 0.85 });

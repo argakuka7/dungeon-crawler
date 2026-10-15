@@ -5,7 +5,7 @@ import { animateWorld } from './render/world.js';
 import { animateCharacter } from './render/animator.js';
 import { generate } from './cubegen/index.js';
 import { groundAt } from './physics/collide.js';
-import { player, state, setStatus } from './game/state.js';
+import { player, state, setStatus, worldPaused } from './game/state.js';
 import { loadCube } from './game/flow.js';
 import { updatePlayer } from './game/update.js';
 import { updateCamera } from './game/camera.js';
@@ -65,7 +65,7 @@ const clock = new THREE.Clock();
 
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
 function frame() {
-  const elapsed = Math.min(clock.getDelta(), 1 / 30), dt = state.inventoryOpen ? 0 : gameTime(elapsed) * timeScale(elapsed);
+  const elapsed = Math.min(clock.getDelta(), 1 / 30), dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
   state.time += dt;
   if (dt > 0 && travelling()) updateTravel(dt);

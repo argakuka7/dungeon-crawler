@@ -4,12 +4,14 @@
 import { damageEnemy } from '../core/combat.js';
 import { STATUSES, afflict, enemyTick, statusOver, immuneTo } from '../core/status.js';
 import { statusHurtFx } from './juice.js';
+import { relay } from '../net/online.js';
 
 // set enemy e burning or poisoned (status: 'burning' | 'toxic') by `spec`; false when it is
-// dead or fire does not hurt it
+// dead or fire does not hurt it. The guest's go to the host too (net/online.js relay).
 export function afflictEnemy(e, status, spec) {
   if (!spec || e.mode === 'dead' || immuneTo(e, status)) return false;
   e[status] = afflict(spec);
+  relay.afflict?.(e, status, spec);
   return true;
 }
 export function updateEnemyStatuses(list, dt) {

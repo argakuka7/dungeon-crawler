@@ -20,15 +20,17 @@ export function touches(pr, p) {
   return Math.hypot(pr.x - p.x, pr.z - p.z, dy) < pr.spec.radius + p.r;
 }
 
-// Advance by dt in small steps. Returns 'hit' (touched the player p; pass null for none),
-// 'blocked' (solid(x, y, z) says it ran into the level), 'spent' (out of range) or null.
+// Advance by dt in small steps. Returns 'hit' (touched the player p, or one of a list of
+// players: pr.victim says which; pass null for none), 'blocked' (solid(x, y, z) says it ran
+// into the level), 'spent' (out of range) or null.
 export function stepProjectile(pr, dt, p, solid) {
-  const n = Math.max(1, Math.ceil(pr.spec.speed * dt / 0.08)), h = dt / n;
+  const n = Math.max(1, Math.ceil(pr.spec.speed * dt / 0.08)), h = dt / n, bodies = Array.isArray(p) ? p : p ? [p] : [];
   pr.t += dt;
   for (let i = 0; i < n; i++) {
     pr.x += pr.vx * h; pr.y += pr.vy * h; pr.z += pr.vz * h;
     pr.travelled += pr.spec.speed * h;
-    if (p && touches(pr, p)) return 'hit';
+    pr.victim = bodies.find(b => touches(pr, b));
+    if (pr.victim) return 'hit';
     if (solid(pr.x, pr.y, pr.z)) return 'blocked';
     if (pr.travelled >= pr.spec.range) return 'spent';
   }

@@ -1,6 +1,6 @@
 // One simulation step for the player.
 import { SIT_IMPACT, RAGDOLL_IMPACT, FALL_DAMAGE } from '../core/constants.js';
-import { player, state } from './state.js';
+import { player, state, worldPaused } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { inputDir, wantsWalk, takeJump, autoAttackHeld, autoAttack } from './input.js';
 import { updateSword, cancelSword } from './sword.js';
@@ -27,7 +27,7 @@ function lunge(s) {
 
 // learn: physics.html#landing (see learn/README.md)
 export function updatePlayer(dt) {
-  if (state.inventoryOpen || state.transitioning) return;
+  if (worldPaused() || state.transitioning) return;
   tickEffects(player, dt, state.time);   // potions at work (core/potions.js)
   // a portal's charge only carries over while checkPortals sees us standing in it
   const charge = state.portalCharge;
@@ -36,7 +36,7 @@ export function updatePlayer(dt) {
   if (player.getUp) tickGetUp(dt);
   // keys win over mouse orders
   const keys = inputDir();
-  if (keys[0] || keys[1]) clearOrder(); else holdPointer(dt);
+  if (keys[0] || keys[1] || state.inventoryOpen) clearOrder(); else holdPointer(dt);   // (the inventory open: playing together)
   // held Shift: swing whenever an enemy is in reach, re-picking the target each time
   if (autoAttackHeld()) autoAttack();
   const order = followOrder(dt);   // may queue an attack on its target

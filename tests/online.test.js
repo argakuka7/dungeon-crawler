@@ -40,7 +40,7 @@ test('a pose packs into whole numbers and checks out', () => {
   assert.ok(isPose(pose));
   assert.ok(!isPose({ ...pose, q: pose.q.slice(1) }));
   assert.ok(!isPose({ ...pose, p: [1, 2, NaN] }));
-  const me = { t: 'me', ts: 1, seed: 7, cube: '0,0,0', trip: 0, pose, hp: 10, maxHp: 10 };
+  const me = { t: 'me', ts: 1, seed: 7, cube: '0,0,0', trip: 0, pose, body: [1, 2, 3, 0, 0], hp: 10, maxHp: 10 };
   assert.ok(isMe(me));
   assert.ok(!isMe({ ...me, cube: 3 }));
   assert.ok(!isMe({ ...me, pose: null }));
@@ -96,4 +96,54 @@ test('the one who travelled last takes the other along', () => {
 test('angles blend the short way round', () => {
   assert.ok(Math.abs(lerpAngle(3, -3, 0.5) - (3 + (2 * Math.PI - 6) / 2)) < 1e-9);
   assert.equal(lerpAngle(0, 1, 0.25), 0.25);
+});
+
+// --- fighting together ---------------------------------------------------------------------
+import './fixtures.js';
+const { chooseTarget, nearestTo, alive, SWITCH } = await import('../src/game/party.js');
+const { stepProjectile } = await import('../src/core/projectiles.js');
+const { rowOf, rosterOf, MODES } = await import('../src/net/protocol.js');
+
+const body = (x, z, more = {}) => ({ x, y: 0, z, r: 0.22, h: 0.85, hp: 10, ragdoll: null, ...more });
+
+test('an enemy goes after the nearer player and does not dither between two', () => {
+  const a = body(0, 0), b = body(5, 0), e = { x: 4, y: 0, z: 0, mode: 'chase' };
+  assert.equal(chooseTarget(e, [a, b]), b);
+  e.target = b; e.x = 2.4;   // a is a little nearer now: it stays with b
+  assert.equal(chooseTarget(e, [a, b]), b);
+  e.x = 2.5 - SWITCH;        // a is clearly nearer
+  assert.equal(chooseTarget(e, [a, b]), a);
+  e.target = b; e.mode = 'attack';   // never in the middle of an attack
+  assert.equal(chooseTarget(e, [a, b]), b);
+  e.mode = 'chase';
+  b.ragdoll = {};            // a fallen player is not gone after
+  e.x = 5;
+  assert.equal(chooseTarget(e, [a, b]), a);
+  a.hp = 0;                  // nobody to hurt: it keeps its target
+  assert.equal(chooseTarget(e, [a, b]), b);
+  assert.equal(chooseTarget(e, [a]), a);
+  assert.ok(!alive(a) && !alive(null));
+  assert.equal(nearestTo(5, 0, [body(0, 0), body(4, 0)]).x, 4);
+});
+
+test('a projectile hits whichever player it touches first', () => {
+  const pr = { spec: { speed: 10, radius: 0.1, range: 20 }, x: 0, y: 0.5, z: 0, vx: 10, vy: 0, vz: 0, travelled: 0, t: 0 };
+  const near = body(3, 0), far = body(6, 0);
+  let end = null;
+  for (let i = 0; !end && i < 100; i++) end = stepProjectile(pr, 1 / 60, [far, near], () => false);
+  assert.equal(end, 'hit');
+  assert.equal(pr.victim, near);
+});
+
+test('the host describes its enemies compactly for the guest', () => {
+  const profile = { type: 'snake', hp: 48, corpseTime: 3 };
+  const e = { id: 'k:snake:1', profile, level: 2, coinDrop: 5, kind: { xp: 10, dropXP: undefined, dropScale: 1 },
+    x: 1.23456, y: 2, z: 3, yaw: 0.5, hp: 40, mode: 'attack', t: 0.333, attacks: 3, attack: 1, speed: 0,
+    burning: {}, toxic: null, beam: { t: 0.2, ex: 4, ey: 1, ez: 5 } };
+  const row = rowOf(e, 7);
+  assert.deepEqual(row, [7, 1.23, 2, 3, 0.5, MODES.indexOf('attack'), 0.33, 3, 1, 0, 40, 1, [0.2, 4, 1, 5]]);
+  const roster = rosterOf([e, { ...e, id: 'k:snake:2' }], 'k', 9);
+  assert.equal(roster.profiles.length, 1);   // a pack shares its profile
+  assert.deepEqual(roster.list.map(x => x.p), [0, 0]);
+  assert.deepEqual(JSON.parse(JSON.stringify(roster)).list[1].id, 'k:snake:2');
 });

@@ -1,8 +1,9 @@
 # Playing together
 
-Status: step 1 of 4 is implemented (walking around together). Two players, co-op.
+Status: steps 1 to 3 of 4 are implemented: walking around together, fighting together and
+sharing the rewards. Two players, co-op.
 
-## How it works now
+## Connecting and staying together
 
 - **O** opens the "Play together" panel (`src/net/lobby.js`). The host gets a four letter
   room code (no I or O) and a link (`?join=CODE`); the guest types the code or opens the link.
@@ -31,20 +32,43 @@ Status: step 1 of 4 is implemented (walking around together). Two players, co-op
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for a new guest.
 
-Each side still has its own enemies, loot and chests in step 1: the friend fights monsters
-you cannot see.
+## Fighting together
 
-## Next steps
+- The enemies live on the host. Its AI goes after either player (`game/party.js`): each
+  enemy picks the nearer one that can be hurt (`chooseTarget`), keeps it unless the other is
+  clearly nearer (2 cells) and never switches in the middle of an attack; whoever hits it
+  becomes its target. Unaware enemies notice either player. A guardian's room and a horde mind
+  the player nearer to them. The guest is a stand-in body on the host (`friend` in
+  `session.js`), updated from its latest `me` (position, floor, down or not).
+- The guest has no enemies of its own while together (`game/enemies.js mirrorEnemies`). The
+  host sends a `roster` of its cube's enemies (ids, levels, profiles: plain data) when they
+  change or the guest asks (`want`, after coming into a cube or dying), and `foes` 15 times a
+  second: one row per enemy (`protocol.js rowOf`). The guest shows them ~110 ms in the past,
+  like the partner (`src/net/foes.js Guest`).
+- The guest fights what it is shown with its own weapons and rules. Its hits and statuses go to
+  the host (`hit`, `afflict`, via `net/online.js relay` from `game/sword.js hitEnemy` and
+  `game/statuses.js`), which applies them (no hit pause or camera kick for a friend's hits).
+  For 1.5 s the guest's own result beats older rows from the host; a death it saw first stays.
+- Blows on the guest (bites, projectiles, beams) are decided on the host against the stand-in
+  and sent over (`hurt`); the guest applies them like any blow (`game/enemycombat.js
+  hitPlayer`). The host's projectiles fly on the guest's side too (`shot`, `landed`), beams
+  shine there from the rows. Both sides see each other's arrows, bolts, spells and flasks fly
+  (`arrow`, `flask`): only the thrower's side hurts anything with them.
+- While together the inventory does not stop the world (`game/state.js worldPaused`): your
+  own input stops, the friend and the enemies go on.
 
-2. **Fighting together.** Enemies only on the host (their ids are seeded and the same on
-   both sides: `core/enemies.js enemyRoll`). Enemy AI targets the nearest living player
-   instead of `player` (`game/enemyai.js`, `enemycombat.js`, `projectiles.js`, `defence.js`,
-   `hordes.js`). The host sends enemy snapshots, the guest shows them and sends its own hits
-   (`hit`); the host sends damage to the guest (`hurt`). Both must wait for the props before
-   spawning (`game/flow.js` re-spawns enemies when they arrive late).
-3. **Rewards.** A kill gives both players XP. Loot is per player: on `kill` each side rolls
-   its own drop locally (`dropLoot`), so floor loot never needs syncing. Gates, defeated
-   guardians, chests and opened faces are the host's.
-4. **Rounding off.** Downed and revive instead of `die()` resetting the cube while the other
-   still plays; the inventory and the Guide's pause stop only your own input, not the world;
-   hit pause only as a look; reconnecting.
+## Rewards
+
+- Every kill gives both players its XP (scaled by their own level) and its coins and drops:
+  each side sees the enemy die and runs its own `awardKills` (`game/enemies.js`). Loot is
+  rolled and dropped on each side for that player alone, so it never goes over the wire and
+  nobody takes the other's. A guardian killed opens its gate on both sides.
+- Chests are each player's own too: both can open each chest once.
+- When the host's cube comes back (the host died, step 4), the guest forgets those kills as
+  well, so both can earn them again.
+
+## Next step
+
+4. **Rounding off.** Downed and revive instead of `die()`: when the host dies its cube resets
+   for both. The Guide's pause still stops only the one side. Reconnecting. Dev-spawned enemies
+   and enemies in other cubes are only the host's.

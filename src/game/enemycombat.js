@@ -1,5 +1,6 @@
 // Bites, rams, slaps, pinches and kicks, thrown blows, burning, chill and poison, and solid
-// bodies. Contact never damages an enemy.
+// bodies. Contact never damages an enemy. A blow lands on the body the enemy goes after
+// (game/party.js): our player, or a friend's stand-in, who gets it sent over (hitBody).
 import { player, state, setStatus } from './state.js';
 import { takeDamage } from '../core/progression.js';
 import { flash } from './hud.js';
@@ -20,7 +21,7 @@ export function poisonPlayer(toxin, reason) {
   player.toxic = afflict(toxin, reason);
   return true;
 }
-export const playerFloor = height => player.grounded && !player.swimming && walkable(player.support, height) ? player.support : null;
+export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
 // a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz)
 export function hitPlayer(blow, fx, fz, nx, nz) {
   const p = player;
@@ -37,11 +38,16 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
 }
+// a blow on body p: our player, or a friend's stand-in (it says how to send it over)
+export function hitBody(p, blow, fx, fz, nx, nz) {
+  if (p.remote) p.hurt(blow, fx, fz, nx, nz);
+  else hitPlayer(blow, fx, fz, nx, nz);
+}
 export function strikePlayer(e) {
-  const p = player, a = attackOf(e), dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
+  const p = e.target?.here ? e.target : player, a = attackOf(e), dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
   if (p.ragdoll || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return;
   if (d > 0.01 && Math.cos(Math.atan2(dx, dz) - e.yaw) < a.arc) return;
-  hitPlayer(blowOf(e.profile, a), e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
+  hitBody(p, blowOf(e.profile, a), e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
 }
 // On fire: the burn ticks away (also while knocked down); water puts it out. A lethal
 // tick knocks the player down for good.
@@ -81,7 +87,9 @@ function pushPlayer(dx, dz) {
   if (dx && canMove(p.x + dx, p.z, 'x', Math.sign(dx))) p.x += dx;
   if (dz && canMove(p.x, p.z + dz, 'z', Math.sign(dz))) p.z += dz;
 }
-export function contactEnemies(list, dt) {
+// moveEnemies: false where the enemies are only shown here (playing as the guest): they push
+// the player but nobody here moves them
+export function contactEnemies(list, dt, moveEnemies = true) {
   const p = player;
   for (const e of list) {
     if (e.mode === 'dead' || p.ragdoll) continue;
@@ -90,8 +98,9 @@ export function contactEnemies(list, dt) {
     const nx = d ? dx / d : 1, nz = d ? dz / d : 0, depth = body - d;
     const share = e.profile.mass / (e.profile.mass + 0.45);
     pushPlayer(nx * depth * share, nz * depth * share);
-    stepEnemy(e, -nx * depth * (1 - share), -nz * depth * (1 - share));
+    if (moveEnemies) stepEnemy(e, -nx * depth * (1 - share), -nz * depth * (1 - share));
   }
+  if (!moveEnemies) return;
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
     const a = list[i], b = list[j];
     if (a.mode === 'dead' || b.mode === 'dead' || Math.abs(a.y - b.y) > 0.6) continue;

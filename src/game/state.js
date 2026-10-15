@@ -3,6 +3,7 @@ import { CHAR_R, CHAR_H } from '../core/constants.js';
 import { swordState } from '../core/combat.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { createPlayerStats, createRun } from '../core/progression.js';
+import { online } from '../net/online.js';
 
 const params = new URLSearchParams(location.search);
 const dev = params.get('dev') === '1';
@@ -46,5 +47,9 @@ export const state = {
 
 // camera orientation and zoom (eased towards the targets)
 export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_ZOOM, zoomTarget: DEFAULT_ZOOM };
+
+// The inventory stops the world, except when playing together: the friend plays on, and so do
+// the enemies (only your own input stops)
+export const worldPaused = () => state.inventoryOpen && !online.partner;
 
 export function setStatus(s) { state.statusMsg = s; state.statusUntil = state.time + 2.2; }

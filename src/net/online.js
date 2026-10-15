@@ -7,3 +7,15 @@ export const online = {
   partner: null,    // the other player once connected: { name }
 };
 export const isGuest = () => online.role === 'guest' && !!online.partner;
+
+// What the game tells the other side as it happens, while playing together (the session sets
+// these; null: nobody to tell). The guest's hits on the host's enemies, and the host's enemy
+// projectiles, so the guest sees them fly:
+//   hit(e, damage, crit, dx, dz, knockback)   the guest hurt enemy e (game/sword.js hitEnemy)
+//   afflict(e, status, spec)                  the guest set it burning or poisoned (game/statuses.js)
+//   launch(pr, e)                             an enemy of the host threw pr (game/projectiles.js)
+//   landed(pr, end)                           ... and it ended: 'hit', 'blocked' or 'spent'
+// and both ways, so the friend sees them fly (only the thrower's side hurts anything with them):
+//   shoot(shot)                               we shot an arrow, a bolt or a spell (game/shots.js)
+//   toss(flask)                               we threw a flask (game/throws.js)
+export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null };

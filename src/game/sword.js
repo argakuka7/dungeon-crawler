@@ -11,6 +11,7 @@ import { enemyHitFx, swingFx, shotFx } from './juice.js';
 import { fireShot } from './shots.js';
 import { throwFlask } from './throws.js';
 import { cooldownLeft } from '../core/potions.js';
+import { relay } from '../net/online.js';
 
 const BUFFER = 0.3;   // s a queued attack waits for the current swing to allow the next
 // the critical-hit roll of each blade hit, in 0..1 (browser checks pin it to keep numbers exact)
@@ -55,14 +56,18 @@ export function updateSword(dt) {
 
 // enemy e took `hit` ({ damage, crit }) from a blow or shot along (dx, dz): it is knocked back
 // along it, heavier bodies less (knockback affixes push harder; a poised enemy that shrugs the
-// blow off barely moves), with the hit's effects. `before`: its health before the hit
+// blow off barely moves), with the hit's effects. `before`: its health before the hit. by: who
+// hit it (playing together, the friend's stand-in, game/party.js): it goes after them now. The
+// guest's hits on the host's enemies go to the host too (net/online.js relay).
 // learn: space.html#unit (see learn/README.md)
-export function hitEnemy(e, hit, before, dx, dz, knockback = 1) {
+export function hitEnemy(e, hit, before, dx, dz, knockback = 1, by = player) {
   state.enemyGrace = 0;   // you started it
   const l = Math.hypot(dx, dz) || 1;
   const push = (e.hp ? e.staggered ? 2.6 : 0.6 : 3.6) * knockback / e.profile.mass;
   e.kbx = dx / l * push; e.kbz = dz / l * push;
-  enemyHitFx(e, before - e.hp, !e.hp, dx, dz, hit.crit);
+  e.target = by;
+  enemyHitFx(e, before - e.hp, !e.hp, dx, dz, hit.crit, by === player);
+  if (by === player) relay.hit?.(e, before - e.hp, hit.crit, dx, dz, knockback);
 }
 
 // learn: architecture.html#swing-journey (see learn/README.md)

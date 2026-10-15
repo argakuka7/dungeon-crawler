@@ -5,6 +5,9 @@
 // keeps closing in while its throw recovers. A pouncing one is carried forward through its leap,
 // one that retreats (the Spicy) rolls back before it fires its beam (game/beams.js).
 //
+// Whom it goes after: the player, or when playing together the nearer of the two players
+// (game/party.js chooseTarget, its `target`); "the player" below is that one.
+//
 // Awareness: an enemy sees the player within its `aggro` ahead of it, half as far behind it,
 // and hears one right next to it. It turns towards a player it half notices, reacts a moment
 // after it notices, and calls the others near it. A hunt follows the player over the floor
@@ -16,6 +19,7 @@
 // its ground (and a `charge`r runs at the player from a few cells away). Throws are aimed a
 // little ahead of a running player.
 import { player, state } from './state.js';
+import { party, chooseTarget, alive as canHurt } from './party.js';
 import { playerFloor, strikePlayer } from './enemycombat.js';
 import { stepEnemy, findPath, pathToward, around, clearLine } from '../physics/enemynav.js';
 import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, isRanged, shotOf } from '../core/enemies.js';
@@ -45,7 +49,9 @@ const call = e => calls.push({ x: e.x, y: e.y, z: e.z, t: 0.3, from: e });
 
 // learn: space.html#angles (see learn/README.md)
 const turn = (e, yaw, dt, rate = 8) => { e.yaw += Math.atan2(Math.sin(yaw - e.yaw), Math.cos(yaw - e.yaw)) * Math.min(1, dt * rate); };
-const toPlayer = e => Math.atan2(player.x - e.x, player.z - e.z);
+// the player e goes after (one that left the cube is not gone after any more)
+const foe = e => e.target && (e.target === player || e.target.here) ? e.target : player;
+const toPlayer = e => { const p = foe(e); return Math.atan2(p.x - e.x, p.z - e.z); };
 const side = () => Math.random() < 0.5 ? -1 : 1;
 function steer(e, x, z, speed, dt) {
   const dx = x - e.x, dz = z - e.z, d = Math.hypot(dx, dz);
@@ -76,23 +82,23 @@ function follow(e, speed, dt, end) {
 }
 
 // a clear line from its eyes to the player's chest, within range and within `rise` above or below
-function sees(e, range, rise = 1.6) {
-  const p = player, d = Math.hypot(p.x - e.x, p.z - e.z);
+function sees(e, range, rise = 1.6, p = foe(e)) {
+  const d = Math.hypot(p.x - e.x, p.z - e.z);
   if (d > range || Math.abs(p.y - e.y) > rise) return false;
   return clearLine(e.x, e.y + Math.min(e.profile.bodyHeight, 1) * 0.8, e.z, p.x, p.y + 0.6, p.z);
 }
 // does an unaware enemy notice the player? Ahead of it within aggro, behind it at half that,
 // or right next to it
 // learn: enemies.html#decide-code (see learn/README.md)
-export function notices(e) {
-  const p = player, d = Math.hypot(p.x - e.x, p.z - e.z);
+export function notices(e, p = foe(e)) {
+  const d = Math.hypot(p.x - e.x, p.z - e.z);
   if (d < HEAR && Math.abs(p.y - e.y) < 1) return true;
-  const ahead = Math.cos(toPlayer(e) - e.yaw) > AHEAD;
-  return sees(e, e.profile.aggro * (ahead ? 1 : BEHIND));
+  const ahead = Math.cos(Math.atan2(p.x - e.x, p.z - e.z) - e.yaw) > AHEAD;
+  return sees(e, e.profile.aggro * (ahead ? 1 : BEHIND), 1.6, p);
 }
 // remember where the player is (and the floor they stand on, if this enemy can walk it)
 function spot(e) {
-  const p = player, f = playerFloor(e.profile.height);
+  const p = foe(e), f = playerFloor(e.profile.height, p);
   e.seen = { x: p.x, y: p.y, z: p.z, f: f ?? e.seen?.f ?? null };
   e.lost = 0;
 }
@@ -117,7 +123,7 @@ function search(e) {
 // close to that as it gets); out of sight for too long, or stuck short of a player it cannot
 // reach, it starts searching.
 function hunt(e) {
-  const p = player, cfg = e.profile, d = Math.hypot(p.x - e.x, p.z - e.z);
+  const p = foe(e), cfg = e.profile, d = Math.hypot(p.x - e.x, p.z - e.z);
   if (sees(e, Math.max(cfg.aggro, cfg.giveUp), 4) || d < HEAR) spot(e);   // a quarry up a stair stays in sight
   else e.lost += THINK;
   if (!e.seen) { search(e); return; }
@@ -134,7 +140,8 @@ function hunt(e) {
 }
 // learn: enemies.html#decide-code #state-machine, paths.html#bfs (see learn/README.md)
 function decide(e) {
-  const p = player, cfg = e.profile, target = playerFloor(cfg.height);
+  e.target = chooseTarget(e);
+  const p = foe(e), cfg = e.profile, target = playerFloor(cfg.height, p);
   const alive = !p.ragdoll && p.hp > 0 && !state.transitioning, dist = Math.hypot(p.x - e.x, p.z - e.z);
   if (e.defence) {
     if (e.mode === 'attack') return;   // never cancel a committed wind-up
@@ -162,21 +169,23 @@ function decide(e) {
   }
   // unaware: idle, walking about, going home or searching
   e.wary = alive && dist < cfg.aggro * WARY && sees(e, cfg.aggro * WARY);
-  if (alive && notices(e)) { notice(e, (e.mode === 'search' ? 0.5 : 1) * REACT * (1 + Math.random()), true); return; }
+  // either player can catch its eye
+  const noticed = !state.transitioning && party().find(b => canHurt(b) && notices(e, b));
+  if (noticed) { e.target = noticed; notice(e, (e.mode === 'search' ? 0.5 : 1) * REACT * (1 + Math.random()), true); return; }
   const heard = alive && calls.find(c => c.from !== e && Math.hypot(c.x - e.x, c.z - e.z) < CALL && Math.abs(c.y - e.y) < 2);
   if (heard) notice(e, REACT * (1.5 + Math.random()), false);
 }
 // a thrown attack (or a beam) needs a free line from its muzzle height to the player's chest
-const clearShot = (e, a) => clearLine(e.x, e.y + shotOf(a).muzzle[1], e.z, player.x, player.y + player.h * 0.55, player.z);
+const clearShot = (e, a, p = foe(e)) => clearLine(e.x, e.y + shotOf(a).muzzle[1], e.z, p.x, p.y + p.h * 0.55, p.z);
 // the attacks e could start now (indices into profile.attacks; [0] for a single attack)
 function ready(e, d) {
-  const p = player, list = e.profile.attacks ?? [e.profile];
+  const p = foe(e), list = e.profile.attacks ?? [e.profile];
   if (p.ragdoll) return [];
   return attacksInReach(e.profile, d, Math.abs(p.y - e.y)).filter(i => !shotOf(list[i]) || clearShot(e, list[i]));
 }
 // where a wind-up turns to: the player, or for a throw a little ahead of where they run
 function aim(e, a) {
-  const p = player;
+  const p = foe(e);
   if (!a.projectile) return toPlayer(e);
   const t = Math.max(0, a.hitAt - e.t) + Math.hypot(p.x - e.x, p.z - e.z) / a.projectile.speed;
   return Math.atan2(p.x + (p.vx || 0) * t * LEAD - e.x, p.z + (p.vz || 0) * t * LEAD - e.z);
@@ -200,7 +209,7 @@ function backOff(e, retreat, t0) {
 //   ranged: backs away inside keep[0], sidesteps while its throw recovers
 //   brute: holds its ground
 function manoeuvre(e, dt, d, strike) {
-  const p = player, cfg = e.profile, speed = cfg.chase;
+  const p = foe(e), cfg = e.profile, speed = cfg.chase;
   // a side it cannot go on to: try the other one; and now and then anyway
   const going = moved => {
     e.blocked = moved < 0.25 ? (e.blocked || 0) + dt : 0;
@@ -233,7 +242,7 @@ function manoeuvre(e, dt, d, strike) {
   return false;
 }
 function fight(e, dt) {
-  const p = player, cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
+  const p = foe(e), cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
   if (!e.path) { e.speed = 0; turn(e, toPlayer(e), dt, 3); return; }
   const facing = Math.cos(Math.atan2(dx, dz) - e.yaw) > 0.7, can = ready(e, d), list = cfg.attacks ?? [cfg];
   // only throws in reach while they recover: one that also bites keeps coming
@@ -258,7 +267,7 @@ function fight(e, dt) {
 }
 // learn: enemies.html#state-machine, paths.html#bfs (see learn/README.md)
 function act(e, dt) {
-  const p = player, cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
+  const p = foe(e), cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
   if (e.mode === 'attack') {
     const a = attackOf(e), t0 = e.t;
     e.t += dt; e.speed = 0;

@@ -207,14 +207,14 @@
   </div>
 </section>
 
-<section class="slide" id="loops" data-lv="2" data-src="src/game/enemies.js#updateEnemies src/core/gear/drops.js#weaponDrops">
+<section class="slide" id="loops" data-lv="2" data-src="src/game/enemies.js#awardKills src/core/gear/drops.js#weaponDrops">
   <h2 lang="en">Doing it again: loops</h2>
   <h2 lang="de">Noch mal und noch mal: Schleifen</h2>
   <div class="cols">
     <div>
       <p lang="en">Every frame, the game has to look at <i>every</i> monster: is it dead? Then you get its experience and its loot. Nobody would write that out for each monster. A <a class="w" href="words.html#loop">loop</a> does it:</p>
       <p lang="de">In jedem Bild muss das Spiel sich <i>jedes</i> Monster anschauen: Ist es tot? Dann bekommst du seine Erfahrung und seine Beute. Niemand würde das für jedes Monster einzeln hinschreiben. Eine <a class="w" href="words.html#loop">Schleife</a> macht das:</p>
-      <pre data-src="src/game/enemies.js#updateEnemies"><code>for (const e of list) {
+      <pre data-src="src/game/enemies.js#awardKills"><code>for (const e of list) {
   const reward = awardKill(player, state.run, e);
   if (reward) {
     xp += reward.xp; levels += reward.levels; killed++; dropLoot(e, reward.coins);

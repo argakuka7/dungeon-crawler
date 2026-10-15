@@ -1,14 +1,16 @@
 // The player's shots in flight in the current cube (core/shots.js): arrows, bolts and spells.
 // They hit the enemies they meet, stop at walls and props or at their range; a spell bursts
-// where it ends. Travel and level resets clear them.
+// where it ends. Travel and level resets clear them. Playing together, the friend's shots fly
+// here too (`ghost`): they stop where they would, but their hits are the friend's to make.
 import { player, state, setStatus } from './state.js';
 import { insideSolid } from '../physics/collide.js';
 import { clearLine } from '../physics/enemynav.js';
 import { weaponHit } from '../core/combat.js';
-import { launchShot, stepShot, burstTargets, aimPoint, BURST_SHARE, MUZZLES } from '../core/shots.js';
+import { launchShot, stepShot, burstTargets, aimPoint, BURST_SHARE, MUZZLES, SHOTS } from '../core/shots.js';
 import { hitEnemy, rolls } from './sword.js';
 import { shotFx } from './juice.js';
 import { drawShots, removeShotViews } from '../render/shots.js';
+import { relay } from '../net/online.js';
 
 export let shots = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -24,7 +26,14 @@ export function fireShot(p, stats, target, yaw) {
   const shot = launchShot(p, stats, target, yaw);
   shots.push(shot);
   shotFx(shot, 'launch');
+  relay.shoot?.(shot);
   return shot;
+}
+// the friend's shot (what relay.shoot sent): { kind, stats, x, y, z, vx, vy, vz, from }
+export function ghostShot(s) {
+  const shot = { ...s, spec: SHOTS[s.kind], travelled: 0, t: 0, hits: new Set(), left: s.stats.pierce ?? 0, ghost: true };
+  shots.push(shot);
+  shotFx(shot, 'launch');
 }
 
 function strike(shot, e, share = 1) {
@@ -40,9 +49,9 @@ export function updateShots(dt, enemies) {
   if (state.inventoryOpen || state.transitioning || !shots.length) return;
   shots = shots.filter(shot => {
     const { hits, end } = stepShot(shot, dt, enemies, solid);
-    for (const e of hits) strike(shot, e);
+    if (!shot.ghost) for (const e of hits) strike(shot, e);
     if (!end) return true;
-    if (shot.stats.burst) for (const e of burstTargets(shot, enemies)) strike(shot, e, BURST_SHARE);
+    if (shot.stats.burst && !shot.ghost) for (const e of burstTargets(shot, enemies)) strike(shot, e, BURST_SHARE);
     shotFx(shot, end);
     removeShotViews([shot]);
     return false;

@@ -2,7 +2,8 @@
 // fire and toxic ones leave behind for a while: a burning patch, a poison cloud. With a flask
 // in hand (core/inventory.js readied) a click throws it at the cursor (game/input.js) and the
 // arc it would fly is shown (render/throws.js). Nothing here hurts the player. Travel and level
-// resets clear them all.
+// resets clear them all. Playing together, the friend's flasks fly and burst here too (`ghost`),
+// but what they do to the enemies is the friend's to do.
 import { player, state, setStatus } from './state.js';
 import { insideSolid, groundAt } from '../physics/collide.js';
 import { clearLine } from '../physics/enemynav.js';
@@ -15,6 +16,7 @@ import { afflictEnemy } from './statuses.js';
 import { flaskFx } from './juice.js';
 import { pickFloor, aimPoint, hoveredEnemy, pointer } from './pointer.js';
 import { syncEquippedWeapon } from './equipment.js';
+import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
 
 export let flasks = [], areas = [];
@@ -46,6 +48,7 @@ export function throwFlask(p, stats, target, yaw) {
   const f = launchFlask(releasePoint(p, yaw), landing(p, target, stats.range, yaw), stats);
   flasks.push(f);
   flaskFx(f, 'launch');
+  relay.toss?.(f);
   if (!readiedItem(inv)) { syncEquippedWeapon(); setStatus('That was the last one'); }
   return f;
 }
@@ -54,7 +57,7 @@ export function throwFlask(p, stats, target, yaw) {
 // burst), and a fire or toxic one leaves its patch or cloud on the floor below
 function burst(f, enemies) {
   const s = f.stats, at = { x: f.x, y: f.y, z: f.z };
-  for (const { e, share } of burstVictims(at, s.radius, enemies)) {
+  for (const { e, share } of f.ghost ? [] : burstVictims(at, s.radius, enemies)) {
     if (!clearLine(at.x, at.y + 0.25, at.z, e.x, e.y + e.profile.bodyHeight * 0.5, e.z)) continue;
     if (s.blast) {
       const before = e.hp, damage = Math.max(1, Math.round(s.blast * share));
@@ -63,11 +66,12 @@ function burst(f, enemies) {
     if (s.burn) afflictEnemy(e, 'burning', s.burn);
     if (s.toxin) afflictEnemy(e, 'toxic', s.toxin);
   }
-  state.enemyGrace = 0;   // you started it
+  if (!f.ghost) state.enemyGrace = 0;   // you started it
   const floor = groundAt(at.x, at.z, at.y + 0.3, 0).h;
   const y = Number.isFinite(floor) && at.y - floor < 2.5 ? floor : null;
-  if (y !== null && s.patch) areas.push({ kind: 'fire', status: 'burning', spec: s.burn, x: at.x, y, z: at.z, r: s.radius * 0.8, t: 0, time: s.patch });
-  if (y !== null && s.cloud) areas.push({ kind: 'toxic', status: 'toxic', spec: s.toxin, x: at.x, y, z: at.z, r: s.radius, t: 0, time: s.cloud });
+  const ghost = !!f.ghost;
+  if (y !== null && s.patch) areas.push({ kind: 'fire', status: 'burning', spec: s.burn, x: at.x, y, z: at.z, r: s.radius * 0.8, t: 0, time: s.patch, ghost });
+  if (y !== null && s.cloud) areas.push({ kind: 'toxic', status: 'toxic', spec: s.toxin, x: at.x, y, z: at.z, r: s.radius, t: 0, time: s.cloud, ghost });
   flaskFx(f, 'burst');
 }
 
@@ -85,13 +89,19 @@ export function updateThrows(dt, enemies) {
   // already running is left to run, core/status.js)
   for (const a of areas) {
     a.t += dt;
-    for (const e of enemies)
+    if (!a.ghost) for (const e of enemies)
       if (!e[a.status] && e.mode !== 'dead' && inArea(a, e.x, e.y, e.z, e.profile.radius)) afflictEnemy(e, a.status, a.spec);
   }
   if (areas.some(a => a.t >= a.time)) {
     removeAreaViews(areas.filter(a => a.t >= a.time));
     areas = areas.filter(a => a.t < a.time);
   }
+}
+// the friend's flask (what relay.toss sent): it flies and bursts here, harmlessly
+export function ghostFlask(f) {
+  const g = { ...f, ghost: true };
+  flasks.push(g);
+  flaskFx(g, 'launch');
 }
 export function drawThrows(dt, off) { drawFlasks(flasks, dt, off); drawAreas(areas, dt, off); }
 export function clearThrows() { removeFlaskViews(flasks); removeAreaViews(areas); flasks = []; areas = []; }
