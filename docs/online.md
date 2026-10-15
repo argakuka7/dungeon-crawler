@@ -28,12 +28,17 @@ being helped up and getting back in. Up to four players, co-op.
   map goes over the wire. Only the host starts new worlds (N); the guests follow.
 - Everyone sends `me` 20 times a second: cube, position, the character's 14 bone rotations
   (`render/partner.js capturePose`), weapon model, worn things, health and level. The
-  others draw them as a figure in the player's colour (`PLAYER_COLORS` in
-  `src/net/online.js`: the same on every screen), ~110 ms in the past, blending the two
+  others draw them as a figure in the player's colour, ~110 ms in the past, blending the two
   messages around that moment (`src/net/sync.js Timeline`). Animation, attacks, ragdolls and
   get-ups all come along with the bones; nothing is animated twice. The host passes `me` on
   at once to players in the same cube and when it changes cubes, else only every 500 ms
   (`FAR_EVERY`): far away it is only needed for the minimap.
+- **Colours:** every player has one colour, by their number (`PLAYER_COLORS` in
+  `src/net/online.js`: host blue, then green, orange, violet), the same on every screen: their
+  hero's clay (`render/partner.js playerTint`; our own hero wears ours too while together,
+  `render/character.js tintCharacter`, and goes back to its own look alone) and their dot on
+  the minimap; over a friend's head their health bar is in their colour too (your own stays
+  red, like playing alone).
 - Each explores where they like. Each friend is a dot in their colour on the minimap (or a
   line under it: another depth, in a house). **F** fades you over to a friend, beside them and
   locked out of any portal you arrive in (`session.js goToFriend`, `game/portals.js

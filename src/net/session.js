@@ -36,7 +36,8 @@ import { setInventoryOpen } from '../game/inventory.js';
 import { lockPortalsHere } from '../game/portals.js';
 import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
-import { capturePose, capturedLook, showPartner, showHelp, removePartner } from '../render/partner.js';
+import { capturePose, capturedLook, showPartner, showHelp, removePartner, playerTint } from '../render/partner.js';
+import { tintCharacter } from '../render/character.js';
 import { openRoom, joinRoom } from './transport.js';
 import { PROTOCOL, MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf, roomCode, cleanName, isMe,
   SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES } from './protocol.js';
@@ -667,6 +668,8 @@ function follow(them, name) {
 export function updateOnline() {
   const now = performance.now();
   if (state.cubeKey !== lastKey) { lastKey = state.cubeKey; cubeSince = now; }
+  // together our hero wears our colour, as the others see it; alone it is as it always was
+  tintCharacter(peers.size && online.slot !== null ? playerTint(online.slot) : null);
   if (!peers.size) return;
   // the host's world: start it once we are not on the way somewhere
   if (pendingSeed !== null && !busy()) {

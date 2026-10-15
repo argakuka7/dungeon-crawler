@@ -19,6 +19,9 @@ import { playerColor } from '../net/online.js';
 
 // a player's colour, lighter (towards white by `k`)
 const shade = (slot, k) => new THREE.Color(playerColor(slot)).lerp(new THREE.Color(0xffffff), k);
+// the clay of player `slot`'s hero: theirs here, ours on our own hero (render/character.js
+// tintCharacter), so everyone looks the same on every screen
+export const playerTint = slot => '#' + shade(slot, 0.45).getHexString();
 const SNAP = 2;   // cells: a jump further than this between two messages is not blended
 
 // our own character as a pose (protocol.js packPose), null before it loaded
@@ -39,7 +42,7 @@ export function capturedLook() {
 const figs = new Map();
 
 function build(slot, name) {
-  const f = createFigure('#' + shade(slot, 0.45).getHexString()), group = f.group;
+  const f = createFigure(playerTint(slot)), group = f.group;
   let mesh = null;
   f.model.traverse(o => { if (o.isSkinnedMesh) mesh = o; });
   // silhouette where terrain hides them, like our own (render/character.js)

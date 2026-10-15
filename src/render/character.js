@@ -73,6 +73,9 @@ function setup(gltf) {
   group.add(model);
   let mesh = null;
   model.traverse(o => { if (o.isSkinnedMesh) mesh = o; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  // the body's meshes, for tintCharacter (not what is worn or held later)
+  const clay = [];
+  model.traverse(o => { if (o.isMesh) clay.push(o); });
 
   // silhouette shown where the character is hidden behind terrain
   const ghost = new THREE.SkinnedMesh(mesh.geometry, new THREE.MeshBasicMaterial({
@@ -151,7 +154,7 @@ function setup(gltf) {
   mixer.update(0);
   const standing = Object.fromEntries(Object.entries(bones).map(([n, b]) => [n, b.quaternion.clone()]));
   Object.assign(character, {
-    ready: true, group, model, mesh, bones, mixer, actions, attacks, holds, standing, light, getUps, footfalls, worn: {},
+    ready: true, group, model, mesh, bones, mixer, actions, attacks, holds, standing, light, getUps, footfalls, worn: {}, clay, tint: null,
     sword: null, held: null, swordWeight: 0, holdWeight: 0, getUpWeight: 0,
     walkStride: stride('Walk'), runStride: stride('Run'), swimStride: stride('Swim'),
     climbStride: extras('Climb').distance * CHAR_SCALE,
@@ -196,6 +199,18 @@ function measureFootfalls(group, bones, actions, mixer) {
   const ys = sample('climb');
   out.climb = { hand: [top(ys.hL), top(ys.hR)], foot: [top(ys.L), top(ys.R)] };
   return out;
+}
+
+// Playing together every player wears their colour, on every screen: our own hero too (the
+// others see it like that, render/partner.js). color: a CSS colour, or null (as exported, alone)
+export function tintCharacter(color = null) {
+  if (!character.ready || character.tint === color) return;
+  character.tint = color;
+  for (const o of character.clay) {
+    // its own copy first: the materials are shared with the rig the other figures are made from
+    if (!o.userData.clay) { o.material = o.material.clone(); o.userData.clay = o.material.color.clone(); }
+    o.material.color.copy(color ? new THREE.Color(color) : o.userData.clay);
+  }
 }
 
 export const characterReady = rigReady.then(setup);

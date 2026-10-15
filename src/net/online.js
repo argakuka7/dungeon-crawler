@@ -12,8 +12,9 @@ export const online = {
 };
 export const together = () => online.peers.size > 0;
 
-// Every player's colour, by player number: the same on every screen (their figure, health bar
-// and minimap dot, render/partner.js, game/minimap.js)
+// Every player's colour, by player number: the same on every screen (their hero, our own too
+// while together, their health bar and minimap dot: render/partner.js, render/character.js
+// tintCharacter, game/minimap.js)
 export const PLAYER_COLORS = ['#6fb4e8', '#7cc96e', '#e8a352', '#bb8ce8'];
 export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];
 
