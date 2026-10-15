@@ -4,12 +4,15 @@
 // to their targets, so the game just says how much of each it wants (game/ambience.js).
 import { onAudioStart } from './context.js';
 
-let ctx = null, bus = null, noiseBuf = null, beds = null, drones = null;
+let ctx = null, bus = null, ambient = null, noiseBuf = null, beds = null, drones = null;
+const AMBIENT = 0.6;   // the beds, drips and pops under the drones
 
 onAudioStart((ac, output) => {
   ctx = ac;
   bus = ctx.createGain(); bus.gain.value = 0.5;
   bus.connect(output);
+  ambient = ctx.createGain(); ambient.gain.value = AMBIENT;
+  ambient.connect(bus);
   noiseBuf = ctx.createBuffer(1, 2 * ctx.sampleRate, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -43,7 +46,7 @@ function bed(build) {
   src.buffer = noiseBuf; src.loop = true;
   src.start(0, Math.random() * 2);
   const g = ctx.createGain(); g.gain.value = 0;
-  chain(build(src), g, bus);
+  chain(build(src), g, ambient);
   return g;
 }
 
@@ -86,7 +89,7 @@ export function drip(level = 1) {
   o.frequency.setValueAtTime(hz, t); o.frequency.exponentialRampToValueAtTime(hz * 0.55, t + 0.05);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12 * level, t + 0.003);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-  o.connect(g).connect(bus); o.start(t); o.stop(t + 0.15);
+  o.connect(g).connect(ambient); o.start(t); o.stop(t + 0.15);
 }
 
 // one bubble bursting on lava
@@ -96,5 +99,5 @@ export function pop(level = 1) {
   o.frequency.setValueAtTime(hz, t); o.frequency.exponentialRampToValueAtTime(hz * 2.5, t + 0.05);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35 * level, t + 0.005);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
-  o.connect(g).connect(bus); o.start(t); o.stop(t + 0.12);
+  o.connect(g).connect(ambient); o.start(t); o.stop(t + 0.12);
 }
