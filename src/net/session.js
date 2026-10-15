@@ -17,7 +17,7 @@
 // (opened gates, loot on the floor, chests) starts fresh, as with any new world. Only the host
 // starts new worlds; the guest comes along.
 import { player, state, setStatus } from '../game/state.js';
-import { newWorld, enterCube, spawnAt } from '../game/flow.js';
+import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
 import { STEP } from '../core/constants.js';
 import { supportedPoint } from '../physics/respawn.js';
 import { blockedAt } from '../physics/collide.js';
@@ -69,6 +69,8 @@ const timeline = new Timeline();
 // under way; pendingSeed: a world the host asked for, started once we are not travelling;
 // announced: the seed the guest was told about (host); mapAt / mapCube: the minimap's friend dot
 let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null, mapAt = 0, mapCube = null;
+// how many open faces the friend knows of (a face once open stays open: more is new)
+let facesSent = 0;
 // the enemies (net/foes.js): host or guest side, while together
 let foes = null, lastFoes = 0;
 // the host's stand-in for the guest, for its enemies to go after (game/party.js)
@@ -193,7 +195,7 @@ function detach() {
   link = null;
   if (foes instanceof Guest) foes.stop(foes.cube === state.cubeKey);   // the host's enemies here are ours now
   foes = null;
-  relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = null;
+  relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
   friend.here = false; setOthers([]);
   clearInterval(ping); ping = null;
   online.partner = null; online.buddy = null;
@@ -230,7 +232,8 @@ function receive(m) {
     online.partner = { name: cleanName(m.name), pid: typeof m.pid === 'string' ? m.pid : null };
     announced = state.cubes?.seed ?? null;
     link.send({ t: 'welcome', v: PROTOCOL, name: myName, seed: announced,
-      defeated: [...state.run.defeated], gates: [...state.run.unlockedGates] });
+      defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces] });
+    facesSent = state.openedFaces.size;
     startHost();
     setPhase('connected', `Playing with ${online.partner.name}`);
     say(`${online.partner.name} joined`);
@@ -242,9 +245,15 @@ function receive(m) {
     online.partner = { name: cleanName(m.name) };
     if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
     // the host's world, and its progress so far: what it defeated stays defeated for us too
-    const run = { defeated: Array.isArray(m.defeated) ? m.defeated : [], gates: Array.isArray(m.gates) ? m.gates : [] };
+    const list = x => Array.isArray(x) ? x.filter(k => typeof k === 'string') : [];
+    const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces) };
     if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
-    else takeRun(run);
+    else {
+      takeRun(run);
+      // (back after a lost connection: what we found meanwhile)
+      link.send({ t: 'visited', keys: visitedKeys() });
+      link.send({ t: 'faces', keys: [...state.openedFaces] });
+    }
     startGuest();
     setPhase('connected', `Playing with ${online.partner.name}`);
     say(`Joined ${online.partner.name}'s world`);
@@ -261,6 +270,7 @@ function receive(m) {
 function shareShots() {
   const r = x => Math.round(x * 1000) / 1000;
   relay.defeated = e => link?.send({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null });
+  relay.visited = key => link?.send({ t: 'visited', keys: [key] });
   relay.shoot = shot => {
     if (!partnerHere()) return;
     const { kind, range, pierce, burst, color } = shot.stats;
@@ -275,6 +285,8 @@ function shareShots() {
 }
 function shotReceive(m) {
   if (m.t === 'defeated' && typeof m.id === 'string') { shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null); return true; }
+  if (m.t === 'visited' && Array.isArray(m.keys)) { for (const k of m.keys) if (typeof k === 'string') shareVisit(k); return true; }
+  if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; return true; }
   if (m.t === 'arrow' && ['arrow', 'bolt', 'spell'].includes(m.kind) && Array.isArray(m.at) && m.at.length === 6 && finite(...m.at)
       && Array.isArray(m.from) && m.from.length === 3 && finite(...m.from) && m.stats && finite(m.stats.range)) {
     if (!partnerHere()) return true;
@@ -367,8 +379,11 @@ function updateFriend() {
 
 // the host's progress in its world (welcome): its kills and opened gates are ours too
 function takeRun(run) {
-  for (const id of run.defeated) if (typeof id === 'string') state.run.defeated.add(id);
-  for (const k of run.gates) if (typeof k === 'string') state.run.unlockedGates.add(k);
+  for (const id of run.defeated) state.run.defeated.add(id);
+  for (const k of run.gates) state.run.unlockedGates.add(k);
+  for (const k of run.visited) shareVisit(k);
+  shareFaces(run.faces);
+  facesSent = state.openedFaces.size;
 }
 
 function refuse() {
@@ -451,6 +466,12 @@ export function updateOnline() {
     link.send({ t: 'world', seed: announced });
   }
   if (state.cubeKey !== lastKey) { lastKey = state.cubeKey; cubeSince = now; }
+  // faces we opened (crossing, discovering, a gate): the friend can walk across there too
+  if (state.openedFaces.size < facesSent) facesSent = state.openedFaces.size;   // a new world
+  if (online.partner && state.openedFaces.size > facesSent) {
+    facesSent = state.openedFaces.size;
+    link.send({ t: 'faces', keys: [...state.openedFaces] });
+  }
   // the friend as of their last word, for the rest of the game (net/online.js buddy)
   online.buddy = online.partner && them && them.seed === state.cubes?.seed ? { cube: them.cube,
     here: them.cube === state.cubeKey && !them.busy && !state.transitioning,

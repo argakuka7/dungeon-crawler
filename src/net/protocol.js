@@ -5,8 +5,11 @@
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
-//   welcome { v, name, seed, defeated, gates }  host -> guest: play in this world (and what
-//                                      was defeated and opened in it so far)
+//   welcome { v, name, seed, defeated, gates, visited, faces }  host -> guest: play in this
+//                                      world (and what was defeated, opened and discovered in
+//                                      it so far)
+//   visited { keys }                   either way: I discovered these cubes (yours too now)
+//   faces   { keys }                   either way: the side faces open for me (open for you too)
 //   world   { seed }                   host -> guest: the host started a new world
 //   me      { ts, seed, cube, busy, pose, body, ground, swim, down, ko, hp, maxHp, level,
 //             weapon, armed, worn }    both ways, about 20 times a second: where I am and how
@@ -33,7 +36,7 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 4;
+export const PROTOCOL = 5;
 
 // Room codes: four letters, without I and O (they look like 1 and 0). Easy to read out loud.
 export const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';

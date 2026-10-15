@@ -28,7 +28,7 @@ import { lootMark, forgetLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
-import { online } from '../net/online.js';
+import { online, relay } from '../net/online.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -124,8 +124,31 @@ function returnFromFall(dead) {
 // two sections elsewhere (the room between them was the last one missing), so all
 // discovered cubes are checked again.
 export function discover(c) {
-  c.visits++;
+  if (!c.visits++) relay.visited?.(c.key);   // playing together: the friend's map shows it too
   return openDiscoveredFaces();
+}
+
+// Playing together, the friend discovered cube k (net/session.js): it is discovered here too,
+// on the minimap and for the faces it opens (once its map is here: it may still have to be made)
+export function shareVisit(k) {
+  const cubes = state.cubes;
+  cubes.get(k).then(c => {
+    if (state.cubes !== cubes || c.visits) return;
+    c.visits = 1;
+    if (openDiscoveredFaces() && state.world) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
+    updateNeighbors(); drawMinimap();
+  }, () => {});
+}
+export const visitedKeys = () => [...state.cubes.cubes.values()].filter(c => c.visits).map(c => c.key);
+
+// Playing together, the friend opened these side faces (a gate they went through, a portal
+// that became an open wall): open here too, so either can walk across where the other did
+export function shareFaces(keys) {
+  const before = state.openedFaces.size;
+  for (const k of keys) state.openedFaces.add(k);
+  if (state.openedFaces.size === before) return;
+  if (state.world) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
+  updateNeighbors(); drawMinimap();
 }
 
 function openDiscoveredFaces() {

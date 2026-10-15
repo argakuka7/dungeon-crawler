@@ -45,6 +45,16 @@ being helped up and getting back in. Two players, co-op.
 - A kill apart tells the other game the enemy is gone (`defeated`), and a guardian's gate opens
   for both; the XP and loot are only the killer's.
 
+## One map for both
+
+- Discovered cubes are shared (`visited`, from `game/flow.js discover`): what either found is
+  on both minimaps and counts for the faces discovery opens (`shareVisit`; a cube the friend
+  found is made here first if it is not yet).
+- Open side faces are shared too (`faces`, `shareFaces`): where one walked across (a gate gone,
+  a portal turned into an open wall), the other can as well.
+- Joining (and getting back in) both send what they have: the host in `welcome`, a guest that
+  keeps its world after a lost connection in `visited` and `faces`.
+
 ## Fighting together
 
 - In a cube together the enemies live on the host. Its AI goes after either player (`game/party.js`): each

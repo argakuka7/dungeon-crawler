@@ -23,4 +23,5 @@ export const isGuest = () => online.role === 'guest' && !!online.partner;
 //   toss(flask)                               we threw a flask (game/throws.js)
 //   defeated(e)                               we got the reward for e (game/enemies.js): apart,
 //                                             it stays defeated for the friend
-export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null };
+//   visited(key)                              we discovered a cube (game/flow.js): the friend's too
+export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null };
