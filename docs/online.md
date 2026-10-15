@@ -134,7 +134,7 @@ being helped up and getting back in. Up to four players, co-op.
 - **Chests** open for everyone: the opener's game rolls the spill (leaning to its weapons) and
   sends it like any drop; the others see the lid open (`game/chests.js shareChest`). Two
   players opening one chest at once: the first drop stands, the other's is swapped for it.
-- **Putting something down** (the V panel) drops it for everyone: a way to hand a friend a
+- **Putting something down** (from the inventory) drops it for everyone: a way to hand a friend a
   weapon.
 - **A death that puts a cube back** (the runner dying with nobody on their feet beside them)
   undoes the drops since it came in for everyone (`forget` to the host, `gone` to all): those

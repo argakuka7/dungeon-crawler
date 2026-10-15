@@ -1,10 +1,11 @@
 // The player's flasks (core/throws.js) in the current cube: in flight, bursting, and what the
 // fire and toxic ones leave behind for a while: a burning patch, a poison cloud. With a flask
-// in hand (core/inventory.js readied) a click throws it at the cursor (game/input.js) and the
-// arc it would fly is shown (render/throws.js). Nothing here hurts the player. Travel and level
+// in hand (core/inventory.js readied) a click throws it at the cursor (game/input.js), or the
+// touch action button aims it like a stick (game/touch.js), and the arc it would fly is shown
+// (render/throws.js). Nothing here hurts the player. Travel and level
 // resets clear them all. Playing together, the friend's flasks fly and burst here too (`ghost`),
 // but what they do to the enemies is the friend's to do.
-import { player, state, setStatus } from './state.js';
+import { player, state, view, setStatus } from './state.js';
 import { insideSolid, groundAt } from '../physics/collide.js';
 import { clearLine } from '../physics/enemynav.js';
 import { damageEnemy, readiedFlask } from '../core/combat.js';
@@ -16,21 +17,34 @@ import { afflictEnemy } from './statuses.js';
 import { flaskFx } from './juice.js';
 import { pickFloor, aimPoint, hoveredEnemy, pointer } from './pointer.js';
 import { syncEquippedWeapon } from './equipment.js';
+import { controls } from './inputstate.js';
+import { screenToWorld, aimReach } from '../core/stick.js';
 import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
 
 export let flasks = [], areas = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
 
-// What a throw would aim at: the enemy under the cursor (its feet), else the floor under it,
-// else the cursor's point at the player's height; null off the game.
+// What a throw would aim at: the touch aim while a thumb aims; else the enemy under the cursor
+// (its feet), else the floor under it, else the cursor's point at the player's height; null off
+// the game.
 export function throwTarget() {
+  if (controls.aim.active) return aimTarget();
   const e = hoveredEnemy();
   if (e) return { x: e.x, y: e.y, z: e.z, enemy: e };
   const hit = pickFloor();
   if (hit) return { x: hit.x, y: hit.y, z: hit.z };
   const a = aimPoint(player.y);
   return a && { x: a.x, y: player.y, z: a.z };
+}
+// the touch aim (game/touch.js): that way on the screen, as far as pushed, on the floor there
+// (or at the player's height over a drop); null in the middle
+function aimTarget() {
+  const flask = readiedFlask(player), a = controls.aim;
+  if (!flask || !a.m) return null;
+  const [dx, dz] = screenToWorld(a.x, a.y, view.yaw), d = aimReach(a.m, flask.flask.range);
+  const x = player.x + dx * d, z = player.z + dz * d, h = groundAt(x, z, player.y + 1.5, 0).h;
+  return { x, y: Number.isFinite(h) && h > player.y - 4 ? h : player.y, z };
 }
 // where a throw at `target` (an enemy, a point, or null: straight ahead) comes down, in range
 function landing(p, target, range, yaw) {
@@ -106,10 +120,10 @@ export function ghostFlask(f) {
 export function drawThrows(dt, off) { drawFlasks(flasks, dt, off); drawAreas(areas, dt, off); }
 export function clearThrows() { removeFlaskViews(flasks); removeAreaViews(areas); flasks = []; areas = []; }
 
-// every frame: the arc a click would throw the flask in hand along, or none
+// every frame: the arc a click (or the touch aim) would throw the flask in hand along, or none
 export function updateAim(enemies) {
   const flask = readiedFlask(player);
-  if (!flask || !state.map || state.inventoryOpen || state.transitioning || !pointer.inside || player.ragdoll || player.climb || player.swimming
+  if (!flask || !state.map || state.inventoryOpen || state.transitioning || !(pointer.inside || controls.aim.active) || player.ragdoll || player.climb || player.swimming
       || (player.sword.active && player.sword.fired)) { drawArc(null); return; }
   const target = throwTarget();
   if (!target) { drawArc(null); return; }

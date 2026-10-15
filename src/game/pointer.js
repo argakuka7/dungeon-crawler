@@ -16,10 +16,12 @@ export const pointer = { ndc: new THREE.Vector2(), inside: false, down: false, m
 const raycaster = new THREE.Raycaster(), ray = raycaster.ray;
 let hovered = null;
 
-canvas.addEventListener('pointermove', e => {
-  pointer.ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+// the cursor at (x, y) px; a finger only points where it taps (game/touch.js), it does not hover
+export function pointAt(x, y) {
+  pointer.ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   pointer.inside = true;
-});
+}
+canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') pointAt(e.clientX, e.clientY); });
 canvas.addEventListener('pointerleave', () => { pointer.inside = false; });
 addEventListener('pointerup', e => { if (e.button === 0) pointer.down = false; });
 addEventListener('blur', () => { pointer.down = false; });

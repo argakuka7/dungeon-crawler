@@ -6,8 +6,10 @@
   pauses simulation/animations and suppresses gameplay input, including attacks,
   movement, respawn, new world, portal debug controls, camera keys and zoom.
   Held/queued input is cleared on opening and closing; keyboard focus stays inside.
-- **V** opens the same paused panel with a Floor column, to move items between the floor and
-  the bag (see [loot.md](loot.md)).
+- When items lie within reach, the panel shows a Floor column beside the bag, to move items
+  between the floor and the bag (see [loot.md](loot.md)). **V** opens it too.
+- The selected item has a thick gold ring. With touch controls the bag button at the end of
+  the quick bar (at the top) opens it ([touch.md](touch.md)).
 - Select a bag slot to inspect it: a weapon shows its rarity, item level, kind, damage, attacks
   per second, damage per second, reach (a sword's) or range (a shot's), crits, piercing or
   bursts, and affixes, and how it compares with the equipped one (damage per second first).

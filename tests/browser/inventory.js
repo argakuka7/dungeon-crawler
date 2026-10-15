@@ -1,6 +1,6 @@
 // Browser integration checks. Resets to a fresh seed-3 run before and after testing.
 //   runInventoryChecks: the modal, equipment, rewards, revisits
-//   runWeaponLootChecks: weapon drops, labels, click pickup, the V panel, dropping, deaths
+//   runWeaponLootChecks: weapon drops, labels, click pickup, the inventory's floor column, dropping, deaths
 import { player, state, view } from '../../src/game/state.js';
 import { newWorld, enterCube, spawnEntry, hurt } from '../../src/game/flow.js';
 import { updatePlayer } from '../../src/game/update.js';
@@ -178,7 +178,7 @@ export async function runWeaponLootChecks() {
       results.push('labels / click pickup');
 
       press('KeyV');
-      check(state.inventoryOpen && !$('inventory-floor-col').hidden && floorItems().length === 1, 'V opens the inventory with the floor');
+      check(state.inventoryOpen && !$('inventory-floor-col').hidden && floorItems().length === 1, 'V (like I) opens the inventory with the floor beside it');
       check(document.querySelectorAll('#inventory-floor [data-floor]').length === 1, 'The floor column lists the weapons in reach');
       check(/Damage per second \d+/.test($('inventory-item-stats').textContent) && /damage per second/.test($('inventory-item-compare').textContent),
         'A weapon shows its damage per second and compares by it');
@@ -191,7 +191,7 @@ export async function runWeaponLootChecks() {
       check(floorItems().length === 3 && /None/.test($('inventory-equipped').textContent), 'Dropped weapons lie on the floor');
       press('KeyV');
       check(!state.inventoryOpen, 'V closes the panel again');
-      results.push('V panel take / drop / last weapon');
+      results.push('inventory floor take / drop / last weapon');
 
       const kept = weapons().filter(p => p.kept).length;
       dropLoot({ id: 'browser:guardian2', level: 8, guardian: true, guardianRole: 'side', x: player.x, y: player.y, z: player.z }, 0);

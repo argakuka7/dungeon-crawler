@@ -4,19 +4,21 @@
 // Mouse: click the floor to walk there, click an enemy to attack it (hold for more), click an
 // item on the floor to pick it up, click a treasure chest to open it, click a villager who
 // trades to go and trade. With a flask in hand (game/throws.js) a click throws it at the cursor
-// instead, whatever is there. V: the floor panel (game/inventory.js); X: item labels.
-// 1-6: the quick bar (game/quickbar.js).
+// instead, whatever is there. I (or V): the inventory, with the floor in reach beside the bag
+// when something lies there (game/inventory.js); X: item labels. 1-6: the quick bar (game/
+// quickbar.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
+// action button holds like Shift, and a tap on the game clicks there without walking.
 import { stepZoom } from '../core/zoom.js';
 import { player, state, view, setStatus } from './state.js';
 import { spawnEntry, nextCube } from './flow.js';
 import { knockDown } from './ragdoll.js';
-import { toggleInventory, toggleFloor, setInventoryOpen } from './inventory.js';
+import { toggleInventory, setInventoryOpen } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { requestCollect } from './loot.js';
-import { pointer, pickFloor, aimPoint, hoveredEnemy } from './pointer.js';
+import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
 import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade } from './orders.js';
-import { hoveredPickup, hoveredChest, hoveredVillager, toggleLabels } from './lootlabels.js';
+import { hoveredPickup, hoveredChest, hoveredVillager, toggleLabels, updateLootLabels } from './lootlabels.js';
 import { queueAttack } from './sword.js';
 import { softTarget, combatStats, readiedFlask } from '../core/combat.js';
 import { throwTarget } from './throws.js';
@@ -27,6 +29,7 @@ import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
 import { lobbyOpen, setLobbyOpen, toggleLobby } from '../net/lobby.js';
 import { goToFriend } from '../net/session.js';
+import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
 
 const { keys } = controls;
@@ -47,7 +50,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (e.code === 'KeyI') { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
-  if (e.code === 'KeyV') { if (!e.repeat) { setHelpOpen(false); toggleFloor(); } e.preventDefault(); return; }
+  if (e.code === 'KeyV') { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
   if (e.code === 'Escape' && state.inventoryOpen) { setInventoryOpen(false); e.preventDefault(); return; }
   // 1-6: the quick bar (with the inventory open: put the selected item there); not while typing
   const bar = /^Digit([1-6])$/.exec(e.code);
@@ -98,12 +101,35 @@ export function autoAttack() {
   if (target) queueAttack(target);
   return target;
 }
-export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning && ATTACK.some(k => keys.has(k));
-export const wantsWalk = () => WALK.some(k => keys.has(k));
+// a tap on the action button with a flask in hand (game/touch.js): at the best enemy in range
+// and in sight, else straight ahead
+export function quickThrow() {
+  if (!readiedFlask(player) || state.transitioning || state.inventoryOpen) return;
+  const [dx, dz] = inputDir(), yaw = dx || dz ? Math.atan2(dx, dz) : player.yaw;
+  queueAttack(softTarget(player, allEnemies(), yaw, bladeSees));
+}
+export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning && (controls.attackHeld || ATTACK.some(k => keys.has(k)));
+// Ctrl, or the touch stick pushed only a little
+export const wantsWalk = () => WALK.some(k => keys.has(k)) || (controls.stick.m > 0 && controls.stick.m < WALK_BELOW);
 addEventListener('pointerdown', e => {
-  if (e.button !== 0 || e.target.tagName !== 'CANVAS' || state.transitioning || state.inventoryOpen) return;
+  // touches are game/touch.js's (a tap comes back through tapGame)
+  if (e.button !== 0 || e.pointerType === 'touch' || e.target.tagName !== 'CANVAS' || state.transitioning || state.inventoryOpen) return;
   e.preventDefault();
   pointer.down = true;
+  click(true);
+});
+// a tap on the game at (x, y) px (game/touch.js): a click there, except that the floor does not
+// walk; nothing stays hovered afterwards
+export function tapGame(x, y) {
+  if (state.transitioning || state.inventoryOpen) return;
+  pointAt(x, y); updatePointer(); updateLootLabels();
+  pointer.down = false;
+  click(false);
+  pointer.inside = false;
+}
+// what a click on the game does: with a flask in hand, throw it there; else go for the enemy,
+// villager, item or chest under the cursor, or (walk) walk to the floor there
+function click(walk) {
   if (readiedFlask(player)) {
     pointer.mode = null; clearOrder();
     const target = throwTarget();
@@ -118,6 +144,7 @@ addEventListener('pointerdown', e => {
   if (item) { pointer.mode = null; orderPickup(item); return; }
   const chest = hoveredChest();
   if (chest) { pointer.mode = null; orderChest(chest); return; }
+  if (!walk) { pointer.mode = null; return; }
   pointer.mode = 'move';
   const hit = pickFloor();
   if (hit) orderMove(hit);
@@ -125,12 +152,12 @@ addEventListener('pointerdown', e => {
     const a = aimPoint();
     if (a) orderMove({ x: a.x, z: a.z, s: null });
   }
-});
+}
 addEventListener('wheel', e => {
   if (!state.inventoryOpen) view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
 }, { passive: true });
 
-// desired direction in world space (WASD relative to the camera)
+// desired direction in world space (WASD or the touch stick, relative to the camera)
 export function inputDir() {
   if (state.inventoryOpen) return [0, 0];
   if (player.autoDir) return player.autoDir;
@@ -139,7 +166,8 @@ export function inputDir() {
   if (keys.has('KeyS') || keys.has('ArrowDown')) iy -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
-  const y = view.yaw;
-  return [Math.cos(y) * ix - Math.sin(y) * iy, -Math.sin(y) * ix - Math.cos(y) * iy];
+  const s = controls.stick;
+  if (s.m > 0) { ix += s.x; iy += s.y; }
+  return screenToWorld(ix, iy, view.yaw);
 }
 export function takeJump() { const j = controls.jumpPressed; controls.jumpPressed = false; return j; }

@@ -28,7 +28,7 @@ test('C reaches stackable pickups within four cells, walking over takes all but 
   assert.ok(walkTakes(coin) && walkTakes({ itemId: 'item_crystal_ruby' }) && !walkTakes({ itemId: WEAPONS[1].id }));
 });
 
-test('labels and the V panel cover everything but coins, within C\'s reach', () => {
+test('labels and the inventory floor column cover everything but coins, within C\'s reach', () => {
   const sword = { itemId: WEAPONS[2].id, x: 5, y: 1, z: 5 }, ruby = { ...sword, itemId: 'item_crystal_ruby' };
   assert.ok(labelled(sword) && labelled(ruby) && !labelled({ itemId: 'item_coin_gold' }));
   assert.ok(inFloorReach(sword, 5 + COLLECT_RADIUS, 1, 5) && inFloorReach(ruby, 5, 1 + COLLECT_HEIGHT, 5));

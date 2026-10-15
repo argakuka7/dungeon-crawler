@@ -1,10 +1,11 @@
 // The inventory is a paused DOM overlay. Item/equipment rules remain renderer-free.
-// I opens the bag; V opens it with a Floor column: the items lying within C's reach. Items move
-// between floor and bag (Take / Drop, Enter on a selected item, or a double-click). You can
-// drop every weapon, even the last one: then you cannot attack until you pick one up. Bound
-// items (the town portal scroll) cannot be dropped. Keys 1-6 put the selected bag item on the
-// quick bar (game/quickbar.js); Use uses it (and closes the bag): drinks a potion, takes a
-// flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
+// I (or V, or the touch bag button) opens the bag, with a Floor column beside it when items lie
+// within C's reach (and from then on while it stays open, also once something is dropped).
+// Take (Enter or a double-click) moves a floor item into the bag; Drop puts a bag item down.
+// You can drop every weapon, even the last one: then you cannot attack until you pick one up.
+// Bound items (the town portal scroll) cannot be dropped. Keys 1-6 put the selected bag item on
+// the quick bar (game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
+// uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
 // of their own (core/shops.js): Buy, Enter or a double-click buys one.
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
@@ -30,8 +31,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 let selected = null, signature = '', previousFocus = null, floorMode = false, trader = null;
 
 export const inventoryFloor = () => state.inventoryOpen && floorMode;
-// floor: open with the Floor column (V); villager: with their wares (a villager with a shop)
-export function setInventoryOpen(open, floor = false, villager = null) {
+// villager: open with their wares (a villager with a shop) instead of the floor
+export function setInventoryOpen(open, villager = null) {
   if (open && (!state.map || state.transitioning)) return;
   if (open) cancelCast(state.cast ? 'Portal cancelled' : '');
   if (open !== state.inventoryOpen) sfx(open ? 'bagOpen' : 'bagClose');
@@ -39,7 +40,7 @@ export function setInventoryOpen(open, floor = false, villager = null) {
   $('inventory-overlay').hidden = !open;
   if (open) {
     trader = shopOf(villager) ? villager : null;
-    floorMode = floor && !trader; previousFocus = document.activeElement;
+    floorMode = !trader && floorItems().length > 0; previousFocus = document.activeElement;
     const first = floorMode && floorItems()[0], ware = trader && shopOf(trader).wares[0];
     selected = ware ? { from: 'shop', id: ware } : first ? { from: 'floor', id: first.id }
       : player.inventory.equipped ? { from: 'bag', id: player.inventory.equipped } : null;
@@ -50,12 +51,10 @@ export function setInventoryOpen(open, floor = false, villager = null) {
 // trade with villager v (core/shops.js): the bag with their wares beside it
 export function openShop(v) {
   if (state.inventoryOpen || !shopOf(v)) return;
-  setInventoryOpen(true, false, v);
+  setInventoryOpen(true, v);
   if (state.inventoryOpen) setStatus(`${shopOf(v).title}: what will it be?`);
 }
 export const toggleInventory = () => setInventoryOpen(!state.inventoryOpen);
-// V: open with the floor, or close (also an inventory opened with I)
-export const toggleFloor = () => setInventoryOpen(!state.inventoryOpen, true);
 
 // 1-6 with the bag open: the selected bag item onto that quick bar slot (or off it again)
 export function assignSelectedToBar(i) {
@@ -127,6 +126,7 @@ function compareText(item) {
 export function updateInventory() {
   $('inventory-overlay').hidden = !state.inventoryOpen;
   if (!state.inventoryOpen) return;
+  if (!floorMode && !trader && floorItems().length) floorMode = true;   // something was put down
   const inv = player.inventory, equipped = equippedItem(inv), allowed = equipmentAllowed(), floor = floorMode ? floorItems() : [];
   if (selected && !selectedItem()) selected = null;
   const item = selectedItem(), sel = selected ? `${selected.from}:${selected.id}` : '';
@@ -244,9 +244,9 @@ function buy() {
 function act() {
   if (selected?.from === 'shop') buy();
   else if (selected?.from === 'floor') take();
-  else if (selected?.from === 'bag' && floorMode && !$('inventory-drop').disabled) drop();
+  else if (selected?.from !== 'bag') return;
   else if (!$('inventory-equip').hidden && !$('inventory-equip').disabled) $('inventory-equip').click();
-  else if (!$('inventory-use').hidden && !floorMode) $('inventory-use').click();
+  else if (!$('inventory-use').hidden) $('inventory-use').click();
 }
 // close the bag first: the game is paused while it is open
 function use() {
@@ -265,11 +265,11 @@ $('inventory-grid').addEventListener('click', e => {
   selected = s ? { from: 'bag', id: s.instanceId } : null;
   refresh();
 });
-$('inventory-grid').addEventListener('dblclick', e => { if (e.target.closest('[data-slot]') && floorMode) drop(); });
+$('inventory-grid').addEventListener('dblclick', e => { if (e.target.closest('[data-slot]')) act(); });
 $('inventory-floor').addEventListener('click', e => {
   const button = e.target.closest('[data-floor]');
   if (!button) return;
-  selected = { from: 'floor', id: Number(button.dataset.floor) };
+  selected = { from: 'floor', id: button.dataset.floor };
   refresh();
 });
 $('inventory-floor').addEventListener('dblclick', e => { if (e.target.closest('[data-floor]')) take(); });
@@ -290,7 +290,7 @@ $('inventory-use').addEventListener('click', use);
 $('inventory-drop').addEventListener('click', drop);
 
 // Keyboard: arrows move through the floor list and the bag (left/right cross between them),
-// Enter or Space on the selected item moves it across (in the bag without the floor: equips).
+// Enter or Space on the selected item takes it from the floor, buys it, or equips / uses it.
 // Tab stays inside the modal, including when slots are re-rendered.
 $('inventory-panel').addEventListener('keydown', e => {
   const el = document.activeElement, slot = el?.dataset?.slot, row = el?.dataset?.floor ?? el?.dataset?.ware;
@@ -305,7 +305,7 @@ $('inventory-panel').addEventListener('keydown', e => {
   const slots = [...$('inventory-grid').querySelectorAll('[data-slot]')];
   const pick = target => { if (!target) return; e.preventDefault(); target.focus(); target.click(); };
   if (e.code === 'Enter' || e.code === 'Space') {
-    const on = row !== undefined ? (trader ? selected?.from === 'shop' && selected.id === row : selected?.from === 'floor' && selected.id === Number(row))
+    const on = row !== undefined ? (trader ? selected?.from === 'shop' && selected.id === row : selected?.from === 'floor' && selected.id === row)
       : selected?.from === 'bag' && player.inventory.slots[Number(slot)]?.instanceId === selected.id;
     if (on) { e.preventDefault(); act(); }
     return;

@@ -1,7 +1,7 @@
 // Loot lying in the cubes: defeated enemies scatter their coins and sometimes a weapon. Walking
 // over coins and stackables takes them, coins within a cell pull themselves in, and C pulls in
 // every stackable pickup within four cells. Weapons are only taken on purpose: click one (or
-// its label) to walk there and pick it up, or use the V panel (game/inventory.js), which also
+// its label) to walk there and pick it up, or take it in the inventory (game/inventory.js), which also
 // puts things from the bag back on the floor. Pickups stay where they fell (per cube, for the
 // whole run) until collected. They are credited when they reach the player.
 //
@@ -108,7 +108,7 @@ export function dropAtFeet(item) {
   relay.drop?.(state.cubeKey, source, [p]);
   return p;
 }
-// a bag item onto the floor (the V panel): false when there is no such item
+// a bag item onto the floor (the inventory): false when there is no such item
 export function dropFromBag(instanceId) {
   const slot = player.inventory.slots.find(s => s?.instanceId === instanceId);
   if (slot && isBound(slot.itemId)) { setStatus(`${ITEMS[slot.itemId].name} cannot be dropped`); return false; }
@@ -120,7 +120,7 @@ export function dropFromBag(instanceId) {
 }
 
 // Take p: claim it and pull it towards the player (delay before it lifts off, dur of the
-// flight; none: it goes straight into the bag once it is ours, the V panel). Playing together
+// flight; none: it goes straight into the bag once it is ours, the inventory). Playing together
 // as a guest the host says whether it is ours.
 function claim(p, delay = null, dur = 0) {
   p.claim = relay.take ? relay.take(state.cubeKey, p) : 'mine';
@@ -174,7 +174,7 @@ export function takePickup(p) {
   return true;
 }
 export const canReachPickup = p => Math.hypot(p.x - player.x, p.z - player.z) <= TAKE_REACH && Math.abs(p.y - player.y) <= 0.8;
-// straight into the bag (the V panel): false when there is no room (a guest's waits for the
+// straight into the bag (the inventory): false when there is no room (a guest's waits for the
 // host's word, hidden meanwhile)
 export function takeNow(p) {
   const list = lootHere(), i = list.indexOf(p);
@@ -184,7 +184,7 @@ export function takeNow(p) {
   if (p.claim === 'mine') { list.splice(list.indexOf(p), 1); receive(p); }
   return true;
 }
-// labelled pickups within C's reach, best first, then nearest: what the V panel lists
+// labelled pickups within C's reach, best first, then nearest: what the inventory lists beside the bag
 export function floorItems() {
   const d = p => Math.hypot(p.x - player.x, p.z - player.z);
   return lootHere().filter(p => !p.fly && !p.claim && p.toss >= 0 && inFloorReach(p, player.x, player.y, player.z))
@@ -284,7 +284,7 @@ export function takenBy(key, id, mine, to = null) {
   if (mine) {
     if (p.claim === 'mine') return;
     p.claim = 'mine';
-    if (!p.fly) { list.splice(list.indexOf(p), 1); receive(p); }   // the V panel: straight into the bag
+    if (!p.fly) { list.splice(list.indexOf(p), 1); receive(p); }   // the inventory: straight into the bag
     return;
   }
   if (p.claim === 'mine') return;   // (never: the host does not give away what it gave us)

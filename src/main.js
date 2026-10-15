@@ -26,6 +26,7 @@ import { updatePlayerBar } from './render/playerbar.js';
 import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
 import { updateQuickbar } from './game/quickbar.js';
+import { updateTouch } from './game/touch.js';
 import { updateLoot } from './game/loot.js';
 import { updateLootLabels } from './game/lootlabels.js';
 import { tickFloatText } from './render/floattext.js';
@@ -93,7 +94,7 @@ function frame() {
   updateHud(player, state.map);
   updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
   updateInventory();
-  updateQuickbar(); updateEffects();
+  updateQuickbar(); updateEffects(); updateTouch();
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Guide (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items

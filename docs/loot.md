@@ -22,11 +22,13 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
 - **X** toggles name labels over every item on the floor but coins. Without it only the item
   under the cursor shows its name. Labels are in the rarity's colour and stack instead of
   overlapping; they are clickable.
-- **V** opens the inventory (paused, like **I**) with a **Floor** column: every item but coins
-  within C's reach (4 cells across, 1.5 up or down), best first, then nearest. Take moves a
-  floor item into the bag, Drop puts a bag item down at your feet. Enter (or Space) on the
-  selected item, or a double-click, moves it across; arrows move through both columns. V, I or
-  Esc closes. Drop also works in the plain I inventory.
+- **I** (or **V**) opens the inventory (paused) with a **Floor** column beside the bag whenever
+  something lies within C's reach (4 cells across, 1.5 up or down): every item but coins, best
+  first, then nearest. Once shown it stays while the panel is open (dropping the first item
+  shows it). Take moves a floor item into the bag, Drop puts a bag item down at your feet.
+  Enter (or Space) on a floor item, or a double-click, takes it; on a bag item it equips or
+  uses it; arrows move through both columns. I, V or Esc closes.
+- With touch controls ([touch.md](touch.md)) a long press on the game collects like C.
 - Weapons can go on the quick bar (**1**–**6**, see `docs/progression.md`): using one equips it.
   The Town Portal Scroll is bound and cannot be dropped.
 - You may drop every weapon, including the equipped one and the last one. Without a weapon you
@@ -183,6 +185,6 @@ browser console:
 
 ```js
 const checks = await import('./tests/browser/inventory.js');
-await checks.runWeaponLootChecks();   // guardian drops, walk-over / C, labels, click pickup, V, drops, deaths
+await checks.runWeaponLootChecks();   // guardian drops, walk-over / C, labels, click pickup, the floor column, drops, deaths
 await (await import('./tests/browser/chests.js')).runChestChecks();   // hover, click, open, spill, deaths, potions
 ```

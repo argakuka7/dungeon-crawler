@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Cube Crawler</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
@@ -37,12 +37,11 @@
       <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>rotate the view</dd>
       <dt><kbd>K</kbd> <kbd>L</kbd> / wheel</dt><dd>zoom in / out (5 levels)</dd>
       <dt><kbd>C</kbd></dt><dd>collect coins and items within four cells</dd>
-      <dt>click item / label</dt><dd>walk there and pick it up (weapons are only taken this way or with <kbd>V</kbd>)</dd>
+      <dt>click item / label</dt><dd>walk there and pick it up (weapons are only taken this way or from the inventory)</dd>
       <dt>click chest</dt><dd>walk up and open it</dd>
       <dt>click villager</dt><dd>walk up and trade (the alchemist in the merchant camp sells potions)</dd>
-      <dt><kbd>V</kbd></dt><dd>items on the floor around you: take them, or drop from the bag</dd>
       <dt><kbd>X</kbd></dt><dd>show the names of all items on the floor</dd>
-      <dt><kbd>I</kbd></dt><dd>inventory</dd>
+      <dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd>inventory, with the items on the floor around you beside it: take them, or drop from the bag</dd>
       <dt><kbd>1</kbd>&ndash;<kbd>6</kbd></dt><dd>quick bar: use an item, drink a potion (<kbd>2</kbd> at the start), take a flask in hand (again: put it away) or equip a weapon (in the inventory: put the selected item there)</dd>
       <dt>click, flask in hand</dt><dd>throw it where the arc points</dd>
       <dt><kbd>B</kbd></dt><dd>knock over</dd>
@@ -102,7 +101,7 @@
 <div id="loot-labels"></div>
 <div id="inventory-overlay" hidden>
   <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title" tabindex="-1">
-    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><button id="inventory-close" aria-label="Close inventory">Close · I / V / Esc</button></header>
+    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><button id="inventory-close" aria-label="Close inventory">Close · I / Esc</button></header>
     <div id="inventory-equipped"></div>
     <div id="inventory-currency" aria-label="Currency"></div>
     <div class="inventory-body">
@@ -113,11 +112,17 @@
         <div id="inventory-item-base"></div><p id="inventory-item-stats"></p><ul id="inventory-item-affixes"></ul><p id="inventory-item-compare"></p>
         <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div></aside>
     </div>
-    <p id="inventory-feedback" role="status"></p><footer>Game paused · V shows the floor: Enter or double-click moves an item between floor and bag · 1-6 puts the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
+    <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · 1-6 puts the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
   </section>
 </div>
 <div id="effects" aria-label="Potions at work"></div>
 <div id="quickbar" aria-label="Quick bar"></div>
+<div id="touch" hidden aria-hidden="true">
+  <div id="touch-stick"><div id="touch-ring" hidden><div id="touch-knob"></div></div></div>
+  <button id="touch-jump" tabindex="-1" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 4l-7 8h4.5v7h5v-7H19z"/></svg></button>
+  <button id="touch-action" tabindex="-1" aria-label="Attack"><img alt="" hidden><span id="touch-action-knob"></span></button>
+  <div id="touch-hold"></div>
+</div>
 <div id="loading"><span></span>generating&hellip;</div>
 <div id="flash"></div>
 <div id="fade"></div>

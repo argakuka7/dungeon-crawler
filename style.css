@@ -126,7 +126,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .inventory-body { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 18px; }
 #inventory-panel.with-floor { width: min(1000px, 100%); }
 #inventory-panel.with-floor .inventory-body { grid-template-columns: 230px minmax(0, 1fr) 210px; }
-#inventory-floor, #inventory-shop { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; }
+#inventory-floor, #inventory-shop { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; padding: 5px; margin: -5px; }
 #inventory-shop-title { color: #e6c35a !important; }
 .floor-item .price { margin-left: auto; color: #e6c35a; font-size: 11px; flex: none; }
 .floor-item.poor .price { color: #9a6a5a; }
@@ -134,7 +134,8 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
   border-color: var(--rarity, #444e5e); }
 .floor-item img { width: 34px; height: 34px; object-fit: contain; flex: none; }
 .floor-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#inventory-panel .floor-item.selected { box-shadow: inset 0 0 0 1px #ffcf7a, 0 0 0 1px #ffcf7a; }
+/* the selected item: a thick gold ring outside its (rarity) border */
+#inventory-panel :is(.floor-item, .inventory-slot).selected { box-shadow: 0 0 0 1px #10141c, 0 0 0 4px #ffcf7a, 0 0 12px 2px #ffcf7a66; }
 .floor-empty { color: #8b95a3; font-size: 12px; }
 #inventory-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 #inventory-panel .inventory-slot { aspect-ratio: 1; position: relative; background: #181e28; padding: 2px; min-width: 0; overflow: hidden;
@@ -144,7 +145,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .inventory-slot .count { position: absolute; right: 5px; bottom: 2px; color: #fff; text-shadow: 0 1px 3px #000; }
 .inventory-slot .equipped { position: absolute; left: 4px; top: 2px; color: #ffcf7a; font-size: 10px; }
 .inventory-slot .bar-key { position: absolute; right: 4px; top: 2px; color: #b98cff; font-size: 10px; text-shadow: 0 1px 2px #000; }
-#inventory-panel .inventory-slot.selected { box-shadow: inset 0 0 0 2px #ffcf7a; }
 #inventory-details { padding: 6px 12px; background: #181e28; border-radius: 4px; }
 #inventory-item-icon { width: 100%; height: 120px; object-fit: contain; }
 #inventory-item-stats { color: #b8c2d0; white-space: pre-line; font-size: 12px; margin: 6px 0; }
@@ -189,6 +189,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #quickbar .qb-slot.casting { border-color: #b98cff; }
 #quickbar .qb-slot.cooling .qb-cast { background: #10141c99; }
 #quickbar .qb-slot.in-hand { box-shadow: inset 0 0 0 2px #ffcf7a, 0 0 8px #ffcf7a88; }
+#quickbar .qb-bag { display: none; }
 
 /* potions at work and poison (game/effects.js): little icons with the time left, over the quick bar */
 #effects { position: fixed; left: 50%; bottom: 78px; transform: translateX(-50%); z-index: 19; display: flex; gap: 5px; pointer-events: none; }
@@ -199,3 +200,47 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #effects .fx.status { border-color: #8fdc3c; width: auto; padding: 2px 6px; color: #b8f080; font: 11px/26px monospace; }
 #effects .fx.ending { animation: fx-blink .5s steps(2) infinite; }
 @keyframes fx-blink { 50% { opacity: .45; } }
+
+/* touch controls (game/touch.js): the stick on the left, the action and jump buttons on the right,
+   the quick bar at the top with a bag button; pinch, twist and long press on the game */
+html { touch-action: manipulation; }
+body.touch { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body.touch canvas, #touch, #touch * { touch-action: none; }
+#touch { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+#touch-stick { position: absolute; left: 0; bottom: 0; width: 45vw; height: 65vh; pointer-events: auto; }
+#touch-ring { position: fixed; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; box-sizing: border-box;
+  border: 2px solid #ffffff55; background: radial-gradient(circle, #0b0d1233 0%, #0b0d1266 100%); pointer-events: none; }
+#touch-knob { position: absolute; left: 36px; top: 36px; width: 48px; height: 48px; border-radius: 50%; background: #e6e9efaa; box-shadow: 0 2px 8px #0008; }
+#touch :is(#touch-action, #touch-jump) { position: absolute; pointer-events: auto; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid #ffffff44; background: radial-gradient(circle at 50% 40%, #2a3140dd, #0b0d12cc); box-shadow: 0 4px 16px #0008; }
+#touch-action { right: calc(28px + env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom)); width: 92px; height: 92px; }
+#touch-action img { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); object-fit: contain; border-radius: 12px; pointer-events: none; }
+#touch-action.down { border-color: #ffcf7a; background: radial-gradient(circle at 50% 40%, #4a4030ee, #0b0d12dd); }
+#touch-action.empty { opacity: .45; }
+#touch-action.flask { border-color: #ffcf7a99; }
+#touch-action-knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%;
+  background: #ffcf7acc; box-shadow: 0 0 12px #ffcf7a; opacity: 0; pointer-events: none; }
+#touch-action.flask.down #touch-action-knob { opacity: 1; }
+#touch-jump { right: calc(136px + env(safe-area-inset-right)); bottom: calc(22px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
+#touch-jump svg { width: 30px; height: 30px; fill: #e6e9ef; pointer-events: none; }
+#touch-jump:active { border-color: #ffcf7a; }
+#touch-hold { position: fixed; left: -36px; top: -36px; width: 72px; height: 72px; pointer-events: none; }
+#touch-hold::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid #ffcf7a; opacity: 0; }
+#touch-hold.on::after { animation: hold-fill .45s linear forwards; }
+#touch-hold.done::after { animation: hold-done .35s ease-out forwards; }
+@keyframes hold-fill { 0%, 25% { opacity: 0; transform: scale(.3); } 100% { opacity: .9; transform: scale(1); } }
+@keyframes hold-done { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.6); } }
+
+body.touch #quickbar { top: calc(8px + env(safe-area-inset-top)); bottom: auto; gap: 5px; padding: 5px; }
+body.touch #quickbar .qb-slot { width: 46px; height: 46px; }
+body.touch #quickbar .qb-key { display: none; }
+body.touch #quickbar .qb-bag { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: 4px; cursor: pointer;
+  background: #2a2f3a; border: 1px solid #8a7a52; border-radius: 4px; }
+body.touch #quickbar .qb-bag svg { width: 28px; height: 28px; fill: #ffe4ae; }
+body.touch #effects { top: calc(72px + env(safe-area-inset-top)); bottom: auto; }
+body.touch #minimap { width: 120px; height: auto; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); }
+body.touch #loading { bottom: auto; top: 110px; }
+body.touch #inventory-overlay { padding: calc(70px + env(safe-area-inset-top)) 12px 12px; }
+body.touch #inventory-panel { max-height: calc(100dvh - 84px); }
+@media (max-width: 640px) { body.touch #minimap { top: calc(70px + env(safe-area-inset-top)); width: 96px; } }
+body.touch #chat { width: min(420px, 44vw); min-width: 0; }

@@ -23,7 +23,7 @@ export function coinDrops(copper) {
 export const stackable = itemId => ITEMS[itemId].stackLimit > 1;
 export const isCoin = itemId => ITEMS[itemId].category === 'currency';
 export const isWeapon = itemId => !!ITEMS[itemId].weapon;
-// walking over takes coins and stackables; weapons wait for a click or the V panel
+// walking over takes coins and stackables; weapons wait for a click or the inventory
 export const walkTakes = p => !isWeapon(p.itemId);
 // what gets a name label (X) and can be clicked to pick up: everything but coins
 export const labelled = p => !isCoin(p.itemId);
@@ -34,7 +34,7 @@ export const inCollectReach = (p, x, y, z) => stackable(p.itemId)
 // does coin p pull itself to the player at (x, y, z)?
 export const inMagnetReach = (p, x, y, z) => isCoin(p.itemId)
   && Math.hypot(p.x - x, p.z - z) <= MAGNET_RADIUS && Math.abs(p.y - y) <= COLLECT_HEIGHT;
-// is pickup p close enough to the player at (x, y, z) to take from the V panel? (C's reach)
+// is pickup p close enough to the player at (x, y, z) to take from the inventory? (C's reach)
 export const inFloorReach = (p, x, y, z) => labelled(p)
   && Math.hypot(p.x - x, p.z - z) <= COLLECT_RADIUS && Math.abs(p.y - y) <= COLLECT_HEIGHT;
 // is the player at (x, y, z) standing on pickup p?

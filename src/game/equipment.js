@@ -49,7 +49,9 @@ export async function readyFlask(itemId) {
   await syncEquippedWeapon();
   if (inventory !== player.inventory) return false;
   sfx(itemId ? 'toss' : 'equip', { volume: 0.6 });
-  setStatus(itemId ? `${def.name} in hand: click where to throw it` : `${displayName(equippedItemOf(inventory)) || 'Weapon'} back in hand`);
+  // (touch controls, game/touch.js: aimed with the action button)
+  const how = globalThis.document?.body.classList.contains('touch') ? 'aim with the action button' : 'click where to throw it';
+  setStatus(itemId ? `${def.name} in hand: ${how}` : `${displayName(equippedItemOf(inventory)) || 'Weapon'} back in hand`);
   return true;
 }
 const equippedItemOf = inv => ownedItem(inv, inv.equipped);

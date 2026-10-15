@@ -303,5 +303,5 @@ const water = await import('./tests/browser/water.js');
 await water.runWaterChecks(); // all fluids: edge guard, jumps/high falls, ragdolls, effects, dry respawn
 const inventory = await import('./tests/browser/inventory.js');
 await inventory.runInventoryChecks(); // resets the run; UI, equipment, rewards, revisits
-await inventory.runWeaponLootChecks(); // weapon drops, labels, click pickup, the V panel, deaths
+await inventory.runWeaponLootChecks(); // weapon drops, labels, click pickup, the inventory floor column, deaths
 ```
