@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("port", nargs="?", type=int, default=8000)
     parser.add_argument("--assets-root", type=Path, default=default_assets_root(), help="checkout containing assets/")
-    parser.add_argument("--bind", default="127.0.0.1")
+    parser.add_argument("--bind", default="0.0.0.0")
     args = parser.parse_args()
     NoCacheHandler.assets = (args.assets_root.expanduser().resolve() / "assets")
     if not NoCacheHandler.assets.is_dir():
