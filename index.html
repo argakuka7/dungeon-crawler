@@ -13,10 +13,17 @@
 <div id="dev" hidden>
   <div><button id="dev-copy" title="Copy all of this">copy</button> seed <b id="dev-seed" class="pick">-</b> &middot; depth <b id="dev-depth">-</b> &middot; layer <b id="dev-layer">-</b> &middot; <b id="dev-fps">-</b> fps</div>
   <div id="dev-stats"></div>
-  <div id="dev-spawn">enemy <select id="dev-kind"></select> lv <input id="dev-elevel" type="number" min="1" max="99" placeholder="auto" title="Empty: the level this depth gives"> &times; <input id="dev-count" type="number" min="1" max="20" value="1">
-    <button id="dev-spawn-go" title="In front of you (J: at the cursor)">spawn</button> <button id="dev-kill" title="With XP and loot">kill all</button> <button id="dev-clear" title="Without XP or loot">clear</button>
-    <label title="Enemies stand still and never attack"><input id="dev-passive" type="checkbox"> passive</label></div>
-  <div id="dev-status"></div>
+  <div id="dev-hint"><kbd>`</kbd> commands: /spawn, /weapon, /give ... (/help lists them)</div>
+</div>
+<div id="chat" aria-label="Chat and what happened">
+  <div id="chat-tabs" hidden><button data-filter="all" class="on">All</button><button data-filter="chat">Chat</button><button data-filter="events">Events</button><span>Enter to send · Esc to close</span></div>
+  <ol id="chat-log" role="log" aria-live="polite"></ol>
+  <div id="chat-status" role="status"></div>
+  <div id="chat-entry" hidden>
+    <ul id="chat-popup" role="listbox" hidden></ul>
+    <div id="chat-usage" hidden></div>
+    <div id="chat-field"><div id="chat-ghost" aria-hidden="true"></div><input id="chat-input" type="text" maxlength="160" autocomplete="off" spellcheck="false" aria-label="Chat, or a command after /"></div>
+  </div>
 </div>
 <div id="help-overlay" hidden>
   <section id="help-panel" role="dialog" aria-labelledby="help-title">
@@ -45,6 +52,8 @@
       <dt><kbd>M</kbd></dt><dd>music on / off</dd>
       <dt><kbd>O</kbd></dt><dd>play together with up to three friends</dd>
       <dt><kbd>F</kbd></dt><dd>playing together: go to a friend (again: the next one)</dd>
+      <dt><kbd>Enter</kbd></dt><dd>chat (playing together, your friends read it); the box keeps what happened</dd>
+      <dt><kbd>`</kbd></dt><dd>type a command (<kbd>/help</kbd> lists them, <kbd>Tab</kbd> completes)</dd>
       <dt><kbd>?</kbd></dt><dd>this help</dd>
     </dl>
     <div class="dev-only" hidden>
@@ -54,7 +63,7 @@
         <dt><kbd>G</kbd></dt><dd>go to the next way down</dd>
         <dt><kbd>PgDn</kbd> <kbd>PgUp</kbd></dt><dd>change depth</dd>
         <dt><kbd>Alt</kbd> + <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>jump to the cube up-right / up-left / down-left / down-right</dd>
-        <dt><kbd>J</kbd></dt><dd>spawn the enemy picked in the dev panel at the cursor</dd>
+        <dt><kbd>`</kbd></dt><dd>developer commands: /spawn, /kill, /weapon, /give, /goto ... (/help)</dd>
       </dl>
     </div>
     <h2>Legend</h2>
@@ -104,13 +113,6 @@
         <div id="inventory-item-base"></div><p id="inventory-item-stats"></p><ul id="inventory-item-affixes"></ul><p id="inventory-item-compare"></p>
         <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div></aside>
     </div>
-    <fieldset id="inventory-dev" hidden><legend>Developer weapons</legend>
-      <label for="dev-weapon">Weapon</label> <select id="dev-weapon"></select>
-      <label for="dev-rarity">Rarity</label> <select id="dev-rarity"></select>
-      <label for="dev-level">Level</label> <input id="dev-level" type="number" min="1" max="99" value="8">
-      <button id="dev-equip">Grant &amp; equip</button> <button id="dev-drop">Drop at feet</button>
-      <p>Dev only: rolls a weapon of that base, rarity and item level.</p>
-    </fieldset>
     <p id="inventory-feedback" role="status"></p><footer>Game paused · V shows the floor: Enter or double-click moves an item between floor and bag · 1-6 puts the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
   </section>
 </div>

@@ -169,9 +169,10 @@ back.
 
 ## Dev tools
 
-With `?dev=1` the inventory's developer box rolls a weapon of any base (grouped by kind), rarity and item level:
-**Grant & equip** puts it in the bag and equips it, **Drop at feet** lays it on the floor.
-`__game.devDropWeapon(itemId, rarity, ilvl)` does the same from the console.
+With `?dev=1` the console (`` ` ``, `docs/console.md`) rolls a weapon of any base, rarity and item
+level: `/weapon <weapon> [rarity] [level] [drop]` puts it in the bag and equips it, or with `drop`
+lays it on the floor (`/weapon grsw mythic 20 drop`). `__game.devDropWeapon(itemId, rarity, ilvl)`
+does the same from the browser's devtools.
 
 ## Tests
 

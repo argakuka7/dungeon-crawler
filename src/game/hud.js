@@ -1,4 +1,5 @@
-// The dev overlay (?dev=1: seed, depth, layer, fps, cube stats, status) and screen fades.
+// The dev overlay (?dev=1: seed, depth, layer, fps, cube stats) and screen fades. What the game
+// says (setStatus) shows in the chat box (game/console.js).
 // The player's own bars float over the character (render/playerbar.js).
 import { themeAt } from '../themes/depth.js';
 import { isFaceOpen } from '../core/boundaries.js';
@@ -12,7 +13,8 @@ const put = (id, text, html = false) => { if (shown[id] === text) return; shown[
 
 if (state.dev) {
   $('dev').hidden = false;
-  $('dev-copy').addEventListener('click', () => navigator.clipboard?.writeText($('dev').innerText.replace(/^copy\s*/, '')));
+  $('dev-copy').addEventListener('click', () => navigator.clipboard?.writeText([...$('dev').children].filter(el => el.id !== 'dev-hint')
+    .map(el => el.innerText).join('\n').replace(/^copy\s*/, '')));
 }
 
 export function showStats(map, cube, seed, visits) {
@@ -31,10 +33,9 @@ export function showStats(map, cube, seed, visits) {
 }
 
 let frames = 0, since = performance.now();
-export function updateHud(player, map, statusMsg) {
+export function updateHud(player, map) {
   if (!state.dev) return;
   put('dev-layer', map ? `${player.layer + 1}/${map.K}` : '-');
-  put('dev-status', statusMsg);
   frames++;
   const now = performance.now();
   if (now - since >= 500) { put('dev-fps', String(Math.round(frames * 1000 / (now - since)))); frames = 0; since = now; }

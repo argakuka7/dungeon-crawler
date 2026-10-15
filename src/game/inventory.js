@@ -8,19 +8,20 @@
 // of their own (core/shops.js): Buy, Enter or a double-click buys one.
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
-import { ITEMS, COINS, WEAPONS, WEAPON_KINDS } from '../core/items.js';
+import { ITEMS, COINS } from '../core/items.js';
 import { BURST_SHARE } from '../core/shots.js';
 import { equippedItem, ownedItem, assignBar, barAllowed, barIndexOf, countOf, copperTotal, formatCoins, hasRoom, autoBar } from '../core/inventory.js';
 import { shopOf, priceOf, buy as buyWare } from '../core/shops.js';
 import { flaskStats, cooldownLeft } from '../core/potions.js';
 import { xpProgress, levelDamage } from '../core/progression.js';
-import { RARITIES, rarityOf } from '../core/gear/rarities.js';
+import { rarityOf } from '../core/gear/rarities.js';
 import { itemStats, displayName, baseLine, affixLines, weaponDps } from '../core/gear/stats.js';
-import { equipmentAllowed, equipOwnedWeapon, devSwapWeapon, devDropWeapon, syncEquippedWeapon } from './equipment.js';
+import { equipmentAllowed, equipOwnedWeapon, syncEquippedWeapon } from './equipment.js';
 import { floorItems, takeNow, dropFromBag } from './loot.js';
 import { clearInput } from './inputstate.js';
 import { cancelCast } from './townportal.js';
 import { useItem } from './quickbar.js';
+import { log } from './log.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -199,8 +200,6 @@ export function updateInventory() {
   drop.hidden = !inBag || !item;
   drop.disabled = isEquipped && !allowed || !!def?.bound;
   drop.title = def?.bound ? 'Bound: it cannot be dropped' : '';
-  $('inventory-dev').hidden = !state.dev;
-  $('dev-equip').disabled = !allowed;
   $('inventory-feedback').textContent = state.equipping ? 'Loading weapon…' : !allowed ? 'Finish your current action before changing weapons.' : state.statusMsg;
 }
 const refresh = () => { signature = ''; updateInventory(); };
@@ -238,6 +237,7 @@ function buy() {
     autoBar(player.inventory, id);
     sfx('coin', { pitch: 0.8 }); sfx('pickup');
     setStatus(`Bought a ${ITEMS[id].name} for ${formatCoins(priceOf(id))}`);
+    log('trade', { item: `a ${ITEMS[id].name}`, price: formatCoins(priceOf(id)) });
   } else setStatus({ poor: 'Not enough coins', full: 'Your bag is full', unknown: 'Not for sale' }[done]);
   refresh();
 }
@@ -288,16 +288,6 @@ $('inventory-equip').addEventListener('click', async () => {
 $('inventory-take').addEventListener('click', take);
 $('inventory-use').addEventListener('click', use);
 $('inventory-drop').addEventListener('click', drop);
-
-$('dev-weapon').innerHTML = WEAPON_KINDS.map(k => `<optgroup label="${k[0].toUpperCase() + k.slice(1)}s">${
-  WEAPONS.filter(w => w.weapon.kind === k).map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</optgroup>`).join('');
-$('dev-rarity').innerHTML = RARITIES.map(r => `<option value="${r.id}"${r.id === 'rare' ? ' selected' : ''}>${r.name}</option>`).join('');
-const devRoll = () => [$('dev-weapon').value, $('dev-rarity').value, Number($('dev-level').value) || 1];
-$('dev-equip').addEventListener('click', async () => {
-  if (await devSwapWeapon(...devRoll())) selected = { from: 'bag', id: player.inventory.equipped };
-  refresh();
-});
-$('dev-drop').addEventListener('click', () => { devDropWeapon(...devRoll()); refresh(); });
 
 // Keyboard: arrows move through the floor list and the bag (left/right cross between them),
 // Enter or Space on the selected item moves it across (in the bag without the floor: equips).

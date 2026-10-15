@@ -32,6 +32,7 @@ import { refreshOpenFaces } from './flow.js';
 import { sfx } from '../audio/sfx.js';
 import { party, nearestTo } from './party.js';
 import { relay, online } from '../net/online.js';
+import { log } from './log.js';
 import { groundAt } from '../physics/collide.js';
 import { walkable } from '../physics/enemynav.js';
 
@@ -88,11 +89,18 @@ function awardKills(list) {
     if (reward) {
       xp += reward.xp; levels += reward.levels; killed++;
       if (droppedHere(e)) dropLoot(e, reward.coins);
-      if (e.guardianGate) unlocked = true;
+      if (e.guardianGate) {
+        unlocked = true;
+        log('guardian', { label: e.profile.label, level: e.level, depth: state.map.depth }, { share: true });
+      }
       relay.defeated?.(e);
     }
   }
-  if (killed) setStatus(`${unlocked ? 'Guardian defeated · Gate unlocked!' : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
+  if (killed) {
+    setStatus(`${unlocked ? 'Guardian defeated · Gate unlocked!' : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
+    log('kill', { count: killed, xp });
+  }
+  if (levels) log('level', { level: player.level }, { share: true });
   if (unlocked) { setGuardianGate(state.world, false); refreshOpenFaces(); drawMinimap(); sfx('unlock'); }
   if (levels) sfx('levelUp');
   return unlocked;
@@ -153,7 +161,7 @@ export function updateEnemies(dt) {
     coordinateDefence(state.map, state.run, list, state.map.guardian ? nearestTo(state.map.guardian.x, state.map.guardian.z) : player);
   }
   const horde = hordeGroups[0], bodies = party();
-  if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) setStatus('Horde awakened!');
+  if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
   updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt);

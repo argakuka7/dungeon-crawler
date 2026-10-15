@@ -17,16 +17,62 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
   font-size: 10px; line-height: 1.45; color: #aab3c2; background: #0b0d1299; border-radius: 3px; user-select: text; }
 #dev b { color: #fff; font-weight: normal; }
 #dev .pick { user-select: all; cursor: text; }
-#dev-status { color: #ffd27a; min-height: 1.45em; }
 #dev-copy { font: inherit; color: #aab3c2; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 2px; padding: 0 4px; cursor: pointer; }
 #dev-copy:hover { color: #fff; }
-#dev-spawn { margin-top: 2px; }
-#dev-spawn :is(select, input, button) { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 2px; padding: 0 3px; }
-#dev-spawn input[type=number] { width: 3.6em; }
-#dev-spawn button { color: #aab3c2; cursor: pointer; }
-#dev-spawn button:hover { color: #fff; }
-#dev-spawn label { white-space: nowrap; cursor: pointer; }
-#dev-spawn input[type=checkbox] { vertical-align: middle; margin: 0 2px 0 4px; }
+#dev-hint { color: #8a96a8; }
+#dev-hint kbd { font-size: 9px; padding: 0 3px; }
+
+/* the chat box (game/console.js): the chronicle, the game's last word, a line to type in */
+#chat { position: fixed; left: 12px; bottom: 12px; z-index: 18; box-sizing: border-box; width: min(470px, calc(50vw - 200px)); min-width: 280px;
+  display: flex; flex-direction: column; font-size: 12px; pointer-events: none; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+#chat.open { pointer-events: auto; padding: 6px 8px 8px; background: #0b0d12d9; border: 1px solid #444c5c; border-radius: 6px; box-shadow: 0 10px 40px #0007; }
+#chat-tabs { display: flex; gap: 4px; align-items: baseline; margin-bottom: 4px; }
+#chat-tabs button { font: inherit; font-size: 11px; color: #8a96a8; background: none; border: 1px solid transparent; border-radius: 3px; padding: 1px 7px; cursor: pointer; }
+#chat-tabs button.on { color: #fff; border-color: #444c5c; background: #2a2f3a; }
+#chat-tabs span { margin-left: auto; color: #6f7a8c; font-size: 10px; }
+#chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: flex-end;
+  max-height: 9.6em; overflow: hidden; line-height: 1.35; }
+#chat.open #chat-log { max-height: min(42vh, 360px); overflow-y: auto; justify-content: flex-start; scrollbar-width: thin; }
+#chat-log li { flex: none; padding: 1px 0; color: #c9d1dc; white-space: pre-wrap; overflow-wrap: anywhere; transition: opacity 1.2s; }
+#chat-log li.old { opacity: 0; }
+#chat-log li.k-chat { color: #f4f6fa; }
+#chat-log li.k-death { color: #ff8a7a; }
+#chat-log li.k-down { color: #ffb08a; }
+#chat-log li.k-up, #chat-log li.k-level { color: #9fe39a; }
+#chat-log li.k-guardian, #chat-log li.k-depth { color: #ffd27a; }
+#chat-log li.k-kill, #chat-log li.k-trade { color: #aab3c2; }
+#chat-log li.k-horde { color: #ff9f5a; }
+#chat-log li.k-party { color: #cfe2ff; }
+#chat-log li.k-world { color: #8a96a8; text-align: center; border-top: 1px solid #ffffff1a; margin-top: 3px; padding-top: 3px; }
+#chat-log li.k-system { color: #9ec7ff; }
+#chat-log li.k-dev { color: #b9a6ff; }
+#chat-log li.error { color: #ff7a6a; }
+#chat-log li.friend > span { border-left: 3px solid var(--who); padding-left: 5px; }
+#chat-log li.more { cursor: pointer; }
+#chat-log li.more > span::after { content: ' \25B8'; color: #8a96a8; }
+#chat-log .record { margin: 2px 0 3px 10px; padding-left: 8px; border-left: 1px solid #ff8a7a66; color: #d8dde6; font-size: 11px; }
+#chat-status { min-height: 1.35em; color: #ffd27a; opacity: 0; transition: opacity .3s; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#chat-status.on { opacity: .85; }
+#chat-entry { position: relative; }
+#chat-usage { margin: 2px 0; color: #8a96a8; font-size: 11px; }
+#chat-usage b { color: #ffe4ae; font-weight: normal; text-decoration: underline; }
+#chat-usage span { color: #6f7a8c; }
+#chat-field { position: relative; }
+#chat-field input, #chat-ghost { box-sizing: border-box; width: 100%; font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid transparent; }
+#chat-field input { position: relative; color: #fff; background: #1a1f29; border-color: #5a6475; border-radius: 4px; outline: none; }
+#chat-field input:focus { border-color: #ffcf7a; }
+#chat-ghost { position: absolute; inset: 0; z-index: 1; color: #6f7a8c; white-space: pre; overflow: hidden; pointer-events: none; text-shadow: none; }
+#chat-ghost span { visibility: hidden; }
+#chat-popup { position: absolute; left: 0; right: 0; bottom: 100%; margin: 0 0 4px; padding: 3px; list-style: none; max-height: 17em; overflow-y: auto; scrollbar-width: thin;
+  background: #12161ef5; border: 1px solid #444c5c; border-radius: 5px; box-shadow: 0 6px 24px #0009; text-shadow: none; }
+#chat-popup li { display: flex; align-items: center; gap: 7px; padding: 2px 6px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+#chat-popup li.on { background: #2f3747; }
+#chat-popup li:hover { background: #262d3a; }
+#chat-popup img, #chat-popup i { flex: none; width: 18px; height: 18px; object-fit: contain; }
+#chat-popup .label { color: #f4f6fa; }
+#chat-popup .id { color: #6f7a8c; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+#chat-popup .label { flex: none; }
+#chat-popup .hint { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #8a96a8; font-size: 11px; }
 
 #help-overlay { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; padding: 16px; pointer-events: none; }
 #help-panel { pointer-events: auto; box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
@@ -108,15 +154,12 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #inventory-item-compare { font-size: 12px; color: #9ea9b6; white-space: pre-line; margin: 6px 0; }
 #inventory-item-compare .up { color: #7fd87a; } #inventory-item-compare .down { color: #ff7a6a; }
 .inventory-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
-#inventory-dev input { font: inherit; width: 4em; color: #e7dfcf; background: #343d46; border: 1px solid #69746d; border-radius: 4px; padding: 6px; }
 #loot-labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
 .loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 12px/1.25 monospace; padding: 2px 6px; white-space: nowrap;
   background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 3px; cursor: pointer; text-shadow: 0 1px 2px #000; }
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }
 .loot-label[data-rarity="legendary"], .loot-label[data-rarity="mythic"], .loot-label[data-rarity="ancient"] { font-weight: bold; }
-#inventory-dev { margin: 18px 0 0; border: 1px solid #555c50; border-radius: 4px; }
-#inventory-dev legend { color: #ffcf7a; }
-#inventory-dev p, #inventory-panel footer { font-size: 11px; color: #9ea9b6; }
+#inventory-panel footer { font-size: 11px; color: #9ea9b6; }
 #inventory-feedback { min-height: 18px; color: #ffcf7a; }
 @media (max-width: 540px) {
   #inventory-panel { padding: 12px; }

@@ -44,6 +44,11 @@
 //   landed  { n, end }                 runner -> viewers: ... and it ended
 //   arrow   { kind, stats, at, origin }  to those here: I shot (it only looks, net/session.js)
 //   flask   { flask }                  to those here: I threw a flask (it only looks)
+// What the players say, and what happened to them (game/console.js shows both in the chat box):
+//   chat    { text }                   to all: something I typed (at most CHAT_MAX characters;
+//                                      the host passes on at most CHAT_BURST in CHAT_WINDOW ms)
+//   news    { kind, data }             to all: something that happened to me, for the others'
+//                                      chronicle (core/chronicle.js NEWS: died, levelled up...)
 // The floor loot is shared and the host decides (game/loot.js). A pickup: { id, itemId, count,
 // gen?, x, y, z, from: [x, y, z], toss, kept? }; its id is `<source>#<i>`, the source the
 // enemy, chest or bag drop it came from:
@@ -62,12 +67,12 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 7;
+export const PROTOCOL = 8;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
 export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
-  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget']);
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news']);
 // is a message addressed `to` (undefined: everyone) for player `slot`?
 export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
 // a valid `to` from a guest: a slot, a list of slots, or none (everyone)
@@ -118,6 +123,17 @@ export const peerId = code => `cube-crawler-${code}`;
 
 // names are shown over the character: short, plain text
 export const cleanName = s => String(s ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 16) || 'Friend';
+
+// Chat: a line is short plain text; a player who sends more than CHAT_BURST lines within
+// CHAT_WINDOW ms has the rest dropped by the host (chatAllowed: times, when this player's
+// last lines came, oldest first; it notes `now` when the line may go on)
+export const CHAT_MAX = 160, CHAT_BURST = 5, CHAT_WINDOW = 5000;
+export function chatAllowed(times, now) {
+  while (times.length && now - times[0] >= CHAT_WINDOW) times.shift();
+  if (times.length >= CHAT_BURST) return false;
+  times.push(now);
+  return true;
+}
 
 // The character's bones (assets/character.glb), in the order a pose lists them.
 export const BONES = ['root', 'hips', 'spine', 'head', 'upper_arm.L', 'forearm.L', 'hand.L',

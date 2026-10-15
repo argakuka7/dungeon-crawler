@@ -219,12 +219,15 @@
   if (reward) {
     xp += reward.xp; levels += reward.levels; killed++;
     if (droppedHere(e)) dropLoot(e, reward.coins);
-    if (e.guardianGate) unlocked = true;
+    if (e.guardianGate) {
+      unlocked = true;
+      log('guardian', { ... }, { share: true });
+    }
     relay.defeated?.(e);
   }
 }</code></pre>
-      <p class="small muted" lang="en"><code>droppedHere(e)</code>: playing together, only the game of whoever struck the last blow drops the loot. <code>relay.defeated?.(e)</code> tells the friends you play together with; the <code>?.</code> means: only if there are any.</p>
-      <p class="small muted" lang="de"><code>droppedHere(e)</code>: Beim Zusammenspielen lässt nur das Spiel dessen, der zuletzt zugeschlagen hat, die Beute fallen. <code>relay.defeated?.(e)</code> sagt es den Freunden, mit denen du zusammen spielst; das <code>?.</code> heißt: nur, wenn es welche gibt.</p>
+      <p class="small muted" lang="en"><code>droppedHere(e)</code>: playing together, only the game of whoever struck the last blow drops the loot. <code>log(...)</code> writes a beaten guardian into the game's diary, the chat box. <code>relay.defeated?.(e)</code> tells the friends you play together with; the <code>?.</code> means: only if there are any.</p>
+      <p class="small muted" lang="de"><code>droppedHere(e)</code>: Beim Zusammenspielen lässt nur das Spiel dessen, der zuletzt zugeschlagen hat, die Beute fallen. <code>log(...)</code> schreibt einen besiegten Wächter ins Tagebuch des Spiels, die Chat-Box. <code>relay.defeated?.(e)</code> sagt es den Freunden, mit denen du zusammen spielst; das <code>?.</code> heißt: nur, wenn es welche gibt.</p>
       <p lang="en">Read it as: "<b>for</b> each monster <code>e</code> <b>of</b> the <code>list</code>, do what's in the curly brackets". The first time round, <code>e</code> is the first monster, then the second, and so on, until the list is done.</p>
       <p lang="de">Lies es so: "<b>Für</b> (for) jedes Monster <code>e</code> <b>aus</b> (of) der <code>list</code>e, mach, was in den geschweiften Klammern steht." Beim ersten Durchlauf ist <code>e</code> das erste Monster, dann das zweite, und so weiter, bis die Liste fertig ist.</p>
       <p class="small muted" lang="en"><code>xp += reward.xp</code> is short for <code>xp = xp + reward.xp</code>: add to what's there. <code>killed++</code> adds one.</p>
@@ -332,6 +335,74 @@ import { fixedWeapon } from './gear/generate.js';</code></pre>
       </ul>
       <a class="portal" href="architecture.html#swing-journey" lang="en">The whole journey of a sword hit</a>
       <a class="portal" href="architecture.html#swing-journey" lang="de">Die ganze Reise eines Schwerthiebs</a>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="talking" data-lv="2" data-src="src/core/commands.js#words,parse src/game/devcommands.js#header">
+  <h2 lang="en">Talking to the game</h2>
+  <h2 lang="de">Mit dem Spiel reden</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">So far, <i>you</i> read the game's code. The game can read too: what you type into its chat box. Press <kbd>Enter</kbd> in the game and type. A line is chat. A line that starts with <code>/</code> is a <b>command</b>, an order for the game:</p>
+      <p lang="de">Bisher hast <i>du</i> den Code des Spiels gelesen. Das Spiel kann auch lesen: was du in seine Chat-Box tippst. Drück im Spiel <kbd>Enter</kbd> und tipp. Eine Zeile ist Chat. Eine Zeile, die mit <code>/</code> anfängt, ist ein <b>Befehl</b>, ein Auftrag fürs Spiel:</p>
+      <pre data-label="typed into the chat box">/spawn redback 5 3</pre>
+      <ol class="steps">
+        <li lang="en">Cut the line into <b>words</b> at the spaces: <code>spawn</code>, <code>redback</code>, <code>5</code>, <code>3</code>.</li>
+        <li lang="de">Die Zeile an den Leerzeichen in <b>Wörter</b> schneiden: <code>spawn</code>, <code>redback</code>, <code>5</code>, <code>3</code>.</li>
+        <li lang="en">The first word picks the command. Each command knows what it wants next: "an enemy, then maybe a level, then maybe a count".</li>
+        <li lang="de">Das erste Wort wählt den Befehl. Jeder Befehl weiß, was er als Nächstes will: "einen Gegner, dann vielleicht eine Stufe, dann vielleicht eine Anzahl".</li>
+        <li lang="en">Read each word as what it should be: <code>redback</code> must be one of the game's enemies, <code>5</code> a whole number from 1 to 99.</li>
+        <li lang="de">Jedes Wort als das lesen, was es sein soll: <code>redback</code> muss einer der Gegner des Spiels sein, <code>5</code> eine ganze Zahl von 1 bis 99.</li>
+        <li lang="en">Run it: three level-5 Redbacks appear. Or, if a word doesn't fit, say what's wrong instead of crashing.</li>
+        <li lang="de">Ausführen: Drei Redbacks der Stufe 5 erscheinen. Oder, wenn ein Wort nicht passt, sagen, was falsch ist, statt abzustürzen.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3 lang="en">A command is just an object</h3>
+      <h3 lang="de">Ein Befehl ist nur ein Objekt</h3>
+      <pre class="wrap" data-label="src/game/devcommands.js (shortened)">dev({
+  name: 'spawn',
+  help: 'put enemies in this cube',
+  args: [{ name: 'enemy', type: 'enemy' },
+         { name: 'level', type: 'int', optional: true },
+         { name: 'count', type: 'int', optional: true }],
+  run({ enemy, level, count }) { ... },
+});</pre>
+      <p lang="en">A name, a short help text, the list of what it wants, and a machine (<code>run</code>) that does it. Adding a command means adding one more object like this. <code>/help</code> lists them all, from the same objects.</p>
+      <p lang="de">Ein Name, ein kurzer Hilfetext, die Liste dessen, was er will, und eine Maschine (<code>run</code>), die es tut. Einen Befehl hinzufügen heißt: noch so ein Objekt hinzufügen. <code>/help</code> listet sie alle auf, aus denselben Objekten.</p>
+      <p class="small muted" lang="en">The commands that spawn monsters or hand out weapons only exist in the developer version (<a href="../index.html?dev=1"><code>?dev=1</code></a>). There, <kbd>`</kbd> opens the box with the <code>/</code> already typed.</p>
+      <p class="small muted" lang="de">Die Befehle, die Monster erscheinen lassen oder Waffen verteilen, gibt es nur in der Entwickler-Version (<a href="../index.html?dev=1"><code>?dev=1</code></a>). Dort öffnet <kbd>`</kbd> die Box mit dem <code>/</code> schon getippt.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="complete" data-lv="2" data-src="src/core/commands.js#match,pick">
+  <h2 lang="en">Try it: guessing what you mean</h2>
+  <h2 lang="de">Probier es: erraten, was du meinst</h2>
+  <p lang="en">Nobody wants to type <code>item_potion_health_greater</code>. So while you type, the box guesses: it gives every item a <b>score</b>, how well it fits what you typed, and shows the best ones. <kbd>Tab</kbd> takes the top one. This is the game's real code, on its real items:</p>
+  <p lang="de">Niemand will <code>item_potion_health_greater</code> tippen. Darum rät die Box, während du tippst: Sie gibt jedem Ding eine <b>Punktzahl</b>, wie gut es zu dem passt, was du getippt hast, und zeigt die besten. <kbd>Tab</kbd> nimmt das oberste. Das ist der echte Code des Spiels, mit seinen echten Dingen:</p>
+  <div class="demo real" data-demo="complete"></div>
+  <p class="small muted" lang="en">Try <code>long</code>: three things start with it, equally well. Then the game doesn't guess, it asks. A wrong guess would be worse than a question.</p>
+  <p class="small muted" lang="de">Probier <code>long</code>: Drei Dinge fangen damit an, gleich gut. Dann rät das Spiel nicht, es fragt. Falsch raten wäre schlimmer als nachfragen.</p>
+</section>
+
+<section class="slide" id="complete-code" data-lv="3" data-src="src/core/commands.js#score">
+  <h2 lang="en">The real code: how well does it fit?</h2>
+  <h2 lang="de">Der echte Code: Wie gut passt es?</h2>
+  <div class="cols wide-left">
+    <pre class="wrap" data-code="src/core/commands.js#score"></pre>
+    <div>
+      <ul>
+        <li lang="en"><code>q.trim().toLowerCase()</code>: first make what you typed tidy, with no spaces around it, all small letters. The names get the same, so <code>Ruby</code> and <code>ruby</code> are the same.</li>
+        <li lang="de"><code>q.trim().toLowerCase()</code>: Erst wird aufgeräumt, was du getippt hast: keine Leerzeichen drumherum, alles kleine Buchstaben. Die Namen genauso, also sind <code>Ruby</code> und <code>ruby</code> gleich.</li>
+        <li lang="en">Then a ladder of <code>if</code>s, best first. The first one that is true gives the score with <code>return</code>, and the function stops. The very one: <b>100</b>. The name starts with it: <b>80</b>. And so on down.</li>
+        <li lang="de">Dann eine Leiter aus <code>if</code>s, das Beste zuerst. Das erste, das stimmt, gibt mit <code>return</code> die Punktzahl, und die Funktion hört auf. Genau das: <b>100</b>. Der Name fängt damit an: <b>80</b>. Und so weiter nach unten.</li>
+        <li lang="en"><code>wordsStart</code> and <code>inOrder</code> are two little helper machines, defined just above it in the same file. Their names say what they check.</li>
+        <li lang="de"><code>wordsStart</code> und <code>inOrder</code> sind zwei kleine Helfer-Maschinen, gleich darüber in derselben Datei definiert. Ihre Namen sagen, was sie prüfen.</li>
+        <li lang="en"><code>-1</code> at the very end: "doesn't fit at all". The box leaves those out.</li>
+        <li lang="de"><code>-1</code> ganz am Ende: "passt gar nicht". Die Box lässt die weg.</li>
+      </ul>
     </div>
   </div>
 </section>

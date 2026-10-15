@@ -11,6 +11,9 @@ import { updatePlayer } from './game/update.js';
 import { updateCamera } from './game/camera.js';
 import { updateCut } from './game/cut.js';
 import { updateHud } from './game/hud.js';
+import { updateConsole, openChat, closeChat, say } from './game/console.js';
+import { runCommand } from './game/commands.js';
+import { chronicle } from './game/log.js';
 import { updateInventory } from './game/inventory.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './game/equipment.js';
 import { updateLightPool, focusPoint } from './render/lightpool.js';
@@ -87,7 +90,8 @@ function frame() {
   tickNeighbors(dt);
   tickProps(state.time);
   if (state.world) animateWorld(state.world, dt, state.time);
-  updateHud(player, state.map, state.statusMsg);
+  updateHud(player, state.map);
+  updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
   updateInventory();
   updateQuickbar(); updateEffects();
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Guide (game/pace.js): the view still turns
@@ -122,9 +126,10 @@ window.__game = {
   get enemies() { return allEnemies(); }, updateEnemies,
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go
   net: { online, hostGame, joinGame, leaveGame, status: sessionStatus },   // playing together (net/session.js)
+  chat: { open: openChat, close: closeChat, say, run: runCommand, chronicle },   // the chat box (game/console.js)
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,
   devWear: state.dev ? devWear : undefined,   // devWear('wear_wizard_hat'), devWear(null)
-  ...(state.dev && { spawnEnemy: spawnEnemies, killEnemies, clearEnemies, goHorde }),
+  ...(state.dev && { spawnEnemy: spawnEnemies, killEnemies, clearEnemies, goHorde }),   // (the console's /spawn, /kill ...)
 };
 frame();

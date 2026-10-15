@@ -17,12 +17,14 @@ import { hurt, die, recover } from './flow.js';
 import { cancelSword } from './sword.js';
 import { goDown, tickDown } from './downed.js';
 
-// respawn: 'safe' (last safe spot, game/flow.js recover), or null (get up where you lie)
-export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, hop = 0 } = {}) {
+// respawn: 'safe' (last safe spot, game/flow.js recover), or null (get up where you lie);
+// by: the enemy behind it (game/enemycombat.js attacker), for the chronicle should it kill
+export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, hop = 0, by = null } = {}) {
   player.climb = null; player.getUp = null;
   cancelSword();
   sfx('knock');
-  if (!character.ready) { hurt(damage, reason); return; }
+  if (!character.ready) { hurt(damage, reason, by); return; }
+  if (damage > 0 || player.hp <= 0) player.lastHurt = { reason, by };
   takeDamage(player, damage, state.time);
   if (damage > 0) flash();
   if (reason) setStatus(reason);
@@ -44,6 +46,7 @@ export function dieInFluid(fluid, surface) {
   if (player.hp <= 0) return;
   player.swimming = false; player.fluid = 0;
   const { x, z } = player;   // before a no-asset fallback respawns the player
+  player.lastHurt = { reason: deathReason(fluid), by: null };
   if (!player.ragdoll) knockDown({ damage: player.hp, reason: deathReason(fluid) });
   else { takeDamage(player, player.hp, state.time); flash(); setStatus(deathReason(fluid)); }
   player.fluidDeath = player.ragdoll ? fluid : 0;

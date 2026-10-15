@@ -9,7 +9,7 @@ import { party, alive } from './party.js';
 import { insideSolid } from '../physics/collide.js';
 import { launch, stepProjectile } from '../core/projectiles.js';
 import { blowOf } from '../core/enemies.js';
-import { hitBody } from './enemycombat.js';
+import { hitBody, attacker } from './enemycombat.js';
 import { projectileFx } from './juice.js';
 import { drawProjectiles, removeProjectileViews } from '../render/projectiles.js';
 import { relay } from '../net/online.js';
@@ -20,7 +20,7 @@ let serial = 0;
 
 export function launchProjectile(e, a) {
   const p = e.target?.here ? e.target : player, pr = launch(e, a.projectile, { x: p.x, y: p.y + p.h * 0.55, z: p.z });
-  pr.blow = blowOf(e.profile, a);
+  pr.blow = { ...blowOf(e.profile, a), by: attacker(e) };
   pr.profile = e.profile;   // the thrower's kind colours it
   pr.n = ++serial;
   projectiles.push(pr);

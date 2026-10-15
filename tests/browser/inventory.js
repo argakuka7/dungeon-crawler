@@ -8,6 +8,7 @@ import { allEnemies, resetEnemies, updateEnemies, ENTRY_GRACE } from '../../src/
 import { setInventoryOpen, updateInventory } from '../../src/game/inventory.js';
 import { clearInput, inputDir } from '../../src/game/input.js';
 import { equipOwnedWeapon, devSwapWeapon } from '../../src/game/equipment.js';
+import { runCommand } from '../../src/game/commands.js';
 import { WEAPONS, ITEMS } from '../../src/core/items.js';
 import { lootHere, updateLoot, requestCollect, dropLoot, dropFromBag, floorItems } from '../../src/game/loot.js';
 import { updateLootLabels } from '../../src/game/lootlabels.js';
@@ -51,7 +52,7 @@ export async function runInventoryChecks() {
     check(state.inventoryOpen && !$('inventory-overlay').hidden, 'I must open inventory');
     check(document.querySelectorAll('.inventory-slot').length === 24, 'Inventory must have 24 bag slots');
     check(document.querySelectorAll('.coin-slot').length === 3, 'Currency needs three reserved slots');
-    check($('inventory-dev').hidden === !state.dev, 'Developer controls must be gated by ?dev=1');
+    check(!$('inventory-dev'), 'Developer weapons come from the console (/weapon), not the inventory');
     const before = [state.time, player.x, player.y, player.z, player.hp, view.yawTarget, view.zoomTarget];
     for (const code of ['KeyW','Space','ShiftLeft','ControlLeft','KeyQ','KeyK','KeyL','KeyR','KeyN']) press(code);
     document.querySelector('canvas').dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
@@ -64,8 +65,9 @@ export async function runInventoryChecks() {
 
     for (const w of SAMPLE) {
       if (state.dev) {
-        $('dev-weapon').value = w.id; $('dev-equip').click();
+        check(await runCommand(`/weapon ${w.id}`), '/weapon must equip ' + w.id);
       } else {
+        check(!await runCommand(`/weapon ${w.id}`), 'Non-dev runs must not know /weapon');
         check(!await devSwapWeapon(w.id), 'Non-dev runs must reject dev grants');
         if (!player.inventory.slots.some(s => s?.itemId === w.id)) addItem(player.inventory, w.id);
         await equipOwnedWeapon(player.inventory.slots.find(s => s?.itemId === w.id).instanceId);
@@ -91,7 +93,7 @@ export async function runInventoryChecks() {
 
     await paused(async () => {
       startSwing(player); setInventoryOpen(true);
-      check($('inventory-equip').disabled && $('dev-equip').disabled, 'Mid-swing weapon switches must be disabled');
+      check($('inventory-equip').disabled, 'Mid-swing weapon switches must be disabled');
       check(!await equipOwnedWeapon(player.inventory.slots.find(s=>s?.itemId === WEAPONS[1].id).instanceId), 'Equipment API must guard active swings');
       setInventoryOpen(false); cancelSwing(player, true);
       const hostile = await state.cubes.get('0,0,-2'), town = await state.cubes.get('0,0,0');

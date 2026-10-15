@@ -36,5 +36,8 @@ export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];
 //   take(key, pickup)                         we reach for it: 'mine' (the host's word, or we are
 //                                             the host) or 'asked' (the host will say)
 //   forget(key, sources)                      a death put our cube back: those drops are undone
+// and the chat box (game/console.js, game/log.js):
+//   chat(text)                                we said something
+//   news(kind, data)                          something happened to us (core/chronicle.js NEWS)
 export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null,
-  drop: null, take: null, forget: null };
+  drop: null, take: null, forget: null, chat: null, news: null };

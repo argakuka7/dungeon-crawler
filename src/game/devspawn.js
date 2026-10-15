@@ -1,15 +1,13 @@
-// Dev tools (?dev=1): spawn any enemy kind, at any level, into the current cube.
-//   J: spawn the picked kind at the cursor (else in front of the player)
-// The dev panel row: kind, level (empty: the level this depth rolls), count, spawn (in front
-// of the player), kill all (with XP / loot), clear (without), passive (enemies stand still).
+// Dev tools (?dev=1): spawn any enemy kind, at any level, into the current cube; kill or
+// remove them all. The console's /spawn, /kill, /remove and /passive (game/devcommands.js).
 // Spawns are ordinary enemies with ids of their own (never in the run's defeated set) and
 // vanish when the cube resets. Guardian kinds get their bars and drops but no gate.
 import { N } from '../core/constants.js';
-import { ENEMY_KINDS, ENEMY_PROFILES, enemyRoll, coinRange, guardianLevel, makeEnemy } from '../core/enemies.js';
+import { ENEMY_KINDS, enemyRoll, coinRange, guardianLevel, makeEnemy } from '../core/enemies.js';
 import { damageEnemy } from '../core/combat.js';
 import { walkable, floorAt, groundY } from '../physics/enemynav.js';
 import { removeEnemyViews } from '../render/enemies.js';
-import { player, state, setStatus } from './state.js';
+import { player, state } from './state.js';
 import { addEnemies, allEnemies, detachEnemies } from './enemies.js';
 import { pickFloor, pointer } from './pointer.js';
 
@@ -66,31 +64,4 @@ export function clearEnemies() {
   const list = detachEnemies();
   removeEnemyViews(list);
   return list.length;
-}
-
-if (state.dev) {
-  const $ = id => document.getElementById(id);
-  const kindSel = $('dev-kind'), levelIn = $('dev-elevel'), countIn = $('dev-count');
-  for (const base of ENEMY_PROFILES) {
-    const group = document.createElement('optgroup');
-    group.label = base.label;
-    for (const k of Object.values(ENEMY_KINDS).filter(k => k.species === base.species)) group.append(new Option(k.label, k.type));
-    kindSel.append(group);
-  }
-  const level = () => { const v = parseInt(levelIn.value, 10); return v >= 1 ? Math.min(v, 99) : null; };
-  const count = () => Math.min(20, Math.max(1, parseInt(countIn.value, 10) || 1));
-  function spawn(at) {
-    const list = spawnEnemies(kindSel.value, { level: level(), n: count(), at });
-    const k = ENEMY_KINDS[kindSel.value];
-    setStatus(list.length ? `Spawned ${list.length} × ${k.label} (level ${list[0].level})` : `No room for a ${k.label} here`);
-  }
-  // the controls keep their keys (typing a level must not walk or zoom)
-  $('dev-spawn').addEventListener('keydown', e => e.stopPropagation());
-  $('dev-spawn-go').addEventListener('click', e => { e.currentTarget.blur(); spawn({ x: player.x + Math.sin(player.yaw) * 2.5, y: player.y, z: player.z + Math.cos(player.yaw) * 2.5 }); });
-  $('dev-kill').addEventListener('click', e => { e.currentTarget.blur(); setStatus(`Killed ${killEnemies()} enemies`); });
-  $('dev-clear').addEventListener('click', e => { e.currentTarget.blur(); setStatus(`Removed ${clearEnemies()} enemies`); });
-  $('dev-passive').addEventListener('change', e => { state.devPassive = e.target.checked; e.target.blur(); });
-  addEventListener('keydown', e => {
-    if (e.code === 'KeyJ' && !e.repeat && !state.inventoryOpen && !e.ctrlKey && !e.metaKey) spawn(null);
-  });
 }

@@ -9,7 +9,7 @@ import { alive } from './party.js';
 import { insideSolid } from '../physics/collide.js';
 import { startBeam, aimBeam, castBeam, muzzleAt, beamHits } from '../core/beams.js';
 import { blowOf, attackOf } from '../core/enemies.js';
-import { hitBody } from './enemycombat.js';
+import { hitBody, attacker } from './enemycombat.js';
 import { beamFx } from './juice.js';
 import { drawBeams, removeBeamViews } from '../render/beams.js';
 
@@ -21,7 +21,7 @@ const target = e => { const p = e.target?.here ? e.target : player; return alive
 
 export function fireBeam(e, a) {
   const p = target(e), b = castBeam(startBeam(e, a.beam, chest(p ?? player)), solid, p);
-  Object.assign(b, { enemy: e, attack: e.attacks, blow: blowOf(e.profile, a), profile: e.profile });
+  Object.assign(b, { enemy: e, attack: e.attacks, blow: { ...blowOf(e.profile, a), by: attacker(e) }, profile: e.profile });
   e.beam = b;
   beams.push(b);
   beamFx(b, 'start');

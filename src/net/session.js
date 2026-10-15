@@ -23,6 +23,11 @@
 // A guest keeps their character (level, bag, gear) when they join and plays on with the
 // host's world as it is: what was defeated and opened, the loot on the floor. Only the host
 // starts new worlds; the guests come along.
+//
+// The chat box (game/console.js) is shared: what a player types goes to everyone (`chat`,
+// shown in their colour and over their head), and so does what happens to them that the
+// others care about (`news`: died, levelled up, found something epic; core/chronicle.js NEWS).
+// Each game writes it into its own chronicle (game/log.js) as the friend's.
 import { player, state, setStatus } from '../game/state.js';
 import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
 import { STEP } from '../core/constants.js';
@@ -40,7 +45,7 @@ import { capturePose, capturedLook, showPartner, showHelp, removePartner, player
 import { tintCharacter } from '../render/character.js';
 import { openRoom, joinRoom } from './transport.js';
 import { PROTOCOL, MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf, roomCode, cleanName, isMe,
-  SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES } from './protocol.js';
+  SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES, CHAT_MAX, chatAllowed } from './protocol.js';
 import { Timeline } from './sync.js';
 import { online, relay } from './online.js';
 import { Runner, Viewer, canBeHit } from './foes.js';
@@ -61,6 +66,9 @@ import { packPickup, acceptDrop, takenBy, grant, forgetDrops, dropOf, allLoot, t
 import { shareChest } from '../game/chests.js';
 import { ITEMS } from '../core/items.js';
 import { RARITY } from '../core/gear/rarities.js';
+import { cleanText, cleanNews } from '../core/chronicle.js';
+import { log } from '../game/log.js';
+import { speech } from '../game/console.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -131,11 +139,13 @@ function showPlayers(note = null) {
   } else if (online.slot !== null) setPhase('connected', `Playing with ${list}`);
 }
 
-// what the player needs to see: over the character (setStatus is the dev overlay)
+// what the player needs to see: over the character, and in the chat box (setStatus)
 function say(text) {
   setStatus(text);
   floatText(text, q => q.set(player.x, player.visY + 2.1, player.z), { color: '#cfe2ff', size: 0.2, life: 2.2, rise: 0.35 });
 }
+// ... and what the chronicle keeps: someone came or went
+function tell(text) { say(text); log('party', { text }); }
 
 const reason = e => ({
   'unavailable-id': 'That room code is taken',
@@ -254,7 +264,7 @@ function apart() {
   if (foes instanceof Viewer) foes.stop(foes.cube === state.cubeKey);   // the runner's enemies here are ours now
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
-  relay.drop = relay.take = relay.forget = null;
+  relay.drop = relay.take = relay.forget = relay.chat = relay.news = null;
   settleClaims();   // what we reached for is ours: nobody else is left to have it
   setOthers([]);
   online.buddies = [];
@@ -271,7 +281,7 @@ function guestArrived(l) {
     if (m?.t !== 'hello') return;
     if (m.v !== PROTOCOL) {
       l.send({ t: 'version', v: PROTOCOL }); setTimeout(() => l.close(), 300);
-      say('A friend with another version of the game tried to join: both reload the page');
+      tell('A friend with another version of the game tried to join: both reload the page');
       return;
     }
     const id = typeof m.pid === 'string' ? m.pid : null;
@@ -299,7 +309,7 @@ function welcome(l, slot, name, id, again) {
   deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
   together();
   showPlayers();
-  say(again ? `${name} is back` : `${name} joined`);
+  tell(again ? `${name} is back` : `${name} joined`);
 }
 
 function fromGuest(p, l, m) {
@@ -307,6 +317,8 @@ function fromGuest(p, l, m) {
   if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
   if (m.t === 'bye') { lostGuest(p); l.close(); return; }
   if (!RELAYED.has(m.t) || !validTo(m.to)) return;
+  // a chat line goes on short and plain, and not too many at once
+  if (m.t === 'chat' && (!(m.text = cleanText(m.text, CHAT_MAX)) || !chatAllowed(p.chatTimes ??= [], performance.now()))) return;
   m.from = p.slot;
   if (m.t === 'me') { if (isMe(m)) { p.timeline.push(m, performance.now()); passMe(m, p.slot); } return; }
   deliver(m, m.to, p.slot);
@@ -321,7 +333,7 @@ function lostGuest(p) {
   deliver({ t: 'left', slot: p.slot, from: 0 }, undefined, p.slot);
   if (!peers.size) apart();
   showPlayers(`${p.name} left`);
-  say(`${p.name} left`);
+  tell(`${p.name} left`);
 }
 
 // --- a guest: what the host says ---------------------------------------------------------------
@@ -342,12 +354,12 @@ function fromHost(m) {
   if (m.from === 0 && m.t === 'joined' && Number.isInteger(m.slot) && m.slot !== online.slot) {
     const known = peers.has(m.slot), name = cleanName(m.name);
     addPeer(m.slot, name); showPlayers();
-    if (!known) say(`${name} joined`);
+    if (!known) tell(`${name} joined`);
     return;
   }
   if (m.from === 0 && m.t === 'left') {
     const p = peers.get(m.slot);
-    if (p) { dropPeer(m.slot); showPlayers(); say(`${p.name} left`); }
+    if (p) { dropPeer(m.slot); showPlayers(); tell(`${p.name} left`); }
     return;
   }
   if (m.from === 0 && m.t === 'world' && Number.isFinite(m.seed)) { pendingSeed = m.seed; return; }
@@ -376,7 +388,7 @@ function welcomed(m) {
   }
   together();
   showPlayers();
-  say(`Joined ${peers.get(0)?.name ?? 'your friend'}'s world`);
+  tell(`Joined ${peers.get(0)?.name ?? 'your friend'}'s world`);
 }
 
 // we (a guest) lost the host: it said goodbye (bye), or the connection broke (then we try to
@@ -389,7 +401,7 @@ function lost(bye = false) {
   online.role = null; online.code = null;
   if (wasIn && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', 'Connection lost. Trying again...'); }
   else setPhase('idle', name ? `${name} left the game` : 'The connection was lost');
-  if (name) say(bye || !wasIn ? `${name} left` : 'Connection lost');
+  if (name) tell(bye || !wasIn ? `${name} left` : 'Connection lost');
 }
 
 function refuse() {
@@ -420,6 +432,9 @@ function pingAll() {
 function together() {
   const r = x => Math.round(x * 1000) / 1000;
   relay.defeated = e => post({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null });
+  // the chat box: what we say, and what happens to us (game/log.js)
+  relay.chat = text => post({ t: 'chat', text });
+  relay.news = (kind, data) => post({ t: 'news', kind, data });
   relay.visited = key => post({ t: 'visited', keys: [key] });
   // our arrows, bolts, spells and flasks fly for those here too (they only look; the hits
   // are ours: game/shots.js, game/throws.js)
@@ -479,9 +494,17 @@ function handle(m) {
   else if (foes instanceof Viewer && m.from === foes.runner) viewerReceive(m);
 }
 
-// what everyone hears about: kills, cubes, faces, and the arrows and flasks of those here
+// what everyone hears about: kills, cubes, faces, the arrows and flasks of those here, and
+// what they say and what happened to them (the chat box)
 function shared(m, p) {
   if (m.t === 'defeated' && typeof m.id === 'string') shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null);
+  else if (m.t === 'chat') {
+    const text = cleanText(m.text, CHAT_MAX);
+    if (text) { log('chat', { text }, { who: { slot: p.slot, name: p.name } }); speech(text, p.slot); }
+  } else if (m.t === 'news') {
+    const data = cleanNews(m.kind, m.data);
+    if (data) log(m.kind, data, { who: { slot: p.slot, name: p.name } });
+  }
   else if (m.t === 'visited' && Array.isArray(m.keys)) { for (const k of m.keys) if (typeof k === 'string') shareVisit(k); }
   else if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; }
   else if (m.t === 'arrow') {

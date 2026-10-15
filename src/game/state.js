@@ -52,4 +52,6 @@ export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_
 // the enemies (only your own input stops)
 export const worldPaused = () => state.inventoryOpen && !together();
 
+// what the game just said: a short line in the chat box (game/console.js), not kept (the
+// chronicle, game/log.js, keeps what matters)
 export function setStatus(s) { state.statusMsg = s; state.statusUntil = state.time + 2.2; }

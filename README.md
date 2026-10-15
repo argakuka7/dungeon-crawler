@@ -30,6 +30,9 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/net/`: playing together (O in the game, up to four players): a room code, PeerJS
     between the host and each guest, the others' poses, following each other through portals
     and one player's enemies shown to the others in its cube (`docs/online.md`).
+  - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
+    chat when playing together, and commands after a `/` that complete the game's items and
+    enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).
 - `assets/`: exported game data (GLB models, item icons, manifests). The game
   loads assets only from here (and music from `music/`). These files are generated; do not edit them by hand.
 - `music/`: hand-written Scrimshaw scores the game plays (`docs/music.md`). Before writing
@@ -58,7 +61,7 @@ docs that explain how the game works, from the big ideas down to the real code:
 
 ```sh
 npm run serve            # uv run --no-project tools/serve.py [port]
-# http://localhost:8000/?seed=123   (?dev=1 for dev tools)
+# http://localhost:8000/?seed=123   (?dev=1 for dev tools: ` opens their commands)
 # with RADIUS_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY set, the guide's tutor uses it through the server
 npm test
 ```

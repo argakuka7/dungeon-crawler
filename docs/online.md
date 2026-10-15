@@ -153,6 +153,17 @@ being helped up and getting back in. Up to four players, co-op.
 - Time runs alike for everyone: the Guide cannot pause or slow it while together
   (`game/pace.js`).
 
+## Talking
+
+- **Enter** opens the chat box (`game/console.js`, `docs/console.md`): a typed line goes to
+  everyone (`chat`), shows in their box in the speaker's colour and over the speaker's head.
+  The host passes on at most 5 lines of a guest per 5 s and only plain text up to 160
+  characters.
+- What happens to a player that the others care about goes to them as `news` (died, knocked
+  out and helped up, levelled up, a guardian defeated, a new depth reached, an epic or better
+  weapon found): each game writes it into its own chronicle as the friend's
+  (`core/chronicle.js NEWS`, checked by `cleanNews`). Joining and leaving are in it too.
+
 ## Not done
 
 - Dev-spawned enemies stay with the game that spawned them: they are not handed over.

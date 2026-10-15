@@ -1,9 +1,10 @@
 // Debug tools, only with ?dev in the URL:
 //   click a portal: take it            G: go to the nearest way down on this depth
-//   H: try this depth's wild horde (console: __game.goHorde(depth))
+//   H: try this depth's wild horde
 //   PageDown / PageUp: go down / up a depth right away (finding the well / ring first)
 //   Alt + WASD / arrows: go to the adjacent cube on that side of the screen
 // None of them wait for guardians: locked portals are taken anyway (the gate stays locked).
+// The console's developer commands (game/devcommands.js: /find, /goto, /horde, /go) do the same.
 import * as THREE from 'three';
 import { camera, renderer } from '../render/scene.js';
 import { step } from '../world/coords.js';
@@ -50,7 +51,8 @@ async function findCube(kind) {
   return null;
 }
 
-async function goTo(kind, take) {
+// to the nearest way `kind` ('up' or 'down') on this depth: take it, or stand next to it
+export async function goTo(kind, take) {
   if (state.transitioning || state.inventoryOpen) return;
   clearMouseInput();
   state.transitioning = true;
@@ -113,7 +115,7 @@ if (state.dev) {
   addEventListener('click', e => { const q = portalAt(e); if (q) takePortal(q); });
   addEventListener('mousemove', e => { document.body.style.cursor = portalAt(e) ? 'pointer' : ''; });
   addEventListener('keydown', e => {
-    if (e.repeat || state.inventoryOpen) return;
+    if (e.repeat || state.inventoryOpen || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
     if (e.altKey && !e.ctrlKey && !e.metaKey && SCREEN[e.code]) { e.preventDefault(); goAdjacent(screenFace(SCREEN[e.code])); return; }
     if (e.code === 'KeyG') goTo('down', false);
     if (e.code === 'KeyH') goHorde().catch(err => setStatus(err.message));

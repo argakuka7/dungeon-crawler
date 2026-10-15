@@ -16,9 +16,9 @@
   and better weapons are framed in their colour.
 - **1**–**6** use the quick bar (see below). With the panel open they put the selected bag
   item on that slot instead.
-- With **`?dev=1`**, inventory has a weapon (grouped by kind), rarity and item level selector with **Grant &
-  equip** and **Drop at feet** buttons that roll such a weapon. Without that exact flag, the
-  controls are hidden and the dev grant API refuses the operation.
+- With **`?dev=1`**, the console's `/weapon <weapon> [rarity] [level] [drop]` rolls such a weapon
+  (`docs/console.md`). Without that exact flag, the developer commands do not exist and the
+  dev grant API refuses the operation.
 - Equipment changes are blocked during attacks, travel, knockdown, stun, swimming
   and climbing. Close the panel to finish an action before changing weapons.
 

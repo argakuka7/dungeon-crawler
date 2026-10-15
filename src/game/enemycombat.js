@@ -14,11 +14,15 @@ import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
 
 export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; };
-// poison the player (a venomous bite, acid; core/status.js), unless an antidote keeps it off
-export function poisonPlayer(toxin, reason) {
+// who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
+// with the blow (core/enemies.js blowOf), over the network too
+export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
+// poison the player (a venomous bite, acid; core/status.js), unless an antidote keeps it off;
+// by: the enemy that did it (attacker)
+export function poisonPlayer(toxin, reason, by = null) {
   if (!toxin || immuneTo(player, 'toxic') || player.hp <= 0) return false;
   if (!player.toxic) setStatus('Poisoned! An antidote cures it');
-  player.toxic = afflict(toxin, reason);
+  player.toxic = { ...afflict(toxin, reason), by };
   return true;
 }
 export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
@@ -28,13 +32,15 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   p.vx = nx * blow.knock; p.vz = nz * blow.knock;
   playerHurtFx(Math.min(blow.damage, p.hp), fx, fz);
   // fire thaws a chill and ice puts a fire out
-  if (blow.burn && p.hp > blow.damage) { p.burning = ignite(blow.burn, blow.reason); p.chilled = null; }
+  const by = blow.by ?? null;
+  if (blow.burn && p.hp > blow.damage) { p.burning = { ...ignite(blow.burn, blow.reason), by }; p.chilled = null; }
   if (blow.chill && p.hp > blow.damage) { p.chilled = chillFrom(blow.chill); p.burning = null; }
-  if (blow.toxin && p.hp > blow.damage) poisonPlayer(blow.toxin, (blow.reason ?? 'Bitten!').replace(/^Bitten/, 'Poisoned'));
+  if (blow.toxin && p.hp > blow.damage) poisonPlayer(blow.toxin, (blow.reason ?? 'Bitten!').replace(/^Bitten/, 'Poisoned'), by);
   // only a heavy blow or a deadly one knocks you over; the rest are a short flinch and a shove
   if (blow.knockDown || p.hp <= blow.damage) {
-    knockDown({ damage: blow.damage, hop: blow.hop, reason: blow.reason }); return;
+    knockDown({ damage: blow.damage, hop: blow.hop, reason: blow.reason, by }); return;
   }
+  if (blow.damage > 0) p.lastHurt = { reason: blow.reason, by };
   takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
 }
@@ -47,7 +53,7 @@ export function strikePlayer(e) {
   const p = e.target?.here ? e.target : player, a = attackOf(e), dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
   if (p.ragdoll || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return;
   if (d > 0.01 && Math.cos(Math.atan2(dx, dz) - e.yaw) < a.arc) return;
-  hitBody(p, blowOf(e.profile, a), e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
+  hitBody(p, { ...blowOf(e.profile, a), by: attacker(e) }, e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
 }
 // On fire: the burn ticks away (also while knocked down); water puts it out. A lethal
 // tick knocks the player down for good.
@@ -58,7 +64,7 @@ export function updateBurning(dt) {
   const damage = burnStep(b, dt);
   if (damage > 0) {
     burnHurtFx(Math.min(damage, p.hp));
-    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: b.reason });
+    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: b.reason, by: b.by });
     else takeDamage(p, Math.min(damage, p.hp), state.time);
   }
   if (burntOut(b)) p.burning = null;
@@ -72,7 +78,7 @@ export function updateToxic(dt) {
   const damage = statusStep(d, dt);
   if (damage > 0) {
     poisonHurtFx(Math.min(damage, p.hp));
-    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: d.reason || 'Poisoned' });
+    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: d.reason || 'Poisoned', by: d.by });
     else takeDamage(p, Math.min(damage, p.hp), state.time);
   }
   if (statusOver(d)) p.toxic = null;

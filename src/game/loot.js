@@ -35,6 +35,7 @@ import { drawLoot, lootLanded } from '../render/loot.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { online, relay } from '../net/online.js';
+import { log } from './log.js';
 
 export const TOSS_TIME = 0.55;   // the arc out of the body
 const TAKE_REACH = 0.6;          // a clicked pickup is taken from this close (cells)
@@ -137,7 +138,12 @@ function credit(p) {
   else {
     const name = displayName(p);
     gained.items.set(name, (gained.items.get(name) || 0) + p.count);
-    if (p.gen) gained.color = rarityOf(p).css;
+    if (p.gen) {
+      const r = rarityOf(p);
+      gained.color = r.css;
+      // a rare one (or better) goes into the chronicle; an epic one (or better) the friends hear of
+      if (r.rank >= RARITY.rare.rank) log('loot', { name, rarity: r.id }, { share: r.rank >= RARITY.epic.rank });
+    }
     sfx('pickup');
   }
   quiet = 0;

@@ -29,6 +29,7 @@ import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
 import { online, relay } from '../net/online.js';
+import { log, logDeath, noteDepth } from './log.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -57,7 +58,8 @@ export function spawnEntry() {
   clearEffects(player);
 }
 
-export function hurt(amount, reason) {
+export function hurt(amount, reason, by = null) {
+  player.lastHurt = { reason, by };
   takeDamage(player, amount, state.time);
   flash();
   if (player.hp <= 0) { setStatus('You died (' + reason + ') - back to where you came in'); die(); }
@@ -77,10 +79,14 @@ function restoreVisit(v) {
 }
 
 // died: back to where you came in, in the cube as it was then (after a fall through cubes:
-// the cube the fall started in)
+// the cube the fall started in). The chronicle notes what did it (game/log.js logDeath).
 // learn: memory.html#death (see learn/README.md)
 export function die() {
   sfx('death');
+  logDeath();
+  backAfterDeath();
+}
+function backAfterDeath() {
   if (state.fallFrom) { returnFromFall(true); return; }
   // playing together the cube stays as it is while a friend fights on in it (and the enemies
   // we are shown are another player's anyway, src/net/foes.js)
@@ -116,7 +122,7 @@ function returnFromFall(dead) {
   }, () => {
     if (state.cubes !== cubes) return;
     state.transitioning = false;
-    if (dead) die(); else recover();   // stay in this cube
+    if (dead) backAfterDeath(); else recover();   // stay in this cube
   }), 380);
 }
 
@@ -208,6 +214,7 @@ export function enterCube(c, from = null, back = null, at = null) {
 export function settleIn(neighbors = true) {
   const c = state.cubes.cubes.get(state.cubeKey);
   showStats(c.map, state.cubeKey, state.cubes.seed, c.visits);
+  noteDepth(c.map, state.cubes.seed);   // the first time this deep: into the chronicle
   drawMinimap();
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
   if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
@@ -250,6 +257,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = fals
   clearInput();
   if (!keepPlayer) Object.assign(player, createPlayerStats(state.dev));
   state.run = createRun(); state.inventoryOpen = false;
+  log('world', { seed });
   // the villagers are a nicety: a failure to load them (logged) does not hold the game up
   return whenReady(Promise.all([state.cubes.get(state.cubes.start), townAssetsReady, syncEquippedWeapon(),
     villagersReady.catch(() => null)]))

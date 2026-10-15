@@ -9,6 +9,8 @@ import { die } from './flow.js';
 import { standUp } from './ragdoll.js';
 import { sfx } from '../audio/sfx.js';
 import { REVIVE_TIME, REVIVE_REACH, REVIVE_HP, BLEED_OUT } from '../core/downed.js';
+import { phrase, cleanBy } from '../core/chronicle.js';
+import { log } from './log.js';
 
 // the friends here and on their feet, who can help
 const helpers = () => online.buddies.filter(b => b.here && !b.out && b.hp > 0);
@@ -22,6 +24,7 @@ export function goDown() {
   if (!list.length) return false;
   player.down = { t: 0, revive: 0, by: null };
   setStatus(`Down! ${helperName(list)} can help you up`);
+  log('down', { cause: phrase(player.lastHurt?.reason) || 'knocked out', by: cleanBy(player.lastHurt?.by) }, { share: true });
   return true;
 }
 
@@ -40,6 +43,7 @@ export function tickDown(dt) {
   player.hp = Math.ceil(player.maxHp * REVIVE_HP);
   sfx('levelUp');
   setStatus('Back on your feet!');
+  log('up', { by: d.by }, { share: true });
   standUp(r);
 }
 
