@@ -1,47 +1,78 @@
-// What two games say to each other when playing together (src/net/session.js). Pure: no DOM,
+// What the games say to each other when playing together (src/net/session.js). Pure: no DOM,
 // no game state, so it can be tested in node.
+//
+// Up to MAX_PLAYERS play together. Every player has a number (slot): the host 0, the guests
+// 1, 2, 3 in the order they came. The guests are only connected to the host, which passes
+// their messages on (a star): a guest's message goes to everyone else unless it says `to`
+// (a slot or a list of slots), and the host stamps who it is `from` (only the types in
+// RELAYED go on). Everything a guest hears has a `from` (0: the host itself).
 //
 // Messages are plain JSON objects with a type `t`:
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
-//   welcome { v, name, seed, defeated, gates, visited, faces }  host -> guest: play in this
-//                                      world (and what was defeated, opened and discovered in
-//                                      it so far)
-//   visited { keys }                   either way: I discovered these cubes (yours too now)
-//   faces   { keys }                   either way: the side faces open for me (open for you too)
-//   world   { seed }                   host -> guest: the host started a new world
+//   welcome { v, slot, players, seed, defeated, gates, visited, faces }  host -> guest: you
+//                                      are player `slot`, with players ([{ slot, name }], the
+//                                      host too); play in this world (and what was defeated,
+//                                      opened and discovered in it so far)
+//   joined  { slot, name }             host -> guests: someone came (or got back in)
+//   left    { slot }                   host -> guests: someone went
+//   visited { keys }                   to all: I discovered these cubes (yours too now)
+//   faces   { keys }                   to all: the side faces open for me (open for you too)
+//   world   { seed }                   host -> guests: the host started a new world
 //   me      { ts, seed, cube, busy, pose, body, ground, swim, down, ko, hp, maxHp, level,
-//             weapon, armed, worn }    both ways, about 20 times a second: where I am and how
-//                                      I look (`ts`: the sender's clock, ms; body: [x, y, z, vx,
-//                                      vz], what the host's enemies go after; ko: lying downed,
-//                                      [helped up %, s left], game/downed.js)
-//   roster  { cube, seed, profiles, list }  host -> guest: the enemies in its cube (net/foes.js)
-//   foes    { ts, cube, list }         host -> guest, about 15 times a second: where they are
-//   want    {}                         guest -> host: send the roster again (we came into a cube)
-//   handover { cube, list }            guest -> host: the host came into our cube: our enemies
+//             weapon, armed, worn }    to all, about 20 times a second: where I am and how I
+//                                      look (`ts`: the sender's clock, ms; body: [x, y, z, vx,
+//                                      vz], what enemies go after; ko: lying downed, [helped up
+//                                      %, s left], game/downed.js). The host passes it on less
+//                                      often to players in another cube (FAR_EVERY).
+// A cube's enemies are run by the player there with the lowest number (net/foes.js): the
+// runner. Those with it in the cube are shown them (viewers):
+//   roster  { cube, seed, profiles, list }  runner -> viewer: the enemies in its cube
+//   foes    { ts, cube, list }         runner -> viewers, about 15 times a second: where they are
+//   want    {}                         viewer -> runner: send the roster again (we came, died)
+//   handover { cube, list }            to the new runner: it came into our cube: our enemies
 //                                      as they are ({ id, x, y, z, yaw, hp, mode }), its now
-//   defeated { id, gate }              either way: I got the reward for enemy `id` (apart, it
+//   defeated { id, gate }              to all: I got the reward for enemy `id` (apart, it
 //                                      stays defeated for you; gate: a guardian's, now open)
-//   hit     { id, damage, crit, dx, dz, kb }  guest -> host: I hurt enemy `id`
-//   afflict { id, status, spec }       guest -> host: I set it burning or poisoned
-//   hurt    { blow, fx, fz, nx, nz }   host -> guest: an enemy's blow landed on you
-//   shot    { n, id, spec, at }        host -> guest: enemy `id` threw projectile n
-//   landed  { n, end }                 host -> guest: ... and it ended
-//   arrow   { kind, stats, at, from }  either way: I shot (it only looks, net/session.js)
-//   flask   { flask }                  either way: I threw a flask (it only looks)
+//   hit     { id, damage, crit, dx, dz, kb }  viewer -> runner: I hurt enemy `id`
+//   afflict { id, status, spec }       viewer -> runner: I set it burning or poisoned
+//   hurt    { blow, fx, fz, nx, nz }   runner -> viewer: an enemy's blow landed on you
+//   shot    { n, id, spec, at }        runner -> viewers: enemy `id` threw projectile n
+//   landed  { n, end }                 runner -> viewers: ... and it ended
+//   arrow   { kind, stats, at, origin }  to those here: I shot (it only looks, net/session.js)
+//   flask   { flask }                  to those here: I threw a flask (it only looks)
+// and between a guest and the host only:
 //   ping    {}                         both ways, every second, also from a background tab
-//   full    {}                         host -> a second guest: this game has two players already
+//   full    {}                         host -> a guest too many: this game is full
 //   version { v }                      either way: the other side runs a different version
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 5;
+export const PROTOCOL = 6;
+
+export const MAX_PLAYERS = 4;
+// what the host passes on from one guest to the others
+export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask']);
+// is a message addressed `to` (undefined: everyone) for player `slot`?
+export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
+// a valid `to` from a guest: a slot, a list of slots, or none (everyone)
+export const validTo = to => to === undefined || Number.isInteger(to) || Array.isArray(to) && to.every(Number.isInteger);
+// the free slot a new guest gets (null: full); `want`: the one it had before, if free
+export function freeSlot(taken, want = null) {
+  if (Number.isInteger(want) && want > 0 && want < MAX_PLAYERS && !taken.has(want)) return want;
+  for (let s = 1; s < MAX_PLAYERS; s++) if (!taken.has(s)) return s;
+  return null;
+}
+// who runs the enemies of a cube: the lowest player number there (the host, if it is there)
+export const runnerOf = slots => Math.min(...slots);
 
 // How often (ms) the games talk (net/session.js)
 // learn: network.html#messages (see learn/README.md)
 export const SEND_EVERY = 50;     // `me`: where I am and how I stand
-export const FOES_EVERY = 66;     // `foes`: the host's enemies
+export const FOES_EVERY = 66;     // `foes`: the runner's enemies
+export const FAR_EVERY = 500;     // `me` from a player in another cube (the host passes on fewer)
 // learn: network.html#broken (see learn/README.md)
 export const PING_EVERY = 1000;   // `ping` (timers still run, slowly, in a background tab)
 // learn: network.html#broken (see learn/README.md)

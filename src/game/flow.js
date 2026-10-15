@@ -82,9 +82,9 @@ function restoreVisit(v) {
 export function die() {
   sfx('death');
   if (state.fallFrom) { returnFromFall(true); return; }
-  // playing together the cube stays as it is while the friend fights on in it (and the enemies
-  // the guest is shown are the host's anyway, src/net/foes.js)
-  if (mirroring() || online.buddy?.here && !online.buddy.out && online.buddy.hp > 0) { spawnEntry(); return; }
+  // playing together the cube stays as it is while a friend fights on in it (and the enemies
+  // we are shown are another player's anyway, src/net/foes.js)
+  if (mirroring() || online.buddies.some(b => b.here && !b.out && b.hp > 0)) { spawnEntry(); return; }
   restoreVisit(state.visit);
   resetEnemies();
   spawnEntry();

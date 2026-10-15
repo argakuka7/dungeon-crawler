@@ -1,8 +1,9 @@
 // Live projectiles in the current cube: thrown by enemies at their attack's hit frame, they
 // fly until they hit a player, run into the level or out of range (core/projectiles.js).
-// Travel and level resets clear them. Playing together, the host's projectiles are shown on
-// the guest's side too (`mirror`): they fly the same way there, but only the host decides
-// whom they hit (game/party.js), and says where they end (net/session.js).
+// Travel and level resets clear them. Playing together, the projectiles of the player who runs
+// this cube's enemies are shown to the others there too (`mirror`): they fly the same way
+// there, but only the runner decides whom they hit (game/party.js), and says where they end
+// (net/session.js).
 import { player } from './state.js';
 import { party, alive } from './party.js';
 import { insideSolid } from '../physics/collide.js';
@@ -27,13 +28,13 @@ export function launchProjectile(e, a) {
   relay.launch?.(pr, e);
   return pr;
 }
-// the host's projectile n, thrown by e (its view here), from (x, y, z) at (vx, vy, vz)
+// the runner's projectile n, thrown by e (its view here), from (x, y, z) at (vx, vy, vz)
 export function mirrorProjectile(n, e, spec, x, y, z, vx, vy, vz) {
   const pr = { kind: spec.kind, spec, x, y, z, vx, vy, vz, travelled: 0, t: 0, profile: e?.profile, n, mirror: true };
   projectiles.push(pr);
   projectileFx(pr, 'launch');
 }
-// the host says its projectile n ended
+// the runner says its projectile n ended
 export function endMirrored(n, end) {
   const pr = projectiles.find(p => p.mirror && p.n === n);
   if (!pr) return;

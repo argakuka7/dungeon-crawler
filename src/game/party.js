@@ -1,5 +1,5 @@
 // Who the enemies can go after: the player, and when playing together (src/net/session.js, on
-// the host) the friend while they are in this cube. A friend is a stand-in body with the
+// the game that runs this cube's enemies) the friends in this cube. A friend is a stand-in body with the
 // fields the enemies read (x, y, z, vx, vz, r, h, hp, ragdoll, grounded, swimming, support) and
 // `remote: true`; a blow that lands on it is sent over (hurt) instead of hitting our player.
 import { player } from './state.js';
@@ -15,7 +15,7 @@ export const alive = b => !!b && b.hp > 0 && !b.ragdoll;
 export const reach = (b, x, y, z) => Math.hypot(b.x - x, b.z - z) + Math.abs(b.y - y);
 
 // The body enemy e goes after. It keeps the one it has while that one can be hurt and the
-// other is not clearly nearer (SWITCH cells), so two players side by side do not make it
+// others are not clearly nearer (SWITCH cells), so two players side by side do not make it
 // dither; it never turns away in the middle of an attack.
 export const SWITCH = 2;
 // learn: network.html#boss (see learn/README.md)

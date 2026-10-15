@@ -1,21 +1,23 @@
-// Playing together: two players in one world, seeing each other and fighting together. The host opens a
-// room (a four letter code), the guest joins it and plays in the host's world: the same seed
-// makes the same cubes on both sides (world/), so the world itself never goes over the wire.
-// Each game runs its own player and tells the other about 20 times a second where it is and
-// how its character is posed (protocol.js `me`); the other draws that as the partner
-// (render/partner.js), a little in the past so it moves smoothly (sync.js Timeline).
+// Playing together: up to four players in one world, seeing each other and fighting together.
+// The host opens a room (a four letter code), the guests join it and play in the host's world:
+// the same seed makes the same cubes everywhere (world/), so the world itself never goes over
+// the wire. The guests are connected to the host only, and the host passes on what they say to
+// each other (a star, protocol.js). Every player has a number: the host 0, the guests 1 to 3.
+// Each game runs its own player and tells the others about 20 times a second where it is and
+// how its character is posed (protocol.js `me`); they draw that as a figure in the player's
+// colour (render/partner.js), a little in the past so it moves smoothly (sync.js Timeline).
 //
-// Each explores where they like. A cube's enemies are run by one of the two (net/foes.js):
-// by the host while it is there (they go after either player; the guest is shown them and
-// fights them, blows on the guest are sent over as `hurt`), else by whoever is there. When the
-// two meet or part, the enemies change hands as they are (`handover`, game/enemies.js
-// adoptEnemies). In a cube together every kill gives both players XP and loot of their own (the
-// loot never goes over the wire); apart, a kill only tells the other the enemy is gone
-// (`defeated`). F fades you over to your friend (goToFriend).
+// Each explores where they like. A cube's enemies are run by one game (net/foes.js): of the
+// players in the cube, the one with the lowest number (the host, if it is there). They go
+// after any player there; the others are shown them and fight them, blows on them are sent
+// over as `hurt`. When players meet or part, the enemies change hands as they are
+// (`handover`, game/enemies.js adoptEnemies). In a cube together every kill gives each player
+// XP and loot of their own (the loot never goes over the wire); apart, a kill only tells the
+// others the enemy is gone (`defeated`). F fades you over to a friend (goToFriend).
 //
-// The guest keeps their character (level, bag, gear) when they join; the world's progress
+// A guest keeps their character (level, bag, gear) when they join; the world's progress
 // (opened gates, loot on the floor, chests) starts fresh, as with any new world. Only the host
-// starts new worlds; the guest comes along.
+// starts new worlds; the guests come along.
 import { player, state, setStatus } from '../game/state.js';
 import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
 import { STEP } from '../core/constants.js';
@@ -31,10 +33,11 @@ import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
 import { capturePose, capturedLook, showPartner, showHelp, removePartner } from '../render/partner.js';
 import { openRoom, joinRoom } from './transport.js';
-import { PROTOCOL, roomCode, cleanName, isMe, SEND_EVERY, FOES_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES } from './protocol.js';
+import { PROTOCOL, MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf, roomCode, cleanName, isMe,
+  SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES } from './protocol.js';
 import { Timeline } from './sync.js';
 import { online, relay } from './online.js';
-import { Host, Guest, canBeHit } from './foes.js';
+import { Runner, Viewer, canBeHit } from './foes.js';
 import { setOthers } from '../game/party.js';
 import { allEnemies, adoptEnemies, shareDefeat } from '../game/enemies.js';
 import { drawMinimap } from '../game/minimap.js';
@@ -50,28 +53,56 @@ import { groundAt } from '../physics/collide.js';
 import { downInfo } from '../game/downed.js';
 
 const FADE_MS = 380;
-const BESIDE = 0.9;      // cells from the partner where going to them puts you
+const BESIDE = 0.9;      // cells from the friend where going to them puts you
 const SETTLED = 1000;    // ms in a cube: then a friend coming in is the one who arrived (handover)
-const MAP_EVERY = 500;   // ms between redraws of the minimap's dot for the friend
-const AFFLICT_EVERY = 500;   // ms: the guest tells the host about a status at most this often
+const MAP_EVERY = 500;   // ms between redraws of the minimap's dots for the friends
+const AFFLICT_EVERY = 500;   // ms: a viewer tells the runner about a status at most this often
 
-let room = null, link = null, myName = 'Friend', local = false, rejoin = null;
+let room = null, myName = 'Friend', local = false, rejoin = null;
 // this page's player: getting back in after a lost connection, the host knows it is still us
 const pid = Math.random().toString(36).slice(2, 12);
-let lastSend = 0, lastHeard = 0, ping = null;
-const timeline = new Timeline();
-// lastKey / cubeSince: the cube we are in and since when; following: a fade to the friend is
+// a guest's line to the host (the host has one per guest, in `peers`), and when it last spoke
+let link = null, lastHeard = 0;
+let lastSend = 0, ping = null;
+// lastKey / cubeSince: the cube we are in and since when; following: a fade to a friend is
 // under way; pendingSeed: a world the host asked for, started once we are not travelling;
-// announced: the seed the guest was told about (host); mapAt / mapCube: the minimap's friend dot
-let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null, mapAt = 0, mapCube = null;
-// how many open faces the friend knows of (a face once open stays open: more is new)
+// announced: the seed the guests were told about (host); mapAt / mapKey: the minimap's dots
+let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null, mapAt = 0, mapKey = '';
+// how many open faces the others know of (a face once open stays open: more is new)
 let facesSent = 0;
-// the enemies (net/foes.js): host or guest side, while together
+// the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's)
 let foes = null, lastFoes = 0;
-// the host's stand-in for the guest, for its enemies to go after (game/party.js)
-const friend = { remote: true, here: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: CHAR_R, h: CHAR_H,
-  hp: 1, maxHp: 1, ragdoll: false, grounded: true, swimming: false, support: null, stun: 0,
-  hurt(blow, fx, fz, nx, nz) { link?.send({ t: 'hurt', blow, fx, fz, nx, nz }); } };
+// F: the player we went to last (the next F goes to the next one)
+let followed = -1;
+
+// The other players, by number: { slot, name, pid, timeline (their `me`), body (their
+// stand-in, for the enemies we run to go after, game/party.js), inCube (in our cube, not
+// travelling: as of their last word), here (and we are not travelling either) }. The host
+// also keeps its line to each guest: link, lastHeard, and passed (whose `me` it passed on to
+// them last: slot -> { ts, cube, seed, busy }).
+const peers = new Map();
+// the host's slot for each page's player that came, so one getting back in gets its number back
+const slotOf = new Map();
+
+function standIn(slot) {
+  return { remote: true, slot, here: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: CHAR_R, h: CHAR_H,
+    hp: 1, maxHp: 1, ragdoll: false, grounded: true, swimming: false, support: null, stun: 0,
+    hurt(blow, fx, fz, nx, nz) { post({ t: 'hurt', blow, fx, fz, nx, nz }, slot); } };
+}
+function addPeer(slot, name) {
+  const p = peers.get(slot) ?? { slot, timeline: new Timeline(), body: standIn(slot), inCube: false, here: false };
+  p.name = name;
+  peers.set(slot, p); online.peers.set(slot, { name });
+  return p;
+}
+function dropPeer(slot) {
+  const p = peers.get(slot);
+  if (!p) return;
+  p.body.here = false;
+  peers.delete(slot); online.peers.delete(slot);
+  removePartner(slot);
+}
+const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
 
 // what the lobby shows (net/lobby.js): { phase, text }; phase: idle | opening | waiting |
 // joining | connected
@@ -80,6 +111,15 @@ let status = { phase: 'idle', text: '' };
 export const sessionStatus = () => status;
 export function onSessionChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function setPhase(phase, text = '') { status = { phase, text }; for (const fn of listeners) fn(status); }
+// connected (or the host waiting): who we play with
+function showPlayers(note = null) {
+  const list = names([...peers.values()].sort((a, b) => a.slot - b.slot).map(p => p.name)), free = MAX_PLAYERS - 1 - peers.size;
+  if (online.role === 'host') {
+    if (!room) return;
+    if (!peers.size) setPhase('waiting', `${note ? note + '. ' : ''}Room ${online.code} is open. Waiting for friends...`);
+    else setPhase('connected', `Playing with ${list}.${free ? ` Room ${online.code} is open for ${free} more.` : ''}`);
+  } else if (online.slot !== null) setPhase('connected', `Playing with ${list}`);
+}
 
 // what the player needs to see: over the character (setStatus is the dev overlay)
 function say(text) {
@@ -94,6 +134,32 @@ const reason = e => ({
   'timeout': 'No answer: check the code and the internet connection',
 }[e?.type] ?? 'Could not connect');
 
+// --- sending ---------------------------------------------------------------------------------
+
+// send m to players `to`: a number, a list of numbers, or undefined: everyone
+function post(m, to) {
+  if (online.role === 'host') { m.from = 0; deliver(m, to, 0); }
+  else link?.send(to === undefined ? m : { ...m, to });
+}
+// the host: hand m to the guests it is for, but not back to the one it came from
+function deliver(m, to, from) {
+  for (const p of peers.values()) if (p.slot !== from && p.link && isFor(to, p.slot)) p.link.send(m);
+}
+// The host passes `me` of player `from` on: at once to those in the same cube (they see them
+// move) and when it changed cubes or started or stopped travelling, now and then to the
+// others (they only need it for the minimap and to know where to go)
+function passMe(m, from) {
+  for (const p of peers.values()) {
+    if (p.slot === from || !p.link) continue;
+    const last = p.passed.get(from), theirs = p.timeline.latest();
+    const near = theirs && theirs.cube === m.cube && theirs.seed === m.seed;
+    if (near || !last || last.cube !== m.cube || last.seed !== m.seed || last.busy !== m.busy || m.ts - last.ts >= FAR_EVERY) {
+      p.link.send(m);
+      p.passed.set(from, { ts: m.ts, cube: m.cube, seed: m.seed, busy: m.busy });
+    }
+  }
+}
+
 // --- opening and joining -------------------------------------------------------------------
 
 export async function hostGame({ name, local: viaTabs = false } = {}) {
@@ -106,8 +172,9 @@ export async function hostGame({ name, local: viaTabs = false } = {}) {
     try {
       room = await openRoom(code, guestArrived, { local });
       if (online.role !== 'host') { room.close(); room = null; return; }   // left while opening
-      online.code = code;
-      setPhase('waiting', `Room ${code} is open. Waiting for a friend...`);
+      online.code = code; online.slot = 0;
+      ping ??= setInterval(pingAll, PING_EVERY);
+      showPlayers();
       return;
     } catch (e) {
       if (e.type === 'unavailable-id' && tries < 4) continue;
@@ -129,7 +196,10 @@ export async function joinGame(code, { name, local: viaTabs = false } = {}) {
   try {
     const l = await joinRoom(code, { local });
     if (online.role !== 'guest') { l.close(); return false; }   // left while joining
-    attach(l);
+    link = l; lastHeard = performance.now();
+    l.onmessage = fromHost;
+    l.onclose = () => { if (link === l) lost(); };
+    ping ??= setInterval(pingAll, PING_EVERY);
     l.send({ t: 'hello', v: PROTOCOL, name: myName, pid });
     return true;
   } catch (e) {
@@ -140,7 +210,7 @@ export async function joinGame(code, { name, local: viaTabs = false } = {}) {
   }
 }
 
-// the guest lost the connection (not a goodbye): try to get back in a few times
+// a guest lost the connection (not a goodbye): try to get back in a few times
 // learn: network.html#broken (see learn/README.md)
 function retry() {
   if (!rejoin) return;
@@ -152,226 +222,300 @@ function retry() {
 
 export function leaveGame() {
   if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
-  link?.send({ t: 'bye' });
-  const l = link;
-  detach();
-  l?.close();
+  if (online.role === 'host') for (const p of [...peers.values()]) { const l = p.link; unhook(l); l?.send({ t: 'bye' }); l?.close(); }
+  else { const l = link; unhook(l); l?.send({ t: 'bye' }); l?.close(); }
+  end();
   room?.close(); room = null;
   online.role = null; online.code = null;
   pendingSeed = null;
   setPhase('idle', '');
 }
+const unhook = l => { if (l) l.onmessage = l.onclose = null; };
 
-function guestArrived(l) {
-  if (!link) { attach(l); return; }
-  // the friend we have, getting back in over a new connection (the old one broke): swap it
-  l.onmessage = m => {
-    if (m?.t === 'hello' && m.pid && m.pid === online.partner?.pid) {
-      const old = link;
-      detach(); old.close();
-      attach(l); receive(m);
-    } else { l.send({ t: 'full' }); setTimeout(() => l.close(), 300); }
-  };
+// nobody to play with any more: the session's state goes
+function end() {
+  for (const slot of [...peers.keys()]) dropPeer(slot);
+  link = null; online.slot = null;
+  clearInterval(ping); ping = null;
+  apart();
 }
-
-function attach(l) {
-  link = l;
-  lastHeard = performance.now();
-  timeline.clear();
-  l.onmessage = receive;
-  l.onclose = () => { if (link === l) lost(); };
-  ping = setInterval(() => {
-    link?.send({ t: 'ping' });
-    if (link && performance.now() - lastHeard > LOST) { const old = link; lost(); old.close(); }
-  }, PING_EVERY);
-}
-
-function detach() {
-  if (link) { link.onmessage = null; link.onclose = null; }
-  link = null;
-  if (foes instanceof Guest) foes.stop(foes.cube === state.cubeKey);   // the host's enemies here are ours now
+// alone again (the others left, or we did): our enemies are our own
+function apart() {
+  if (foes instanceof Viewer) foes.stop(foes.cube === state.cubeKey);   // the runner's enemies here are ours now
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
-  friend.here = false; setOthers([]);
-  clearInterval(ping); ping = null;
-  online.partner = null; online.buddy = null;
-  timeline.clear();
+  setOthers([]);
+  online.buddies = [];
   removePartner();
+  if (state.cubes) drawMinimap();
 }
 
-// the other side is gone: it said goodbye (bye), or the connection broke (the guest then tries
-// to get back in)
-// learn: network.html#broken (see learn/README.md)
-function lost(bye = false) {
-  const name = online.partner?.name, code = online.code, guest = online.role === 'guest' && !!name;
-  detach();
-  if (online.role === 'host' && room) setPhase('waiting', `${name ?? 'Your friend'} left. Room ${online.code} is still open.`);
-  else {
-    online.role = null; online.code = null;
-    if (guest && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', 'Connection lost. Trying again...'); }
-    else setPhase('idle', name ? `${name} left the game` : 'The connection was lost');
-  }
-  if (name) say(bye || !guest ? `${name} left` : 'Connection lost');
+// --- the host: guests coming and going ---------------------------------------------------------
+
+// someone connected: they say hello first (a friend getting back in over a new connection, the
+// old one broken, gets their number back)
+function guestArrived(l) {
+  l.onmessage = m => {
+    if (m?.t !== 'hello') return;
+    if (m.v !== PROTOCOL) {
+      l.send({ t: 'version', v: PROTOCOL }); setTimeout(() => l.close(), 300);
+      say('A friend with another version of the game tried to join: both reload the page');
+      return;
+    }
+    const id = typeof m.pid === 'string' ? m.pid : null;
+    const back = id && [...peers.values()].find(p => p.pid === id);
+    if (back) { const old = back.link; unhook(old); old?.close(); }
+    const slot = back ? back.slot : freeSlot(new Set(peers.keys()), slotOf.get(id));
+    if (slot === null) { l.send({ t: 'full' }); setTimeout(() => l.close(), 300); return; }
+    welcome(l, slot, cleanName(m.name), id, !!back);
+  };
 }
 
-// --- messages --------------------------------------------------------------------------------
+function welcome(l, slot, name, id, again) {
+  const p = addPeer(slot, name);
+  Object.assign(p, { pid: id, link: l, lastHeard: performance.now(), passed: new Map() });
+  if (id) slotOf.set(id, slot);
+  l.onmessage = m => fromGuest(p, l, m);
+  l.onclose = () => { if (p.link === l) lostGuest(p); };
+  if (foes instanceof Runner) foes.forget(slot);
+  announced = state.cubes?.seed ?? null;
+  const players = [{ slot: 0, name: myName }, ...[...peers.values()].filter(o => o !== p).map(o => ({ slot: o.slot, name: o.name }))];
+  l.send({ t: 'welcome', v: PROTOCOL, slot, players, seed: announced,
+    defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces] });
+  facesSent = state.openedFaces.size;
+  deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
+  together();
+  showPlayers();
+  say(again ? `${name} is back` : `${name} joined`);
+}
 
-function receive(m) {
+function fromGuest(p, l, m) {
+  p.lastHeard = performance.now();
+  if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
+  if (m.t === 'bye') { lostGuest(p); l.close(); return; }
+  if (!RELAYED.has(m.t) || !validTo(m.to)) return;
+  m.from = p.slot;
+  if (m.t === 'me') { if (isMe(m)) { p.timeline.push(m, performance.now()); passMe(m, p.slot); } return; }
+  deliver(m, m.to, p.slot);
+  if (isFor(m.to, 0)) handle(m);
+}
+
+// a guest went (said bye, or its connection broke): the others hear it
+function lostGuest(p) {
+  if (peers.get(p.slot) !== p) return;
+  unhook(p.link);
+  dropPeer(p.slot);
+  deliver({ t: 'left', slot: p.slot, from: 0 }, undefined, p.slot);
+  if (!peers.size) apart();
+  showPlayers(`${p.name} left`);
+  say(`${p.name} left`);
+}
+
+// --- a guest: what the host says ---------------------------------------------------------------
+
+function fromHost(m) {
   lastHeard = performance.now();
   if (!m || typeof m !== 'object') return;
-  if (m.t === 'me') { if (online.partner && isMe(m)) timeline.push(m, performance.now()); return; }
+  m.from = Number.isInteger(m.from) ? m.from : 0;
   if (m.t === 'ping') return;
   if (m.t === 'bye') { const l = link; lost(true); l?.close(); return; }
-  if (online.role === 'host') {
-    if (foes) { hostReceive(m); return; }
-    if (m.t !== 'hello' || online.partner) return;
-    if (m.v !== PROTOCOL) { refuse(); return; }
-    online.partner = { name: cleanName(m.name), pid: typeof m.pid === 'string' ? m.pid : null };
-    announced = state.cubes?.seed ?? null;
-    link.send({ t: 'welcome', v: PROTOCOL, name: myName, seed: announced,
-      defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces] });
-    facesSent = state.openedFaces.size;
-    startHost();
-    setPhase('connected', `Playing with ${online.partner.name}`);
-    say(`${online.partner.name} joined`);
+  if (online.slot === null) {
+    if (m.t === 'welcome') welcomed(m);
+    else if (m.t === 'full') { const l = link; unhook(l); end(); l?.close(); online.role = null; online.code = null; setPhase('idle', `That game has ${MAX_PLAYERS} players already`); }
+    else if (m.t === 'version') refuse();
     return;
   }
-  // guest
-  if (m.t === 'welcome' && !online.partner) {
-    if (m.v !== PROTOCOL) { refuse(); return; }
-    online.partner = { name: cleanName(m.name) };
-    if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
-    // the host's world, and its progress so far: what it defeated stays defeated for us too
-    const list = x => Array.isArray(x) ? x.filter(k => typeof k === 'string') : [];
-    const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces) };
-    if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
-    else {
-      takeRun(run);
-      // (back after a lost connection: what we found meanwhile)
-      link.send({ t: 'visited', keys: visitedKeys() });
-      link.send({ t: 'faces', keys: [...state.openedFaces] });
-    }
-    startGuest();
-    setPhase('connected', `Playing with ${online.partner.name}`);
-    say(`Joined ${online.partner.name}'s world`);
-  } else if (foes && guestReceive(m)) return;
-  else if (m.t === 'world' && online.partner && Number.isFinite(m.seed)) pendingSeed = m.seed;
-  else if (m.t === 'full') { const l = link; detach(); l?.close(); online.role = null; online.code = null; setPhase('idle', 'That game has two players already'); }
-  else if (m.t === 'version') { const l = link; detach(); l?.close(); online.role = null; online.code = null; setPhase('idle', 'Your friend has another version of the game: both reload the page'); }
+  if (m.t === 'me') { const p = peers.get(m.from); if (p && isMe(m)) p.timeline.push(m, performance.now()); return; }
+  if (m.from === 0 && m.t === 'joined' && Number.isInteger(m.slot) && m.slot !== online.slot) {
+    const known = peers.has(m.slot), name = cleanName(m.name);
+    addPeer(m.slot, name); showPlayers();
+    if (!known) say(`${name} joined`);
+    return;
+  }
+  if (m.from === 0 && m.t === 'left') {
+    const p = peers.get(m.slot);
+    if (p) { dropPeer(m.slot); showPlayers(); say(`${p.name} left`); }
+    return;
+  }
+  if (m.from === 0 && m.t === 'world' && Number.isFinite(m.seed)) { pendingSeed = m.seed; return; }
+  handle(m);
 }
 
-// --- fighting together (net/foes.js) ------------------------------------------------------------
+function welcomed(m) {
+  if (m.v !== PROTOCOL) { refuse(); return; }
+  if (!Number.isInteger(m.slot) || m.slot < 1 || m.slot >= MAX_PLAYERS) return;
+  online.slot = m.slot;
+  for (const pl of Array.isArray(m.players) ? m.players : [])
+    if (Number.isInteger(pl?.slot) && pl.slot >= 0 && pl.slot < MAX_PLAYERS && pl.slot !== m.slot) addPeer(pl.slot, cleanName(pl.name));
+  if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
+  // the host's world, and its progress so far: what it defeated stays defeated for us too
+  const list = x => Array.isArray(x) ? x.filter(k => typeof k === 'string') : [];
+  const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces) };
+  if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
+  else {
+    takeRun(run);
+    // (back after a lost connection: what we found meanwhile)
+    post({ t: 'visited', keys: visitedKeys() });
+    post({ t: 'faces', keys: [...state.openedFaces] });
+  }
+  together();
+  showPlayers();
+  say(`Joined ${peers.get(0)?.name ?? 'your friend'}'s world`);
+}
 
-// Our arrows, bolts, spells and flasks fly on the friend's side too (they only look; the hits
-// are ours: game/shots.js, game/throws.js)
-function shareShots() {
+// we (a guest) lost the host: it said goodbye (bye), or the connection broke (then we try to
+// get back in)
+// learn: network.html#broken (see learn/README.md)
+function lost(bye = false) {
+  const name = peers.get(0)?.name, code = online.code, wasIn = online.slot !== null;
+  unhook(link);
+  end();
+  online.role = null; online.code = null;
+  if (wasIn && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', 'Connection lost. Trying again...'); }
+  else setPhase('idle', name ? `${name} left the game` : 'The connection was lost');
+  if (name) say(bye || !wasIn ? `${name} left` : 'Connection lost');
+}
+
+function refuse() {
+  const l = link;
+  l?.send({ t: 'version', v: PROTOCOL });
+  unhook(l); end(); l?.close();
+  online.role = null; online.code = null;
+  setPhase('idle', 'Your friend has another version of the game: both reload the page');
+}
+
+// every second, to everyone (also from a background tab); silence for LOST: gone
+function pingAll() {
+  const now = performance.now();
+  if (online.role === 'host') {
+    for (const p of [...peers.values()]) {
+      p.link?.send({ t: 'ping' });
+      if (now - p.lastHeard > LOST) { const l = p.link; lostGuest(p); l?.close(); }
+    }
+  } else if (link) {
+    link.send({ t: 'ping' });
+    if (now - lastHeard > LOST) { const old = link; lost(); old.close(); }
+  }
+}
+
+// --- together ----------------------------------------------------------------------------------
+
+// someone to play with (again): tell them what happens
+function together() {
   const r = x => Math.round(x * 1000) / 1000;
-  relay.defeated = e => link?.send({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null });
-  relay.visited = key => link?.send({ t: 'visited', keys: [key] });
+  relay.defeated = e => post({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null });
+  relay.visited = key => post({ t: 'visited', keys: [key] });
+  // our arrows, bolts, spells and flasks fly for those here too (they only look; the hits
+  // are ours: game/shots.js, game/throws.js)
   relay.shoot = shot => {
-    if (!partnerHere()) return;
+    const to = hereSlots();
+    if (!to.length) return;
     const { kind, range, pierce, burst, color } = shot.stats;
-    link?.send({ t: 'arrow', kind: shot.kind, stats: { kind, range, pierce, burst, color },
-      at: [shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz].map(r), from: shot.from.map(r) });
+    post({ t: 'arrow', kind: shot.kind, stats: { kind, range, pierce, burst, color },
+      at: [shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz].map(r), origin: shot.from.map(r) }, to);
   };
   relay.toss = f => {
-    if (!partnerHere()) return;
+    const to = hereSlots();
+    if (!to.length) return;
     const { view, ...flask } = f;
-    link?.send({ t: 'flask', flask });
+    post({ t: 'flask', flask }, to);
   };
+  // shown another's enemies: our hits and statuses go to it
+  const told = new Map();   // enemy and status -> when the runner was last told
+  relay.hit = (e, damage, crit, dx, dz, kb) => {
+    if (!(foes instanceof Viewer)) return;
+    foes.predicted(e);
+    post({ t: 'hit', id: e.id, damage, crit, dx, dz, kb }, foes.runner);
+  };
+  relay.afflict = (e, status, spec) => {
+    if (!(foes instanceof Viewer)) return;
+    const key = e.id + status, now = performance.now();
+    if (now - (told.get(key) ?? -Infinity) < AFFLICT_EVERY) return;
+    told.set(key, now);
+    post({ t: 'afflict', id: e.id, status, spec }, foes.runner);
+  };
+  // running the enemies: our enemies' projectiles fly for those here too
+  relay.launch = (pr, e) => { const to = hereSlots(); if (to.length) post({ t: 'shot', n: pr.n, id: e.id, spec: pr.spec, at: [pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz] }, to); };
+  relay.landed = (pr, end) => { const to = hereSlots(); if (to.length) post({ t: 'landed', n: pr.n, end }, to); };
 }
-function shotReceive(m) {
-  if (m.t === 'defeated' && typeof m.id === 'string') { shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null); return true; }
-  if (m.t === 'visited' && Array.isArray(m.keys)) { for (const k of m.keys) if (typeof k === 'string') shareVisit(k); return true; }
-  if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; return true; }
-  if (m.t === 'arrow' && ['arrow', 'bolt', 'spell'].includes(m.kind) && Array.isArray(m.at) && m.at.length === 6 && finite(...m.at)
-      && Array.isArray(m.from) && m.from.length === 3 && finite(...m.from) && m.stats && finite(m.stats.range)) {
-    if (!partnerHere()) return true;
+const hereSlots = () => [...peers.values()].filter(p => p.here).map(p => p.slot);
+
+const enemy = id => allEnemies().find(e => e.id === id && e.mode !== 'dead');
+const validState = s => s && typeof s.id === 'string' && [s.x, s.y, s.z, s.yaw, s.hp].every(Number.isFinite);
+// an enemy as it is now, for another game to take over (game/enemies.js adoptEnemies)
+const stateOf = e => ({ id: e.id, x: e.x, y: e.y, z: e.z, yaw: e.yaw, hp: e.hp, mode: e.mode });
+const finite = (...xs) => xs.every(Number.isFinite);
+
+// a message from another player (not `me`; the host's own word was handled before)
+function handle(m) {
+  const p = peers.get(m.from);
+  if (!p || shared(m, p)) return;
+  if (foes instanceof Runner) runnerReceive(m, p);
+  else if (foes instanceof Viewer && m.from === foes.runner) viewerReceive(m);
+}
+
+// what everyone hears about: kills, cubes, faces, and the arrows and flasks of those here
+function shared(m, p) {
+  if (m.t === 'defeated' && typeof m.id === 'string') shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null);
+  else if (m.t === 'visited' && Array.isArray(m.keys)) { for (const k of m.keys) if (typeof k === 'string') shareVisit(k); }
+  else if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; }
+  else if (m.t === 'arrow') {
+    if (!p.here || !['arrow', 'bolt', 'spell'].includes(m.kind) || !Array.isArray(m.at) || m.at.length !== 6 || !finite(...m.at)
+      || !Array.isArray(m.origin) || m.origin.length !== 3 || !finite(...m.origin) || !finite(m.stats?.range)) return true;
     const [x, y, z, vx, vy, vz] = m.at;
-    ghostShot({ kind: m.kind, stats: m.stats, x, y, z, vx, vy, vz, from: m.from });
-  } else if (m.t === 'flask' && m.flask?.stats && finite(m.flask.x, m.flask.y, m.flask.z, m.flask.vx, m.flask.vy, m.flask.vz, m.flask.T)) {
-    if (partnerHere()) ghostFlask({ ...m.flask, t: 0, spin: 0 });
+    ghostShot({ kind: m.kind, stats: m.stats, x, y, z, vx, vy, vz, from: m.origin });
+  } else if (m.t === 'flask') {
+    if (p.here && m.flask?.stats && finite(m.flask.x, m.flask.y, m.flask.z, m.flask.vx, m.flask.vy, m.flask.vz, m.flask.T)) ghostFlask({ ...m.flask, t: 0, spin: 0 });
   } else return false;
   return true;
 }
-// is the friend in our cube (the host: as its stand-in says; the guest: as the host's last word)?
-const partnerHere = () => foes instanceof Host ? friend.here : hostHere();
 
-function startHost() {
-  foes = new Host();
-  shareShots();
-  relay.launch = (pr, e) => { if (friend.here) link?.send({ t: 'shot', n: pr.n, id: e.id, spec: pr.spec, at: [pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz] }); };
-  relay.landed = (pr, end) => { if (friend.here) link?.send({ t: 'landed', n: pr.n, end }); };
-}
-const enemy = id => allEnemies().find(e => e.id === id && e.mode !== 'dead');
-const validState = s => s && typeof s.id === 'string' && [s.x, s.y, s.z, s.yaw, s.hp].every(Number.isFinite);
-// an enemy as it is now, for the other side to take over (game/enemies.js adoptEnemies)
-const stateOf = e => ({ id: e.id, x: e.x, y: e.y, z: e.z, yaw: e.yaw, hp: e.hp, mode: e.mode });
-const finite = (...xs) => xs.every(Number.isFinite);
-function hostReceive(m) {
-  if (shotReceive(m)) return;
-  if (m.t === 'want') { foes.forget(); return; }
-  // the guest ran this cube's enemies until we came in: take them over as they are
+// we run the enemies here: those shown them ask for them, hand theirs over, and hit them
+function runnerReceive(m, p) {
+  if (m.t === 'want') { foes.forget(p.slot); return; }
+  // they ran this cube's enemies until we came in: take them over as they are
   if (m.t === 'handover' && m.cube === state.cubeKey && Array.isArray(m.list)) { adoptEnemies(m.list.filter(validState)); foes.forget(); return; }
-  if (!friend.here) return;
+  if (!p.here) return;
   if (m.t === 'hit' && finite(m.damage, m.dx, m.dz, m.kb) && m.damage > 0) {
     const e = enemy(m.id);
     if (!e) return;
     const before = e.hp;
-    if (damageEnemy(e, m.damage)) hitEnemy(e, { damage: before - e.hp, crit: !!m.crit }, before, m.dx, m.dz, m.kb, friend);
+    if (damageEnemy(e, m.damage)) hitEnemy(e, { damage: before - e.hp, crit: !!m.crit }, before, m.dx, m.dz, m.kb, p.body);
   } else if (m.t === 'afflict' && (m.status === 'burning' || m.status === 'toxic') && m.spec && typeof m.spec === 'object') {
     const e = enemy(m.id);
-    if (e && afflictEnemy(e, m.status, m.spec)) e.target = friend;
+    if (e && afflictEnemy(e, m.status, m.spec)) e.target = p.body;
   }
 }
 
-function startGuest() {
-  const g = foes = new Guest(() => link?.send({ t: 'want' }));
-  const told = new Map();   // enemy and status -> when the host was last told
-  relay.hit = (e, damage, crit, dx, dz, kb) => {
-    g.predicted(e);
-    link?.send({ t: 'hit', id: e.id, damage, crit, dx, dz, kb });
-  };
-  relay.afflict = (e, status, spec) => {
-    const key = e.id + status, now = performance.now();
-    if (now - (told.get(key) ?? -Infinity) < AFFLICT_EVERY) return;
-    told.set(key, now);
-    link?.send({ t: 'afflict', id: e.id, status, spec });
-  };
-  shareShots();
-}   // (it is shown the host's enemies while the host is in its cube: updateOnline)
-function guestReceive(m) {
-  if (shotReceive(m)) return true;
+// we are shown another's enemies (m is from their runner)
+function viewerReceive(m) {
   if (m.t === 'roster' && Array.isArray(m.list) && Array.isArray(m.profiles)) foes.roster(m);
   else if (m.t === 'foes') foes.foes(m, performance.now());
   else if (m.t === 'hurt') {
     const b = m.blow;
-    if (b && typeof b === 'object' && finite(b.damage, b.knock ?? 0, m.fx, m.fz, m.nx, m.nz) && canBeHit() && hostHere())
+    if (b && typeof b === 'object' && finite(b.damage, b.knock ?? 0, m.fx, m.fz, m.nx, m.nz) && canBeHit() && runnerHere())
       hitPlayer(b, m.fx, m.fz, m.nx, m.nz);
-  } else if (m.t === 'shot' && Array.isArray(m.at) && m.at.length === 6 && finite(...m.at) && m.spec?.speed > 0 && hostHere())
+  } else if (m.t === 'shot' && Array.isArray(m.at) && m.at.length === 6 && finite(...m.at) && m.spec?.speed > 0 && runnerHere())
     mirrorProjectile(m.n, foes.find(m.id), m.spec, ...m.at);
   else if (m.t === 'landed') endMirrored(m.n, ['hit', 'blocked', 'spent'].includes(m.end) ? m.end : 'spent');
-  else return false;
-  return true;
 }
-// is the host in our cube (as of its last word)?
-function hostHere() {
-  const h = timeline.latest();
-  return !!h && h.seed === state.cubes?.seed && h.cube === state.cubeKey && !h.busy;
-}
+const runnerHere = () => foes instanceof Viewer && !!peers.get(foes.runner)?.inCube;
 
-// the host's stand-in for the guest follows the guest's latest word: enemies go after it while
-// the guest is in this cube
-function updateFriend() {
-  const m = timeline.latest();
-  friend.here = !!m && !m.busy && m.seed === state.cubes?.seed && m.cube === state.cubeKey && !state.transitioning;
-  if (friend.here) {
-    const [x, y, z, vx, vz] = m.body;
-    Object.assign(friend, { x, y, z, vx, vz, hp: m.hp, maxHp: m.maxHp, ragdoll: !!m.down || m.hp <= 0,
-      grounded: !!m.ground, swimming: !!m.swim });
-    friend.support = friend.grounded ? groundAt(x, z, y + 0.05, 0).s : null;
+// Who runs our cube's enemies: the lowest player number here. When one lower than us came in
+// (we were here first), ours go over to it as they are; when the runner leaves us here, its
+// go on here as we were shown them (net/foes.js).
+function updateRunner(now) {
+  const runner = runnerOf([online.slot, ...[...peers.values()].filter(p => p.inCube).map(p => p.slot)]);
+  if (runner === online.slot) {
+    if (foes instanceof Viewer) { foes.stop(foes.cube === state.cubeKey); foes = null; }
+    if (!(foes instanceof Runner)) foes = new Runner();
+    return;
   }
-  setOthers(friend.here ? [friend] : []);
+  if (foes instanceof Viewer) { if (foes.runner !== runner) foes.follow(runner); return; }
+  if (state.cubeKey && now - cubeSince > SETTLED)
+    post({ t: 'handover', cube: state.cubeKey, list: allEnemies().filter(e => e.id && e.mode !== 'dead').map(stateOf) }, runner);
+  foes = new Viewer(runner, v => post({ t: 'want' }, v.runner));
+  foes.start();
 }
 
 // the host's progress in its world (welcome): its kills and opened gates are ours too
@@ -384,14 +528,6 @@ function takeRun(run) {
   facesSent = state.openedFaces.size;
 }
 
-function refuse() {
-  link.send({ t: 'version', v: PROTOCOL });
-  const l = link;
-  detach(); l.close();
-  if (online.role === 'host') setPhase('waiting', `A friend with another version of the game tried to join: both reload the page. Room ${online.code} is still open.`);
-  else { online.role = null; online.code = null; setPhase('idle', 'Your friend has another version of the game: both reload the page'); }
-}
-
 // --- every frame -----------------------------------------------------------------------------
 
 const busy = () => !state.map || state.transitioning || !!state.fallFrom || following;
@@ -402,9 +538,11 @@ function send(now) {
   if (!pose || !state.cubes || !state.cubeKey) return;
   const weapon = (readiedFlask(player) ?? equippedWeapon(player))?.model ?? null;
   const p = player, r = x => Math.round(x * 1000) / 1000;
-  link.send({ t: 'me', ts: now, seed: state.cubes.seed, cube: state.cubeKey, busy: busy(), pose,
+  const m = { t: 'me', ts: now, seed: state.cubes.seed, cube: state.cubeKey, busy: busy(), pose,
     body: [p.x, p.y, p.z, p.vx, p.vz].map(r), ground: p.grounded ? 1 : 0, swim: p.swimming ? 1 : 0, down: p.ragdoll ? 1 : 0,
-    ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() });
+    ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() };
+  if (online.role === 'host') { m.from = 0; passMe(m, 0); }
+  else link?.send(m);
 }
 
 // a spot a step away from p on the same level, in a straight line from it (null: none)
@@ -417,21 +555,23 @@ function beside(p) {
   return null;
 }
 
-// F: fade over to the cube the friend is in, and stand next to them
+// F: fade over to the cube a friend is in, and stand next to them (the next friend each time)
 export function goToFriend() {
-  const them = timeline.latest();
-  if (!online.partner || !them) return;
+  const list = [...peers.values()].filter(p => p.timeline.latest()).sort((a, b) => a.slot - b.slot);
+  if (!list.length) return;
+  const p = list.find(o => o.slot > followed) ?? list[0], them = p.timeline.latest();
   if (busy() || player.down || player.ragdoll || them.busy || them.seed !== state.cubes?.seed) { say('Not now'); return; }
-  follow(them);
+  followed = p.slot;
+  follow(them, p.name);
 }
-function follow(them) {
+function follow(them, name) {
   const cubes = state.cubes, key = them.cube, at = { x: them.pose.p[0], y: them.pose.p[1], z: them.pose.p[2] };
   following = true;
   if (state.inventoryOpen) setInventoryOpen(false);
   state.transitioning = true; state.portalCharge = null;
   cancelSword(true); cancelCast(); clearMouseInput();
   fadeOut();
-  say(`Following ${online.partner?.name ?? 'your friend'}`);
+  say(`Following ${name}`);
   setTimeout(() => whenReady(cubes.get(key)).then(c => {
     following = false;
     if (state.cubes !== cubes) return;
@@ -448,10 +588,11 @@ function follow(them) {
   }), FADE_MS);
 }
 
-// main.js, every frame after the camera moved: send, hand enemies over, show the partner
+// main.js, every frame after the camera moved: send, hand enemies over, show the others
 export function updateOnline() {
-  if (!link) return;
-  const now = performance.now(), them = timeline.latest();
+  const now = performance.now();
+  if (state.cubeKey !== lastKey) { lastKey = state.cubeKey; cubeSince = now; }
+  if (!peers.size) return;
   // the host's world: start it once we are not on the way somewhere
   if (pendingSeed !== null && !busy()) {
     const seed = pendingSeed;
@@ -460,48 +601,61 @@ export function updateOnline() {
     newWorld(seed, { keepPlayer: true });   // (it starts the fresh run at once, the cube comes later)
     if (pendingRun) { takeRun(pendingRun); pendingRun = null; }
   }
-  if (online.role === 'host' && online.partner && state.cubes && state.cubes.seed !== announced) {
+  if (online.role === 'host' && state.cubes && state.cubes.seed !== announced) {
     announced = state.cubes.seed;
-    link.send({ t: 'world', seed: announced });
+    post({ t: 'world', seed: announced });
   }
-  if (state.cubeKey !== lastKey) { lastKey = state.cubeKey; cubeSince = now; }
-  // faces we opened (crossing, discovering, a gate): the friend can walk across there too
+  // faces we opened (crossing, discovering, a gate): the others can walk across there too
   if (state.openedFaces.size < facesSent) facesSent = state.openedFaces.size;   // a new world
-  if (online.partner && state.openedFaces.size > facesSent) {
+  if (state.openedFaces.size > facesSent) {
     facesSent = state.openedFaces.size;
-    link.send({ t: 'faces', keys: [...state.openedFaces] });
+    post({ t: 'faces', keys: [...state.openedFaces] });
   }
-  // the friend as of their last word, for the rest of the game (net/online.js buddy)
-  online.buddy = online.partner && them && them.seed === state.cubes?.seed ? { cube: them.cube,
-    here: them.cube === state.cubeKey && !them.busy && !state.transitioning,
-    x: them.body[0], y: them.body[1], z: them.body[2], hp: them.hp, out: !!them.ko } : null;
-  // the friend on the minimap: when they change cubes, and now and then as they move
-  if (online.buddy?.cube !== mapCube || (online.buddy && now - mapAt > MAP_EVERY)) {
-    mapCube = online.buddy?.cube ?? null; mapAt = now;
+  // where everyone is, as of their last word; the stand-ins of those here follow it
+  const seed = state.cubes?.seed, buddies = [];
+  for (const p of peers.values()) {
+    const m = p.timeline.latest();
+    p.inCube = !!m && !m.busy && m.seed === seed && m.cube === state.cubeKey;
+    p.here = p.body.here = p.inCube && !state.transitioning;
+    if (p.here) {
+      const [x, y, z, vx, vz] = m.body;
+      Object.assign(p.body, { x, y, z, vx, vz, hp: m.hp, maxHp: m.maxHp, ragdoll: !!m.down || m.hp <= 0,
+        grounded: !!m.ground, swimming: !!m.swim });
+      p.body.support = p.body.grounded ? groundAt(x, z, y + 0.05, 0).s : null;
+    }
+    if (m && m.seed === seed) buddies.push({ slot: p.slot, name: p.name, cube: m.cube, here: p.here,
+      x: m.body[0], y: m.body[1], z: m.body[2], hp: m.hp, out: !!m.ko });
+  }
+  online.buddies = buddies;
+  // the friends on the minimap: when they change cubes, and now and then as they move
+  const key = buddies.map(b => `${b.slot}${b.cube}`).join(' ');
+  if (key !== mapKey || (buddies.length && now - mapAt > MAP_EVERY)) {
+    mapKey = key; mapAt = now;
     if (state.cubes) drawMinimap();
   }
-  // The guest is shown the host's enemies while the host is here. When the host came in to us
-  // (we were here first), ours go over to it as they are; when it leaves us here, its go on
-  // here as we were shown them (net/foes.js).
-  if (foes instanceof Guest && foes.active !== hostHere()) {
-    if (!foes.active) {
-      if (now - cubeSince > SETTLED) link.send({ t: 'handover', cube: state.cubeKey, list: allEnemies().filter(e => e.id && e.mode !== 'dead').map(stateOf) });
-      foes.start();
-    } else foes.stop(foes.cube === state.cubeKey);
-  }
-  if (online.partner && now - lastSend >= SEND_EVERY) { lastSend = now; send(now); }
-  if (foes instanceof Host) {
-    updateFriend();
-    if (state.cubes && them?.seed === state.cubes.seed && now - lastFoes >= FOES_EVERY) {
+  updateRunner(now);
+  if (now - lastSend >= SEND_EVERY) { lastSend = now; send(now); }
+  if (foes instanceof Runner) {
+    setOthers([...peers.values()].filter(p => p.here).map(p => p.body));
+    const viewers = [...peers.values()].filter(p => p.inCube).map(p => p.slot);
+    if (state.cubes && now - lastFoes >= FOES_EVERY) {
       lastFoes = now;
-      for (const msg of foes.messages(now)) link.send(msg);
+      for (const [msg, to] of foes.messages(now, viewers)) post(msg, to);
     }
+  } else {
+    setOthers([]);
+    foes?.check(now);
   }
-  // the partner, if they are here (as they were DELAY ago)
-  const span = online.partner && timeline.at(now), b = span?.b;
-  const here = b && !b.busy && b.seed === state.cubes?.seed && b.cube === state.cubeKey && !state.transitioning;
-  showPartner(here ? span : null, online.partner?.name);
-  showHelp(here && Array.isArray(b.ko) && finite(...b.ko) ? b.ko : null, online.partner?.name);
+  // the others who are here (as they were DELAY ago)
+  for (const p of peers.values()) {
+    const span = p.timeline.at(now), b = span?.b;
+    const here = b && !b.busy && b.seed === seed && b.cube === state.cubeKey && !state.transitioning;
+    showPartner(p.slot, here ? span : null, p.name);
+    showHelp(p.slot, here && Array.isArray(b.ko) && finite(...b.ko) ? b.ko : null, p.name);
+  }
 }
 
-addEventListener('pagehide', () => link?.send({ t: 'bye' }));
+addEventListener('pagehide', () => {
+  if (online.role === 'host') for (const p of peers.values()) p.link?.send({ t: 'bye' });
+  else link?.send({ t: 'bye' });
+});

@@ -27,9 +27,9 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
-  - `src/net/`: playing together (O in the game): a room code, PeerJS between the two browsers,
-    the partner's pose, following each other through portals and the host's enemies shown to
-    the guest (`docs/online.md`).
+  - `src/net/`: playing together (O in the game, up to four players): a room code, PeerJS
+    between the host and each guest, the others' poses, following each other through portals
+    and one player's enemies shown to the others in its cube (`docs/online.md`).
 - `assets/`: exported game data (GLB models, item icons, manifests). The game
   loads assets only from here (and music from `music/`). These files are generated; do not edit them by hand.
 - `music/`: hand-written Scrimshaw scores the game plays (`docs/music.md`). Before writing

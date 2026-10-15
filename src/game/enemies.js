@@ -1,6 +1,7 @@
 // Every species participates in combat, collision, loading and portal travel.
-// Playing together, the host's enemies go after either player (game/party.js); the guest has
-// none of its own, it is shown the host's (mirrorEnemies) and fights those.
+// Playing together, a cube's enemies are run by one of the players there (net/foes.js) and go
+// after any of them (game/party.js); the others have none of their own, they are shown the
+// runner's (mirrorEnemies) and fight those.
 import { spiders, resetSpiders, updateSpiders, detachSpiders } from './spiders.js';
 import { stunders, resetStunders, updateStunders, detachStunders } from './stunders.js';
 import { snakes, resetSnakes, updateSnakes, detachSnakes } from './snakes.js';
@@ -45,9 +46,9 @@ export const ENTRY_GRACE = 1.2;
 let spawned = [];
 export function addEnemies(list) { spawned.push(...list); }
 
-// Playing as the guest (net/session.js): { list, apply(dt), reset() }. `list` is the host's
-// enemies in this cube, shown here; apply puts them where the host says they are (a little in
-// the past, like the friend), reset asks the host for this cube's list again.
+// Shown another player's enemies (net/foes.js Viewer): { list, apply(dt), reset() }. `list` is
+// the runner's enemies in this cube, shown here; apply puts them where the runner says they are
+// (a little in the past, like the friends), reset asks the runner for this cube's list again.
 let mirror = null;
 export const mirroring = () => !!mirror;
 export function mirrorEnemies(m) {
@@ -76,8 +77,8 @@ export function resetEnemies() {
   coordinateDefence(state.map, state.run, allEnemies(), player);
 }
 // Every enemy that died since the last look: its XP, and its loot dropped. Playing together,
-// both players get it, whoever struck the blow: each side looks at its own enemies (the
-// guest at the ones it is shown) and rolls its own loot. true: a guardian's gate opened.
+// every player there gets it, whoever struck the blow: each game looks at its own enemies (or
+// at the ones it is shown) and rolls its own loot. true: a guardian's gate opened.
 // learn: architecture.html#swing-journey, code.html#loops (see learn/README.md)
 function awardKills(list) {
   let xp = 0, levels = 0, killed = 0, unlocked = false;
@@ -139,7 +140,7 @@ export function updateEnemies(dt) {
   const unlocked = awardKills(list);
   if ((defenceThink -= dt) <= 0 || unlocked) {
     defenceThink = .25;
-    // a guardian's room and a horde mind whichever player is nearer
+    // a guardian's room and a horde mind whichever player is nearest
     coordinateDefence(state.map, state.run, list, state.map.guardian ? nearestTo(state.map.guardian.x, state.map.guardian.z) : player);
   }
   const horde = hordeGroups[0], bodies = party();
@@ -152,8 +153,8 @@ export function updateEnemies(dt) {
   updateProjectiles(dt); updateBeams(dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(allEnemies(), dt);
 }
-// the guest's side: the host moves its enemies; we fight them (our hits go to the host, game/
-// sword.js) and get our XP and loot from those that die
+// shown another player's enemies: the runner moves them; we fight them (our hits go to the
+// runner, game/sword.js) and get our XP and loot from those that die
 function followEnemies(dt) {
   mirror.apply(dt);
   const list = mirror.list;

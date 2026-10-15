@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roomCode, readCode, CODE_LETTERS, CODE_LENGTH, cleanName, packPose, isPose, isMe, BONES, Q } from '../src/net/protocol.js';
+import { roomCode, readCode, CODE_LETTERS, CODE_LENGTH, cleanName, packPose, isPose, isMe, BONES, Q,
+  MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf } from '../src/net/protocol.js';
 import { Timeline, lerpAngle, DELAY } from '../src/net/sync.js';
 
 test('room codes are four letters without I and O', () => {
@@ -44,6 +45,32 @@ test('a pose packs into whole numbers and checks out', () => {
   assert.ok(isMe(me));
   assert.ok(!isMe({ ...me, cube: 3 }));
   assert.ok(!isMe({ ...me, pose: null }));
+});
+
+test('messages go to everyone, one player or a few', () => {
+  assert.ok(isFor(undefined, 2));
+  assert.ok(isFor(2, 2) && !isFor(1, 2));
+  assert.ok(isFor([0, 3], 3) && !isFor([0, 3], 1));
+  assert.ok(validTo(undefined) && validTo(3) && validTo([1, 2]));
+  assert.ok(!validTo('all') && !validTo([1, 'x']) && !validTo({}) && !validTo(1.5));
+  // what only the host may say does not go on from a guest
+  for (const t of ['hello', 'welcome', 'joined', 'left', 'world', 'full', 'version', 'bye', 'ping']) assert.ok(!RELAYED.has(t));
+});
+
+test('guests get the free numbers, and their own back', () => {
+  assert.equal(MAX_PLAYERS, 4);
+  assert.equal(freeSlot(new Set()), 1);
+  assert.equal(freeSlot(new Set([1, 3])), 2);
+  assert.equal(freeSlot(new Set([1, 2, 3])), null);   // full: the host and three guests
+  assert.equal(freeSlot(new Set([1]), 3), 3);           // back after a lost connection
+  assert.equal(freeSlot(new Set([3]), 3), 1);           // ... unless someone has it now
+  assert.equal(freeSlot(new Set(), 0), 1);              // never the host's
+});
+
+test('the lowest player number in a cube runs its enemies', () => {
+  assert.equal(runnerOf([2]), 2);
+  assert.equal(runnerOf([2, 1, 3]), 1);
+  assert.equal(runnerOf([3, 0]), 0);   // the host, when it is there
 });
 
 const me = (ts, x = ts / 100) => ({ ts, x });

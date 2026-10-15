@@ -1,5 +1,5 @@
-// The "Play together" panel (O): host a game and give a friend its code (or a link), or type a
-// friend's code to join theirs. Like the help it does not pause the game. A link with
+// The "Play together" panel (O): host a game and give friends its code (or a link), up to
+// three of them, or type a friend's code to join theirs. Like the help it does not pause the game. A link with
 // ?join=CODE opens the panel and joins that game once the first cube is there; ?net=local
 // plays between tabs of this browser instead of over the internet (for testing,
 // net/transport.js).

@@ -7,7 +7,8 @@ import { statusHurtFx } from './juice.js';
 import { relay } from '../net/online.js';
 
 // set enemy e burning or poisoned (status: 'burning' | 'toxic') by `spec`; false when it is
-// dead or fire does not hurt it. The guest's go to the host too (net/online.js relay).
+// dead or fire does not hurt it. Ours on enemies another player
+// runs go to that player too (net/online.js relay).
 export function afflictEnemy(e, status, spec) {
   if (!spec || e.mode === 'dead' || immuneTo(e, status)) return false;
   e[status] = afflict(spec);

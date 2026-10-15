@@ -87,7 +87,7 @@ function pushPlayer(dx, dz) {
   if (dx && canMove(p.x + dx, p.z, 'x', Math.sign(dx))) p.x += dx;
   if (dz && canMove(p.x, p.z + dz, 'z', Math.sign(dz))) p.z += dz;
 }
-// moveEnemies: false where the enemies are only shown here (playing as the guest): they push
+// moveEnemies: false where the enemies are only shown here (another player runs them): they push
 // the player but nobody here moves them
 export function contactEnemies(list, dt, moveEnemies = true) {
   const p = player;

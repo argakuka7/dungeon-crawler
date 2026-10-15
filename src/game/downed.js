@@ -1,8 +1,8 @@
 // Playing together: a blow that would kill you leaves you lying where you fell instead
-// (downed). The enemies leave you be. Your friend helps you up by standing next to you for
-// REVIVE_TIME; you get up with a share of your health. If nobody comes within BLEED_OUT, the
-// friend leaves the cube or goes down too, you are back at the entry as after any death (R
-// gives up at once). Alone, a death is a death (game/flow.js die).
+// (downed). The enemies leave you be. A friend helps you up by standing next to you for
+// REVIVE_TIME; you get up with a share of your health. If nobody comes within BLEED_OUT, or
+// no friend is left in the cube on their feet, you are back at the entry as after any death
+// (R gives up at once). Alone, a death is a death (game/flow.js die).
 import { player, setStatus } from './state.js';
 import { online } from '../net/online.js';
 import { die } from './flow.js';
@@ -10,26 +10,30 @@ import { standUp } from './ragdoll.js';
 import { sfx } from '../audio/sfx.js';
 import { REVIVE_TIME, REVIVE_REACH, REVIVE_HP, BLEED_OUT } from '../core/downed.js';
 
-// is the friend here and on their feet, to help?
-const helper = () => { const b = online.buddy; return b?.here && !b.out && b.hp > 0 ? b : null; };
+// the friends here and on their feet, who can help
+const helpers = () => online.buddies.filter(b => b.here && !b.out && b.hp > 0);
+// who can help you up, said in a few words
+export const helperName = (list = helpers()) => list.length === 1 ? list[0].name : 'A friend';
 
 // the ragdoll of a fatal blow came to rest: lie there (true), or not (alone: false, die)
 // learn: network.html#help-up (see learn/README.md)
 export function goDown() {
-  if (!helper()) return false;
-  player.down = { t: 0, revive: 0 };
-  setStatus(`Down! ${online.partner?.name ?? 'Your friend'} can help you up`);
+  const list = helpers();
+  if (!list.length) return false;
+  player.down = { t: 0, revive: 0, by: null };
+  setStatus(`Down! ${helperName(list)} can help you up`);
   return true;
 }
 
 // every step while down (game/ragdoll.js stepRagdoll)
 // learn: network.html#help-up (see learn/README.md)
 export function tickDown(dt) {
-  const d = player.down, b = helper();
+  const d = player.down, list = helpers();
   d.t += dt;
-  if (!b || d.t >= BLEED_OUT) { player.down = null; player.ragdoll = null; die(); return; }
-  const near = Math.hypot(b.x - player.x, b.z - player.z) < REVIVE_REACH && Math.abs(b.y - player.y) < 1.2;
+  if (!list.length || d.t >= BLEED_OUT) { player.down = null; player.ragdoll = null; die(); return; }
+  const near = list.find(b => Math.hypot(b.x - player.x, b.z - player.z) < REVIVE_REACH && Math.abs(b.y - player.y) < 1.2);
   d.revive = near ? d.revive + dt : Math.max(0, d.revive - dt);
+  d.by = near?.name ?? d.by;   // who is helping (for the note over us, render/playerbar.js)
   if (d.revive < REVIVE_TIME) return;
   const r = player.ragdoll;
   player.down = null; player.ragdoll = null;

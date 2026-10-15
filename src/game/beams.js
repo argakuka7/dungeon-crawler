@@ -2,7 +2,8 @@
 // enemy's eyes from the attack's fire time (core/enemies.js fireAt) and bursts at the hit frame;
 // the aim follows the player it goes after (game/party.js) meanwhile, and the beam follows its
 // enemy's turning. A stagger or death of the enemy puts it out. Travel and level resets clear
-// them. Playing together, the guest is shown the host's beams as they shine (mirrorBeam).
+// them. Playing together, the others in a cube are shown the beams of the player who runs its
+// enemies as they shine (mirrorBeam).
 import { player } from './state.js';
 import { alive } from './party.js';
 import { insideSolid } from '../physics/collide.js';
@@ -35,7 +36,7 @@ function end(b, what) {
 export function updateBeams(dt) {
   beams = beams.filter(b => {
     const e = b.enemy, p = target(e);
-    if (b.mirror) return true;   // the host moves it (mirrorBeam)
+    if (b.mirror) return true;   // the runner moves it (mirrorBeam)
     if (e.mode !== 'attack' || e.attacks !== b.attack) return end(b, 'fizzle');
     b.t += dt;
     Object.assign(b, muzzleAt(e, b.spec.muzzle));
@@ -49,7 +50,7 @@ export function updateBeams(dt) {
     return end(b, 'burst');
   });
 }
-// The host's beam of enemy e as it shines there now: [t, ex, ey, ez] (where it ends), or null
+// The runner's beam of enemy e as it shines there now: [t, ex, ey, ez] (where it ends), or null
 // once it is gone: it burst if it had shone its time, else it was put out.
 export function mirrorBeam(e, data) {
   let b = e.beam;

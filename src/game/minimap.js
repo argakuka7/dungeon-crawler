@@ -1,8 +1,8 @@
 // Overview of the cubes visited at the current depth, centred on the current cube. Cubes are
 // coloured by their WFC tile; edges show rivers (blue) and portals (gold: leads somewhere new,
 // cyan: explored); triangles are wells / rings; a violet dot is the open town portal. Inside a
-// house it shows the cube outside, with the house's door marked. Playing together, a blue dot
-// is where the friend is (src/net/session.js redraws it as they move).
+// house it shows the cube outside, with the house's door marked. Playing together, a dot in
+// each friend's colour is where they are (src/net/session.js redraws them as they move).
 import { KIND_COLOR } from '../world/tiles.js';
 import { key, parse, step } from '../world/coords.js';
 import { state } from './state.js';
@@ -10,7 +10,7 @@ import { isFaceOpen } from '../core/boundaries.js';
 import { gateLocked, portalLocked } from '../core/guardians.js';
 import { N } from '../core/constants.js';
 import { TOWN_KEY, isInterior } from '../world/town.js';
-import { online } from '../net/online.js';
+import { online, playerColor } from '../net/online.js';
 
 const R = 3, CELL = 24, PAD = 6, SIZE = (2 * R + 1) * CELL + PAD * 2;
 const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 42 });
@@ -25,9 +25,25 @@ function tri(x, y, up, color) {
   g.moveTo(x - 4, y + (up ? 3 : -3)); g.lineTo(x + 4, y + (up ? 3 : -3)); g.lineTo(x, y + (up ? -4 : 4)); g.fill();
 }
 
+// a friend's place on this map: [x, z] in pixels, or null (another depth, in a house, far away)
+function spot(b, X0, Y, Z0) {
+  const [bx, by, bz] = isInterior(b.cube) ? [NaN, NaN, NaN] : parse(b.cube);
+  if (by !== Y || Math.abs(bx - X0) > R || Math.abs(bz - Z0) > R) return null;
+  return [PAD + (bx - X0 + R) * CELL + b.x / N * CELL, PAD + (bz - Z0 + R) * CELL + b.z / N * CELL];
+}
+// where a friend is when not on this map
+function whereabouts(b, Y) {
+  const by = isInterior(b.cube) ? NaN : parse(b.cube)[1];
+  return isInterior(b.cube) ? 'in a house' : by === Y ? 'far away' : `depth ${-by}`;
+}
+
 export function drawMinimap() {
   const inside = state.map?.interior, W = state.cubes, [X0, Y, Z0] = parse(inside ? inside.outside : state.cubeKey);
   const visited = k => !!W.cubes.get(k)?.visits;
+  const tp = state.run.townPortal, friends = online.buddies.filter(b => b.cube), away = friends.filter(b => !spot(b, X0, Y, Z0));
+  // a line of text under the map each: the depth, the town portal, each friend off the map
+  const height = SIZE + 14 * (1 + !!tp + away.length);
+  if (canvas.height !== height) canvas.height = height;
   g.clearRect(0, 0, canvas.width, canvas.height);
   g.fillStyle = '#0b0d1266'; g.fillRect(0, 0, canvas.width, canvas.height);
   for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) {
@@ -54,7 +70,6 @@ export function drawMinimap() {
       tri(px + CELL / 2 + (d === 4 ? -5 : 5), pz + CELL / 2, d === 5, d === 4 && gateLocked(c.map, state.run) ? '#ff3547' : visited(step(k, d)) ? '#5fd3ff' : '#ffc94a');
   }
   // the open town portal: a violet dot where it stands (in town too, at its other end)
-  const tp = state.run.townPortal;
   for (const [k, pad] of tp ? [[tp.key, tp.pad], [TOWN_KEY, W.cubes.get(TOWN_KEY)?.map.town?.portal]] : []) {
     const [x, y, z] = parse(k);
     if (!pad || y !== Y || Math.abs(x - X0) > R || Math.abs(z - Z0) > R) continue;
@@ -69,16 +84,16 @@ export function drawMinimap() {
   const count = [...W.cubes.values()].filter(c => c.visits && !isInterior(c.key)).length;
   g.fillText(`depth ${-Y}   ${count} cubes visited${inside ? '   (inside)' : ''}`, PAD, SIZE + 10);
   if (tp) { g.fillStyle = '#c9a8ff'; g.fillText(`portal open: depth ${tp.depth}`, PAD, SIZE + 24); }
-  // the friend: a dot in their cube, or where they are when not on this depth's map
-  const b = online.buddy, name = online.partner?.name;
-  if (!b?.cube) return;
-  const [bx, by, bz] = isInterior(b.cube) ? [NaN, NaN, NaN] : parse(b.cube);
-  if (by === Y && Math.abs(bx - X0) <= R && Math.abs(bz - Z0) <= R) {
-    g.fillStyle = '#6fb4e8'; g.strokeStyle = '#0b0d12'; g.lineWidth = 1.5; g.beginPath();
-    g.arc(PAD + (bx - X0 + R) * CELL + b.x / N * CELL, PAD + (bz - Z0 + R) * CELL + b.z / N * CELL, 4, 0, Math.PI * 2);
+  // the friends: a dot in their cube, or a line saying where they are when not on this map
+  for (const b of friends) {
+    const at = spot(b, X0, Y, Z0);
+    if (!at) continue;
+    g.fillStyle = playerColor(b.slot); g.strokeStyle = '#0b0d12'; g.lineWidth = 1.5; g.beginPath();
+    g.arc(at[0], at[1], 4, 0, Math.PI * 2);
     g.fill(); g.stroke();
-  } else {
-    g.fillStyle = '#9fcdf0';
-    g.fillText(`${name}: ${isInterior(b.cube) ? 'in a house' : by === Y ? 'far away' : `depth ${-by}`} (F: go)`, PAD, SIZE + (tp ? 38 : 24));
   }
+  away.forEach((b, i) => {
+    g.fillStyle = playerColor(b.slot);
+    g.fillText(`${b.name}: ${whereabouts(b, Y)} (F: go)`, PAD, SIZE + 24 + 14 * (i + !!tp));
+  });
 }

@@ -43,8 +43,8 @@
       <dt><kbd>N</kbd></dt><dd>new world</dd>
       <dt><kbd>P</kbd></dt><dd>show the generator path</dd>
       <dt><kbd>M</kbd></dt><dd>music on / off</dd>
-      <dt><kbd>O</kbd></dt><dd>play together with a friend</dd>
-      <dt><kbd>F</kbd></dt><dd>playing together: go to your friend</dd>
+      <dt><kbd>O</kbd></dt><dd>play together with up to three friends</dd>
+      <dt><kbd>F</kbd></dt><dd>playing together: go to a friend (again: the next one)</dd>
       <dt><kbd>?</kbd></dt><dd>this help</dd>
     </dl>
     <div class="dev-only" hidden>
@@ -81,13 +81,13 @@
       <div class="online-row"><input id="online-code" type="text" maxlength="40" placeholder="CODE" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="online-join">Join</button></div>
     </div>
     <div id="online-room" hidden>
-      <p>Tell your friend this code:</p>
+      <p>Tell your friends this code (up to three can join):</p>
       <div id="online-room-code"></div>
       <button id="online-copy">Copy link</button>
     </div>
     <p id="online-status" role="status" aria-live="polite"></p>
     <button id="online-leave" hidden>Leave</button>
-    <p class="online-note">You play in the host's world and keep your own character. Explore together or apart: the blue dot on the map is your friend, F takes you to them. Together, the monsters go after both of you and every kill gives both of you XP and loot of your own. Knocked out, you lie there until your friend stands next to you and helps you up. Needs the internet: the two browsers find each other through the PeerJS service and then talk directly.</p>
+    <p class="online-note">Up to four play together: you play in the host's world and keep your own character. Explore together or apart: the coloured dots on the map are your friends, F takes you to them. Together, the monsters go after all of you and every kill gives each of you XP and loot of your own. Knocked out, you lie there until a friend stands next to you and helps you up. Needs the internet: the browsers find the host through the PeerJS service and then talk to it directly.</p>
   </section>
 </div>
 <div id="loot-labels"></div>
