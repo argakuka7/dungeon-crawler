@@ -7,8 +7,10 @@ import { graph, reachFrom, reachTo } from './reach.js';
 import { search, take } from './route.js';
 
 const MAX = 12;          // escape routes per cube
-const ACCESS = 16;       // ways onto cut-off platforms per cube
-const ACCESS_MIN = 8;    // floors a platform needs to be worth a way up
+const ACCESS = 8;        // ways onto cut-off platforms per cube
+// floors a cut-off platform needs to be worth a way up: floating platforms (upper layers)
+// look like places to go; on the ground most are scenery (mesa tops, crater rims)
+const ACCESS_MIN = 8, ACCESS_MIN_GROUND = 40;
 const TWO_WAY = mv => mv.kind !== 'drop' && mv.kind !== 'jump';
 
 // floor ids the character can get to from the portals (a fall in from the cube above does not
@@ -22,7 +24,7 @@ export function addAccess(ctx) {
   const { hub, floors, jitter, have } = ctx;
   if (!hub) return;
   ctx.bigLadders = true;
-  const stand = f => f && !f.fluid && !f.prot && !f.siteBlocked && !f.landing;
+  const stand = f => f && !f.fluid && !f.prot && !f.siteBlocked && !f.landing && !ctx.border(f);   // never onto the cube's rim
   const failed = new Set();
   for (let n = 0; n < ACCESS; n++) {
     const seen = reachable(ctx, false), adj = graph(ctx, false), und = new Map();
@@ -43,14 +45,14 @@ export function addAccess(ctx) {
           for (const h of ctx.cols[idx(g.x + dx, g.z + dz)]) if (Math.abs(h.top - g.top) <= 2) grow(h);
       }
       comp.forEach(g => done.add(g.id));
-      if (comp.length >= ACCESS_MIN && (!best || comp.length > best.length)) best = comp;
+      const floating = comp.filter(g => g.layer > 0).length;
+      if ((floating >= ACCESS_MIN || comp.length >= ACCESS_MIN_GROUND) && (!best || comp.length > best.length)) best = comp;
     }
-    if (!best) { ctx.stats.accessDone = 1; break; }
+    if (!best) break;
     // from its lowest floor: the shortest climb
     const from = best.reduce((a, b) => b.top < a.top ? b : a);
     const seg = search(ctx, from, f => seen.has(f.id), jitter, have, TWO_WAY);
-    if (globalThis.DBG) console.log('access', n, 'comp', best.length, 'from', from.x, from.z, from.top, 'seg', seg && seg.map(m => m.kind + (m.hang ? '(hang)' : '') + ':' + m.from.top + '>' + m.to.top).join(' '));
-    if (!take(ctx, seg)) { ctx.stats.accessFail = (ctx.stats.accessFail || 0) + 1; best.forEach(g => failed.add(g.id)); continue; }
+    if (!take(ctx, seg)) { best.forEach(g => failed.add(g.id)); continue; }
     ctx.stats.access = (ctx.stats.access || 0) + 1;
   }
   ctx.bigLadders = false;
