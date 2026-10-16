@@ -11,7 +11,7 @@ const level = f => f.fluid ? f.surf : f.top;
 // smoothing can pull a corner up into the room under the floor above: too low to stand
 export const isCramped = (ctx, f) => { const a = !f.landing && ctx.nextAbove(f); return !!a && Math.max(...f.cs) + CHAR_H + 0.02 > a.bottom * LH; };
 
-function graph(ctx, real) {
+export function graph(ctx, real) {
   const { cols, floors, headOK, moves, fences } = ctx, adj = new Map();
   const memo = new Map(), cramped = f => real && (memo.get(f) ?? memo.set(f, isCramped(ctx, f)).get(f));
   const stand = f => !f.siteBlocked && (!f.fluid || f.fluid === WATER) && !cramped(f);
@@ -37,7 +37,8 @@ function graph(ctx, real) {
       else if (headOK(below, h + 1) && !fenced(f, n, h * LH)) add(f, below);   // drop
     }
   }
-  for (const m of moves) { add(m.from, m.to); if (!ONE_WAY.has(m.kind)) add(m.to, m.from); }
+  // route walks become slopes when smoothing (smooth.js): both ways, before it as well
+  for (const m of moves) { add(m.from, m.to); if (!ONE_WAY.has(m.kind) || (!real && m.kind === 'walk')) add(m.to, m.from); }
   return adj;
 }
 
@@ -49,5 +50,12 @@ export function reachTo(ctx, goal, real) {
   for (const [a, bs] of adj) for (const b of bs) { let s = rev.get(b.id); if (!s) rev.set(b.id, s = []); s.push(a); }
   const seen = new Set([goal.id]), stack = [goal.id];
   while (stack.length) for (const a of rev.get(stack.pop()) || []) if (!seen.has(a)) { seen.add(a); stack.push(a); }
+  return seen;
+}
+
+// ids of every floor the character can get to from `starts`
+export function reachFrom(ctx, starts, real) {
+  const adj = graph(ctx, real), seen = new Set(starts.map(f => f.id)), stack = [...seen];
+  while (stack.length) for (const b of adj.get(stack.pop()) || []) if (!seen.has(b.id)) { seen.add(b.id); stack.push(b.id); }
   return seen;
 }

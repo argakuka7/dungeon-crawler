@@ -5,27 +5,31 @@ import { Heap } from '../core/heap.js';
 export const moveKey = m => m.kind + ':' + Math.min(m.from.id, m.to.id) + ':' + Math.max(m.from.id, m.to.id);
 
 // learn: paths.html#astar #astar-code (see learn/README.md)
-export function search(ctx, from, goal, jitter, have) {
+// `goal`: a floor, or a test for any of several (then plain Dijkstra); `ok`: which moves count
+export function search(ctx, from, goal, jitter, have, ok = null) {
   const { SZ, movesFrom } = ctx;
   const gs = new Float64Array(SZ).fill(Infinity), prev = new Array(SZ).fill(null), closed = new Uint8Array(SZ);
-  const hfn = f => Math.abs(f.x - goal.x) + Math.abs(f.z - goal.z);
+  const many = typeof goal === 'function', isGoal = many ? goal : f => f === goal;
+  const hfn = many ? () => 0 : f => Math.abs(f.x - goal.x) + Math.abs(f.z - goal.z);
   const open = new Heap();
   gs[from.id] = 0; open.push(hfn(from), from);
+  let end = null;
   while (open.size) {
     const cur = open.pop();
-    if (cur === goal) break;
+    if (isGoal(cur)) { end = cur; break; }
     if (closed[cur.id]) continue;
     closed[cur.id] = 1;
     for (const mv of movesFrom(cur)) {
+      if (ok && !ok(mv)) continue;
       // no jump straight after a drop the same way (the fall carries you into the gap)
       if (mv.kind === 'jump' && prev[cur.id]?.kind === 'drop' && prev[cur.id].d === mv.d) continue;
       const ng = gs[cur.id] + (have.has(moveKey(mv)) ? 0.2 : mv.cost + jitter[mv.to.id]);
       if (ng < gs[mv.to.id]) { gs[mv.to.id] = ng; prev[mv.to.id] = mv; open.push(ng + hfn(mv.to), mv.to); }
     }
   }
-  if (!isFinite(gs[goal.id])) return null;
+  if (!end) return null;
   const moves = [];
-  for (let f = goal; f !== from; f = prev[f.id].from) moves.unshift(prev[f.id]);
+  for (let f = end; f !== from; f = prev[f.id].from) moves.unshift(prev[f.id]);
   return moves;
 }
 

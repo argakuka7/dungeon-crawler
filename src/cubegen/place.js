@@ -78,7 +78,7 @@ export function placeStructures(ctx) {
       if (m.kind === 'walk') pathWalks.push(m);
     }
   }
-  stats.landings = landings.size;
+  stats.landings = landings.size; stats.skipped = skipped.size;
   if (skipped.size) {
     ctx.moves = moves.filter(m => !skipped.has(moveKey(m)));
     ctx.segments = ctx.segments.filter(sg => sg.every(m => !skipped.has(moveKey(m))));

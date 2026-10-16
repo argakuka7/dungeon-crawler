@@ -3,6 +3,8 @@
 import { N, LH, LAVA, DIRS, OPP, EDGE_CORNERS } from '../core/constants.js';
 import { idx, inb, edgeKey } from '../core/util.js';
 import { floorY, runY } from '../core/surfaces.js';
+import { reachTo } from './reach.js';
+import { reachable } from './escape.js';
 
 export function addFences(ctx) {
   const { R, cols, floors, pieces, runs, pathEdges, fenceNoise, stats } = ctx;
@@ -16,7 +18,7 @@ export function addFences(ctx) {
     const ys = pts.map(p => p[1]);
     const f = { pts, ymin: Math.min(...ys), ymax: Math.max(...ys), layer, show };
     fenceList.push(f);
-    const key = edgeKey(x, z, nx, nz);
+    const key = f.key = edgeKey(x, z, nx, nz);
     if (!fences.has(key)) fences.set(key, []);
     fences.get(key).push(f);
   }
@@ -52,9 +54,27 @@ export function addFences(ctx) {
       if (wall || my - nt < 0.9) continue;
       stats.cliffs++;
       const p = lava ? 0.85 : runsF ? 0.9 : f.layer > 0 && my - nt > 2 ? 0.3 : 0.06;
-      if (R() < p) { addFence(f.c, d, (fx, fz) => floorY(f, fx, fz), f.layer); stats.fences++; }
+      if (R() < p) { addFence(f.c, d, (fx, fz) => floorY(f, fx, fz), f.layer); fenceList[fenceList.length - 1].cliff = f.id; stats.fences++; }
     }
   }
   for (const f of floors) for (const d of [0, 2]) if (f.link[d] && !f.fluid && f.link[d].top !== f.top) stats.slopes++;
   ctx.fences = fences; ctx.fenceList = fenceList;
+}
+
+// a cliff fence must not be what keeps a floor from the exit: take down the fences around
+// floors that are cut off now (dropping off them may be their way out)
+export function openTraps(ctx) {
+  if (!ctx.hub) return;
+  for (let i = 0; i < 4; i++) {
+    const safe = reachTo(ctx, ctx.hub, true), seen = reachable(ctx, true);
+    const trapped = new Set([...seen].filter(id => !safe.has(id)));
+    const drop = ctx.fenceList.filter(f => f.cliff != null && trapped.has(f.cliff));
+    if (!drop.length) return;
+    for (const f of drop) {
+      const list = ctx.fences.get(f.key); list.splice(list.indexOf(f), 1);
+      if (!list.length) ctx.fences.delete(f.key);
+    }
+    ctx.fenceList = ctx.fenceList.filter(f => !drop.includes(f));
+    ctx.stats.fences -= drop.length; ctx.stats.unfenced = (ctx.stats.unfenced || 0) + drop.length;
+  }
 }

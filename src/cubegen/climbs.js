@@ -4,17 +4,24 @@
 import { LH, DIRS, OPP } from '../core/constants.js';
 import { idx, inb } from '../core/util.js';
 
-// ladder from f to the floor g in the neighbouring column n (3-14 levels apart, either way)
+// ladder from f to the floor g in the neighbouring column n (3-14 levels apart, either way).
+// With ctx.bigLadders (ways onto cut-off platforms and out of pits) also long ones up to 24
+// levels, and ones hanging from the edge of a floating platform down to the ground.
+const MAX_RISE = 14, BIG_RISE = 24;
 export function ladderMoves(ctx, f, d, n, out) {
   if (f.landing || f.fluid) return;
+  const big = ctx.bigLadders;
   for (const g of ctx.cols[n]) {
     if (g.fluid || g.siteBlocked) continue;
     const lo = g.top > f.top ? f : g, hi = lo === f ? g : f, rise = hi.top - lo.top;
-    if (rise < 3 || rise > 14 || hi.bottom > lo.top + 1) continue;   // the wall reaches the lower floor
+    if (rise < 3 || rise > (big ? BIG_RISE : MAX_RISE)) continue;
+    const hang = hi.bottom > lo.top + 1;   // no wall behind the ladder's lower part
+    // a hanging ladder: nothing else in the high column alongside it
+    if (hang && (!big || ctx.cols[hi.c].some(h => h !== hi && h.top > lo.top - 1 && h.bottom < hi.top))) continue;
     const above = ctx.nextAbove(lo);
     if (above && above.bottom < hi.top + 3) continue;   // room to climb all the way up
     if (!ctx.headOK(hi, hi.top)) continue;
-    out.push({ kind: 'ladder', from: f, to: g, d, cells: [], lo, hi, cost: 1.6 + 0.2 * rise });
+    out.push({ kind: 'ladder', from: f, to: g, d, cells: [], lo, hi, hang, cost: 1.6 + 0.2 * rise + (rise > MAX_RISE ? 3 : 0) + (hang ? 3 : 0) });
   }
 }
 
@@ -56,11 +63,11 @@ export function placeClimb(m, claims, pathEdges, ladders) {
   if (overlaps(claims[lo.c], cl)) return false;
   claims[lo.c].push(cl);
   pathEdges.add(lo.id + ':' + wall); pathEdges.add(hi.id + ':' + OPP[wall]);
-  if (!ladders.some(l => l.lo === lo && l.hi === hi)) ladders.push({ lo, hi, d: wall });
+  if (!ladders.some(l => l.lo === lo && l.hi === hi)) ladders.push({ lo, hi, d: wall, hang: !!m.hang });
   return true;
 }
 
 // what the game needs to know about a ladder (plain data)
 export const ladderInfo = l => ({
-  c: l.lo.c, x: l.lo.x, z: l.lo.z, d: l.d, y0: l.lo.top * LH, y1: l.hi.top * LH, layer: l.lo.layer, lo: l.lo.id, hi: l.hi.id,
+  c: l.lo.c, x: l.lo.x, z: l.lo.z, d: l.d, y0: l.lo.top * LH, y1: l.hi.top * LH, layer: l.lo.layer, lo: l.lo.id, hi: l.hi.id, hang: l.hang,
 });
