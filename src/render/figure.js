@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { ITEMS, outfitOf } from '../core/items.js';
-import { cloneSkinned } from './skinned.js';
+import { cloneSkinned, cullBySphere } from './skinned.js';
 
 const URL = 'assets/character.glb';
 const sanitize = name => THREE.PropertyBinding.sanitizeNodeName(name);
@@ -66,7 +66,8 @@ export function createFigure(color = null) {
     if (!o.isMesh) return;
     o.material = o.material.clone();
     if (color) o.material.color.set(color);
-    o.castShadow = true; o.frustumCulled = false;
+    o.castShadow = true;
+    if (o.isSkinnedMesh) cullBySphere(o); else o.frustumCulled = false;
     o.userData.sharedGeo = true;   // the rig owns the geometry
   });
   const group = new THREE.Group();

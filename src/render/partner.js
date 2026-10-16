@@ -49,7 +49,7 @@ function build(slot, name) {
   const ghost = new THREE.SkinnedMesh(mesh.geometry, new THREE.MeshBasicMaterial({
     color: shade(slot, 0.5), transparent: true, opacity: 0.4, depthFunc: THREE.GreaterDepth, depthWrite: false }));
   ghost.bind(mesh.skeleton, mesh.bindMatrix);
-  ghost.renderOrder = 999; ghost.frustumCulled = false;
+  ghost.renderOrder = 999; ghost.boundingSphere = mesh.boundingSphere;   // culled with the body
   ghost.userData.sharedGeo = true;
   mesh.parent.add(ghost);
   mesh.material.transparent = true;

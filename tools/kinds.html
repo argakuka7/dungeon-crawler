@@ -19,8 +19,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { ENEMY_KINDS, ENEMY_PROFILES } from './src/core/enemies.js';
-import { cloneEnemy } from './src/render/enemymodel.js';
-import { kindColors, recolor, hideParts } from './src/render/recolor.js';
+import { dressEnemy } from './src/render/enemymodel.js';
 import { spiderModel } from './src/render/spidermodel.js';
 import { stunderModel } from './src/render/stundermodel.js';
 import { snakeModel } from './src/render/snakemodel.js';
@@ -60,10 +59,8 @@ const tags = [];
 rows.forEach((row, r) => row.forEach((k, c) => {
   const prefab = models[k.species];
   if (!prefab.ready) return;
-  const model = cloneEnemy(prefab), colors = kindColors(k, prefab);
+  const { model } = dressEnemy(prefab, k);   // recoloured, without the parts it hides
   model.scale.multiplyScalar((k.size ?? 1) * 1.5 / ENEMY_KINDS[k.species].height);   // rows share a height, kinds keep their size
-  hideParts(model, k);
-  model.traverse(o => { if (o.isMesh) o.material = [].concat(o.material).map(m => recolor(m.clone(), colors)).at(-1); });
   const clip = q.get('pose') === 'attack' ? Object.values(prefab.attacks)[0] : prefab.walk;
   const mixer = new THREE.AnimationMixer(model), action = mixer.clipAction(clip);
   action.play(); mixer.setTime(q.get('pose') === 'attack' ? k.hitAt : clip.duration * 0.25);

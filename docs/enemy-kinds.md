@@ -31,8 +31,8 @@ Then add it to `ENEMY_KINDS` and to the rosters that should spawn it.
   - `xp` scales XP and coins. It defaults to `√(hp × damage)`.
 - Any other key replaces the base value outright: `label`, `reason`, `ichor`, `cooldown`,
   `aggro`, and so on.
-- `hide` lists materials the kind does not show: meshes drawn only with them are hidden
-  (`hideParts` in `src/render/recolor.js`). A model can carry parts for several kinds this
+- `hide` lists materials the kind does not show: the body's parts drawn with them are left
+  out of its mesh (`dressEnemy` in `src/render/enemymodel.js`). A model can carry parts for several kinds this
   way: the Shraps has an ice head and a fire head, and each of its kinds hides the other.
 - `fx` names the glow of its own in `GLOW` (`src/render/enemies.js`), in place of the
   species' (the Fire shraps' flames; the plain Shraps has none).

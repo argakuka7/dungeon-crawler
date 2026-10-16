@@ -5,7 +5,9 @@
 // flickering over whatever clip plays, an emissive pulse and drifting embers.
 // An enemy kind (core/enemies.js) is drawn with its species' model, recoloured
 // (recolor.js), stripped of the parts it hides and scaled by its size; its `light` and `sparks`
-// replace the glow's colours, and its `fx` names a glow of its own.
+// replace the glow's colours, and its `fx` names a glow of its own. The body is one mesh with
+// one material that colours each part (material) on its own (enemymodel.js): the hit flash,
+// hover tint and gloom write the parts' colours, the glow pulse and the death fade the material.
 // Wheels (bones named wheel.*, a species with a `wheel` radius) spin by the distance the body
 // rolls along its heading, whatever clip plays, and spin down once it is dead.
 // Waves (bones named wave0, wave1, ..., a species with `waves`: the Wolla's rings) turn about
@@ -36,8 +38,7 @@ import { wolkModel } from './wolkmodel.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { glow, emit, rand } from './particles.js';
 import { wetTrail, removeTrail } from './trails.js';
-import { cloneEnemy } from './enemymodel.js';
-import { kindColors, recolor, hideParts } from './recolor.js';
+import { dressEnemy, paintParts } from './enemymodel.js';
 import { attackOf } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
@@ -152,9 +153,9 @@ function gloomStep(v, e, dt) {
   v.gloom += ((dead ? 0 : gloomOf(e)) - v.gloom) * Math.min(1, dt * (dead ? 2.5 : 10));
   v.glimmer = dead ? 0 : glimmer(e, v);
 }
-function polish(material, { roughness = 0.2, metalness = 0.5, sheen = 0 }) {
-  material.roughness = roughness; material.metalness = metalness;
-  if (sheen && material.emissive) material.emissive.copy(material.color).multiplyScalar(sheen);
+function polish(part, { roughness = 0.2, metalness = 0.5, sheen = 0 }) {
+  part.roughness = roughness; part.metalness = metalness;
+  if (sheen) part.emissive.copy(part.color).multiplyScalar(sheen);
 }
 function glints(v, e, dt) {
   const rate = e.profile.finish?.glints;
@@ -169,31 +170,27 @@ function glints(v, e, dt) {
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
 function makeView(e, prefab) {
-  const group = new THREE.Group(), model = cloneEnemy(prefab), size = e.profile.size ?? 1;
+  const group = new THREE.Group(), { model, mesh, material, parts } = dressEnemy(prefab, e.profile), size = e.profile.size ?? 1;
   model.scale.multiplyScalar(size);
-  hideParts(model, e.profile);
   group.add(model); scene.add(group);
-  const materials = [], colors = kindColors(e.profile, prefab), gloom = e.profile.gloom;
+  material.transparent = true;   // fades out once dead
+  const gloom = e.profile.gloom;
   const named = roles => new Set((roles ?? []).flatMap(role => e.profile.parts?.[role] ?? [role]));
   const gloomy = named(gloom?.parts), finish = e.profile.finish, polished = named(finish?.parts);
-  model.traverse(o => {
-    if (!o.isMesh) return;
-    const own = m => { const c = recolor(m.clone(), colors); c.transparent = true;
-      if (polished.has(c.name)) polish(c, finish); materials.push({ material: c, color: c.color.clone(), glow: c.emissiveIntensity ?? 0, gloom: gloomy.has(c.name) }); return c; };
-    o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
-  });
+  for (const p of parts) {
+    if (polished.has(p.name)) polish(p, finish);
+    p.gloom = gloomy.has(p.name);
+  }
+  paintParts(material, parts);
   // silhouette shown where the body is hidden behind terrain (like the player's); drawn
   // before the body, so it never shows the body's own back parts through its front
   const ghost = new THREE.MeshBasicMaterial({ color: GHOST, transparent: true, opacity: GHOST_OPACITY,
     depthFunc: THREE.GreaterDepth, depthWrite: false });
-  const meshes = [];
-  model.traverse(o => { if (o.isMesh) meshes.push(o); });
-  for (const o of meshes) {
-    const g = o.isSkinnedMesh ? new THREE.SkinnedMesh(o.geometry, ghost) : new THREE.Mesh(o.geometry, ghost);
-    if (o.isSkinnedMesh) g.bind(o.skeleton, o.bindMatrix);
-    g.renderOrder = -1; g.frustumCulled = o.frustumCulled;
-    o.add(g);   // same world transform as the body part
-  }
+  const silhouette = new THREE.SkinnedMesh(mesh.geometry, ghost);
+  silhouette.bind(mesh.skeleton, mesh.bindMatrix);
+  silhouette.renderOrder = -1; silhouette.boundingSphere = mesh.boundingSphere;
+  silhouette.userData.sharedGeo = true;
+  mesh.add(silhouette);   // same world transform as the body
   // actions: walk, fast?, death and one per attack clip (keyed like attack.clip, else 'attack')
   const mixer = new THREE.AnimationMixer(model), actions = {}, weights = {};
   const clips = { walk: prefab.walk, fast: prefab.fast, death: prefab.death, ...prefab.attacks };
@@ -218,7 +215,7 @@ function makeView(e, prefab) {
     trackLight(light, group);
   }
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
-  return { group, model, mixer, actions, prefab, materials, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
+  return { group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0 };
 }
@@ -233,7 +230,7 @@ function glowFx(v, e, dt, life) {
   });
   const swing = fx.pulse ? 1 + fx.pulse * (beat(v.phase) - 0.3) : 0.82 + 0.18 * Math.sin(t * 23) * Math.sin(t * 7.1);
   if (v.light) v.light.intensity = fx.light[1] * swing * life;
-  if (fx.pulse) for (const m of v.materials) if (m.glow) m.material.emissiveIntensity = m.glow * (0.6 + 0.4 * life) * swing;
+  if (fx.pulse) v.material.emissiveIntensity = (0.6 + 0.4 * life) * swing;   // every part's glow (times its own strength)
   if (fx.embers && life > 0.3 && Math.hypot(e.x - player.x, e.z - player.z) < 12)
     for (let i = Math.floor(fx.embers.rate * dt * life + Math.random()); i > 0; i--) {
       const s = fx.embers.spread;
@@ -252,7 +249,8 @@ function dying(v, e, dt, off) {
   v.actions.death.time = Math.min(e.deadT, v.actions.death.getClip().duration);
   const fade = Math.max(0, 1 - Math.max(0, e.deadT - e.profile.deathTime - 0.5) / 0.8);
   gloomStep(v, e, dt);
-  for (const m of v.materials) { m.material.opacity = fade; if (m.gloom) m.material.color.copy(baseColor(v, m)); }
+  v.material.opacity = fade;
+  v.parts.forEach((p, i) => { if (p.gloom) v.colors[i].copy(baseColor(v, p)); });
   v.ghost.opacity = GHOST_OPACITY * fade;
   v.bar.visible = false; v.label.visible = false; v.mark.visible = false;
   v.group.visible = fade > 0;
@@ -293,7 +291,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     }
     const flash = Math.min(0.6, e.hurtT / 0.22 * 0.6);
     gloomStep(v, e, dt);
-    for (const m of v.materials) m.material.color.copy(baseColor(v, m)).lerp(flash > 0.1 || !e.hovered ? white : hover, Math.max(flash, e.hovered ? 0.22 : 0));
+    v.parts.forEach((p, i) => v.colors[i].copy(baseColor(v, p)).lerp(flash > 0.1 || !e.hovered ? white : hover, Math.max(flash, e.hovered ? 0.22 : 0)));
     v.bar.visible = !!e.guardian || !!e.hovered || !e.hordeId && e.hp < e.profile.hp;
     v.label.visible = v.bar.visible || !e.hordeId && Math.hypot(e.x - player.x, e.z - player.z) < e.profile.aggro + 1;
     inverseYaw.setFromAxisAngle(up, -v.yaw);
@@ -316,7 +314,7 @@ export function removeEnemyViews(list) {
     if (v.flash) untrackLight(v.flash);
     removeTrail(v);
     v.mixer.stopAllAction(); v.mixer.uncacheRoot(v.model);
-    v.materials.forEach(({ material }) => material.dispose());
+    v.material.dispose();
     v.ghost.dispose();
     v.label.material.map.dispose(); v.label.material.dispose();
     const skeletons = new Set();
