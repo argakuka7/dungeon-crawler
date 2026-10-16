@@ -33,6 +33,9 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   A ring fills under the finger.
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
   closer), twist to turn the view a quarter (each 35 degrees).
+- The page itself never zooms: no double-tap zoom (`touch-action: manipulation` on every
+  element; the game and the touch controls take all touches, `none`), and the viewport is not
+  scalable (`user-scalable=no`, for Android; iOS goes by `touch-action`).
 
 The menu button at the end of the quick bar opens the Esc menu (`src/game/escmenu.js`): playing
 together, the controls and the music. Respawning has no touch control yet.

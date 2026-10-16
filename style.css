@@ -210,7 +210,8 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 
 /* touch controls (game/touch.js): the stick on the left, the action and jump buttons on the right,
    the quick bar at the top with a bag button; pinch, twist and long press on the game */
-html { touch-action: manipulation; }
+/* no double-tap zoom anywhere (touch-action is per element, not inherited; the game's own pinch is below) */
+*, *::before, *::after { touch-action: manipulation; }
 body.touch { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 body.touch canvas, #touch, #touch * { touch-action: none; }
 #touch { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
