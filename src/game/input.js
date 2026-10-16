@@ -91,6 +91,8 @@ addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', clearInput);
 // Ctrl+click is a right click on macOS: no context menu over the game
 addEventListener('contextmenu', e => { if (e.target.tagName === 'CANVAS') e.preventDefault(); });
+// no picture or link dragged off by accident (style.css stops text selection)
+addEventListener('dragstart', e => e.preventDefault());
 // Auto-attack (Shift): attack the best enemy the weapon can reach (a blade's reach, a shot's
 // range), the hovered one first, else the closest, preferring those ahead of the movement keys
 // or the facing. Never at the air and never walking up: without an enemy that close (and, for

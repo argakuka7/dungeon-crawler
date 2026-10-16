@@ -11,6 +11,11 @@ canvas { display: block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 [hidden] { display: none !important; }
+/* nothing is selected by accident: no text selection, no dragging pictures, no callouts (what is
+   typed into stays selectable; the dev panel and the room code choose otherwise below) */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; }
 kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 3px; padding: 0 4px; color: #e6e9ef; font: inherit; }
 
 #dev { position: absolute; top: 8px; left: 8px; z-index: 5; max-width: min(640px, calc(100vw - 260px)); padding: 4px 7px;
@@ -212,7 +217,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
    the quick bar at the top with a bag button; pinch, twist and long press on the game */
 /* no double-tap zoom anywhere (touch-action is per element, not inherited; the game's own pinch is below) */
 *, *::before, *::after { touch-action: manipulation; }
-body.touch { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 body.touch canvas, #touch, #touch * { touch-action: none; }
 #touch { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
 #touch-stick { position: absolute; left: 0; bottom: 0; width: 45vw; height: 65vh; pointer-events: auto; }
