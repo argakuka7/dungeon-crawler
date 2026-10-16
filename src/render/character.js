@@ -42,7 +42,7 @@ export function mountWeapon(bones, weapon) {
   weapon.scale.setScalar(d.mount_scale ?? 1);
   if (d.mount_quat_gltf) weapon.quaternion.fromArray(d.mount_quat_gltf);
   else weapon.rotation.set(Math.PI / 3, 0, 0);   // +Y blade axis -> 60 degrees from forearm
-  weapon.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  weapon.traverse(o => { if (o.isMesh) o.castShadow = true; });   // rigid on a bone: culled by its own bounds
   return item;
 }
 

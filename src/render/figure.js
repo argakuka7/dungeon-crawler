@@ -120,7 +120,7 @@ export function wear(f, id) {
       return m;
     });
     if (o.material.length === 1) o.material = o.material[0];
-    o.castShadow = true; o.frustumCulled = false;
+    o.castShadow = true;   // (rigid on a bone: culled by its own bounds, like any mesh)
     o.userData.sharedGeo = true;   // the template owns the geometry
   });
   f.bones[d.socket ?? 'hand.R'].add(object);

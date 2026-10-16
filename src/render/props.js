@@ -78,7 +78,8 @@ export function buildProps(placed, group) {
         mesh.setMatrixAt(i, m4);
         mesh.setColorAt(i, col.set(q.tint || '#ffffff'));
       });
-      mesh.castShadow = p.blocking || p.height > 0.8;
+      // glowing parts (windows, lantern glass) are light, not matter: no shadow
+      mesh.castShadow = (p.blocking || p.height > 0.8) && !part.material.name.endsWith('_glow');
       mesh.receiveShadow = true;
       group.add(mesh);
     }
