@@ -324,6 +324,10 @@ one long bridge over a valley.
   long and as steep as the levels say. It is placed like any bridge, in one style for the
   whole span (from the theme's weights), with a deeper sag for rope and tall trestles under
   plank and iron. Invisible side rails keep you on it like on every bridge.
+- **Seen from across:** entering any cube of a span (its rooms at the ends included) fetches
+  all of its cubes and marks them `sighted` (`game/flow.js sightSpans`): the low-detail
+  surroundings show them like visited cubes, so the far side and the island are in view
+  before you get there. Sighting is not a visit: no faces open, the minimap does not show them.
 - **Dev:** `/span [n]` jumps to the start of the world's next (or n-th) span.
 - **Checks:** `tests/spans.test.js` covers the plan (straight, in budget, unguarded, islands
   apart), the pads on both sides of every crossing, matching ground on every face of every
@@ -642,8 +646,9 @@ exactly the pixels the other drops. Every cube, full or proxy, sits in its own g
 (`render/glass.js`) that moves and fades with it (`game/travelfx.js`), with panes omitted
 on opened side connections.
 
-The minimap and the low-detail surroundings only show cubes you have visited; prefetching
-never discovers a cube. Surroundings include diagonals and distant cubes on the active
+The minimap and the low-detail surroundings only show cubes you have visited (the
+surroundings also the cubes of a gorge span you are on, see above); prefetching never
+discovers a cube. Surroundings include diagonals and distant cubes on the active
 stratum, within 48 world units (three cube widths) of the player's horizontal position.
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.

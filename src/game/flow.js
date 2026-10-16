@@ -29,6 +29,8 @@ import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
+import { spansThrough } from '../world/spans.js';
+import { depthOf } from '../themes/depth.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 
@@ -219,9 +221,23 @@ export function settleIn(neighbors = true) {
   drawMinimap();
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
   if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
+  sightSpans();
   // get the cubes behind our portals (and doors) ready in the background
   state.cubes.prefetch([...c.map.portals.filter(p => p.kind !== 'spawn').map(p => step(state.cubeKey, p.dir)),
     ...(c.map.doors || []).map(d => d.to)]);
+}
+
+// A gorge span (world/spans.js) is seen whole from any of its cubes: across the valley the far
+// side shows before you get there. Its cubes are fetched and sighted (shown, not discovered).
+function sightSpans() {
+  const cubes = state.cubes, k = state.cubeKey;
+  if (isInterior(k)) return;
+  for (const span of spansThrough(cubes.layout(depthOf(k)), k)) for (const s of span.keys)
+    cubes.get(s).then(c => {
+      if (state.cubes !== cubes || c.sighted) return;
+      c.sighted = true;
+      updateNeighbors();
+    }).catch(() => {});
 }
 
 // Discovered cubes within the render budget, on the active stratum only.

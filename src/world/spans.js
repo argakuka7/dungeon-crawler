@@ -161,6 +161,9 @@ export function spanVertex(world, vx, Y, vz) {
   return 'valley';
 }
 
+// the spans cube k is part of (either end included)
+export const spansThrough = (layout, k) => (layout.spans || []).filter(s => s.keys.includes(k));
+
 // the layout's lookup tables for its spans
 export function indexSpans(layout, spans, cells) {
   layout.spans = spans;
