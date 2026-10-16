@@ -61,13 +61,24 @@ function target(m) {
   return Math.min(best, info.top);
 }
 
+// the probes only change with what they look from and to: standing still under a still camera,
+// last frame's target holds (a ragdoll's depends on the cut itself)
+let lastKey = null, lastTarget = 0;
+function cachedTarget(m) {
+  const p = player, c = camera.position;
+  const key = [m, m.blockers, p.x, p.visY, p.z, p.vx, p.vz, p.swimming, c.x, c.y, c.z];
+  if (!p.ragdoll && lastKey && key.every((v, i) => v === lastKey[i])) return lastTarget;
+  lastKey = p.ragdoll ? null : key;
+  return lastTarget = target(m);
+}
+
 function apply(m) { setCut(cut >= mapInfo(m).top - 0.01 ? Infinity : cut, m, player.x, player.visY + 0.6, player.z); }
 
 export function updateCut(dt) {
   const m = state.map;
   if (!m) return;
   if (m !== lastMap) { resetCut(); return; }
-  const t = target(m);
+  const t = cachedTarget(m);
   if (t > cut + 1e-3) {
     // restoring hidden geometry: only once the character has been in clear view for a moment;
     // right away if the cut is below our feet (climbing into the layer) or halfway through a slab
@@ -88,7 +99,7 @@ export function resetCut() {
   const m = state.map;
   if (!m) return;
   updateCamera(0);   // the camera may still be looking at the previous spot
-  lastMap = m; vel = 0; hold = RESTORE_DELAY;
+  lastMap = m; vel = 0; hold = RESTORE_DELAY; lastKey = null;
   cut = mapInfo(m).top;
   cut = target(m);
   apply(m);
