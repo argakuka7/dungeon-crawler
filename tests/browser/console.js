@@ -10,7 +10,7 @@ import { controls } from '../../src/game/inputstate.js';
 import { hitPlayer } from '../../src/game/enemycombat.js';
 import { allEnemies } from '../../src/game/enemies.js';
 import { chronicle, clearChronicle } from '../../src/game/log.js';
-import { chatOpen, closeChat } from '../../src/game/console.js';
+import { chatOpen, closeChat, openChat } from '../../src/game/console.js';
 import { runCommand } from '../../src/game/commands.js';
 import { countOf } from '../../src/core/inventory.js';
 
@@ -62,8 +62,8 @@ export async function runConsoleChecks() {
     key('Enter', 'Enter', input());
     await delay(30);
     check(countOf(player.inventory, 'item_potion_health_greater') === potions + 1, 'Enter must run /give with the best fit');
-    check(chatOpen() && input().value === '/', 'After a command the box stays open for the next one');
-    key('Escape', 'Escape', input());   // the suggestions go: Up is the history again
+    check(!chatOpen() && $('chat-popup').hidden, 'After a command the box and its suggestions must close');
+    openChat('');
     key('ArrowUp', 'ArrowUp', input());
     check(input().value === '/give gr he', 'Up must bring the last line back: ' + input().value);
     const typed = JSON.parse(localStorage.getItem('cube-crawler-history'));

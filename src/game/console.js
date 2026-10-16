@@ -3,7 +3,8 @@
 // friends read it in the box and over our head (net/session.js). A line that starts with / is
 // a command (game/commands.js, with the developer ones under ?dev=1, game/devcommands.js):
 // while typing one, the box offers what fits (the game's items, enemies, rarities ...), Tab
-// takes the highlighted one, and Enter runs the line, filling in what clearly fits. ` (the key
+// takes the highlighted one, and Enter runs the line, filling in what clearly fits, and closes
+// the box. ` (the key
 // left of 1) opens it with the / typed. Up and Down move through the suggestions while they
 // show, else through the lines typed before (kept across reloads); Esc hides the suggestions,
 // then closes the box. The game goes on meanwhile.
@@ -109,8 +110,8 @@ async function submit() {
   if (!line || line === '/') { closeChat(); return; }
   remember(line);
   if (!line.startsWith('/')) { closeChat(); say(line); return; }
-  // a command: the box stays open for the next one
-  input.value = '/'; refreshCompletion();
+  // a command: the box closes (its suggestions with it) and Enter opens it again
+  closeChat();
   await runCommand(line);
 }
 

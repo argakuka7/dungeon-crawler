@@ -8,7 +8,7 @@ say to each other (chat) and the commands (the console).
 - **Enter** opens it to type. A line is chat; a line that starts with `/` is a command.
   **`** (the key left of 1, `^` on a German keyboard; by `e.code`, so any layout) opens it with
   the `/` already typed. **Esc** closes the list of suggestions first, then the box. Enter on an
-  empty line closes it too. The game goes on while it is open (it does not pause).
+  empty line closes it too, and so does running a command (Enter opens it again). The game goes on while it is open (it does not pause).
 - While typing, the game's keys are not the game's (`game/console.js` stops them at the field;
   the keys held to walk are let go when it opens). Clicks in the box keep the field focused; a
   click into the world closes it. The wheel scrolls the box, not the camera.
