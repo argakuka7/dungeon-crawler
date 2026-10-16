@@ -12,8 +12,8 @@ in `docs/enemy-kinds.md`.
 | Depth | Theme | Kind | Layout (ring radius) | Fluids / river | Enemy level (base, range) |
 |---:|---|---|---|---|---|
 | 0 | Meadow islands | surface | town + road to the first well | water | 1 (always 1) |
-| 1 | Meadow islands | surface, sky islands | arc, r=3 | water | 1 (always 1) |
-| 2 | Meadow islands | surface, sky islands | arc, r=3 | water | 2 (1–3) |
+| 1 | Meadow islands | surface, sky islands | arc, r=3, gorge spans | water | 1 (always 1) |
+| 2 | Meadow islands | surface, sky islands | arc, r=3, gorge spans | water | 2 (1–3) |
 | 3 | Snowy peaks | surface, sky islands | arc, r=3 | water | 3 (2–4) |
 | 4 | Badlands | surface | arc, r=3 | water (some lava / acid) | 4 (3–5) |
 | 5 | Root caves | cave | arc, r=3 | water | 5 (4–6) |
@@ -32,6 +32,10 @@ in `docs/enemy-kinds.md`.
 | 18 | Volcanic depths | cave | arc, r=1 | lava river | 18 (17–19) |
 | 19 | Obsidian abyss | cave, large voids | arc, r=1 | lava only | 19 (18–20) |
 | 20 | Obsidian abyss | cave, the core | 3×3 core around the axis | lava only | 20 (19–21) |
+
+Gorge spans (depths 1 and 2): some rooms are joined by one long bridge over a valley or the
+open sky, sometimes out to a lonely island; see [world.md](world.md#gorge-spans-worldspansjs-cubegenspanjs).
+Their gorge cubes have half the usual population.
 
 ## Enemies per depth
 
