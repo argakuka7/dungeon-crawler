@@ -1,15 +1,15 @@
 // The main menu: before the game starts, and after "Save and quit" in the Esc menu
 // (game/escmenu.js). The dev tools and ?seed= skip it (state.js mode; ?menu=1 shows it after all).
 //   title       Continue (the chosen hero in its world), Choose World, Join Game, Choose
-//               Character, Manage Worlds, the controls, the guide. No hero yet: it says so,
-//               and OK goes to make one.
+//               Character, the controls, the guide. No hero yet: it says so, and OK goes to
+//               make one.
 //   worlds      the chosen hero's world: one of the saved ones, a new random one, or a known one
 //               (a world name or a number, core/names.js). Back to the title: Continue plays it.
+//               Each world's name can be copied (to share it) and the world deleted here too.
 //   join        a hero (it becomes the chosen one) and a friend's room code
 //   joining     waiting for the friend's game; the hero comes along, the world is theirs (it
 //               does not become the hero's world)
 //   characters  up to three heroes (core/save.js MAX_HEROES): choose, rename, delete, make one
-//   manage      the worlds: copy a name to share it, delete
 // ?join=CODE opens Join Game with the code filled in (state.js: never skipped).
 //
 // Behind the menu the cube the chosen hero left its world in (game/showcase.js), and over it the
@@ -101,10 +101,9 @@ function heroPick(h, isChosen = false) {
 
 const screens = {
   title() {
-    const hero = chosen(), worlds = store.worlds().length;
-    const manage = worlds ? '<button class="title-item" data-act="manage">Manage Worlds</button>' : '';
-    const more = '<div class="menu-row"><button data-act="controls">Controls</button><a class="title-link" href="learn/" target="_blank" rel="noopener">The guide</a></div>';
-    if (!hero) return `<div class="title-list">${noHero}${manage}${more}</div>`;
+    const hero = chosen();
+    const more = '<button class="title-item" data-act="controls">Controls</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">The guide</a>';
+    if (!hero) return `<div class="title-list">${noHero}${more}</div>`;
     const world = store.heroWorld(hero.id);
     const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : 'not been there yet'}`;
     return `<div class="title-list">
@@ -112,21 +111,22 @@ const screens = {
       <button class="${world ? 'title-item' : 'menu-big'}" data-act="choose-world">Choose World${world ? '' : `<small>${esc(hero.name)} has no world yet</small>`}</button>
       <button class="title-item" data-act="join-game">Join Game</button>
       <button class="title-item" data-act="characters">Choose Character</button>
-      ${manage}${more}
+      ${more}
     </div>`;
   },
   worlds() {
     const hero = chosen(), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
-    const rows = worlds.map(w => `<li class="title-card"><button class="title-pick${w.id === hero.world ? ' chosen' : ''}" data-act="world" data-id="${w.id}"><span>`
+    const rows = worlds.map(w => `<li class="title-card title-world"><button class="title-pick${w.id === hero.world ? ' chosen' : ''}" data-act="world" data-id="${w.id}"><span>`
       + `<b>${esc(w.name)}${w.id === hero.world ? ' <em>its world now</em>' : ''}</b>`
-      + `<small>${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button></li>`).join('');
-    const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one in Manage Worlds to make a new one.</p>`
+      + `<small>${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button>`
+      + `<div class="title-actions"><button data-act="copy-name" data-id="${w.id}" title="To share it: a friend makes it with New Known World">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}</div></li>`).join('');
+    const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one to make a new one.</p>`
       : form === 'known' ? `<div class="title-form title-new-world">
           <input id="title-seed" maxlength="60" placeholder="A world name or a number" data-enter="create-world" aria-label="World name or number" autocomplete="off" spellcheck="false">
           <p id="title-preview" class="title-preview">A friend's world: type its name.</p>
           <div class="menu-row"><button class="menu-big" data-act="create-world">Make it</button><button data-act="cancel">Cancel</button></div></div>`
       : `<div class="menu-row title-new"><button data-act="random-world">New Random World</button><button data-act="known-world">New Known World</button></div>`;
-    return `<h2>Choose World <small>for ${esc(hero.name)}</small></h2>
+    return `<h2>Choose World <small>for ${esc(hero.name)} · ${worlds.length} of ${MAX_WORLDS}</small></h2>
       ${rows ? `<ul class="title-cards">${rows}</ul>` : '<p>No worlds yet.</p>'}${make}
       <button data-act="back" class="title-back">Back</button>`;
   },
@@ -161,18 +161,7 @@ const screens = {
     }).join('');
     return `<h2>Choose Character</h2><ul class="title-cards">${cards}</ul><button data-act="back" class="title-back">Back</button>`;
   },
-  manage() {
-    const worlds = store.worlds(), heroes = store.heroes();
-    const rows = worlds.map(w => {
-      const home = heroes.filter(h => h.world === w.id).map(h => esc(h.name));
-      return `<li class="title-card"><span class="title-info"><b>${esc(w.name)}</b>`
-        + `<small>${depthText(w)} · ${ago(w.updated)}${home.length ? ` · world of ${home.join(', ')}` : ''}</small></span>`
-        + `<div class="title-actions"><button data-act="copy-name" data-id="${w.id}">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}</div></li>`;
-    }).join('');
-    return `<h2>Manage Worlds <small>${worlds.length} of ${MAX_WORLDS}</small></h2>
-      ${rows ? `<ul class="title-cards">${rows}</ul><p>A friend plays the same world with its name: New Known World.</p>` : '<p>No worlds yet.</p>'}
-      <button data-act="back" class="title-back">Back</button>`;
-  },
+
 };
 
 function render() {
@@ -276,7 +265,6 @@ const actions = {
   'join-game'() { screen = 'join'; },
   characters() { from = 'title'; screen = 'characters'; form = store.heroes().length ? null : 'hero'; },
   'first-hero'() { from = screen; screen = 'characters'; form = 'hero'; },
-  manage() { screen = 'manage'; },
   controls() { setHelpOpen(!helpOpen()); },
   back() {
     form = null;

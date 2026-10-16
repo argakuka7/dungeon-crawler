@@ -267,7 +267,7 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
   #title-overlay { place-items: end center; padding-bottom: max(16px, 4vh);
     background: linear-gradient(0deg, #080c13cc 0%, #080c1366 35%, transparent 60%); }
 }
-#title-box { box-sizing: border-box; width: min(460px, 100%); }
+#title-box { box-sizing: border-box; width: min(360px, 100%); }
 #title-logo { margin: 0 0 18px; text-align: center; color: #ffe4ae; font-size: 30px; font-weight: normal; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 0 #8a5a2a, 0 0 24px #ffb45a55; }
 #title-panel { padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px;
@@ -282,7 +282,8 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 #title-panel :is(button, input, .title-link):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
 #title-panel .menu-big { display: block; width: 100%; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
 #title-panel .menu-big small { display: block; margin-top: 2px; color: #aab3c2; font-size: 11px; }
-#title-panel .title-item { display: block; width: 100%; padding: 9px; font-size: 13px; }
+#title-panel .title-item { display: block; box-sizing: border-box; width: 100%; padding: 9px; font-size: 13px; }
+.title-world .title-pick b { white-space: normal; }
 #title-panel .menu-row > * { flex: 1; }
 #title-panel .menu-row input { flex: 3; min-width: 0; }
 .title-list { display: grid; gap: 10px; }
@@ -294,9 +295,6 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 .title-pick b { color: #fff; font-weight: normal; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title-pick em { color: #8fd48a; font-style: normal; font-size: 11px; margin-left: 4px; }
 #title-panel .title-pick.chosen { border-color: #8a7a52; background: #2f3020; }
-.title-info { flex: 1; min-width: 0; display: grid; align-content: center; padding: 4px 2px; }
-.title-info b { color: #fff; font-weight: normal; font-size: 13px; }
-.title-info small { color: #8a96a8; font-size: 11px; }
 .title-none { color: #e6e9ef !important; text-align: center; font-size: 13px; }
 .title-preview { color: #cfe2ff !important; min-height: 1.4em; }
 .title-preview.bad { color: #8a96a8 !important; }

@@ -12,12 +12,13 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
     there). Only when the hero has a world.
   - **Choose World**: one of the saved worlds, **New Random World**, or **New Known World** (a
     world name or a number, with what it makes shown as it is typed; a world saved already makes
-    a fresh copy, "... II"). Choosing goes back to the title: it only changes Continue.
+    a fresh copy, "... II"). Choosing goes back to the title: it only changes Continue. Each
+    world's name can be copied here (to share it: a friend makes it with New Known World) and the
+    world deleted (the button asks again). Worlds have no other names.
   - **Join Game**: the hero that goes (it becomes the chosen one) and the friend's room code. The
     friend's world never becomes the hero's world.
   - **Choose Character**: three places, a new hero needs only a name; choose one (back to the
     title), rename, delete (the button asks again; the chosen one gone, the next is chosen).
-  - **Manage Worlds**: copy a world's name (to share it), delete one. Worlds have no other names.
   - With no hero yet the title says so, and OK goes to Choose Character. Esc goes back a screen.
 - **`?join=CODE`** opens Join Game with the code filled in (even with `?dev=1` or `?seed=`).
   A failed join comes back there and says why. Joining is only done in the main menu.
