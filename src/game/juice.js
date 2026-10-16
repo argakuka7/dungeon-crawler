@@ -4,6 +4,7 @@ import { player } from './state.js';
 import { emit, glow, soft, rand } from '../render/particles.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
+import { muzzleAt } from '../core/beams.js';
 
 let stop = 0;
 // world-space camera offset that springs back (camera.js)
@@ -143,6 +144,55 @@ export function beamFx(b, what) {
   }
   sfx('zapburst', { at: { x, y, z } });
   if (Math.hypot(x - player.x, z - player.z) < 3) cameraKick(x - player.x, z - player.z, 0.06, 0.02);
+}
+
+// The Wolla's storm (game/gusts.js), spec g: lightning out of its cloud ('thunder', i: which
+// bolt), the blow starting ('blow'), and the gust blowing for a frame of dt ('gust'): wind
+// streaks, rain and wisps of cloud rushing out of its mouth in its cone. arg: the bolt, or dt.
+const WIND = ['#ffffff', '#e2f1ff', '#c4e2ff'];
+const BOLTS = [[0.25, 1.0, 0.04], [-0.23, 1.0, 0.04]];   // where they end (blender/wolla.py)
+export function stormFx(e, g, what, arg = 0) {
+  const size = e.profile.size ?? 1, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), dt = arg;
+  if (what === 'thunder') {
+    const at = muzzleAt(e, BOLTS[arg % 2].map(v => v * size));
+    emit(glow, at.x, at.y, at.z, { life: 0.12, size: 0.9, grow: 1, color: '#fff4c0', alpha: 0.9 });
+    for (let i = 0; i < 10; i++)
+      emit(glow, at.x, at.y, at.z, { v: [rand(-1.5, 1.5), rand(-2.5, 0.5), rand(-1.5, 1.5)], life: rand(0.12, 0.25), size: rand(0.04, 0.08),
+        color: i % 2 ? '#ffe45a' : '#ffffff', gravity: 4, drag: 2 });
+    sfx('thunder', { at, pitch: arg ? 0.85 : 1 });
+    if (Math.hypot(at.x - player.x, at.z - player.z) < 4) cameraKick(0, 0, 0, 0.04);
+    return;
+  }
+  const o = muzzleAt(e, g.muzzle);
+  if (what === 'blow') {
+    sfx('gust', { at: o });
+    for (let i = 0; i < 6; i++)   // the cloud torn apart by the blow
+      emit(soft, o.x + rand(-0.2, 0.2), o.y + rand(0.2, 0.6), o.z + rand(-0.2, 0.2), { v: [fx * rand(2, 4), rand(-0.3, 0.2), fz * rand(2, 4)],
+        life: rand(0.5, 0.8), size: rand(0.25, 0.4), grow: 1, color: '#6b7384', alpha: 0.5, drag: 1.5 });
+    if (Math.hypot(o.x - player.x, o.z - player.z) < 5) cameraKick(fx, fz, 0.05);
+    return;
+  }
+  // blowing: streaks (three motes in a row, flying together), raindrops and grey wisps
+  const sx = fz, sz = -fx, speed = g.range / 0.45;
+  const fan = () => { const u = rand(-1, 1); return [u * g.width * 0.7, u * g.spread]; };
+  for (let n = Math.floor(90 * dt + Math.random()); n > 0; n--) {
+    const [w, s] = fan(), v = speed * rand(0.85, 1.15), y = o.y + rand(-0.3, 0.35), vy = rand(-0.4, 0.3);
+    const vx = (fx + sx * s) * v, vz = (fz + sz * s) * v, c = WIND[n % 3], life = rand(0.3, 0.45);
+    for (let k = 0; k < 4; k++)
+      emit(soft, o.x + sx * w - vx * k * 0.014, y - vy * k * 0.014, o.z + sz * w - vz * k * 0.014,
+        { v: [vx, vy, vz], life, size: 0.075 - k * 0.014, color: c, alpha: 0.9 - k * 0.18 });
+  }
+  const rain = e.profile.ichor?.[0] ?? '#9fd8ff';
+  for (let n = Math.floor(30 * dt + Math.random()); n > 0; n--) {
+    const [w, s] = fan(), v = speed * rand(0.6, 0.9);
+    emit(soft, o.x + sx * w, o.y + rand(-0.2, 0.3), o.z + sz * w, { v: [(fx + sx * s) * v, rand(0, 0.8), (fz + sz * s) * v],
+      life: rand(0.35, 0.5), size: rand(0.04, 0.06), color: n % 2 ? rain : '#7fb8ff', alpha: 0.9, gravity: 5 });
+  }
+  for (let n = Math.floor(22 * dt + Math.random()); n > 0; n--) {   // the storm itself: grey cloud tearing along
+    const [w, s] = fan(), v = speed * rand(0.45, 0.7);
+    emit(soft, o.x + sx * w, o.y + rand(-0.1, 0.3), o.z + sz * w, { v: [(fx + sx * s) * v, rand(-0.1, 0.2), (fz + sz * s) * v],
+      life: rand(0.5, 0.75), size: rand(0.22, 0.36), grow: 1.6, color: n % 2 ? '#7d8698' : '#9aa3b4', alpha: 0.42, drag: 0.7 });
+  }
 }
 
 // poison ticking while the player is poisoned (core/status.js)

@@ -20,7 +20,7 @@ import { goDown, tickDown } from './downed.js';
 // respawn: 'safe' (last safe spot, game/flow.js recover), or null (get up where you lie);
 // by: the enemy behind it (game/enemycombat.js attacker), for the chronicle should it kill
 export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, hop = 0, by = null } = {}) {
-  player.climb = null; player.getUp = null;
+  player.climb = null; player.getUp = null; player.gust = null;
   cancelSword();
   sfx('knock');
   if (!character.ready) { hurt(damage, reason, by); return; }

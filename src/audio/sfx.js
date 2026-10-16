@@ -1,6 +1,6 @@
 // Generated sound effects (Web Audio, no sample files): a sword whoosh, a bow's draw and twang,
 // a crossbow's shot and reload, a spell's cast and burst, shots striking walls, hits, kills,
-// getting hurt, pickups, thrown fireballs / punches / ice balls and burning, lasers, the player's body (jumps,
+// getting hurt, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, the player's body (jumps,
 // falls, knock-downs, fluid deaths), travel, items and the bag, and the enemies' voices
 // (voices.js). Footsteps are footsteps.js, the continuous sounds loops.js. The audio context
 // lives in context.js.
@@ -298,6 +298,19 @@ const SOUNDS = {
     tone('sawtooth', 190 * p, 240 * p, t, 0.25, filter('bandpass', 900, 4, amp(t, 0.03, 0.08, 0.22, out)));
     tone('sine', 120 * p, 60 * p, t + 0.3, 0.12, amp(t + 0.3, 0.002, 0.7, 0.12, out));
     noise(t + 0.3, 0.06, filter('lowpass', 1200, 0.7, amp(t + 0.3, 0.002, 0.45, 0.06, out)));
+  },
+  thunder(t, out, p) {   // the Wolla's little storm cloud: a sharp crack and a rolling rumble
+    noise(t, 0.08, filter('highpass', 2200 * p, 0.7, amp(t, 0.001, 0.55, 0.08, out)));
+    noise(t + 0.02, 0.12, filter('bandpass', 900 * p, 1, amp(t + 0.02, 0.003, 0.4, 0.12, out)));
+    const rumble = filter('lowpass', 260 * p, 1.5, amp(t + 0.04, 0.06, 0.9, 1.1, out));
+    rumble.frequency.setValueAtTime(420 * p, t + 0.04); rumble.frequency.exponentialRampToValueAtTime(110 * p, t + 1.1);
+    noise(t + 0.04, 1.15, rumble);
+    tone('sine', 70 * p, 38 * p, t + 0.03, 0.7, amp(t + 0.03, 0.02, 0.4, 0.65, out));
+  },
+  gust(t, out, p) {      // the Wolla blowing: a roaring wind that swells and howls away
+    sweep(t, 0.65, 300 * p, 1100 * p, 450 * p, 1.2, 0.75, out, 0.05);
+    sweep(t + 0.05, 0.55, 1400 * p, 2600 * p, 900 * p, 6, 0.12, out, 0.08);   // the howl
+    noise(t, 0.6, filter('lowpass', 180 * p, 1, amp(t, 0.04, 0.5, 0.55, out)));
   },
   cloud(t, out, p) {     // the cloud bridge puffing out of the gate
     noise(t, 0.6, filter('lowpass', 900 * p, 0.7, amp(t, 0.08, 0.45, 0.5, out)));

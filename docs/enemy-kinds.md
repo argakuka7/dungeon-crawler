@@ -105,6 +105,9 @@ attack clip's hit frame. `?bg=%23202020` sets the backdrop colour.
 | Emerald triangle | Triangle | `oklch(0.80 0.20 155)` green glow | ×1.25 | ×1.1 | ×1 | 1 | ×1.17 | 13–16 |
 | Crimson triangle | Triangle | `oklch(0.64 0.22 25)` red glow | ×1.35 | ×1.35 | ×1 | 1 | ×1.35 | 15–16, 19–20 |
 | Fire shraps | Shraps | `oklch(0.56 0.17 32)` red, fire head | ×1.45 | ×1.4 | ×1.1 | 1 | ×1.42 | 17–19 |
+| Bog wolla | Wolla | `oklch(0.70 0.17 145)` green | ×1.2 | ×1.15 | ×1 | 1 | ×1.17 | 9–10, 14 |
+| Storm wolla | Wolla | `oklch(0.56 0.20 300)` purple | ×1.3 | ×1.3 | ×1.1 | 1.08 | ×1.3 | 13–15, 19 |
+| Ember wolla | Wolla | `oklch(0.72 0.17 52)` orange | ×1.45 | ×1.4 | ×1.1 | 1.12 | ×1.42 | 18–19 |
 
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red
@@ -114,6 +117,10 @@ ice and the swamp snakes of their own.
 
 The Fire shraps swaps the Shraps' ice head for a burning one (`hide`), throws fireballs that
 burn instead of ice balls that chill (`attacks`) and glows like the fire species (`fx`).
+
+The Wollas are strength tiers too: blue, then green in the swamp, purple in the mines and ruins,
+orange in the volcanic depths and the abyss. Their eyes take a contrasting colour, and each kind
+leaves a trail of its own colour (`trail`).
 
 Fire-face, Fire-cat and Spicy have `parts` (flame, fur, eyes; the Spicy's body, glow, wheels and
 eyes) but no kinds yet. A Spicy kind can give its laser a colour of its own with `beamColor`. A blue-fire kind

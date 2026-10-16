@@ -21,6 +21,7 @@ export const player = {
   airTime: 0, coyote: 0, jumpBuf: 0, stun: 0,
   burning: null,   // on fire (core/projectiles.js ignite)
   chilled: null,   // slowed by an ice ball (core/projectiles.js chillFrom)
+  gust: null,      // blown back by a Wolla's storm (core/gusts.js pushStep)
   // event counters the animator watches
   jumpCount: 0, landCount: 0, landImpact: 0,
   ragdoll: null, getUp: null,   // getting up after a ragdoll (game/ragdoll.js)

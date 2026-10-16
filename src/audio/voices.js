@@ -97,6 +97,20 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         clicks(t + 0.1, 10, 0.07, 3200 * p, 0.35, out);
       },
     },
+    wolla: {    // made of water: a bubbly warble, a long breath drawn in, and a splash running out
+      alert: (t, out, p) => {
+        gloops(t, 4, 300 * p, 520 * p, 0.06, 0.3, out);
+        tone('sine', 380 * p, 760 * p, t + 0.22, 0.18, amp(t + 0.22, 0.01, 0.18, 0.17, out));
+      },
+      windup: (t, out, p) => {   // (the thunder and the blow are their own sounds, game/gusts.js)
+        sweep(t + 0.1, 0.75, 500 * p, 1500 * p, 2400 * p, 3, 0.22, out, 0.4);
+        gloops(t, 3, 250 * p, 400 * p, 0.09, 0.2, out);
+      },
+      death: (t, out, p) => {
+        gloops(t, 9, 180 * p, 600 * p, 0.07, 0.28, out, false);
+        noise(t + 0.55, 0.5, filter('bandpass', 1300 * p, 0.8, amp(t + 0.55, 0.005, 0.5, 0.45, out)));   // the splash
+      },
+    },
   };
   const out = {};
   for (const [species, kinds] of Object.entries(V)) for (const k of VOICE_KINDS) out[`${species}_${k}`] = kinds[k];

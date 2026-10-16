@@ -3,7 +3,8 @@
 // picks one each time it strikes, among those its target is in reach of. A ranged attack is
 // thrown from its reach away when it has a clear shot; a species that also fights up close
 // keeps closing in while its throw recovers. A pouncing one is carried forward through its leap,
-// one that retreats (the Spicy) rolls back before it fires its beam (game/beams.js).
+// one that retreats (the Spicy) rolls back before it fires its beam (game/beams.js), and the
+// Wolla's storm blows from its hit frame on (game/gusts.js).
 //
 // Whom it goes after: the player, or when playing together the nearer of the two players
 // (game/party.js chooseTarget, its `target`); "the player" below is that one.
@@ -277,7 +278,8 @@ function act(e, dt) {
     if (a.retreat) backOff(e, a.retreat, t0);
     if (!e.bit && e.t >= fireAt(a)) {
       e.bit = true;
-      if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a); else strikePlayer(e);
+      // (a gust blows on from here by itself: game/gusts.js)
+      if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a); else if (!a.gust) strikePlayer(e);
     }
     if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = cfg.cooldown * (0.8 + Math.random() * 0.4); e.side = side(); }
     return;

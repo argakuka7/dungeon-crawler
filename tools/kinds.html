@@ -30,10 +30,11 @@ import { triangleModel } from './src/render/trianglemodel.js';
 import { fireCatModel } from './src/render/firecatmodel.js';
 import { shrapsModel } from './src/render/shrapsmodel.js';
 import { spicyModel } from './src/render/spicymodel.js';
+import { wollaModel } from './src/render/wollamodel.js';
 
 const q = new URLSearchParams(location.search);
 const MODELS = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
-  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel };
+  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel };
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
 document.body.append(renderer.domElement);

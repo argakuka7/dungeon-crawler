@@ -199,9 +199,32 @@ export const SPICY = {
   style: 'ranged', keep: [2.4, 4.2],
   seedSalt: 0x5b1c7e3, spacing: 4,
 };
-export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY];
-// what a ranged attack sends out: its projectile or its beam (null for a blow)
-export const shotOf = a => a.projectile ?? a.beam ?? null;
+// A body of four wavy rings of water with two eyes floating above (blender/wolla.py). The game
+// spins the rings (`waves`: rad/s, render/enemies.js), so its waves keep running round it, and it
+// leaves a wet trail (`trail`: the puddles' colour). It glides, its loop running on time.
+// A `gust` is a ranged attack that is neither thrown nor shone: a storm cloud gathers above it
+// and thunders (at the `thunder` times of the attack, s), then from the hit frame on it blows
+// from its mouth (`muzzle`) for `time` seconds: a body within `range` of the mouth and inside
+// the cone ahead of it (`width` either side at the mouth, widening by `spread` per cell) is hit
+// once, and blown back at `push` cells/s for `pushTime` seconds on top of the blow's knock
+// (core/gusts.js, game/gusts.js). Sidestepping out of the cone before it blows dodges it.
+export const WOLLA = {
+  type: 'wolla', species: 'wolla', label: 'Wolla', hp: 95, damage: 22, knock: 3,
+  xp: 64, coins: [14, 26],
+  radius: 0.38, height: 1.2, bodyHeight: 0.95, mass: 1.4, hover: true, waves: 1.1, trail: '#3d6f9c',
+  aggro: 5, giveUp: 8, chase: 1.5, wander: 0.5, homeSpeed: 0.8,
+  reach: 3, hitReach: 0, hitAt: 27 / 30, trackUntil: 0.5, attackTime: 1.8, cooldown: 1.9,
+  arc: 0.5, knockDown: false, hop: 3, reason: 'Blown away by a Wolla!', ichor: ['#9fd8ff', '#2a6fc0'], pitch: 1,
+  gust: { kind: 'storm', time: 17 / 30, range: 3.6, width: 0.35, spread: 0.36, push: 7.5, pushTime: 0.5,
+    muzzle: [0, 0.584, 0.466], thunder: [13 / 30, 20 / 30] },
+  poise: 0.6, hitStun: 0.2, deathTime: 2, corpseTime: 4,
+  parts: { waves: ['WollaWaves', 'WollaWavesDeep'], eyes: ['WollaEyes_glow'] },
+  style: 'ranged', keep: [1.5, 2.8],
+  seedSalt: 0x3a77e1a, spacing: 4,
+};
+export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA];
+// what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
+export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
 // Enemy kinds: a species' base profile with its own name, colours and strength, drawn with
 // the species' model.
@@ -224,7 +247,8 @@ export function enemyKind(base, { mods = {}, attacks = base.attacks, ...spec }) 
   const thrown = p => ({ ...p, muzzle: p.muzzle.map(v => v * size) });
   // a melee attack's own reach grows with the body; a throw's (or a beam's) stays
   const sized = a => ({ ...a, hitReach: reach(a), ...(a.reach !== undefined && !shotOf(a) && { reach: a.reach * size }),
-    ...(a.projectile && { projectile: thrown(a.projectile) }), ...(a.beam && { beam: thrown(a.beam) }) });
+    ...(a.projectile && { projectile: thrown(a.projectile) }), ...(a.beam && { beam: thrown(a.beam) }),
+    ...(a.gust && { gust: thrown(a.gust) }) });
   const list = attacks && attacks.map(sized);
   const own = list?.some(a => a.reach !== undefined);
   return {
@@ -237,6 +261,7 @@ export function enemyKind(base, { mods = {}, attacks = base.attacks, ...spec }) 
     ...(list && { attacks: list }),
     ...(base.projectile && { projectile: thrown(base.projectile) }),
     ...(base.beam && { beam: thrown(base.beam) }),
+    ...(base.gust && { gust: thrown(base.gust) }),
     ...(base.wheel && { wheel: base.wheel * size }),
     ...spec,
   };
@@ -330,6 +355,23 @@ export const FIRE_SHRAPS = enemyKind(SHRAPS, {
     projectile: { ...FIREFACE.projectile, speed: 6.5, range: 7, muzzle: SHRAPS_THROW.projectile.muzzle } }],
   ichor: ['#ffb030', '#a02a10'], pitch: 0.9, mods: { hp: 1.45, damage: 1.4, speed: 1.1 },
 });
+// The Wollas: blue, then green in the swamp, purple in the mines and the ruins, orange in the
+// volcanic depths, each stronger than the one before. Their eyes take the opposite colour.
+export const BOG_WOLLA = enemyKind(WOLLA, {
+  type: 'bogwolla', label: 'Bog wolla', reason: 'Blown away by a Bog wolla!',
+  colors: { waves: 'oklch(0.70 0.17 145)', eyes: 'oklch(0.78 0.17 350)' }, ichor: ['#b4f08a', '#3f8f2a'], trail: '#4f7a34',
+  mods: { hp: 1.2, damage: 1.15 },
+});
+export const STORM_WOLLA = enemyKind(WOLLA, {
+  type: 'stormwolla', label: 'Storm wolla', reason: 'Blown away by a Storm wolla!',
+  colors: { waves: 'oklch(0.56 0.20 300)', eyes: 'oklch(0.92 0.18 110)' }, ichor: ['#d6a8ff', '#5a2ca0'], trail: '#5a3f86',
+  mods: { hp: 1.3, damage: 1.3, speed: 1.1, size: 1.08 },
+});
+export const EMBER_WOLLA = enemyKind(WOLLA, {
+  type: 'emberwolla', label: 'Ember wolla', reason: 'Blown away by an Ember wolla!', fireproof: true,
+  colors: { waves: 'oklch(0.72 0.17 52)', eyes: 'oklch(0.86 0.12 205)' }, ichor: ['#ffc07a', '#a0480f'], trail: '#7a4a24',
+  mods: { hp: 1.45, damage: 1.4, speed: 1.1, size: 1.12 },
+});
 // One full attack and recovery, averaged over a species' attacks (s), and what it deals per
 // second at level 1 (a projectile's burn included): how dangerous it is to stand next to.
 export function attackCycle(profile) {
@@ -377,7 +419,8 @@ export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base
   poise: Math.max(base.poise, GUARDIAN_TIERS.descent.poise), mods: guardianMods(base, GUARDIAN_TIERS.descent),
 })]));
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
-  REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS].map(k => [k.type, k]));
+  REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
+  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA].map(k => [k.type, k]));
 
 // the attack e is performing (or about to perform): one of profile.attacks, else the profile
 export const attackOf = e => e.profile.attacks?.[e.attack] ?? e.profile;
@@ -421,7 +464,8 @@ export function blowOf(profile, a = profile) {
   const damage = Math.round(profile.damage * (a.power ?? 1));
   return { damage, knock: a.knock ?? profile.knock,
     knockDown: !!a.knockDown, hop: a.hop, reason: a.reason, burn: a.projectile?.burn ?? a.burn ?? null,
-    chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage) };
+    chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage),
+    ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }) };
 }
 
 // a level-1 value grown to `level`

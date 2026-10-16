@@ -5,6 +5,7 @@ import { groundAt, ceilingAt, slopeAt } from './collide.js';
 import { canMove } from './canmove.js';
 import { chillFactor } from '../core/projectiles.js';
 import { effectMod } from '../core/potions.js';
+import { pushStep, pushControl } from '../core/gusts.js';
 
 // learn: physics.html#feel #walls (see learn/README.md)
 function horizontal(dt, dx, dz, run) {
@@ -62,12 +63,23 @@ function jumping(dt, jump) {
   p.jumpCount++;
 }
 
+// A Wolla's gust (core/gusts.js): it carries the body on top of its own moving, axis by axis
+// so it slides along walls, and takes most of the steering away while it is strong.
+function blown(dt) {
+  const p = player, [mx, mz] = pushStep(p.gust, dt);
+  if (Math.abs(mx) > 1e-6 && canMove(p.x + mx, p.z, 'x', Math.sign(mx))) p.x += mx;
+  if (Math.abs(mz) > 1e-6 && canMove(p.x, p.z + mz, 'z', Math.sign(mz))) p.z += mz;
+  if (p.gust.t <= 0) p.gust = null;
+}
+
 // returns the ground info plus `landed` (impact speed of a landing this step, else 0)
 // learn: physics.html#walls (see learn/README.md)
 export function movePlayer(dt, dx, dz, run, jump) {
   const p = player;
   if (p.stun > 0) { p.stun -= dt; dx = dz = 0; jump = false; }
+  if (p.gust) { const k = pushControl(p.gust); dx *= k; dz *= k; }
   horizontal(dt, dx, dz, run);
+  if (p.gust) blown(dt);
   jumping(dt, jump);
 
   const gr = groundAt(p.x, p.z, p.y, p.swimming ? SWIM_STEP : STEP);

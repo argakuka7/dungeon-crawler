@@ -130,6 +130,20 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   radius included) takes the hit. Walking or running across the beam gets out of it in time;
   standing still or backing straight off does not. A stagger or death of the Spicy puts the
   beam out before it bursts.
+- Wolla (`blender/wolla.py`): four wavy rings of water stacked into a body, with two eyes
+  floating above them. The game spins the rings about their own axes (every other one the other
+  way, `profile.waves` in rad/s, `render/enemies.js`), so the crests keep running round it, and
+  faster while it storms. It glides (`hover`) and leaves a wet trail of puddles that dry up
+  again (`render/trails.js`). It fights from afar (`style: 'ranged'`, 1.5–2.8 cells, from 3
+  cells): a little storm cloud puffs up above it and lightning flashes out of it twice (0.43 s
+  and 0.67 s, a light and a thunder clap), then at 0.9 s (clip frame 27) its upper rings lift
+  like a lid, it opens its mouth and blows for 0.57 s (`gust`, `game/gusts.js`,
+  `core/gusts.js`). A player up to 3.6 cells ahead of the mouth, in a cone 0.35 cells either
+  side at the mouth widening by 0.36 per cell, with a clear line to it, is hit once: the blow's
+  damage and knock, and then blown back at 7.5 cells/s fading over 0.5 s (about 1.9 cells,
+  `physics/move.js`; walls stop it, ledges and fluids do not), with little steering meanwhile.
+  It stops turning at 0.5 s, so stepping out of the cone then dodges it. A stagger ends the
+  storm. Kinds: Bog wolla (green), Storm wolla (purple), Ember wolla (orange).
 - The glow lives in `render/enemies.js`: each of the three (and the Fire shraps) carries a light from the
   shared light pool (`trackLight`), bones named `flame*` keep flickering over any clip,
   the Triangle's emissive materials pulse with its hover beat, fire sheds embers, and
@@ -168,7 +182,7 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
   - `skirmish` (spiders, snakes, Fire-cats): backs off after a blow, circles at `circle` cells
     (spiders scuttle sideways facing you, `strafe`; the others walk round), switching sides
     when blocked and now and then, and darts in once the cooldown is over.
-  - `ranged` (Fire-face, Triangle, Spicy): backs away while closer than `keep[0]`, sidesteps while the
+  - `ranged` (Fire-face, Triangle, Spicy, Wolla): backs away while closer than `keep[0]`, sidesteps while the
     throw recovers, and moves for a clear shot when it has none.
   - `brute` (Stunder, Octonaut, Shraps): holds its ground. The Stunder `charge`s: it runs the
     last 1.5–5 cells at 1.8× its chase speed when it can strike again.
@@ -281,7 +295,7 @@ these do not change inventory or combat stats. Swimming / climbing hides the pro
 vertical speed advances its phase, descent reverses it, and stopping holds
 the grip. Regenerate via the Blender commands in
 `character.py`, `spider.py`, `stunder.py`, `snake.py`, `octonaut.py`, `fireface.py`,
-`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py` and `sword.py` (the SDF creatures share `blender/creature.py`
+`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py` and `sword.py` (the SDF creatures share `blender/creature.py`
 and can also be rebuilt from a Blender MCP session; previews land in `blender/previews/`). Tests check balance, hit timing,
 direction / reach / height, cancellations, deterministic spawns, clearance,
 navigation and the exported asset/clip contract.

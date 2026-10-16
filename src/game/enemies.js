@@ -11,11 +11,13 @@ import { triangles, resetTriangles, updateTriangles, detachTriangles } from './t
 import { fireCats, resetFireCats, updateFireCats, detachFireCats } from './firecats.js';
 import { shraps, resetShraps, updateShraps, detachShraps } from './shraps.js';
 import { spicies, resetSpicies, updateSpicies, detachSpicies } from './spicy.js';
+import { wollas, resetWollas, updateWollas, detachWollas } from './wolla.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { updateProjectiles, drawAllProjectiles, clearProjectiles } from './projectiles.js';
 import { updateBeams, drawAllBeams, clearBeams } from './beams.js';
+import { updateGusts } from './gusts.js';
 import { hitWithSword } from './sword.js';
 import { updateShots, drawAllShots, clearShots } from './shots.js';
 import { updateThrows, drawThrows, clearThrows } from './throws.js';
@@ -66,13 +68,13 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...spawned];
 export function resetEnemies() {
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas();
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
   coordinateDefence(state.map, state.run, allEnemies(), player);
@@ -164,10 +166,10 @@ export function updateEnemies(dt) {
   if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
-  updateProjectiles(dt); updateBeams(dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(allEnemies(), dt);
 }
 // shown another player's enemies: the runner moves them; we fight them (our hits go to the
@@ -177,7 +179,7 @@ function followEnemies(dt) {
   const list = mirror.list;
   hitWithSword(list); updateShots(dt, list); updateThrows(dt, list);
   awardKills(list);
-  updateProjectiles(dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  updateProjectiles(dt); updateGusts(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(list, dt, false);
 }
 export function drawEnemies(dt, off) { animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawAllShots(dt, off); drawThrows(dt, off); }
@@ -187,5 +189,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachSpawned()];
 }

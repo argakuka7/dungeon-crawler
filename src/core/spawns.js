@@ -11,7 +11,7 @@
 //     always-present species are kept first, the others in a random order weighted by chance.
 //   The lead: one present species (picked by chance) dominates the cube. It draws its count
 //     from the top half of its range, every other species from the bottom half.
-// Ranged species (Fire-face, Triangle, Shraps, Spicy) stay at a few per cube; the melee ones, the spiders
+// Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla) stay at a few per cube; the melee ones, the spiders
 // above all, come in larger and larger packs further down.
 import { mulberry32, hash32 } from './util.js';
 import { ENEMY_KINDS } from './enemies.js';
@@ -28,18 +28,18 @@ export const DEPTH_SPAWNS = [
   /*  4 badlands */ D(3, ['snake', 1, 3, 6, 2, { sandviper: 3, snake: 1, bloodviper: .5 }], ['spider', .8, 4, 8, 3, { spider: 2, redback: .5 }],
     ['stunder', .6, 1, 2, 1, { stonestunder: 1, stunder: 1 }]),
   /*  5 root caves */ D(3, ['spider', 1, 6, 10, 3, { spider: 3, bogspider: 1 }], ['snake', .8, 3, 6, 2, { snake: 2, sandviper: 1 }],
-    ['stunder', .6, 1, 2, 1, { stunder: 2, stonestunder: 1 }]),
+    ['stunder', .6, 1, 2, 1, { stunder: 2, stonestunder: 1 }], ['wolla', .3, 1, 2]),
   /*  6 root caves */ D(3, ['spider', 1, 7, 12, 3, { spider: 3, bogspider: 1, redback: .5 }], ['snake', .8, 4, 7, 2, { snake: 1, sandviper: 2, bloodviper: .5 }],
-    ['stunder', .6, 1, 3, 1, { stunder: 2, stonestunder: 1 }], ['octonaut', .2, 1, 1]),
+    ['stunder', .6, 1, 3, 1, { stunder: 2, stonestunder: 1 }], ['wolla', .4, 1, 2], ['octonaut', .2, 1, 1]),
   /*  7 frozen caves */ D(3, ['octonaut', 1, 2, 4], ['shraps', .8, 1, 3], ['spider', .8, 6, 10, 3, { frostspider: 3, spider: 1 }],
     ['stunder', .5, 1, 2, 1, { froststunder: 1 }], ['snake', .3, 3, 5, 2, { frostadder: 3, snake: 1 }]),
   /*  8 frozen caves */ D(3, ['octonaut', 1, 3, 5, 2], ['shraps', .9, 2, 3], ['spider', .8, 7, 12, 4, { frostspider: 3, spider: 1 }],
     ['stunder', .6, 1, 2, 1, { froststunder: 2, stonestunder: 1 }], ['triangle', .15, 1, 1]),
   /*  9 fungal swamp */ D(3, ['snake', 1, 6, 10, 3, { venomadder: 2, snake: 2, bloodviper: 1 }], ['octonaut', .8, 2, 4, 2, { bogoctonaut: 3, octonaut: 1 }],
-    ['spicy', .6, 1, 2],
+    ['spicy', .6, 1, 2], ['wolla', .35, 1, 2, 1, { bogwolla: 3, wolla: 1 }],
     ['spider', .6, 6, 10, 4, { bogspider: 3, spider: 1 }], ['stunder', .25, 1, 2]),
   /* 10 fungal swamp */ D(3, ['snake', 1, 7, 12, 3, { venomadder: 2, snake: 1, bloodviper: 1 }], ['octonaut', .8, 3, 5, 2, { bogoctonaut: 3, octonaut: 1 }],
-    ['spicy', .8, 1, 3],
+    ['spicy', .8, 1, 3], ['wolla', .5, 1, 2, 1, { bogwolla: 3, wolla: 1 }],
     ['spider', .6, 8, 12, 4, { bogspider: 3, spider: 1 }], ['fireface', .1, 1, 1]),
   /* 11 spider nests */ D(3, ['spider', 1, 16, 24, 6, { spider: 3, bogspider: 1, redback: 1 }], ['stunder', .5, 1, 2, 1, { stunder: 1, stonestunder: 1 }],
     ['octonaut', .3, 1, 2, 1, { octonaut: 1, bogoctonaut: 1 }], ['snake', .3, 4, 6, 3, { venomadder: 1, bloodviper: 1 }],
@@ -47,19 +47,21 @@ export const DEPTH_SPAWNS = [
   /* 12 spider nests */ D(3, ['spider', 1, 20, 28, 7, { spider: 2, bogspider: 1, redback: 1.5 }], ['stunder', .6, 1, 3, 1, { stunder: 1, stonestunder: 1 }],
     ['octonaut', .4, 1, 2, 1, { octonaut: 1, bogoctonaut: 1, coraloctonaut: .5 }], ['triangle', .15, 1, 1]),
   /* 13 crystal mines */ D(3, ['triangle', 1, 1, 2, 1, { emeraldtriangle: 2, triangle: 1 }], ['stunder', .6, 1, 2, 1, { stonestunder: 1 }],
-    ['octonaut', .7, 2, 4, 2, { octonaut: 1, coraloctonaut: 1 }], ['spider', .6, 10, 14, 4, { spider: 2, frostspider: 1, redback: 1 }]),
+    ['octonaut', .7, 2, 4, 2, { octonaut: 1, coraloctonaut: 1 }], ['wolla', .4, 1, 2, 1, { stormwolla: 2, wolla: 1 }],
+    ['spider', .6, 10, 14, 4, { spider: 2, frostspider: 1, redback: 1 }]),
   /* 14 crystal mines */ D(3, ['triangle', 1, 2, 3, 1, { emeraldtriangle: 2, triangle: 1 }], ['stunder', .7, 1, 3, 1, { stonestunder: 1 }],
-    ['octonaut', .7, 2, 5, 2, { octonaut: 1, coraloctonaut: 1 }], ['spider', .5, 10, 14, 4, { spider: 2, frostspider: 1, redback: 1 }]),
+    ['octonaut', .7, 2, 5, 2, { octonaut: 1, coraloctonaut: 1 }], ['wolla', .5, 1, 3, 1, { stormwolla: 2, bogwolla: 1 }],
+    ['spider', .5, 10, 14, 4, { spider: 2, frostspider: 1, redback: 1 }]),
   /* 15 buried ruins */ D(3, ['triangle', .8, 1, 2, 1, { triangle: 1, emeraldtriangle: 1, crimsontriangle: 1 }], ['octonaut', .8, 3, 5, 2, { coraloctonaut: 2, bogoctonaut: 1 }],
-    ['snake', .8, 8, 12, 4, { sandviper: 1, bloodviper: 2, shadowmamba: 1 }], ['firecat', .3, 1, 2]),
+    ['snake', .8, 8, 12, 4, { sandviper: 1, bloodviper: 2, shadowmamba: 1 }], ['wolla', .3, 1, 2, 1, { stormwolla: 1 }], ['firecat', .3, 1, 2]),
   /* 16 buried ruins */ D(4, ['triangle', .8, 1, 3, 1, { triangle: 1, emeraldtriangle: 1, crimsontriangle: 1 }], ['octonaut', .8, 3, 6, 2, { coraloctonaut: 2, bogoctonaut: 1 }],
     ['snake', .6, 10, 14, 4, { bloodviper: 2, shadowmamba: 1.5 }], ['firecat', .5, 2, 3, 2], ['spider', .4, 10, 16, 5, { redback: 1, spider: 1 }]),
   /* 17 volcanic depths */ D(4, ['fireface', 1, 1, 2], ['firecat', 1, 2, 4, 2], ['shraps', .6, 1, 2, 1, { fireshraps: 1 }],
     ['stunder', .6, 1, 2, 1, { magmastunder: 1 }], ['snake', .5, 10, 14, 4, { shadowmamba: 2, bloodviper: 1 }]),
   /* 18 volcanic depths */ D(3, ['fireface', 1, 2, 3], ['firecat', 1, 3, 6, 3], ['shraps', .7, 1, 3, 1, { fireshraps: 1 }],
-    ['stunder', .6, 2, 3, 1, { magmastunder: 1 }], ['spider', .3, 14, 20, 6, { redback: 1 }]),
+    ['stunder', .6, 2, 3, 1, { magmastunder: 1 }], ['wolla', .5, 1, 2, 1, { emberwolla: 1 }], ['spider', .3, 14, 20, 6, { redback: 1 }]),
   /* 19 obsidian abyss */ D(3, ['fireface', 1, 2, 3], ['firecat', 1, 4, 7, 3], ['shraps', .4, 1, 2, 1, { fireshraps: 1 }],
-    ['triangle', .6, 1, 2, 1, { crimsontriangle: 2, triangle: 1 }],
+    ['triangle', .6, 1, 2, 1, { crimsontriangle: 2, triangle: 1 }], ['wolla', .4, 1, 2, 1, { emberwolla: 2, stormwolla: 1 }],
     ['stunder', .4, 1, 2, 1, { magmastunder: 2, stonestunder: 1 }]),
   /* 20 the core */ D(4, ['firecat', 1, 5, 9, 3], ['fireface', 1, 2, 4], ['triangle', .8, 2, 3, 1, { crimsontriangle: 2, triangle: 1 }],
     ['stunder', .5, 2, 3, 1, { magmastunder: 2, stonestunder: 1 }], ['spider', .3, 18, 26, 8, { redback: 2, spider: 1 }]),

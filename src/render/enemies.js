@@ -8,6 +8,11 @@
 // replace the glow's colours, and its `fx` names a glow of its own.
 // Wheels (bones named wheel.*, a species with a `wheel` radius) spin by the distance the body
 // rolls along its heading, whatever clip plays, and spin down once it is dead.
+// Waves (bones named wave0, wave1, ..., a species with `waves`: the Wolla's rings) turn about
+// their own axes, every other one the other way, so the crests run round the body; they whirl
+// faster while it gathers its storm and blows, and still once it is dead. Its storm cloud's
+// lightning (the attack's `thunder` times) flashes a light, and it leaves a wet trail
+// (trails.js).
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
 import { spiderModel } from './spidermodel.js';
@@ -19,8 +24,10 @@ import { triangleModel } from './trianglemodel.js';
 import { fireCatModel } from './firecatmodel.js';
 import { shrapsModel } from './shrapsmodel.js';
 import { spicyModel } from './spicymodel.js';
+import { wollaModel } from './wollamodel.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { glow, emit, rand } from './particles.js';
+import { wetTrail, removeTrail } from './trails.js';
 import { cloneEnemy } from './enemymodel.js';
 import { kindColors, recolor, hideParts } from './recolor.js';
 import { attackOf } from '../core/enemies.js';
@@ -29,7 +36,7 @@ import { player } from '../game/state.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
-  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel };
+  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel };
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
 // clip's beat (twice per hover loop); embers: per second, rising from `from` (a bone, or
 // a height above the body); flicker: extra flame motion
@@ -65,6 +72,47 @@ function spinWheels(v, e, dt) {
   v.rolled = { x: e.x, z: e.z };
   v.roll = (v.roll + v.spin * dt) % (2 * Math.PI);
   for (const w of v.wheels) w.bone.quaternion.multiply(spin.setFromAxisAngle(w.axis, v.roll));
+}
+// the wave bones (wave0, wave1, ...) and the axis each turns about, in its own frame: the
+// body's up in the rest pose
+function findWaves(model) {
+  const bones = [];
+  for (let b; (b = model.getObjectByName('wave' + bones.length));) bones.push(b);
+  if (!bones.length) return null;
+  model.updateMatrixWorld(true);
+  return bones.map((bone, i) => ({ bone, angle: 0, dir: i % 2 ? -1 : 1, rate: 1 + 0.12 * i,
+    axis: up.clone().applyQuaternion(bone.getWorldQuaternion(new THREE.Quaternion()).invert()) }));
+}
+// how much faster the waves run: gathering the storm, then blowing it, then calming down
+function whirl(e) {
+  const a = e.mode === 'attack' ? attackOf(e) : null;
+  if (!a?.gust) return e.mode === 'dead' ? 0 : 1;
+  const blow = a.hitAt, end = blow + a.gust.time;
+  if (e.t < blow) return 1 + 2 * Math.min(1, e.t / blow);
+  return e.t < end ? 5 : 1 + 4 * Math.exp(-(e.t - end) * 4);
+}
+function turnWaves(v, e, dt) {
+  if (!v.waves) return;
+  const speed = e.profile.waves ?? 1;
+  v.whirl += (whirl(e) - v.whirl) * Math.min(1, dt * (e.mode === 'dead' ? 1.5 : 6));
+  for (const w of v.waves) {
+    w.angle = (w.angle + w.dir * w.rate * speed * v.whirl * dt) % (2 * Math.PI);
+    w.bone.quaternion.multiply(spin.setFromAxisAngle(w.axis, w.angle));
+  }
+}
+// The storm cloud's lightning: a light that flares at each of the attack's thunder times and
+// dies away, shining only while it flares.
+function thunder(v, e) {
+  const g = e.mode === 'attack' ? attackOf(e).gust : null;
+  let k = 0;
+  if (g) for (const at of g.thunder) if (e.t >= at) k = Math.max(k, Math.exp(-(e.t - at) * 9) * (0.7 + 0.3 * Math.sin(e.t * 83)));
+  if (k > 0.03 && !v.flash) {
+    v.flash = new THREE.PointLight(0xfff0b0, 0, 5 * v.size, 2); v.flash.position.y = 1.45 * v.size;
+    trackLight(v.flash, v.group);
+  }
+  if (!v.flash) return;
+  v.flash.intensity = 8 * k;
+  if (k <= 0.03) { untrackLight(v.flash); v.flash = null; }
 }
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
@@ -116,7 +164,7 @@ function makeView(e, prefab) {
   }
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
   return { group, model, mixer, actions, prefab, materials, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
-    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100 };
+    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100 };
 }
 // the hover clip's beat (matches blender/triangle.py): sharp, twice per loop
 const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
@@ -138,7 +186,7 @@ function glowFx(v, e, dt, life) {
         spread: 0.2, life: rand(0.5, 0.9), size: rand(0.04, 0.07), color: v.sparks[i % v.sparks.length], gravity: -0.3, drag: 0.8 });
     }
 }
-function dying(v, e, dt) {
+function dying(v, e, dt, off) {
   if (!v.dead) {
     v.dead = true;
     for (const a of Object.values(v.actions)) a.setEffectiveWeight(0);
@@ -152,7 +200,7 @@ function dying(v, e, dt) {
   v.bar.visible = false; v.label.visible = false; v.mark.visible = false;
   v.group.visible = fade > 0;
   v.mixer.update(0);
-  spinWheels(v, e, dt);
+  spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
   glowFx(v, e, 0, Math.max(0, 1 - e.deadT / e.profile.deathTime) * fade);   // the glow dies with it
 }
 export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
@@ -165,7 +213,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.yaw = e.mode === 'attack' ? e.yaw : angleTo(v.yaw, e.yaw, Math.min(1, dt * 14));
     v.group.position.set(e.x + off.x, e.y + off.y, e.z + off.z);
     v.group.rotation.y = v.yaw;
-    if (e.mode === 'dead') { dying(v, e, dt); continue; }
+    if (e.mode === 'dead') { dying(v, e, dt, off); continue; }
     const attack = e.mode === 'attack', strike = A[attackOf(e).clip ?? 'attack'];
     if (attack && v.attacks !== e.attacks) {
       v.attacks = e.attacks; strike.reset().play(); strike.timeScale = 0;
@@ -198,7 +246,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mark.visible = v.markT > 0;
     v.mark.scale.setScalar(0.5 * (e.mode === 'alert' ? 1 + 0.35 * Math.sin(Math.PI * v.markT) : v.markT));
     v.mixer.update(0);
-    spinWheels(v, e, dt);
+    spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
     glowFx(v, e, dt, 1);
   }
 }
@@ -207,6 +255,8 @@ export function removeEnemyViews(list) {
     const v = e.view;
     scene.remove(v.group);
     if (v.light) untrackLight(v.light);
+    if (v.flash) untrackLight(v.flash);
+    removeTrail(v);
     v.mixer.stopAllAction(); v.mixer.uncacheRoot(v.model);
     v.materials.forEach(({ material }) => material.dispose());
     v.ghost.dispose();

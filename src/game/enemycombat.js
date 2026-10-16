@@ -13,7 +13,7 @@ import { ignite, burnStep, burntOut, chillFrom, chillStep } from '../core/projec
 import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
 
-export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; };
+export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
 export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
@@ -26,7 +26,8 @@ export function poisonPlayer(toxin, reason, by = null) {
   return true;
 }
 export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
-// a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz)
+// a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz); a gust's
+// blow (its `push`) goes on blowing the player that way for a moment (physics/move.js)
 export function hitPlayer(blow, fx, fz, nx, nz) {
   const p = player;
   p.vx = nx * blow.knock; p.vz = nz * blow.knock;
@@ -43,6 +44,9 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   if (blow.damage > 0) p.lastHurt = { reason: blow.reason, by };
   takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
+  const push = blow.push;
+  if (push && push.speed > 0 && push.speed < 30 && push.time > 0 && push.time < 3)
+    p.gust = { vx: nx * push.speed, vz: nz * push.speed, t: push.time, time: push.time };
 }
 // a blow on body p: our player, or a friend's stand-in (it says how to send it over)
 export function hitBody(p, blow, fx, fz, nx, nz) {
