@@ -207,9 +207,9 @@ function updateScene() {
   startShowcase(w ? { key: `${w.id} ${cube}`, seed: w.seed, cube, run: w.run } : null);
 }
 
-// main.js menuFrame: where the hero over the menu is drawn (CSS pixels; null: nowhere). Beside
-// the menu, as tall as it, roughly in the middle of the screen; on a narrow screen (a phone held
-// upright) above it; with no room, not at all.
+// main.js menuFrame: where the hero over the menu is drawn (CSS pixels; null: nowhere). Right
+// beside the menu, as tall as it; on a narrow screen (a phone held upright) above it; with no
+// room, not at all.
 export function heroBox() {
   const el = $('title-hero');
   if (state.mode !== 'menu' || el.hidden) return null;
@@ -217,8 +217,7 @@ export function heroBox() {
   let b = null;
   if (W - r.right >= 220) {
     const h = Math.min(r.height, H * 0.85), w = h * 0.5;
-    const cx = Math.min(Math.max(W / 2, r.right + w / 2 + 24), W - w / 2 - 8);
-    b = { left: cx - w / 2, top: r.top + (r.height - h) / 2, width: w, height: h };
+    b = { left: r.right + 12, top: r.top + (r.height - h) / 2, width: w, height: h };
   } else if (r.top >= 160) {
     const h = Math.min((r.top - 16) * 0.7, H * 0.32), w = h * 0.6;   // (standing on the menu, the cube still seen)
     b = { left: (W - w) / 2, top: r.top - h - 8, width: w, height: h };

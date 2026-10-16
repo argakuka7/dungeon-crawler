@@ -33,8 +33,8 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
   chosen hero's bag (the weapon in its hand, `syncEquippedWeapon`), idling and turning a little
   to and fro, its name and level under it; a click on it is Choose Character. It stands in a
   little scene of its own (its own camera and lights, the same far fog so no shaders change),
-  drawn after the world into a box: beside the menu, as tall as it, roughly in the middle of a
-  wide screen; above the menu on a phone held upright; not at all without room
+  drawn after the world into a box: right beside the menu, as tall as it, on a wide screen;
+  above the menu on a phone held upright; not at all without room
   (`menu.js heroBox`). There is one figure: in the menu it moves into that scene, in a game
   back into the world's.
 - **Behind the main menu** (`showcase.js`): the cube the chosen hero left its world in (the town
