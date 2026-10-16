@@ -1,11 +1,16 @@
 // The main menu: before the game starts, and after "Save and quit" in the Esc menu
 // (game/escmenu.js). The dev tools and ?seed= skip it (state.js mode; ?menu=1 shows it after all).
-//   title    Continue (the hero and world played last), the heroes, the controls, the guide
-//   heroes   up to three (core/save.js MAX_HEROES), made with a name: choose, rename, delete
-//   worlds   for the chosen hero, up to eight: play, rename, delete, make a new one (a name and a
-//            seed, both left empty: made up); or join a friend's game with their code
-//   joining  waiting for the friend's game; the hero comes along, the world is theirs
-// ?join=CODE: straight to the heroes, and the chosen one joins that game.
+//   title       Continue (the chosen hero in its world), Choose World, Join Game, Choose
+//               Character, Manage Worlds, the controls, the guide. No hero yet: it says so,
+//               and OK goes to make one.
+//   worlds      the chosen hero's world: one of the saved ones, a new random one, or a known one
+//               (a world name or a number, core/names.js). Back to the title: Continue plays it.
+//   join        a hero (it becomes the chosen one) and a friend's room code
+//   joining     waiting for the friend's game; the hero comes along, the world is theirs (it
+//               does not become the hero's world)
+//   characters  up to three heroes (core/save.js MAX_HEROES): choose, rename, delete, make one
+//   manage      the worlds: copy a name to share it, delete
+// ?join=CODE opens Join Game with the code filled in (state.js: never skipped).
 import { state, view } from './state.js';
 import { setHelpOpen, helpOpen } from './help.js';
 import { fadeOut } from './hud.js';
@@ -13,7 +18,7 @@ import { endWorld } from './flow.js';
 import { startShowcase, stopShowcase, showcaseCubes } from './showcase.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } from './save.js';
-import { cleanName, heroLevel, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
+import { cleanName, heroLevel, savedWorldName, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
 import { readSeed } from '../core/names.js';
 import { ITEMS } from '../core/items.js';
 import { playSong } from '../audio/music.js';
@@ -21,17 +26,18 @@ import { readCode } from '../net/protocol.js';
 import { online } from '../net/online.js';
 import { joinGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
 
-const FADE_MS = 380, CONFIRM_MS = 4000;
+const FADE_MS = 380, CONFIRM_MS = 4000, COPIED_MS = 1500;
 const $ = id => document.getElementById(id);
 const overlay = $('title-overlay'), panel = $('title-panel');
 const params = new URLSearchParams(location.search), local = params.get('net') === 'local';
 
-// screen: which one shows; heroId: the hero chosen; form: what is being typed ('hero': a new
-// hero, 'world': a new world, { rename: id }); asked: the delete button that asks again (id,
-// until when); note: what went wrong; invite: ?join=CODE, until a hero tried it; joining: the
-// code of the game we wait for
-let screen = 'title', heroId = null, form = null, asked = { id: null, until: 0 }, note = '';
-let invite = state.mode === 'menu' ? readCode(params.get('join')) : null, joining = null;
+// screen: which one shows; from: where Choose Character goes back to ('title' or 'join');
+// form: what is being typed ('hero': a new hero, 'known': a known world, { rename: id });
+// asked: the delete button that asks again (id, until when); note: what went wrong; copied: the
+// world whose name was just copied; invite: ?join=CODE, until joined or given up; code: the
+// room code typed so far; joining: the code of the game we wait for
+let screen = 'title', from = 'title', form = null, asked = { id: null, until: 0 }, note = '', copied = null;
+let invite = state.mode === 'menu' ? readCode(params.get('join')) : null, code = invite ?? '', joining = null;
 
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 function ago(t) {
@@ -46,6 +52,8 @@ function playTime(s) {
   return m < 60 ? `${m} min played` : `${Math.floor(m / 60)} h ${m % 60} min played`;
 }
 const heroIcon = h => { const s = h.inventory.slots.find(x => x?.instanceId === h.inventory.equipped); return s ? ITEMS[s.itemId]?.icon : null; };
+const depthText = w => w.deepest ? `depth ${w.deepest}` : 'town';
+const chosen = () => { const id = store.selected(); return id ? store.hero(id) : null; };
 
 // --- showing ------------------------------------------------------------------------------------
 
@@ -55,9 +63,8 @@ export function openMainMenu() {
   overlay.hidden = false;
   playSong(null);   // no music in the menu
   startShowcase();   // the living cubes behind it
-  screen = invite ? 'heroes' : 'title';
-  form = !store.heroes().length && screen === 'heroes' ? 'hero' : null;
-  note = '';
+  screen = invite ? 'join' : 'title';
+  form = null; note = '';
   render();
 }
 // off to play: the screen goes dark (the game's first cube fades it in), the showcase stops
@@ -76,32 +83,67 @@ function deleteButton(id) {
   const sure = asked.id === id && performance.now() < asked.until;
   return `<button data-act="delete" data-id="${id}" class="${sure ? 'confirm' : ''}">${sure ? 'Sure? Click again' : 'Delete'}</button>`;
 }
-const renaming = id => form?.rename === id;
-const renameField = (id, name) => `<span class="title-rename"><input id="title-rename" maxlength="16" value="${esc(name)}" data-enter="save-name" aria-label="New name">`
-  + `<button data-act="save-name" data-id="${id}">Save</button></span>`;
+const noHero = `<p class="title-none">You don't have a character yet.</p><button class="menu-big" data-act="first-hero">OK</button>`;
+// a hero to pick (with its weapon's picture); `chosen`: the one picked now
+function heroPick(h, isChosen = false) {
+  const icon = heroIcon(h);
+  return `<button class="title-pick${isChosen ? ' chosen' : ''}" data-act="hero" data-id="${h.id}">${icon ? `<img src="${esc(icon)}" alt="">` : '<i></i>'}`
+    + `<span><b>${esc(h.name)}</b><small>Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}</small></span></button>`;
+}
 
 const screens = {
   title() {
-    const id = store.selected(), hero = id && store.hero(id), world = id && store.heroWorld(id);
-    const heroes = store.heroes().length;
+    const hero = chosen(), worlds = store.worlds().length;
+    const manage = worlds ? '<button class="title-item" data-act="manage">Manage Worlds</button>' : '';
+    const more = '<div class="menu-row"><button data-act="controls">Controls</button><a class="title-link" href="learn/" target="_blank" rel="noopener">The guide</a></div>';
+    if (!hero) return `<div class="title-list">${noHero}${manage}${more}</div>`;
+    const world = store.heroWorld(hero.id);
+    const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : 'not been there yet'}`;
     return `<div class="title-list">
-      ${hero && world ? `<button class="menu-big" data-act="continue">Continue<small>${esc(hero.name)} · level ${heroLevel(hero)} · in ${esc(world.name)}</small></button>` : ''}
-      <button class="menu-big" data-act="heroes">${heroes ? 'Heroes' : 'New game'}</button>
-      <div class="menu-row"><button data-act="controls">Controls</button><a class="title-link" href="learn/" target="_blank" rel="noopener">The guide</a></div>
+      ${world ? `<button class="menu-big" data-act="continue">Continue<small>${esc(hero.name)} · level ${heroLevel(hero)}</small><small>${where}</small></button>` : ''}
+      <button class="${world ? 'title-item' : 'menu-big'}" data-act="choose-world">Choose World${world ? '' : `<small>${esc(hero.name)} has no world yet</small>`}</button>
+      <button class="title-item" data-act="join-game">Join Game</button>
+      <button class="title-item" data-act="characters">Choose Character</button>
+      ${manage}${more}
     </div>`;
   },
-  heroes() {
-    const heroes = store.heroes();
+  worlds() {
+    const hero = chosen(), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
+    const rows = worlds.map(w => `<li class="title-card"><button class="title-pick${w.id === hero.world ? ' chosen' : ''}" data-act="world" data-id="${w.id}"><span>`
+      + `<b>${esc(w.name)}${w.id === hero.world ? ' <em>its world now</em>' : ''}</b>`
+      + `<small>${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button></li>`).join('');
+    const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one in Manage Worlds to make a new one.</p>`
+      : form === 'known' ? `<div class="title-form title-new-world">
+          <input id="title-seed" maxlength="60" placeholder="A world name or a number" data-enter="create-world" aria-label="World name or number" autocomplete="off" spellcheck="false">
+          <p id="title-preview" class="title-preview">A friend's world: type its name.</p>
+          <div class="menu-row"><button class="menu-big" data-act="create-world">Make it</button><button data-act="cancel">Cancel</button></div></div>`
+      : `<div class="menu-row title-new"><button data-act="random-world">New Random World</button><button data-act="known-world">New Known World</button></div>`;
+    return `<h2>Choose World <small>for ${esc(hero.name)}</small></h2>
+      ${rows ? `<ul class="title-cards">${rows}</ul>` : '<p>No worlds yet.</p>'}${make}
+      <button data-act="back" class="title-back">Back</button>`;
+  },
+  join() {
+    const heroes = store.heroes(), hero = chosen();
+    const body = !heroes.length ? noHero : `<h3>Who goes</h3><ul class="title-cards">${heroes.map(h => `<li class="title-card">${heroPick(h, h.id === hero?.id)}</li>`).join('')}</ul>
+      <h3>Your friend's code</h3>
+      <div class="menu-row"><input id="title-code" maxlength="40" placeholder="CODE" data-enter="join" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}"><button class="menu-big" data-act="join">Join</button></div>
+      <p>Your hero goes into your friend's world and takes home what it finds there.</p>`;
+    return `<h2>Join Game</h2>${body}<button data-act="back" class="title-back">Back</button>`;
+  },
+  joining() {
+    const hero = chosen();
+    return `<h2>Joining ${esc(joining)}</h2><p>${esc(hero?.name ?? 'Your hero')} goes into your friend's world.</p>
+      <p class="title-status">${esc(sessionStatus().text)}</p><button data-act="cancel-join" class="title-back">Cancel</button>`;
+  },
+  characters() {
+    const heroes = store.heroes(), hero = chosen();
     let formShown = false;
     const cards = Array.from({ length: MAX_HEROES }, (_, i) => {
       const h = heroes[i];
-      if (h) {
-        const icon = heroIcon(h);
-        return `<li class="title-card">${renaming(h.id) ? renameField(h.id, h.name)
-          : `<button class="title-pick" data-act="hero" data-id="${h.id}">${icon ? `<img src="${esc(icon)}" alt="">` : '<i></i>'}`
-            + `<span><b>${esc(h.name)}</b><small>Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}</small></span></button>`}
-          <div class="title-actions"><button data-act="rename" data-id="${h.id}">Rename</button>${deleteButton(h.id)}</div></li>`;
-      }
+      if (h) return `<li class="title-card">${form?.rename === h.id
+        ? `<span class="title-rename"><input id="title-rename" maxlength="16" value="${esc(h.name)}" data-enter="save-name" aria-label="New name"><button data-act="save-name" data-id="${h.id}">Save</button></span>`
+        : heroPick(h, h.id === hero?.id)}
+        <div class="title-actions"><button data-act="rename" data-id="${h.id}">Rename</button>${deleteButton(h.id)}</div></li>`;
       if (form === 'hero' && !formShown) {
         formShown = true;
         return `<li class="title-card title-form"><input id="title-name" maxlength="16" placeholder="Name your hero" data-enter="create-hero" aria-label="Hero name">
@@ -109,71 +151,84 @@ const screens = {
       }
       return `<li class="title-card title-empty"><button data-act="new-hero">+ New hero</button></li>`;
     }).join('');
-    return `<h2>Choose your hero</h2>${invite ? `<p class="title-invite">to join your friend's game ${esc(invite)}</p>` : ''}
-      <ul class="title-cards">${cards}</ul><button data-act="back" class="title-back">Back</button>`;
+    return `<h2>Choose Character</h2><ul class="title-cards">${cards}</ul><button data-act="back" class="title-back">Back</button>`;
   },
-  worlds() {
-    const hero = store.hero(heroId), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
-    const rows = worlds.map(w => `<li class="title-card">${`<button class="title-pick" data-act="world" data-id="${w.id}"><span><b>${esc(w.name)}${w.heroes.includes(heroId) ? '' : ' <em>new for this hero</em>'}</b>`
-        + `<small>${w.deepest ? `depth ${w.deepest}` : 'town'} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button>`}
-      <div class="title-actions">${deleteButton(w.id)}</div></li>`).join('');
-    const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one to make a new one.</p>`
-      : form === 'world' ? `<div class="title-form title-new-world">
-          <label>Seed <input id="title-seed" maxlength="60" placeholder="random" data-enter="create-world" autocomplete="off" spellcheck="false"></label>
-          <div class="menu-row"><button class="menu-big" data-act="create-world">Make it and play</button>${worlds.length ? '<button data-act="cancel">Cancel</button>' : ''}</div></div>`
-      : '<button data-act="new-world" class="title-new">+ New world</button>';
-    return `<h2>${esc(hero.name)} <small>level ${heroLevel(hero)}</small></h2>
-      <h3>Play in a world</h3><ul class="title-cards">${rows}</ul>${make}
-      <h3>or join a friend's game</h3>
-      <div class="menu-row"><input id="title-code" maxlength="40" placeholder="CODE" data-enter="join" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button data-act="join">Join</button></div>
+  manage() {
+    const worlds = store.worlds(), heroes = store.heroes();
+    const rows = worlds.map(w => {
+      const home = heroes.filter(h => h.world === w.id).map(h => esc(h.name));
+      return `<li class="title-card"><span class="title-info"><b>${esc(w.name)}</b>`
+        + `<small>${depthText(w)} · ${ago(w.updated)}${home.length ? ` · world of ${home.join(', ')}` : ''}</small></span>`
+        + `<div class="title-actions"><button data-act="copy-name" data-id="${w.id}">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}</div></li>`;
+    }).join('');
+    return `<h2>Manage Worlds <small>${worlds.length} of ${MAX_WORLDS}</small></h2>
+      ${rows ? `<ul class="title-cards">${rows}</ul><p>A friend plays the same world with its name: New Known World.</p>` : '<p>No worlds yet.</p>'}
       <button data-act="back" class="title-back">Back</button>`;
-  },
-  joining() {
-    const hero = store.hero(heroId);
-    return `<h2>Joining ${esc(joining)}</h2><p>${esc(hero?.name ?? 'Your hero')} goes into your friend's world.</p>
-      <p class="title-status">${esc(sessionStatus().text)}</p><button data-act="cancel-join" class="title-back">Cancel</button>`;
   },
 };
 
 function render() {
   if (state.mode !== 'menu') return;
-  if (screen !== 'title' && screen !== 'heroes' && !store.hero(heroId)) screen = 'heroes';
+  if (screen === 'worlds' && !chosen()) screen = 'title';
   panel.innerHTML = screens[screen]() + (note ? `<p class="title-note" role="alert">${esc(note)}</p>` : '');
   panel.dataset.screen = screen;
-  const first = panel.querySelector('#title-rename, #title-name, #title-seed');
-  first?.focus();
+  panel.querySelector('#title-rename, #title-name, #title-seed')?.focus();
+}
+// what the world name or number typed so far is
+function updatePreview() {
+  const t = $('title-seed').value.trim(), seed = t ? readSeed(t) : null;
+  const p = $('title-preview');
+  if (!t) { p.textContent = "A friend's world: type its name."; p.classList.remove('bad'); return; }
+  p.classList.toggle('bad', seed === null);
+  if (seed === null) { p.textContent = 'Not a world name or a number (yet)'; return; }
+  const copy = store.nextCopy(seed);
+  p.textContent = `${savedWorldName(seed, copy)}${copy > 1 ? ' (you have this world already: a fresh copy)' : ''}`;
 }
 
 // --- doing --------------------------------------------------------------------------------------
 
-function start(hero, world) {
+function start(heroId, worldId) {
   closeMainMenu();
-  play(hero, world).catch(e => {   // (the game files did not come: the server or the connection)
+  play(heroId, worldId).catch(e => {   // (the game files did not come: the server or the connection)
     console.error('could not start', e);
     stopSaving(); endWorld(); openMainMenu();   // (another showcase)
     note = 'That world would not start. Try again?'; render();
   });
 }
 
-function joinWith(code) {
+function joinWith(room) {
+  const id = store.selected();
+  if (!id || !playAsGuest(id)) { note = 'Choose a character first'; render(); return; }
   invite = null;
-  if (!playAsGuest(heroId)) { note = 'That hero is gone'; render(); return; }
-  joining = code; screen = 'joining'; note = '';
+  joining = room; screen = 'joining'; note = '';
   render();
-  joinGame(code, { name: store.hero(heroId).name, local });
+  joinGame(room, { name: store.hero(id).name, local });
 }
 function stopJoining(text = '') {
   joining = null;
   stopSaving();
-  screen = 'worlds'; note = text;
+  screen = 'join'; note = text;
   render();
+}
+// the chosen hero's world from now on (back to the title: Continue plays it)
+function chooseWorld(id) {
+  if (!store.setHeroWorld(store.selected(), id)) { note = 'Could not save that (is the storage full?)'; return; }
+  form = null; screen = 'title';
 }
 
 const actions = {
-  continue() { const h = store.selected(), w = h && store.heroWorld(h); if (w) start(h, w.id); },
-  heroes() { screen = 'heroes'; form = store.heroes().length ? null : 'hero'; },
+  continue() { const id = store.selected(), w = id && store.heroWorld(id); if (w) start(id, w.id); },
+  'choose-world'() { screen = 'worlds'; form = null; },
+  'join-game'() { screen = 'join'; },
+  characters() { from = 'title'; screen = 'characters'; form = store.heroes().length ? null : 'hero'; },
+  'first-hero'() { from = screen; screen = 'characters'; form = 'hero'; },
+  manage() { screen = 'manage'; },
   controls() { setHelpOpen(!helpOpen()); },
-  back() { form = null; screen = screen === 'worlds' ? 'heroes' : 'title'; if (screen === 'title') invite = null; },
+  back() {
+    form = null;
+    if (screen === 'join') { invite = null; code = ''; }
+    screen = screen === 'characters' ? from : 'title';
+  },
   cancel() { form = null; },
   'new-hero'() { form = 'hero'; },
   'create-hero'() {
@@ -181,32 +236,31 @@ const actions = {
     if (!name) { note = 'Your hero needs a name'; return; }
     const h = newHero(name);
     if (!h) { note = 'Could not make the hero (is the storage full?)'; return; }
-    form = null; heroId = h.id;
-    if (invite) { joinWith(invite); return; }
-    screen = 'worlds';
-    if (!store.worlds().length) form = 'world';
+    store.select(h.id);
+    form = null; screen = from;
   },
   hero(id) {
-    heroId = id; form = null;
     store.select(id);
-    if (invite) { joinWith(invite); return; }
-    screen = 'worlds';
-    if (!store.worlds().length) form = 'world';
+    if (screen === 'characters') { form = null; screen = from; }
   },
-  world(id) { start(heroId, id); },
-  'new-world'() { form = 'world'; },
+  world(id) { chooseWorld(id); },
+  'random-world'() {
+    const w = newSavedWorld();
+    if (!w) { note = 'Could not make the world (is the storage full?)'; return; }
+    chooseWorld(w.id);
+  },
+  'known-world'() { form = 'known'; },
   'create-world'() {
-    const typed = $('title-seed').value.trim(), seed = typed ? readSeed(typed) : (Math.random() * 2 ** 32) >>> 0;
-    if (seed === null) { note = 'That is not a world name or a number'; return; }
+    const seed = readSeed($('title-seed').value);
+    if (seed === null) { note = $('title-seed').value.trim() ? 'That is not a world name or a number' : "Type the world's name"; return; }
     const w = newSavedWorld(seed);
     if (!w) { note = 'Could not make the world (is the storage full?)'; return; }
-    start(heroId, w.id);
+    chooseWorld(w.id);
   },
   rename(id) { form = { rename: id }; },
   'save-name'(id) {
-    const name = cleanName($('title-rename').value);
+    const name = cleanName($('title-rename').value), h = store.hero(id);
     if (!name) { note = 'A name, please'; return; }
-    const h = store.hero(id);
     if (h) store.putHero({ ...h, name });
     form = null;
   },
@@ -219,12 +273,19 @@ const actions = {
     asked = { id: null, until: 0 };
     forget(id);
     if (store.hero(id)) store.deleteHero(id); else store.deleteWorld(id);
-    if (id === heroId) { heroId = null; screen = 'heroes'; }
+  },
+  'copy-name'(id) {
+    const w = store.worlds().find(e => e.id === id);
+    if (!w) return;
+    navigator.clipboard?.writeText(w.name).then(() => {
+      copied = id; render();
+      setTimeout(() => { if (copied === id) { copied = null; render(); } }, COPIED_MS);
+    }, () => { note = w.name; render(); });   // (no clipboard: at least it shows)
   },
   join() {
-    const code = readCode($('title-code').value);
-    if (!code) { note = 'A code has four letters'; return; }
-    joinWith(code);
+    const room = readCode($('title-code').value);
+    if (!room) { note = 'A code has four letters'; return; }
+    joinWith(room);
   },
   'cancel-join'() { leaveGame(); stopJoining(); },
 };
@@ -244,6 +305,10 @@ panel.addEventListener('keydown', e => {
   const t = e.target.dataset?.enter;
   if (e.key === 'Enter' && t) { e.preventDefault(); act(t, panel.querySelector(`[data-act="${t}"]`)?.dataset.id); }
 });
+panel.addEventListener('input', e => {
+  if (e.target.id === 'title-seed') updatePreview();
+  if (e.target.id === 'title-code') code = e.target.value;   // (kept when the screen draws again)
+});
 // Esc: the controls closed, the form given up, else back a screen
 addEventListener('keydown', e => {
   if (state.mode !== 'menu' || e.key !== 'Escape') return;
@@ -254,7 +319,7 @@ addEventListener('keydown', e => {
   else if (screen !== 'title') act('back');
 });
 
-// joining: the friend's game says how it goes; a failure brings us back to the worlds
+// joining: the friend's game says how it goes; a failure brings us back to Join Game
 onSessionChange(s => {
   if (state.mode !== 'menu' || screen !== 'joining') return;
   if (s.phase === 'idle') stopJoining(s.text || 'Could not join');
@@ -275,5 +340,5 @@ export function quitToMenu() {
   if (online.role) leaveGame();
   state.transitioning = true;   // nothing moves while the screen goes dark
   fadeOut();
-  setTimeout(() => { endWorld(); heroId = null; openMainMenu(); }, FADE_MS);
+  setTimeout(() => { endWorld(); openMainMenu(); }, FADE_MS);
 }

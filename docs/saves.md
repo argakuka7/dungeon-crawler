@@ -7,14 +7,20 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
 ## The menus
 
 - **The main menu** comes first (`state.mode` `'menu'`; the dev tools and `?seed=` skip it,
-  `?menu=1` shows it after all). Title: Continue (the hero and world played last), the heroes,
-  the controls, the guide. Heroes: three places, a new hero needs only a name; choose one, rename
-  it, delete it (the button asks again). Worlds, for the chosen hero: play one (a world the hero
-  was never in says so), rename, delete, or make a new one: a name and a seed, both optional (a
-  number is the seed itself, any other text is made into one, nothing: a random one; the name is
-  made up from the seed). Or join a friend's game with their code. Esc goes back a screen.
-- **`?join=CODE`** opens the heroes, with the code: the hero chosen (or made) joins at once.
-  A failed join comes back to the worlds and says why.
+  `?menu=1` shows it after all). It is about one hero, the chosen one (remembered):
+  - **Continue**: the hero in its world (its name, level, the world and how deep the hero got
+    there). Only when the hero has a world.
+  - **Choose World**: one of the saved worlds, **New Random World**, or **New Known World** (a
+    world name or a number, with what it makes shown as it is typed; a world saved already makes
+    a fresh copy, "... II"). Choosing goes back to the title: it only changes Continue.
+  - **Join Game**: the hero that goes (it becomes the chosen one) and the friend's room code. The
+    friend's world never becomes the hero's world.
+  - **Choose Character**: three places, a new hero needs only a name; choose one (back to the
+    title), rename, delete (the button asks again; the chosen one gone, the next is chosen).
+  - **Manage Worlds**: copy a world's name (to share it), delete one. Worlds have no other names.
+  - With no hero yet the title says so, and OK goes to Choose Character. Esc goes back a screen.
+- **`?join=CODE`** opens Join Game with the code filled in (even with `?dev=1` or `?seed=`).
+  A failed join comes back there and says why. Joining is only done in the main menu.
 - **The Esc menu** in a world: "Save and quit to the menu" (with friends in a hosted game it asks
   first: they drop out). A guest's "Leave the game" goes back to the main menu too; when the
   host leaves, the guest plays on in the friend's world, unsaved, until it quits.

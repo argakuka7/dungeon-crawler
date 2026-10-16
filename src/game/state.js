@@ -7,8 +7,9 @@ import { together } from '../net/online.js';
 
 const params = new URLSearchParams(location.search);
 const dev = params.get('dev') === '1';
-// the dev tools and ?seed= start in a world right away (?menu=1: in the main menu after all)
-const skipMenu = (dev || params.has('seed')) && params.get('menu') !== '1';
+// the dev tools and ?seed= start in a world right away (?menu=1: in the main menu after all;
+// ?join=CODE always: joining is done there)
+const skipMenu = (dev || params.has('seed')) && params.get('menu') !== '1' && !params.has('join');
 
 // learn: architecture.html#notebook (see learn/README.md)
 export const player = {

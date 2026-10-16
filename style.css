@@ -102,7 +102,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .menu-field { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: #e6e9ef; }
 .menu-field input { flex: 1; min-width: 0; }
 .menu-row { display: flex; gap: 8px; }
-#menu-code { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 16px; }
 #menu-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
 #menu-room button, #menu-leave, #menu-quit { display: block; width: 100%; }
 #menu-quit { margin-top: 10px; }
@@ -283,6 +282,7 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 #title-panel :is(button, input, .title-link):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
 #title-panel .menu-big { display: block; width: 100%; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
 #title-panel .menu-big small { display: block; margin-top: 2px; color: #aab3c2; font-size: 11px; }
+#title-panel .title-item { display: block; width: 100%; padding: 9px; font-size: 13px; }
 #title-panel .menu-row > * { flex: 1; }
 #title-panel .menu-row input { flex: 3; min-width: 0; }
 .title-list { display: grid; gap: 10px; }
@@ -293,6 +293,13 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 .title-pick span { min-width: 0; display: grid; }
 .title-pick b { color: #fff; font-weight: normal; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title-pick em { color: #8fd48a; font-style: normal; font-size: 11px; margin-left: 4px; }
+#title-panel .title-pick.chosen { border-color: #8a7a52; background: #2f3020; }
+.title-info { flex: 1; min-width: 0; display: grid; align-content: center; padding: 4px 2px; }
+.title-info b { color: #fff; font-weight: normal; font-size: 13px; }
+.title-info small { color: #8a96a8; font-size: 11px; }
+.title-none { color: #e6e9ef !important; text-align: center; font-size: 13px; }
+.title-preview { color: #cfe2ff !important; min-height: 1.4em; }
+.title-preview.bad { color: #8a96a8 !important; }
 .title-pick small { color: #8a96a8; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title-actions { display: flex; flex-direction: column; gap: 4px; }
 #title-panel .title-actions button { padding: 2px 8px; font-size: 11px; color: #aab3c2; }
@@ -303,10 +310,9 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 .title-rename { flex: 1; display: flex; gap: 6px; }
 .title-rename input { flex: 1; min-width: 0; }
 .title-new-world { flex-direction: column; margin-top: 8px; }
-.title-new-world label { display: grid; grid-template-columns: 4em 1fr; align-items: center; color: #c5cdbc; }
-#title-panel .title-new { display: block; width: 100%; margin-top: 6px; color: #8a96a8; border-style: dashed; background: none; }
+#title-panel .title-new { margin-top: 8px; }
+#title-panel .title-new button { color: #c5cdbc; border-style: dashed; background: none; }
 #title-code { text-transform: uppercase; letter-spacing: 4px; }
 #title-panel .title-back { margin-top: 16px; }
-.title-invite { color: #ffe4ae !important; }
 .title-status { color: #cfe2ff !important; min-height: 1.4em; }
 .title-note { color: #ffb3a3 !important; }

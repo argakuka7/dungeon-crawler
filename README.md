@@ -27,11 +27,13 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
-  - `src/net/`: playing together (the Esc menu, up to four players): a room code, PeerJS
-    between the host and each guest, the others' poses, following each other through portals
-    and one player's enemies shown to the others in its cube (`docs/online.md`).
+  - `src/net/`: playing together (hosting in the Esc menu, joining in the main menu, up to four
+    players): a room code, PeerJS between the host and each guest, the others' poses,
+    following each other through portals and one player's enemies shown to the others in its
+    cube (`docs/online.md`).
   - Saves (`src/core/save.js`, `src/game/save.js`): up to three heroes and eight worlds,
-    apart, in `localStorage`; a hero goes into any world, a friend's too (`docs/saves.md`).
+    apart, in `localStorage`; each hero remembers its world, goes into any other, a friend's too;
+    every seed has its own name (`src/core/names.js`, `docs/saves.md`).
   - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
     chat when playing together, and commands after a `/` that complete the game's items and
     enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).
@@ -63,7 +65,7 @@ docs that explain how the game works, from the big ideas down to the real code:
 
 ```sh
 npm run serve            # uv run --no-project tools/serve.py [port]
-# http://localhost:8000/            the main menu: heroes, worlds, joining a friend
+# http://localhost:8000/            the main menu: your hero, its world, joining a friend
 # http://localhost:8000/?seed=123   straight into that world, nothing saved
 #   (?dev=1 for dev tools: ` opens their commands; it skips the menu too, ?menu=1 shows it)
 # ?touch=1 forces the touch controls (docs/touch.md)

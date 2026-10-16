@@ -4,10 +4,11 @@
 // stops.
 //
 // Play together: host this world (friends come in with a four letter room code, or a link
-// with ?join=CODE, and drop out as they like), stop hosting, join a friend's game with their
-// code, leave it (back to the main menu). Up to four play together (net/session.js); ?net=local plays between tabs of
-// this browser instead of over the internet (for testing, net/transport.js). Your name is
-// your saved hero's (game/save.js); without one a field asks for it.
+// with ?join=CODE, and drop out as they like), stop hosting, leave a friend's game (back to the
+// main menu; joining one is done there, game/menu.js). Up to four play together
+// (net/session.js); ?net=local plays between tabs of this browser instead of over the internet
+// (for testing, net/transport.js). Your name is your saved hero's (game/save.js); without one a
+// field asks for it.
 import { state } from './state.js';
 import { clearInput } from './inputstate.js';
 import { clearMouseInput } from './orders.js';
@@ -15,9 +16,8 @@ import { setHelpOpen } from './help.js';
 import { savedHero } from './save.js';
 import { quitToMenu } from './menu.js';
 import { musicEnabled, toggleMusic } from '../audio/music.js';
-import { readCode } from '../net/protocol.js';
 import { online, together, playerColor } from '../net/online.js';
-import { hostGame, joinGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
+import { hostGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
 
 const $ = id => document.getElementById(id);
 const overlay = $('menu-overlay'), params = new URLSearchParams(location.search);
@@ -108,14 +108,6 @@ $('menu-close').onclick = () => setMenuOpen(false);
 // a click on the dimmed game around the panel resumes too
 overlay.addEventListener('pointerdown', e => { if (e.target === overlay) setMenuOpen(false); });
 $('menu-host').onclick = () => hostGame({ name: playerName(), local });
-function join() {
-  const code = readCode($('menu-code').value);
-  if (!code) { $('menu-status').textContent = 'A code has four letters'; $('menu-code').focus(); return; }
-  document.activeElement?.blur?.();
-  joinGame(code, { name: playerName(), local });
-}
-$('menu-join').onclick = join;
-$('menu-code').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
 // stopping a game friends are in asks first
 $('menu-leave').onclick = () => {
   if (online.role === 'host' && together() && performance.now() >= confirmUntil) {
@@ -149,17 +141,3 @@ $('menu-controls').onclick = () => { setMenuOpen(false); setHelpOpen(true); };
 $('menu-music').onclick = () => { toggleMusic(); render(); };
 // a clicked button lets go of the focus: Space and Enter belong to the game again
 overlay.addEventListener('click', e => { if (e.target.tagName === 'BUTTON') e.target.blur(); });
-
-// ?join=CODE without the main menu (the dev tools, ?seed=; else game/menu.js asks for the hero
-// first): the menu opens (once every module is there: not while they are still loading) and
-// joins once the first cube is there
-const invited = state.mode === 'play' && readCode(params.get('join'));
-if (invited) {
-  $('menu-code').value = invited;
-  const wait = setInterval(() => {
-    setMenuOpen(true);
-    if (!state.map || state.transitioning) return;
-    clearInterval(wait);
-    join();
-  }, 200);
-}
