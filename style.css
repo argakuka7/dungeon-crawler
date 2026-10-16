@@ -83,28 +83,35 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #help-panel .keys { display: grid; grid-template-columns: 9.5em 1fr; gap: 5px 14px; margin: 0; }
 #help-panel dt { color: #e6e9ef; white-space: nowrap; }
 #help-panel dd { margin: 0; color: #aab3c2; }
-/* play together (net/lobby.js): like the help, it does not pause the game */
-#online-overlay { position: fixed; inset: 0; z-index: 22; display: grid; place-items: center; padding: 16px; pointer-events: none; }
-#online-panel { pointer-events: auto; box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
-  padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
-#online-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-#online-panel h1 { margin: 0 0 12px; color: #fff; font-size: 15px; letter-spacing: 3px; }
-#online-panel p { margin: 10px 0 6px; color: #aab3c2; }
-#online-panel :is(button, input) { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 6px 10px; }
-#online-panel button { cursor: pointer; }
-#online-panel button:hover:not(:disabled) { background: #364052; color: #fff; }
-#online-panel :is(button, input):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
-#online-panel #online-close { color: #8a96a8; background: none; border: none; padding: 0; font-size: 11px; }
-.online-field { display: flex; align-items: center; gap: 10px; color: #e6e9ef; }
-.online-field input { flex: 1; min-width: 0; }
-#online-panel .online-big { display: block; width: 100%; margin-top: 14px; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
-.online-row { display: flex; gap: 8px; }
-#online-code { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 16px; }
-#online-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
-#online-room button { display: block; width: 100%; }
-#online-status { min-height: 1.4em; color: #cfe2ff !important; }
-#online-leave { display: block; width: 100%; }
-#online-panel .online-note { margin-top: 14px; font-size: 11px; color: #6f7a8c; }
+/* the Esc menu (game/escmenu.js): over the game, dimmed; alone the game waits meanwhile */
+#menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: 16px; background: #080c1399; }
+#menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
+#menu-panel header { display: flex; align-items: baseline; gap: 12px; }
+#menu-panel h1 { margin: 0 0 12px; color: #fff; font-size: 15px; letter-spacing: 3px; }
+#menu-panel h2 { margin: 18px 0 4px; padding-top: 12px; border-top: 1px solid #2a2f3a; color: #c5cdbc; font-size: 12px; }
+#menu-paused { color: #8a96a8; font-size: 11px; }
+#menu-panel p { margin: 10px 0 6px; color: #aab3c2; }
+#menu-panel :is(button, input) { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 6px 10px; }
+#menu-panel button { cursor: pointer; }
+#menu-panel button:hover:not(:disabled) { background: #364052; color: #fff; }
+#menu-panel :is(button, input):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
+#menu-panel #menu-close { margin-left: auto; color: #8a96a8; background: none; border: none; padding: 0; font-size: 11px; }
+#menu-panel .menu-big { display: block; width: 100%; margin-top: 10px; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
+#menu-resume { margin-top: 0 !important; }
+.menu-field { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: #e6e9ef; }
+.menu-field input { flex: 1; min-width: 0; }
+.menu-row { display: flex; gap: 8px; }
+#menu-code { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 16px; }
+#menu-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
+#menu-room button, #menu-leave { display: block; width: 100%; }
+#menu-panel #menu-leave.confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
+#menu-players { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: #e6e9ef; }
+#menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
+#menu-status { min-height: 1.4em; color: #cfe2ff !important; }
+#menu-panel .menu-note { margin-top: 14px; font-size: 11px; color: #6f7a8c; }
+#menu-panel .menu-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid #2a2f3a; }
+.menu-more button { flex: 1; }
 #legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; color: #aab3c2; }
 #legend div { display: flex; align-items: center; gap: 6px; }
 #legend i { display: inline-block; width: 11px; height: 11px; border: 1px solid #0006; }
@@ -189,7 +196,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #quickbar .qb-slot.casting { border-color: #b98cff; }
 #quickbar .qb-slot.cooling .qb-cast { background: #10141c99; }
 #quickbar .qb-slot.in-hand { box-shadow: inset 0 0 0 2px #ffcf7a, 0 0 8px #ffcf7a88; }
-#quickbar .qb-bag { display: none; }
+#quickbar :is(.qb-bag, .qb-menu) { display: none; }
 
 /* potions at work and poison (game/effects.js): little icons with the time left, over the quick bar */
 #effects { position: fixed; left: 50%; bottom: 78px; transform: translateX(-50%); z-index: 19; display: flex; gap: 5px; pointer-events: none; }
@@ -234,9 +241,11 @@ body.touch canvas, #touch, #touch * { touch-action: none; }
 body.touch #quickbar { top: calc(8px + env(safe-area-inset-top)); bottom: auto; gap: 5px; padding: 5px; }
 body.touch #quickbar .qb-slot { width: 46px; height: 46px; }
 body.touch #quickbar .qb-key { display: none; }
-body.touch #quickbar .qb-bag { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: 4px; cursor: pointer;
+body.touch #quickbar :is(.qb-bag, .qb-menu) { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: 4px; cursor: pointer;
   background: #2a2f3a; border: 1px solid #8a7a52; border-radius: 4px; }
-body.touch #quickbar .qb-bag svg { width: 28px; height: 28px; fill: #ffe4ae; }
+body.touch #quickbar :is(.qb-bag, .qb-menu) svg { width: 28px; height: 28px; fill: #ffe4ae; }
+body.touch #quickbar .qb-menu { border-color: #444c5c; }
+body.touch #quickbar .qb-menu svg { fill: #c5cdbc; }
 body.touch #effects { top: calc(72px + env(safe-area-inset-top)); bottom: auto; }
 body.touch #minimap { width: 120px; height: auto; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); }
 body.touch #loading { bottom: auto; top: 110px; }

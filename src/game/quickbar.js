@@ -4,7 +4,8 @@
 // potions.js; a flask is taken in hand to throw, or put away again, game/equipment.js). With
 // the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
 // the same slot: off). A potion's slot fills while its cooldown runs. With touch controls
-// (game/touch.js) the bar sits at the top, with a bag button at its end for the inventory.
+// (game/touch.js) the bar sits at the top, with a bag button at its end for the inventory and a
+// menu button for the Esc menu (game/escmenu.js).
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS } from '../core/items.js';
@@ -15,13 +16,16 @@ import { displayName } from '../core/gear/stats.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { equipOwnedWeapon, readyFlask } from './equipment.js';
 import { useTownPortal } from './townportal.js';
-import { assignSelectedToBar, toggleInventory } from './inventory.js';
+import { assignSelectedToBar, toggleInventory, setInventoryOpen } from './inventory.js';
+import { toggleMenu } from './escmenu.js';
 
 const bar = document.getElementById('quickbar');
 bar.innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button class="qb-slot" data-bar="${i}" tabindex="-1">`
   + `<img alt="" hidden><span class="qb-cast"></span><span class="qb-key">${i + 1}</span><span class="qb-count"></span></button>`).join('')
   + '<button class="qb-bag" data-bag tabindex="-1" title="Inventory (I)" aria-label="Inventory"><svg viewBox="0 0 24 24" aria-hidden="true">'
-  + '<path d="M9 7V5.5a3 3 0 0 1 6 0V7h2.6a1 1 0 0 1 1 .9l1.2 11A1 1 0 0 1 18.8 20H5.2a1 1 0 0 1-1-1.1l1.2-11a1 1 0 0 1 1-.9zm1.6 0h2.8V5.5a1.4 1.4 0 0 0-2.8 0z"/></svg></button>';
+  + '<path d="M9 7V5.5a3 3 0 0 1 6 0V7h2.6a1 1 0 0 1 1 .9l1.2 11A1 1 0 0 1 18.8 20H5.2a1 1 0 0 1-1-1.1l1.2-11a1 1 0 0 1 1-.9zm1.6 0h2.8V5.5a1.4 1.4 0 0 0-2.8 0z"/></svg></button>'
+  + '<button class="qb-menu" data-menu tabindex="-1" title="Menu (Esc)" aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M4 6h16v2.2H4zm0 4.9h16v2.2H4zm0 4.9h16V18H4z"/></svg></button>';
 const buttons = [...bar.querySelectorAll('[data-bar]')];
 let signature = '', shown = null;   // shown: the inventory drawn (a new run has a new one)
 
@@ -83,6 +87,7 @@ export function barKey(i) {
 bar.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   if (e.target.closest('[data-bag]')) { e.preventDefault(); toggleInventory(); return; }
+  if (e.target.closest('[data-menu]')) { e.preventDefault(); setInventoryOpen(false); toggleMenu(); return; }
   const b = e.target.closest('[data-bar]');
   if (!b) return;
   e.preventDefault();   // no focus: Space and Enter must stay with the game

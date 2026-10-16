@@ -5,9 +5,12 @@ being helped up and getting back in. Up to four players, co-op.
 
 ## Connecting
 
-- **O** opens the "Play together" panel (`src/net/lobby.js`). The host gets a four letter
-  room code (no I or O) and a link (`?join=CODE`); up to three guests type the code or open
-  the link. The room stays open while there is room.
+- Play together is in the Esc menu (Esc or O, the menu button with touch controls;
+  `src/game/escmenu.js`). You always start alone; "Host this world" opens a room: the host gets a
+  four letter room code (no I or O) and a link (`?join=CODE`); up to three guests type the code
+  or open the link. The room stays open while there is room, friends come and go. "Stop
+  hosting" closes it (with friends in it, the button asks again first: they drop out). Your name
+  is your saved hero's (`docs/saves.md`); without one, the menu asks for it.
 - `src/net/transport.js`: PeerJS (`vendor/peerjs/`, loaded only when hosting or joining).
   The host registers `cube-crawler-<CODE>` with the public PeerJS broker. Each guest
   connects to it, and from then on talks to the host directly over a WebRTC data channel

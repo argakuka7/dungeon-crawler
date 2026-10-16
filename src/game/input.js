@@ -27,7 +27,7 @@ import { clearLine } from '../physics/enemynav.js';
 import { allEnemies } from './enemies.js';
 import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
-import { lobbyOpen, setLobbyOpen, toggleLobby } from '../net/lobby.js';
+import { setMenuOpen, toggleMenu } from './escmenu.js';
 import { goToFriend } from '../net/session.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
@@ -38,9 +38,15 @@ const WALK = ['ControlLeft', 'ControlRight'], ATTACK = ['ShiftLeft', 'ShiftRight
 
 addEventListener('keydown', e => {
   if (e.metaKey || e.altKey) return;
-  // typing a name or a code (the play together panel): only Escape is ours
+  // typing a name or a code (the Esc menu): only Escape is ours
   if (e.target?.tagName === 'INPUT' && e.target.type === 'text') {
-    if (e.code === 'Escape' && lobbyOpen()) { setLobbyOpen(false); e.preventDefault(); }
+    if (e.code === 'Escape' && state.menuOpen) { setMenuOpen(false); e.preventDefault(); }
+    return;
+  }
+  // the Esc menu is open: Esc and O close it, the game gets no keys
+  if (state.menuOpen) {
+    if ((e.code === 'Escape' || e.code === 'KeyO') && !e.repeat) setMenuOpen(false);
+    if (!['Tab', 'Enter', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab, Enter and Space)
     return;
   }
   // Ctrl is the walk modifier: track it and the movement keys (and keep Ctrl+S / Ctrl+D /
@@ -59,8 +65,8 @@ addEventListener('keydown', e => {
   // by key, not code: ? and / sit on different keys across layouts
   if (e.key === '?' || e.key === '/') { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
   if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }
-  if (e.code === 'Escape' && lobbyOpen()) { setLobbyOpen(false); e.preventDefault(); return; }
-  if (e.code === 'KeyO') { if (!e.repeat) { setHelpOpen(false); toggleLobby(); } e.preventDefault(); return; }
+  // Esc with nothing else open, and O: the menu (play together is in it)
+  if (e.code === 'Escape' || e.code === 'KeyO') { if (!e.repeat) toggleMenu(); e.preventDefault(); return; }
   keys.add(e.code);
   if (e.repeat) return;
   if (e.code === 'Space') { controls.jumpPressed = true; e.preventDefault(); }
@@ -154,7 +160,7 @@ function click(walk) {
   }
 }
 addEventListener('wheel', e => {
-  if (!state.inventoryOpen) view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
+  if (!state.inventoryOpen && !state.menuOpen) view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
 }, { passive: true });
 
 // desired direction in world space (WASD or the touch stick, relative to the camera)

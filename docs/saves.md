@@ -1,8 +1,9 @@
 # Saves: heroes and worlds
 
 Status: saving and loading are implemented (`src/core/save.js`, `src/game/save.js`), and can be
-used through the developer commands. Still to come: the main menu (heroes, worlds, joining), the
-Esc menu (back to the menu, start / stop hosting) and the living cubes behind the menu.
+used through the developer commands. The Esc menu (`src/game/escmenu.js`) hosts and stops
+hosting, joins and leaves. Still to come: the main menu (heroes, worlds, joining), "Save & quit
+to the menu" in the Esc menu, and the living cubes behind the main menu.
 
 ## Heroes and worlds, apart
 

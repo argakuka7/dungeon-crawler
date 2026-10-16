@@ -122,7 +122,7 @@ function dropPeer(slot) {
 }
 const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
 
-// what the lobby shows (net/lobby.js): { phase, text }; phase: idle | opening | waiting |
+// what the Esc menu shows (game/escmenu.js): { phase, text }; phase: idle | opening | waiting |
 // joining | connected
 const listeners = new Set();
 let status = { phase: 'idle', text: '' };

@@ -27,7 +27,7 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
-  - `src/net/`: playing together (O in the game, up to four players): a room code, PeerJS
+  - `src/net/`: playing together (the Esc menu, up to four players): a room code, PeerJS
     between the host and each guest, the others' poses, following each other through portals
     and one player's enemies shown to the others in its cube (`docs/online.md`).
   - Saves (`src/core/save.js`, `src/game/save.js`): up to three heroes and eight worlds,

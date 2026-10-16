@@ -19,7 +19,8 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   go calls the throw off. A tap without dragging throws at the best enemy in range and in sight,
   or straight ahead.
 - **Jump** is the smaller button beside it.
-- **The quick bar** moves to the top, with a bag button at its end that opens the inventory.
+- **The quick bar** moves to the top, with a bag button at its end that opens the inventory and
+  a menu button for the Esc menu.
   The potions at work show below it; the minimap gets smaller.
 - The stick and buttons hide while the inventory is open.
 
@@ -33,4 +34,5 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
   closer), twist to turn the view a quarter (each 35 degrees).
 
-Help, music, playing together and respawning have no touch controls yet.
+The menu button at the end of the quick bar opens the Esc menu (`src/game/escmenu.js`): playing
+together, the controls and the music. Respawning has no touch control yet.
