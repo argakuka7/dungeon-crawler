@@ -38,20 +38,36 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
 
 ## Heroes and worlds, apart
 
-- A **hero** (up to 3) is the character: a name, the XP (the level follows from it) and the bag
-  with everything in it (`core/inventory.js`: slots, coins, quick bar, the weapon in hand). A
-  hero goes into any world, a friend's too, and takes home what it found there.
-  `{ v, id, name, created, updated, playTime, xp, inventory }`
+- A **hero** (up to 3) is the character: a name, the XP (the level follows from it), the bag
+  with everything in it (`core/inventory.js`: slots, coins, quick bar, the weapon in hand) and
+  its world, the one Continue goes back to (`null`: none yet, or it was deleted). A hero goes
+  into any world, a friend's too, and takes home what it found there; a friend's world never
+  becomes its world (it is not saved here). Playing a saved world makes it the hero's world.
+  `{ v, id, name, created, updated, playTime, xp, inventory, world }`
 - A **world** (up to 8) is a seed and what was done in it: what was defeated, the gates and
   chests opened, the drops that came (`run.dropped`), the loot lying on the floors, the open town
   portal, the open side faces, the discovered cubes, the deepest depth reached, and where each
   hero left it (`spots`: the cube and its entry). The map is never saved: the seed makes the same
-  cubes again (`world/`). A world is named after its seed (`worldName`: "Mossy Vale").
-  `{ v, id, name, seed, created, updated, deepest, run: { defeated, gates, chests, dropped, loot,
-  townPortal }, faces, visited, spots }`
+  cubes again (`world/`). A world is named after its seed (`core/names.js`, below); a seed saved
+  a second time is its copy 2, "... II". The name is written along but never read back.
+  `{ v, id, seed, copy, name, created, updated, deepest, run: { defeated, gates, chests, dropped,
+  loot, townPortal }, faces, visited, spots }`
 - Coming into a world a hero has its level and bag, full health, no potions at work
   (`heroStats`). It comes in at the entry of the cube it left that world in (or the cube a fall
   started in), else in town. What it defeated there stays defeated: no cube is put back.
+
+## World names
+
+Every seed has a name of its own, and the name gives the seed back (`core/names.js`):
+"The Sunken Vale of Ravenmere", an adjective (512), a landmark (256) and a place made of a
+prefix (512) and a suffix (64): exactly 2^32 names, one for each seed. The seed is stirred first
+with steps that can all be undone (`mix` / `unmix`), so seeds side by side get names nothing
+alike. `seedFromName` reads a name as typed (any case and spacing, "the", "of" and a copy number
+may be left out), `readSeed` a name or a number: a friend can share a world by its name.
+
+The words are hand-picked; the tests check that every place reads only one way and that nothing
+rude comes out, also where a prefix meets a suffix. The lists are fixed: a changed word renames
+the worlds that have it and their old names no longer find them. Worlds cannot be renamed.
 
 ## Where they are kept
 
@@ -62,7 +78,7 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
 | `cube-crawler.heroes` | the heroes, one list |
 | `cube-crawler.worlds` | the worlds' index for the menu: id, name, seed, updated, deepest, heroes there |
 | `cube-crawler.world.<id>` | one world (they grow: mostly the floor loot) |
-| `cube-crawler.last` | the hero and world played last (Continue) |
+| `cube-crawler.last` | the hero chosen in the menu (`{ hero }`; Continue plays it in its world) |
 
 What is read is checked (`checkHero`, `checkWorld`, `checkInventory`): an item the game no
 longer knows leaves the bag, the quick bar and the hand only keep what is still there, damaged

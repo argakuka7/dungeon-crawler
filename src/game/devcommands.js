@@ -143,17 +143,16 @@ dev({
   },
 });
 dev({
-  name: 'save', help: 'save as this hero (made, or overwritten) in this world (saved as a new one, named so)',
-  args: [{ name: 'hero', type: 'text' }, { name: 'world', type: 'text', optional: true }],
-  run({ hero, world }) { return saveAs(hero, world); },
+  name: 'save', help: 'save as this hero (made, or overwritten) in this world (saved as a new one if it is not yet)',
+  args: [{ name: 'hero', type: 'text' }],
+  run({ hero }) { return saveAs(hero); },
 });
 dev({
-  name: 'load', help: 'play a saved hero in a saved world (its last one, else a new one)',
+  name: 'load', help: 'play a saved hero in a saved world (its own one, else a new one)',
   args: [{ name: 'hero', type: 'hero' }, { name: 'world', type: 'savedworld', optional: true }],
   async run({ hero, world }) {
     if (online.role) return 'Not while playing together';
-    const last = store.last();
-    world ??= last?.hero === hero ? last.world : store.worlds().find(w => w.heroes.includes(hero))?.id ?? store.worlds()[0]?.id ?? 'new';
+    world ??= store.heroWorld(hero)?.id ?? 'new';
     if (world === 'new') { const w = newSavedWorld(); if (!w) return `There are ${MAX_WORLDS} worlds already`; world = w.id; }
     await play(hero, world);
     return `${savedHero().name} in ${savedWorld().name}`;

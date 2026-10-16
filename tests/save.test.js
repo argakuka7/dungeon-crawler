@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHero, checkHero, heroStats, heroLevel, checkInventory, createWorld, checkWorld, worldName, cleanName,
+import { createHero, checkHero, heroStats, heroLevel, checkInventory, createWorld, checkWorld, savedWorldName, cleanName,
   openStore, memoryStorage, KEYS, MAX_HEROES, MAX_WORLDS, SAVE_VERSION } from '../src/core/save.js';
 import { addInstance, addItem, assignBar, equippedItem, countOf, BAG_SIZE } from '../src/core/inventory.js';
 import { xpForLevel, maxHealth, START_POTIONS } from '../src/core/progression.js';
 import { HEALTH_POTION, OLD_SWORD } from '../src/core/items.js';
 import { rollWeapon } from '../src/core/gear/generate.js';
 import { mulberry32 } from '../src/core/util.js';
+import { worldName, seedFromName } from '../src/core/names.js';
 
 const roundTrip = x => JSON.parse(JSON.stringify(x));
 
@@ -76,13 +77,11 @@ test('names are plain and short', () => {
   assert.equal(cleanName('x'.repeat(30)).length, 16);
 });
 
-test('a world is named after its seed, the same every time', () => {
-  assert.equal(worldName(7), worldName(7));
-  assert.match(worldName(7), /^[A-Z][a-z]+ [A-Z][a-z]+$/);
-  assert.ok(new Set(Array.from({ length: 40 }, (_, i) => worldName(i))).size > 25, 'seeds give different names');
-  for (let i = 0; i < 200; i++) { const [a, b] = worldName(i).split(' '); assert.notEqual(a, b); }
+test('a world is named after its seed; a second copy of a seed is "... II"', () => {
   assert.equal(createWorld(7, { id: 'w-1' }).name, worldName(7));
-  assert.equal(createWorld(7, { id: 'w-1', name: 'Home' }).name, 'Home');
+  assert.equal(createWorld(7, { id: 'w-1', copy: 2 }).name, `${worldName(7)} II`);
+  assert.equal(seedFromName(savedWorldName(7, 3)), 7, 'the copy number does not get in the way of reading it');
+  assert.equal(checkWorld({ ...createWorld(7, { id: 'w-1' }), name: 'Mossy Vale' }).name, worldName(7), 'a name written by an older version is not read');
   assert.equal(createWorld(-1, { id: 'w-1' }).seed, 0xffffffff);
 });
 
@@ -125,27 +124,85 @@ test('the store keeps up to three heroes and eight worlds', () => {
   assert.equal(store.worlds()[0].id, `w-${MAX_WORLDS - 1}`, 'the newest first');
   assert.equal(store.world('w-x'), null);
   assert.equal(store.world('w-2').seed, 2);
+  assert.equal(store.worlds().find(e => e.id === 'w-2').name, worldName(2));
 });
 
-test('deleting a hero takes its spots out of the worlds and forgets it was played last', () => {
+test('a seed saved again is its next copy', () => {
+  const store = openStore(memoryStorage());
+  assert.equal(store.nextCopy(5), 1);
+  store.putWorld(createWorld(5, { id: 'w-1' }));
+  assert.equal(store.nextCopy(5), 2);
+  store.putWorld(createWorld(5, { id: 'w-2', copy: 2 }));
+  assert.equal(store.nextCopy(5), 3);
+  assert.equal(store.nextCopy(6), 1);
+  assert.deepEqual(store.worlds().map(e => e.name).sort(), [worldName(5), `${worldName(5)} II`].sort());
+});
+
+test('a hero remembers its world, and the menu remembers the hero', () => {
+  const store = openStore(memoryStorage());
+  assert.equal(store.selected(), null);
+  const a = createHero('A', { id: 'h-a', now: 1 }), b = createHero('B', { id: 'h-b', now: 2 }), c = createHero('C', { id: 'h-c', now: 3 });
+  for (const h of [a, b, c]) store.putHero(h);
+  assert.equal(store.selected(), 'h-a', 'nothing chosen yet: the first hero');
+  store.select('h-b');
+  assert.equal(store.selected(), 'h-b');
+  assert.equal(store.heroWorld('h-b'), null, 'a new hero has no world yet');
+  store.putWorld(createWorld(5, { id: 'w-1' }));
+  assert.ok(store.setHeroWorld('h-b', 'w-1'));
+  assert.equal(store.hero('h-b').world, 'w-1');
+  assert.equal(store.heroWorld('h-b').id, 'w-1');
+  assert.equal(checkHero({ ...b, world: '../x' }).world, null);
+
+  // the chosen hero deleted: the one after it is chosen, else the one before
+  store.deleteHero('h-b');
+  assert.equal(store.selected(), 'h-c');
+  store.deleteHero('h-c');
+  assert.equal(store.selected(), 'h-a');
+  store.deleteHero('h-a');
+  assert.equal(store.selected(), null);
+});
+
+test('deleting a world leaves the heroes whose world it was without one', () => {
+  const store = openStore(memoryStorage());
+  store.putHero({ ...createHero('A', { id: 'h-a' }), world: 'w-1' });
+  store.putHero({ ...createHero('B', { id: 'h-b' }), world: 'w-2' });
+  store.putWorld(createWorld(1, { id: 'w-1' })); store.putWorld(createWorld(2, { id: 'w-2' }));
+  store.deleteWorld('w-1');
+  assert.equal(store.hero('h-a').world, null);
+  assert.equal(store.hero('h-b').world, 'w-2');
+});
+
+test('heroes saved before they had a world get one: the last played, else the newest they were in', () => {
+  const storage = memoryStorage();
+  const old = h => { const { world, ...rest } = h; return rest; };
+  const spot = { cube: '0,0,0', arrival: { x: 1, y: 0, z: 1 } };
+  const w1 = { ...createWorld(1, { id: 'w-1' }), updated: 1, spots: { 'h-a': spot, 'h-b': spot } };
+  const w2 = { ...createWorld(2, { id: 'w-2' }), updated: 2, spots: { 'h-b': spot } };
+  const before = openStore(storage);
+  before.putWorld(w1); before.putWorld(w2);
+  storage.setItem(KEYS.heroes, JSON.stringify([old(createHero('A', { id: 'h-a' })), old(createHero('B', { id: 'h-b' })), old(createHero('C', { id: 'h-c' }))]));
+  storage.setItem(KEYS.selected, JSON.stringify({ hero: 'h-a', world: 'w-1' }));
+  const store = openStore(storage);
+  assert.equal(store.hero('h-a').world, 'w-1', 'played last');
+  assert.equal(store.hero('h-b').world, 'w-2', 'the newest it was in');
+  assert.equal(store.hero('h-c').world, null, 'never anywhere');
+  assert.equal(store.selected(), 'h-a');
+});
+
+test('deleting a hero takes its spots out of the worlds', () => {
   const store = openStore(memoryStorage());
   const a = createHero('A', { id: 'h-a' }), b = createHero('B', { id: 'h-b' });
   store.putHero(a); store.putHero(b);
   const w = createWorld(5, { id: 'w-1' });
   w.spots = { 'h-a': { cube: '0,0,0', arrival: { x: 1, y: 0, z: 1 } }, 'h-b': { cube: '0,0,0', arrival: { x: 2, y: 0, z: 2 } } };
   store.putWorld(w);
-  store.setLast('h-a', 'w-1');
-  assert.deepEqual(store.last(), { hero: 'h-a', world: 'w-1' });
   assert.deepEqual(store.worlds()[0].heroes, ['h-a', 'h-b']);
   store.deleteHero('h-a');
   assert.deepEqual(Object.keys(store.world('w-1').spots), ['h-b']);
   assert.deepEqual(store.worlds()[0].heroes, ['h-b']);
-  assert.equal(store.last(), null);
-  store.setLast('h-b', 'w-1');
   store.deleteWorld('w-1');
   assert.equal(store.world('w-1'), null);
   assert.equal(store.worlds().length, 0);
-  assert.equal(store.last(), null);
 });
 
 test('the store leaves alone what it cannot read, and says when the storage refuses', () => {

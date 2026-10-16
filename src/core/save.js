@@ -1,28 +1,32 @@
 // Saved games: heroes and worlds, apart. Pure: no DOM, no game state (game/save.js runs it).
 //
-// A hero (up to MAX_HEROES) is the character: name, XP and the bag. It goes into any world, a
-// friend's too, and takes home what it found there.
-//   { v, id, name, created, updated, playTime, xp, inventory }
+// A hero (up to MAX_HEROES) is the character: name, XP and the bag, and its world (the one
+// Continue goes back to; null: none yet). It goes into any world, a friend's too, and takes home
+// what it found there; a friend's world does not become its world.
+//   { v, id, name, created, updated, playTime, xp, inventory, world }
 // A world (up to MAX_WORLDS) is a seed and what was done in it: what was defeated and opened,
-// the loot on the floor, the cubes discovered, and where each hero left it (spots).
-//   { v, id, name, seed, created, updated, deepest,
+// the loot on the floor, the cubes discovered, and where each hero left it (spots). Its name
+// comes from the seed (core/names.js); the same seed saved again is the second copy, "... II".
+//   { v, id, seed, copy, name, created, updated, deepest,
 //     run: { defeated, gates, chests, dropped, loot, townPortal }, faces, visited,
 //     spots: { [heroId]: { cube, arrival: { x, y, z } } } }
-// The map itself is never saved: the same seed makes the same cubes (world/).
+// The map itself is never saved: the same seed makes the same cubes (world/). The name is
+// written along (to read the file) but never read back.
 //
 // The store keeps them in a Storage (localStorage, or a stand-in in the tests) under KEYS: the
-// heroes in one entry, the worlds one entry each (they grow) plus an index for the menu. What
-// is read is checked: a damaged or unknown entry is left out (and left alone), an item the game
-// no longer knows leaves the bag. `v` says which version wrote it: migrate brings older ones up.
+// heroes in one entry, the worlds one entry each (they grow) plus an index for the menu, and
+// the hero chosen in the menu. What is read is checked: a damaged or unknown entry is left out
+// (and left alone), an item the game no longer knows leaves the bag. `v` says which version
+// wrote it: migrate brings older ones up.
 import { ITEMS, COINS } from './items.js';
 import { BAG_SIZE, BAR_SIZE, createInventory, whole } from './inventory.js';
 import { createPlayerStats, levelFromXP, maxHealth } from './progression.js';
 import { validGen, validPickup } from './loot.js';
-import { mulberry32 } from './util.js';
+import { worldName } from './names.js';
 
 export const SAVE_VERSION = 1, MAX_HEROES = 3, MAX_WORLDS = 8, NAME_MAX = 16;
 export const KEYS = {
-  heroes: 'cube-crawler.heroes', worlds: 'cube-crawler.worlds', last: 'cube-crawler.last',
+  heroes: 'cube-crawler.heroes', worlds: 'cube-crawler.worlds', selected: 'cube-crawler.last',
   world: id => `cube-crawler.world.${id}`,
 };
 
@@ -40,24 +44,15 @@ export function cleanName(s) {
   return typeof s === 'string' ? s.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX).trim() : '';
 }
 
-// A world's name from its seed: 'Mossy Hollow'
-const FIRST = ['Mossy', 'Hidden', 'Crooked', 'Silent', 'Golden', 'Misty', 'Ancient', 'Windy', 'Frozen', 'Sunken',
-  'Bright', 'Shadow', 'Stony', 'Hollow', 'Rusty', 'Thorny', 'Amber', 'Copper', 'Dusky', 'Lucky'];
-const SECOND = ['Hollow', 'Vale', 'Deeps', 'Reach', 'Barrow', 'Crag', 'Glen', 'Warren', 'Keep', 'Burrow',
-  'Fen', 'Spire', 'Grotto', 'Ridge', 'Pits', 'Halls', 'Wilds', 'Nook', 'Rift', 'Moor'];
-export function worldName(seed) {
-  const r = mulberry32(seed ^ 0x5eed);
-  const a = FIRST[Math.floor(r() * FIRST.length)];
-  let b = SECOND[Math.floor(r() * SECOND.length)];
-  if (b === a) b = SECOND[(SECOND.indexOf(b) + 1) % SECOND.length];
-  return `${a} ${b}`;
-}
+// A saved world's name: its seed's (core/names.js), the second copy of a seed "... II"
+const ROMAN = ['', '', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+export const savedWorldName = (seed, copy = 1) => worldName(seed) + (copy > 1 ? ` ${ROMAN[copy] ?? copy}` : '');
 
 // --- heroes -------------------------------------------------------------------------------------
 
 export function createHero(name, { id = newId('h'), now = Date.now() } = {}) {
   return { v: SAVE_VERSION, id, name: cleanName(name) || 'Hero', created: now, updated: now, playTime: 0,
-    xp: 0, inventory: createPlayerStats().inventory };
+    xp: 0, inventory: createPlayerStats().inventory, world: null };
 }
 export const heroLevel = h => levelFromXP(h.xp);
 
@@ -106,14 +101,14 @@ export function checkHero(h) {
   let xp = 0;
   try { xp = whole(h.xp); } catch { return null; }
   return { v: SAVE_VERSION, id: h.id, name: cleanName(h.name) || 'Hero', created: time(h.created), updated: time(h.updated),
-    playTime: time(h.playTime), xp, inventory: checkInventory(h.inventory) };
+    playTime: time(h.playTime), xp, inventory: checkInventory(h.inventory), world: isId(h.world) ? h.world : null };
 }
 
 // --- worlds -------------------------------------------------------------------------------------
 
-export function createWorld(seed, { name = '', id = newId('w'), now = Date.now() } = {}) {
+export function createWorld(seed, { copy = 1, id = newId('w'), now = Date.now() } = {}) {
   seed >>>= 0;
-  return { v: SAVE_VERSION, id, name: cleanName(name) || worldName(seed), seed, created: now, updated: now, deepest: 0,
+  return { v: SAVE_VERSION, id, seed, copy, name: savedWorldName(seed, copy), created: now, updated: now, deepest: 0,
     run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null }, faces: [], visited: [], spots: {} };
 }
 
@@ -138,14 +133,21 @@ export function checkWorld(w) {
     const arrival = point(s?.arrival);
     if (isId(hero) && typeof s.cube === 'string' && arrival) spots[hero] = { cube: s.cube, arrival };
   }
-  return { v: SAVE_VERSION, id: w.id, name: cleanName(w.name) || worldName(w.seed), seed: w.seed,
+  const copy = Number.isInteger(w.copy) && w.copy > 0 ? w.copy : 1;
+  return { v: SAVE_VERSION, id: w.id, seed: w.seed, copy, name: savedWorldName(w.seed, copy),
     created: time(w.created), updated: time(w.updated), deepest: Number.isInteger(w.deepest) && w.deepest > 0 ? w.deepest : 0,
     run: { defeated: strings(run.defeated), gates: strings(run.gates), chests: strings(run.chests), dropped: strings(run.dropped),
       loot: checkLoot(run.loot), townPortal: checkTownPortal(run.townPortal) },
     faces: strings(w.faces), visited: strings(w.visited), spots };
 }
-// what the menu lists of a world, without reading all of it
-export const worldEntry = w => ({ id: w.id, name: w.name, seed: w.seed, updated: w.updated, deepest: w.deepest, heroes: Object.keys(w.spots) });
+// what the menu lists of a world, without reading all of it (the heroes: those that were there)
+export const worldEntry = w => ({ id: w.id, seed: w.seed, copy: w.copy, updated: w.updated, deepest: w.deepest, heroes: Object.keys(w.spots) });
+function checkEntry(e) {
+  if (!isObj(e) || !isId(e.id) || !Number.isInteger(e.seed) || e.seed < 0 || e.seed > 0xffffffff) return null;
+  const copy = Number.isInteger(e.copy) && e.copy > 0 ? e.copy : 1;
+  return { id: e.id, seed: e.seed, copy, name: savedWorldName(e.seed, copy), updated: time(e.updated),
+    deepest: Number.isInteger(e.deepest) && e.deepest > 0 ? e.deepest : 0, heroes: strings(e.heroes) };
+}
 
 // an entry written by an older version of the game, brought up to this one; null: not a save
 // we can read (one from a newer version is left alone)
@@ -175,16 +177,36 @@ export function openStore(storage) {
       if (i < 0) list.push(h); else list[i] = h;
       return write(KEYS.heroes, list);
     },
-    // a hero goes, and so do its spots in the worlds
+    // a hero goes, and so do its spots in the worlds; the one after it (else before) is chosen instead
     deleteHero(id) {
+      const heroes = store.heroes(), i = heroes.findIndex(h => h.id === id);
       write(KEYS.heroes, rawList(KEYS.heroes).filter(x => x?.id !== id));
       for (const e of store.worlds()) {
         const w = store.world(e.id);
         if (w?.spots[id]) { delete w.spots[id]; store.putWorld(w); }
       }
-      if (read(KEYS.last)?.hero === id) remove(KEYS.last);
+      if (read(KEYS.selected)?.hero === id) {
+        const next = heroes[i + 1] ?? heroes[i - 1];
+        if (next) store.select(next.id); else remove(KEYS.selected);
+      }
     },
-    worlds: () => rawList(KEYS.worlds).filter(e => isObj(e) && isId(e.id)).sort(newestFirst),
+    // the hero chosen in the menu (Continue plays it in its world): if gone, the first one; null: none
+    selected() {
+      const heroes = store.heroes(), id = read(KEYS.selected)?.hero;
+      return (heroes.find(h => h.id === id) ?? heroes[0])?.id ?? null;
+    },
+    select: id => write(KEYS.selected, { hero: id }),
+    // hero `heroId` goes on in world `worldId` from now on (Continue)
+    setHeroWorld(heroId, worldId) {
+      const h = store.hero(heroId);
+      return !!h && (h.world === worldId || store.putHero({ ...h, world: worldId }));
+    },
+    // the hero's world as the menu lists it; null: none (yet, or deleted)
+    heroWorld(heroId) {
+      const w = store.hero(heroId)?.world;
+      return w ? store.worlds().find(e => e.id === w) ?? null : null;
+    },
+    worlds: () => rawList(KEYS.worlds).map(checkEntry).filter(Boolean).sort(newestFirst),
     world: id => isId(id) ? checkWorld(read(KEYS.world(id))) : null,
     putWorld(w) {
       const index = rawList(KEYS.worlds), i = index.findIndex(e => e?.id === w.id);
@@ -193,18 +215,26 @@ export function openStore(storage) {
       if (i < 0) index.push(worldEntry(w)); else index[i] = worldEntry(w);
       return write(KEYS.worlds, index);
     },
+    // a world goes, and the heroes whose world it was have none
     deleteWorld(id) {
       remove(KEYS.world(id));
       write(KEYS.worlds, rawList(KEYS.worlds).filter(e => e?.id !== id));
-      if (read(KEYS.last)?.world === id) remove(KEYS.last);
+      for (const h of store.heroes()) if (h.world === id) store.putHero({ ...h, world: null });
     },
-    // the hero and world played last (Continue), if both are still there
-    last() {
-      const l = read(KEYS.last);
-      return isObj(l) && store.hero(l.hero) && store.worlds().some(e => e.id === l.world) ? { hero: l.hero, world: l.world } : null;
-    },
-    setLast: (hero, world) => write(KEYS.last, { hero, world }),
+    // the copy number for one more world of this seed (1: the first)
+    nextCopy: seed => 1 + Math.max(0, ...store.worlds().filter(e => e.seed === seed).map(e => e.copy)),
   };
+
+  // saves from before the heroes had a world: the world played last with that hero, else the
+  // newest one it was in
+  const raw = rawList(KEYS.heroes);
+  const old = h => isObj(h) && !('world' in h) && !!checkHero(h);
+  if (raw.some(old)) {
+    const last = read(KEYS.selected), worlds = store.worlds();
+    for (const h of raw) if (old(h))
+      h.world = last?.hero === h.id && worlds.some(e => e.id === last.world) ? last.world : worlds.find(e => e.heroes.includes(h.id))?.id ?? null;
+    write(KEYS.heroes, raw);
+  }
   return store;
 }
 

@@ -92,8 +92,8 @@ Developer (`?dev=1`):
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |
 | `/saves` | the saved heroes and worlds, and what is being saved now |
-| `/save <hero> [world]` | save as this hero (overwritten, or a new one) in this world (a new saved world, named so, unless it is saved already); from then on it saves itself |
-| `/load <hero> [world\|new]` | play a saved hero in a saved world (no world: its last one) |
+| `/save <hero>` | save as this hero (overwritten, or a new one) in this world (a new saved world unless it is saved already, now the hero's world); from then on it saves itself |
+| `/load <hero> [world\|new]` | play a saved hero in a saved world (no world: the hero's own one, else a new one) |
 | `/delete <hero\|world>` | delete a saved hero or world |
 
 The spawn row of the dev panel, its J key and the inventory's "Developer weapons" section are

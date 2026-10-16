@@ -36,24 +36,27 @@ export const savedWorld = () => worldSaved() ? current.world : null;
 // --- starting -----------------------------------------------------------------------------------
 
 // Play hero `heroId` in world `worldId` (both in the store): the hero comes in where it left that
-// world (else in town). What was being played is saved first. Resolves once the first cube is there.
+// world (else in town), and that is its world from now on (Continue). What was being played is
+// saved first. Resolves once the first cube is there.
 export function play(heroId, worldId) {
-  const hero = store.hero(heroId), world = store.world(worldId);
-  if (!hero || !world) return Promise.reject(new Error('No such hero or world'));
+  const world = store.world(worldId);
+  if (!store.hero(heroId) || !world) return Promise.reject(new Error('No such hero or world'));
   saveNow();
+  store.setHeroWorld(heroId, worldId);
+  store.select(heroId);
+  const hero = store.hero(heroId);
   Object.assign(player, heroStats(hero));
   setHero(hero);
   Object.assign(current, { world, visited: new Set(world.visited) });
   knowDepths(world.seed, world.deepest);
   const started = newWorld(world.seed, { keepPlayer: true, restore: restoreOf(world, hero.id) });
   current.cubes = state.cubes;
-  store.setLast(hero.id, world.id);
   signature = ''; played = 0;
   return started;
 }
 
 // Hero `heroId` goes into a friend's world (game/menu.js, before joining): the friend's world
-// is not ours to save, the hero is. false: there is no such hero.
+// is not ours to save, the hero is; its own world stays its world. false: there is no such hero.
 export function playAsGuest(heroId) {
   const hero = store.hero(heroId);
   if (!hero) return false;
@@ -85,16 +88,17 @@ export function newHero(name) {
   const h = createHero(name);
   return store.putHero(h) ? h : null;
 }
-// A new world in the store (seed: random if not given)
-export function newSavedWorld({ seed = (Math.random() * 2 ** 32) >>> 0, name = '' } = {}) {
+// A new world in the store (seed: random if not given; a seed saved already makes a copy, "... II")
+export function newSavedWorld(seed = (Math.random() * 2 ** 32) >>> 0) {
   if (store.worlds().length >= MAX_WORLDS) return null;
-  const w = createWorld(seed, { name });
+  const w = createWorld(seed, { copy: store.nextCopy(seed >>> 0) });
   return store.putWorld(w) ? w : null;
 }
 
 // Save what is being played now as hero `heroName` (that hero is overwritten, or a new one made)
-// and, unless this world is saved already, as a new world `worldName`. A message: what happened.
-export function saveAs(heroName, worldName = '') {
+// and, unless this world is saved already, as a new world; it becomes the hero's world. A
+// message: what happened.
+export function saveAs(heroName) {
   const name = cleanName(heroName);
   if (!name) return 'A hero needs a name';
   if (!state.cubes) return 'No world yet';
@@ -103,12 +107,13 @@ export function saveAs(heroName, worldName = '') {
   if (current.hero?.id !== hero.id) played = 0;
   setHero(hero);
   if (!worldSaved()) {
-    const world = newSavedWorld({ seed: state.cubes.seed, name: worldName });
+    const world = newSavedWorld(state.cubes.seed);
     if (!world) { saveNow(); return `Saved ${hero.name}; there are ${MAX_WORLDS} worlds already, this one is not saved`; }
     Object.assign(current, { world, cubes: state.cubes, visited: new Set() });
   }
+  setHero({ ...current.hero, world: current.world.id });
   if (!saveNow()) return 'Could not save (is the storage full?)';
-  store.setLast(current.hero.id, current.world.id);
+  store.select(current.hero.id);
   return `Saved ${current.hero.name} in ${current.world.name}`;
 }
 
@@ -123,6 +128,7 @@ export function detachWorld() {
 // the hero or world `id` was deleted from the store: not saved any more
 export function forget(id) {
   if (current.hero?.id === id) setHero(null);
+  if (current.hero?.world === id) setHero({ ...current.hero, world: null });
   if (current.world?.id === id) { current.world = null; current.cubes = null; }
 }
 

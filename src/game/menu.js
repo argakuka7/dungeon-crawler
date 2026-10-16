@@ -13,9 +13,9 @@ import { endWorld } from './flow.js';
 import { startShowcase, stopShowcase, showcaseCubes } from './showcase.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } from './save.js';
-import { cleanName, worldName, heroLevel, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
+import { cleanName, heroLevel, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
+import { readSeed } from '../core/names.js';
 import { ITEMS } from '../core/items.js';
-import { hashKey } from '../world/coords.js';
 import { playSong } from '../audio/music.js';
 import { readCode } from '../net/protocol.js';
 import { online } from '../net/online.js';
@@ -46,12 +46,6 @@ function playTime(s) {
   return m < 60 ? `${m} min played` : `${Math.floor(m / 60)} h ${m % 60} min played`;
 }
 const heroIcon = h => { const s = h.inventory.slots.find(x => x?.instanceId === h.inventory.equipped); return s ? ITEMS[s.itemId]?.icon : null; };
-// a seed as typed: a number as it is, any other text made into one; empty: a random one
-function readSeed(text) {
-  const t = text.trim();
-  if (!t) return (Math.random() * 2 ** 32) >>> 0;
-  return /^\d{1,10}$/.test(t) && Number(t) <= 0xffffffff ? Number(t) : hashKey(t);
-}
 
 // --- showing ------------------------------------------------------------------------------------
 
@@ -88,7 +82,7 @@ const renameField = (id, name) => `<span class="title-rename"><input id="title-r
 
 const screens = {
   title() {
-    const last = store.last(), hero = last && store.hero(last.hero), world = last && store.world(last.world);
+    const id = store.selected(), hero = id && store.hero(id), world = id && store.heroWorld(id);
     const heroes = store.heroes().length;
     return `<div class="title-list">
       ${hero && world ? `<button class="menu-big" data-act="continue">Continue<small>${esc(hero.name)} · level ${heroLevel(hero)} · in ${esc(world.name)}</small></button>` : ''}
@@ -120,14 +114,12 @@ const screens = {
   },
   worlds() {
     const hero = store.hero(heroId), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
-    const rows = worlds.map(w => `<li class="title-card">${renaming(w.id) ? renameField(w.id, w.name)
-      : `<button class="title-pick" data-act="world" data-id="${w.id}"><span><b>${esc(w.name)}${w.heroes.includes(heroId) ? '' : ' <em>new for this hero</em>'}</b>`
+    const rows = worlds.map(w => `<li class="title-card">${`<button class="title-pick" data-act="world" data-id="${w.id}"><span><b>${esc(w.name)}${w.heroes.includes(heroId) ? '' : ' <em>new for this hero</em>'}</b>`
         + `<small>${w.deepest ? `depth ${w.deepest}` : 'town'} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button>`}
-      <div class="title-actions"><button data-act="rename" data-id="${w.id}">Rename</button>${deleteButton(w.id)}</div></li>`).join('');
+      <div class="title-actions">${deleteButton(w.id)}</div></li>`).join('');
     const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one to make a new one.</p>`
       : form === 'world' ? `<div class="title-form title-new-world">
-          <label>Name <input id="title-world-name" maxlength="16" placeholder="${esc(worldName(0))}" data-enter="create-world"></label>
-          <label>Seed <input id="title-seed" maxlength="40" placeholder="random" data-enter="create-world" autocomplete="off" spellcheck="false"></label>
+          <label>Seed <input id="title-seed" maxlength="60" placeholder="random" data-enter="create-world" autocomplete="off" spellcheck="false"></label>
           <div class="menu-row"><button class="menu-big" data-act="create-world">Make it and play</button>${worlds.length ? '<button data-act="cancel">Cancel</button>' : ''}</div></div>`
       : '<button data-act="new-world" class="title-new">+ New world</button>';
     return `<h2>${esc(hero.name)} <small>level ${heroLevel(hero)}</small></h2>
@@ -148,14 +140,8 @@ function render() {
   if (screen !== 'title' && screen !== 'heroes' && !store.hero(heroId)) screen = 'heroes';
   panel.innerHTML = screens[screen]() + (note ? `<p class="title-note" role="alert">${esc(note)}</p>` : '');
   panel.dataset.screen = screen;
-  const first = panel.querySelector('#title-rename, #title-name, #title-world-name');
+  const first = panel.querySelector('#title-rename, #title-name, #title-seed');
   first?.focus();
-  if (first?.id === 'title-world-name') updateNamePlaceholder();
-}
-// the new world's name, made up from the seed typed so far
-function updateNamePlaceholder() {
-  const seed = $('title-seed')?.value.trim();
-  $('title-world-name').placeholder = seed ? worldName(readSeed(seed)) : 'made up from the seed';
 }
 
 // --- doing --------------------------------------------------------------------------------------
@@ -184,7 +170,7 @@ function stopJoining(text = '') {
 }
 
 const actions = {
-  continue() { const l = store.last(); if (l) start(l.hero, l.world); },
+  continue() { const h = store.selected(), w = h && store.heroWorld(h); if (w) start(h, w.id); },
   heroes() { screen = 'heroes'; form = store.heroes().length ? null : 'hero'; },
   controls() { setHelpOpen(!helpOpen()); },
   back() { form = null; screen = screen === 'worlds' ? 'heroes' : 'title'; if (screen === 'title') invite = null; },
@@ -202,6 +188,7 @@ const actions = {
   },
   hero(id) {
     heroId = id; form = null;
+    store.select(id);
     if (invite) { joinWith(invite); return; }
     screen = 'worlds';
     if (!store.worlds().length) form = 'world';
@@ -209,8 +196,9 @@ const actions = {
   world(id) { start(heroId, id); },
   'new-world'() { form = 'world'; },
   'create-world'() {
-    const seed = readSeed($('title-seed').value);
-    const w = newSavedWorld({ seed, name: cleanName($('title-world-name').value) || worldName(seed) });
+    const typed = $('title-seed').value.trim(), seed = typed ? readSeed(typed) : (Math.random() * 2 ** 32) >>> 0;
+    if (seed === null) { note = 'That is not a world name or a number'; return; }
+    const w = newSavedWorld(seed);
     if (!w) { note = 'Could not make the world (is the storage full?)'; return; }
     start(heroId, w.id);
   },
@@ -218,8 +206,8 @@ const actions = {
   'save-name'(id) {
     const name = cleanName($('title-rename').value);
     if (!name) { note = 'A name, please'; return; }
-    const h = store.hero(id), w = !h && store.world(id);
-    if (h) store.putHero({ ...h, name }); else if (w) store.putWorld({ ...w, name });
+    const h = store.hero(id);
+    if (h) store.putHero({ ...h, name });
     form = null;
   },
   delete(id) {
@@ -256,7 +244,6 @@ panel.addEventListener('keydown', e => {
   const t = e.target.dataset?.enter;
   if (e.key === 'Enter' && t) { e.preventDefault(); act(t, panel.querySelector(`[data-act="${t}"]`)?.dataset.id); }
 });
-panel.addEventListener('input', e => { if (e.target.id === 'title-seed') updateNamePlaceholder(); });
 // Esc: the controls closed, the form given up, else back a screen
 addEventListener('keydown', e => {
   if (state.mode !== 'menu' || e.key !== 'Escape') return;

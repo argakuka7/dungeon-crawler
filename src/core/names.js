@@ -168,10 +168,12 @@ function lookups() {
 }
 
 // The seed of a world name as typed: big or small letters, any spaces, "the" and "of" may be
-// left out. null: not a world name.
+// left out, and so may a number after it ("... II": a second copy of it, core/save.js).
+// null: not a world name.
 export function seedFromName(text) {
   if (typeof text !== 'string') return null;
-  const t = text.toLowerCase().split(/[^a-z]+/).filter(w => w && w !== 'the' && w !== 'of');
+  const t = text.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && w !== 'the' && w !== 'of');
+  if (t.length === 4 && /^([ivx]+|\d+)$/.test(t[3])) t.pop();
   if (t.length !== 3) return null;
   const { adjectives, landmarks, places } = lookups();
   const a = adjectives.get(t[0]), l = landmarks.get(t[1]), ps = places.get(t[2]);

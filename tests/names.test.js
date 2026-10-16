@@ -68,7 +68,8 @@ test('a name is read as typed: any letters, any spaces, "the" and "of" may go', 
   const seed = 123456789, name = worldName(seed), [, a, l, , p] = name.split(' ');
   for (const typed of [name.toLowerCase(), name.toUpperCase(), `  ${a}   ${l}  ${p} `, `${a} ${l} of ${p}`, `the ${a}-${l}, of ${p}!`])
     assert.equal(seedFromName(typed), seed, typed);
-  for (const bad of ['', 'bob', `${a} ${l}`, `${l} ${a} of ${p}`, `${a} ${l} of ${p} ${p}`, `${a} ${l} of ${p}x`, null, 42])
+  assert.equal(seedFromName(`${name} II`), seed, 'a second copy');
+  for (const bad of ['', 'bob', `${name} II II`, `${a} ${l}`, `${l} ${a} of ${p}`, `${a} ${l} of ${p} ${p}`, `${a} ${l} of ${p}x`, null, 42])
     assert.equal(seedFromName(bad), null, String(bad));
 });
 
