@@ -30,6 +30,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/net/`: playing together (O in the game, up to four players): a room code, PeerJS
     between the host and each guest, the others' poses, following each other through portals
     and one player's enemies shown to the others in its cube (`docs/online.md`).
+  - Saves (`src/core/save.js`, `src/game/save.js`): up to three heroes and eight worlds,
+    apart, in `localStorage`; a hero goes into any world, a friend's too (`docs/saves.md`).
   - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
     chat when playing together, and commands after a `/` that complete the game's items and
     enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).

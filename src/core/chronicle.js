@@ -31,7 +31,7 @@ export const KINDS = {
   horde: { group: 'events' },    // {}: a horde woke up
   trade: { group: 'events' },    // { item, price }: bought something
   party: { group: 'events' },    // { text }: someone joined or left
-  world: { group: 'events' },    // { seed }: a new world began
+  world: { group: 'events' },    // { seed, name? }: a new world began (name: a saved one, back in it)
   system: { group: 'system' },   // { text }: what the console says (help, mistakes)
   dev: { group: 'system' },      // { text, error? }: what a developer command did
 };
@@ -107,7 +107,7 @@ export function describe({ kind, data: d = {}, who }) {
     case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
     case 'horde': return 'A horde woke up!';
     case 'trade': return `Bought ${d.item} for ${d.price}`;
-    case 'world': return `A new world · seed ${d.seed}`;
+    case 'world': return d.name ? `${d.name} · seed ${d.seed}` : `A new world · seed ${d.seed}`;
     default: return String(d.text ?? '');
   }
 }

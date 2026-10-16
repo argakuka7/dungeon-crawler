@@ -43,3 +43,7 @@ export function noteDepth(map, seed) {
   reached.add(map.depth);
   log('depth', { depth: map.depth, place: placeOf(map) }, { share: true });
 }
+// a saved world (game/save.js): its depths down to `deepest` were reached before
+export function knowDepths(seed, deepest) {
+  reached = new Set(Array.from({ length: deepest }, (_, i) => i + 1)); reachedIn = seed;
+}

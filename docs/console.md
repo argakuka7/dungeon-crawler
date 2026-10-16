@@ -84,12 +84,16 @@ Developer (`?dev=1`):
 | `/goto <down\|up>`, `/find <down\|up>` | take the nearest way down / up (PgDn / PgUp), or stand next to it (G) |
 | `/go <east\|west\|south\|north>` | into the next cube (Alt + WASD) |
 | `/horde [depth]` | a depth's wild horde (H) |
-| `/newworld [seed]` | a new world (N) |
+| `/newworld [seed]` | a new world (N); a saved hero comes along as it is |
 | `/give <item> [count]` | things into the bag (a weapon: a common one, equipped) |
 | `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default rare, item level 8) |
 | `/wear <thing\|off>` | headwear on or off |
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |
+| `/saves` | the saved heroes and worlds, and what is being saved now |
+| `/save <hero> [world]` | save as this hero (overwritten, or a new one) in this world (a new saved world, named so, unless it is saved already); from then on it saves itself |
+| `/load <hero> [world\|new]` | play a saved hero in a saved world (no world: its last one) |
+| `/delete <hero\|world>` | delete a saved hero or world |
 
 The spawn row of the dev panel, its J key and the inventory's "Developer weapons" section are
 gone: these commands replace them.
@@ -97,9 +101,10 @@ gone: these commands replace them.
 ### Completing
 
 An argument has a type. Types with a list of values (`item`, `weapon`, `wearable`, `enemy`,
-`rarity`, `depth`, `mood`, and small fixed ones like `way`, `dir`, `toggle`) take their values
-from the game's own tables (`ITEMS`, `ENEMY_KINDS`, `RARITIES` ...), so new ones complete
-without any change here. `int` and `text` take what is typed.
+`rarity`, `depth`, `mood`, the saves `hero`, `savedworld` and `save`, and small fixed ones
+like `way`, `dir`, `toggle`) take their values from the game's own tables (`ITEMS`,
+`ENEMY_KINDS`, `RARITIES`, the store of saves ...), so new ones complete without any change
+here. `int` and `text` take what is typed.
 
 What was typed is matched against a value's id and its name, ignoring case (`score`):
 

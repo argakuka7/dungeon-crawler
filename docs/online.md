@@ -124,8 +124,9 @@ being helped up and getting back in. Up to four players, co-op.
   (the host runs that cube and the enemy is still alive there: the guest's killing `hit`
   reaches the host before its `drop`, over the same ordered line).
 - Sources and ids: an enemy `e:<id>`, a chest `c:<site id>`, something put down from the bag
-  `b:<player>:<n>`; a pickup is `<source>#<i>`, so a guessed drop and the one that stands
-  line up pickup by pickup (`acceptDrop` keeps what matches, swaps what does not).
+  `b:<player>:<page><n>` (page: a tag of the page, new after a reload, so it never meets what
+  a saved world still holds); a pickup is `<source>#<i>`, so a guessed drop and the one that
+  stands line up pickup by pickup (`acceptDrop` keeps what matches, swaps what does not).
 - **Taking** is a claim (`claim`): the host's stand at once (it tells the others `took`); a
   guest's pickup flies in at once, the guest asks (`take`) and credits it once the host's
   `took` names it. If someone else was first, it turns and flies to them. A claim is only

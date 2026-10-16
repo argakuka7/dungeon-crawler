@@ -1,7 +1,7 @@
 // The developer commands (?dev=1), typed in the chat box (game/console.js): spawning and
 // clearing enemies, getting about, items and the hero. They do what the dev tools always did
 // (game/devspawn.js, game/dev.js, game/equipment.js), now by name: /help lists them.
-import { addCommand } from '../core/commands.js';
+import { addCommand, addType } from '../core/commands.js';
 import { ITEMS } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 import { addItem } from '../core/inventory.js';
@@ -17,6 +17,8 @@ import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
 import { forceMood } from './music.js';
 import { nextCube, newWorld } from './flow.js';
 import { pickFloor, pointer } from './pointer.js';
+import { heroLevel, MAX_WORLDS } from '../core/save.js';
+import { store, play, saveAs, newSavedWorld, savedHero, savedWorld, forget } from './save.js';
 
 const dev = cmd => addCommand(commands, { ...cmd, dev: true });
 const ahead = (d = 2.5) => ({ x: player.x + Math.sin(player.yaw) * d, y: player.y, z: player.z + Math.cos(player.yaw) * d });
@@ -122,6 +124,50 @@ dev({
     return `Level ${player.level}`;
   },
 });
+// --- saves (game/save.js) --------------------------------------------------------------------
+
+const heroes = () => store.heroes().map(h => ({ value: h.id, label: h.name, hint: `level ${heroLevel(h)}` }));
+const worlds = () => store.worlds().map(w => ({ value: w.id, label: w.name, hint: `seed ${w.seed}, depth ${w.deepest}` }));
+addType(commands, { name: 'hero', values: heroes });
+addType(commands, { name: 'savedworld', values: () => [...worlds(), { value: 'new', label: 'new', hint: 'a new world' }] });
+addType(commands, { name: 'save', values: () => [...heroes().map(h => ({ ...h, hint: `hero, ${h.hint}` })), ...worlds().map(w => ({ ...w, hint: `world, ${w.hint}` }))] });
+
+dev({
+  name: 'saves', help: 'the saved heroes and worlds',
+  run() {
+    const h = savedHero(), w = savedWorld();
+    return [`Saving: ${h ? h.name : 'no hero'} in ${w ? w.name : 'no world'}`,
+      ...store.heroes().map(x => `hero ${x.name}: level ${heroLevel(x)}, ${Math.round(x.playTime / 60)} min`),
+      ...store.worlds().map(x => `world ${x.name}: seed ${x.seed}, depth ${x.deepest}`)].join('\n');
+  },
+});
+dev({
+  name: 'save', help: 'save as this hero (made, or overwritten) in this world (saved as a new one, named so)',
+  args: [{ name: 'hero', type: 'text' }, { name: 'world', type: 'text', optional: true }],
+  run({ hero, world }) { return saveAs(hero, world); },
+});
+dev({
+  name: 'load', help: 'play a saved hero in a saved world (its last one, else a new one)',
+  args: [{ name: 'hero', type: 'hero' }, { name: 'world', type: 'savedworld', optional: true }],
+  async run({ hero, world }) {
+    if (online.role) return 'Not while playing together';
+    const last = store.last();
+    world ??= last?.hero === hero ? last.world : store.worlds().find(w => w.heroes.includes(hero))?.id ?? store.worlds()[0]?.id ?? 'new';
+    if (world === 'new') { const w = newSavedWorld(); if (!w) return `There are ${MAX_WORLDS} worlds already`; world = w.id; }
+    await play(hero, world);
+    return `${savedHero().name} in ${savedWorld().name}`;
+  },
+});
+dev({
+  name: 'delete', help: 'delete a saved hero or world', args: [{ name: 'save', type: 'save' }],
+  run({ save }) {
+    const h = store.hero(save), w = store.worlds().find(x => x.id === save);
+    forget(save);
+    if (h) store.deleteHero(save); else store.deleteWorld(save);
+    return `Deleted ${h ? `hero ${h.name}` : `world ${w.name}`}`;
+  },
+});
+
 dev({
   name: 'music', help: 'hold one mood of the music (auto: let go)', args: [{ name: 'mood', type: 'mood' }],
   run({ mood }) { forceMood(mood === 'auto' ? null : mood); return mood === 'auto' ? 'The music picks its mood again' : `Music: ${mood}`; },

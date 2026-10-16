@@ -64,11 +64,11 @@ import { groundAt } from '../physics/collide.js';
 import { downInfo } from '../game/downed.js';
 import { packPickup, acceptDrop, takenBy, grant, forgetDrops, dropOf, allLoot, takeLoot, settleClaims } from '../game/loot.js';
 import { shareChest } from '../game/chests.js';
-import { ITEMS } from '../core/items.js';
-import { RARITY } from '../core/gear/rarities.js';
+import { validPickup } from '../core/loot.js';
 import { cleanText, cleanNews } from '../core/chronicle.js';
 import { log } from '../game/log.js';
 import { speech } from '../game/console.js';
+import { detachWorld } from '../game/save.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -370,6 +370,7 @@ function welcomed(m) {
   if (m.v !== PROTOCOL) { refuse(); return; }
   if (!Number.isInteger(m.slot) || m.slot < 1 || m.slot >= MAX_PLAYERS) return;
   online.slot = m.slot;
+  detachWorld();   // the host's world is theirs to save: ours stays as it was (our hero is still saved)
   for (const pl of Array.isArray(m.players) ? m.players : [])
     if (Number.isInteger(pl?.slot) && pl.slot >= 0 && pl.slot < MAX_PLAYERS && pl.slot !== m.slot) addPeer(pl.slot, cleanName(pl.name));
   if (rejoin) { clearTimeout(rejoin.timer); rejoin = null; }
@@ -518,14 +519,6 @@ function shared(m, p) {
   return true;
 }
 
-// A pickup as it came over the wire (game/loot.js packPickup), and a generated weapon's data
-const validGen = g => !!g && typeof g === 'object' && Object.hasOwn(RARITY, g.rarity) && Number.isFinite(g.ilvl)
-  && Array.isArray(g.affixes) && typeof g.name === 'string';
-function validPickup(m) {
-  return !!m && typeof m.id === 'string' && typeof m.itemId === 'string' && Object.hasOwn(ITEMS, m.itemId)
-    && Number.isInteger(m.count) && m.count > 0 && finite(m.x, m.y, m.z, m.toss)
-    && Array.isArray(m.from) && m.from.length === 3 && finite(...m.from) && (m.gen === undefined || validGen(m.gen));
-}
 const strings = xs => Array.isArray(xs) && xs.every(x => typeof x === 'string');
 
 // The shared floor loot (game/loot.js). The host decides: a guest's drop stands if it is the

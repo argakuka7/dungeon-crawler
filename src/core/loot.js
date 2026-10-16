@@ -2,6 +2,7 @@
 // no renderer (see game/loot.js and render/loot.js). Weapons are generated (core/gear/).
 import { COINS, ITEMS } from './items.js';
 import { coinCounts, whole } from './inventory.js';
+import { RARITY } from './gear/rarities.js';
 
 export const WALK_RADIUS = 0.45;   // walking over a pickup takes it
 export const MAGNET_RADIUS = 1;    // coins pull themselves in this close (cells)
@@ -39,3 +40,14 @@ export const inFloorReach = (p, x, y, z) => labelled(p)
   && Math.hypot(p.x - x, p.z - z) <= COLLECT_RADIUS && Math.abs(p.y - y) <= COLLECT_HEIGHT;
 // is the player at (x, y, z) standing on pickup p?
 export const steppedOn = (p, x, y, z) => Math.hypot(p.x - x, p.z - z) <= WALK_RADIUS && Math.abs(p.y - y) <= 0.8;
+
+// A generated weapon's own data, and a pickup as it is packed (game/loot.js packPickup), as they
+// come over the wire (net/session.js) or out of a save (core/save.js)
+const finite = (...xs) => xs.every(Number.isFinite);
+export const validGen = g => !!g && typeof g === 'object' && Object.hasOwn(RARITY, g.rarity) && Number.isFinite(g.ilvl)
+  && Array.isArray(g.affixes) && typeof g.name === 'string';
+export function validPickup(m) {
+  return !!m && typeof m.id === 'string' && typeof m.itemId === 'string' && Object.hasOwn(ITEMS, m.itemId)
+    && Number.isInteger(m.count) && m.count > 0 && finite(m.x, m.y, m.z, m.toss)
+    && Array.isArray(m.from) && m.from.length === 3 && finite(...m.from) && (m.gen === undefined || validGen(m.gen));
+}

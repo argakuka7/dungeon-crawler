@@ -28,7 +28,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // selected: { from: 'bag', id: instanceId } | { from: 'floor', id: pickup id } |
 // { from: 'shop', id: item id } | null; trader: the villager whose wares are shown (or null)
-let selected = null, signature = '', previousFocus = null, floorMode = false, trader = null;
+let selected = null, signature = '', shown = null, previousFocus = null, floorMode = false, trader = null;
 
 export const inventoryFloor = () => state.inventoryOpen && floorMode;
 // villager: open with their wares (a villager with a shop) instead of the floor
@@ -131,8 +131,8 @@ export function updateInventory() {
   if (selected && !selectedItem()) selected = null;
   const item = selectedItem(), sel = selected ? `${selected.from}:${selected.id}` : '';
   const next = `${inv.version}:${sel}:${floorMode}:${trader?.name}:${floor.map(p => p.id)}:${allowed}:${state.equipping}:${player.hp}:${player.xp}:${state.statusMsg}`;
-  if (next === signature) return;
-  signature = next;
+  if (next === signature && inv === shown) return;   // (another hero's bag: game/save.js)
+  signature = next; shown = inv;
   const xp = xpProgress(player), shop = shopOf(trader);
   $('inventory-panel').classList.toggle('with-floor', floorMode || !!shop);
   $('inventory-floor-col').hidden = !floorMode;

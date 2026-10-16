@@ -6,7 +6,7 @@
 // whole run) until collected. They are credited when they reach the player.
 //
 // Every drop has a source: an enemy (`e:<id>`), a chest (`c:<site id>`) or something put down
-// from the bag (`b:<player>:<n>`), and each pickup is `<source>#<i>`. A source drops once per
+// from the bag (`b:<player>:<page><n>`), and each pickup is `<source>#<i>`. A source drops once per
 // run (run.dropped), until a death puts its enemy back (forgetLoot).
 //
 // Playing together the floor loot is shared: one copy of every pickup, for whoever takes it
@@ -41,6 +41,9 @@ export const TOSS_TIME = 0.55;   // the arc out of the body
 const TAKE_REACH = 0.6;          // a clicked pickup is taken from this close (cells)
 const TO_FRIEND = 0.3;           // s a pickup takes to fly to the friend who got it
 let seq = 1, bagDrops = 0, collectRequested = false;
+// what this page puts down from the bag is `b:<player>:<page><n>`: a saved world (or a friend's
+// we come back to after a reload) may still hold what an earlier page put down
+const page = Math.random().toString(36).slice(2, 7);
 let gained = null, quiet = 0;      // pickups credited recently, shown together
 
 export const lootHere = () => state.run.loot.get(state.cubeKey) || [];
@@ -101,7 +104,7 @@ export function spill(source, at, copper, items, extra = {}, from = { x: at.x, y
 
 // put item ({ itemId, count, gen? }) down at the player's feet; it stays there through a death
 export function dropAtFeet(item) {
-  const source = `b:${online.slot ?? 0}:${++bagDrops}`;
+  const source = `b:${online.slot ?? 0}:${page}${++bagDrops}`;
   const p = place(lootIn(state.cubeKey), item, `${source}#0`, source, landing(player.x, player.y, player.z, 0.35, 0.8),
     { x: player.x, y: player.y + 0.5, z: player.z }, { kept: true, refused: true });   // refused: not straight back in when walking over it
   state.run.dropped.add(source);
@@ -302,7 +305,9 @@ export function grant(key, id, to = null) {
 // the host's floor loot, for a guest who comes ([[cube, packed pickups]])
 export const allLoot = () => [...state.run.loot].map(([k, list]) => [k, list.filter(p => !p.claim).map(p => ({ ...packPickup(p), source: p.source }))])
   .filter(([, list]) => list.length);
-// a guest coming into the host's world: its floor loot instead of ours
+// the floor loot as a save keeps it: what lies there, landed (core/save.js)
+export const savedLoot = () => allLoot().map(([k, list]) => [k, list.map(p => ({ ...p, toss: 1 }))]);
+// a guest coming into the host's world (and a saved world, game/flow.js): its floor loot instead of ours
 export function takeLoot(cubes) {
   state.run.loot.clear();
   for (const [k, list] of cubes) state.run.loot.set(k, list.map(m => unpack(m, m.source)));

@@ -64,6 +64,7 @@ import { musicInfo } from './audio/music.js';
 import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
+import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 
 const clock = new THREE.Clock();
 
@@ -110,6 +111,7 @@ function frame() {
   updatePortalBar();
   updateCastBar();
   updateMusic(elapsed);
+  updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -127,6 +129,7 @@ window.__game = {
   get enemies() { return allEnemies(); }, updateEnemies,
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go
   net: { online, hostGame, joinGame, leaveGame, status: sessionStatus },   // playing together (net/session.js)
+  saves: { store, play, saveAs, saveNow, get hero() { return savedHero(); }, get world() { return savedWorld(); } },   // game/save.js
   chat: { open: openChat, close: closeChat, say, run: runCommand, chronicle },   // the chat box (game/console.js)
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,

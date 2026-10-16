@@ -24,7 +24,7 @@ import { clearEffects } from '../core/potions.js';
 import { restoreDefeated, gateLocked, guardianLockMessage } from '../core/guardians.js';
 import { syncEquippedWeapon } from './equipment.js';
 import { clearInput } from './inputstate.js';
-import { lootMark, forgetLoot } from './loot.js';
+import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
@@ -246,8 +246,10 @@ whenPropsReady(() => {
 });
 
 // keepPlayer: the player keeps their character (level, bag, gear); joining a friend's world
-// (src/net/session.js)
-export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = false } = {}) {
+// (src/net/session.js), or a saved hero (game/save.js). restore: a saved world's progress
+// (game/save.js restoreOf): { name, run, faces, visited, spot }; spot: { cube, arrival } where to
+// come in (else the town's spawn pad)
+export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = state.keepHero, restore = null } = {}) {
   clearNeighbors(); clearNeighborCache();
   state.cubes?.dispose();
   state.cubes = new WorldClient(seed, { arche: state.dev && new URLSearchParams(location.search).get('arche') });
@@ -257,11 +259,32 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = fals
   clearInput();
   if (!keepPlayer) Object.assign(player, createPlayerStats(state.dev));
   state.run = createRun(); state.inventoryOpen = false;
-  log('world', { seed });
+  if (restore) restoreRun(restore);
+  log('world', restore?.name ? { seed, name: restore.name } : { seed });
+  // a saved spot whose cube does not come (the generator changed): the town instead
+  const cubes = state.cubes, spot = restore?.spot;
+  const first = spot ? cubes.get(spot.cube).catch(() => cubes.get(cubes.start)) : cubes.get(cubes.start);
   // the villagers are a nicety: a failure to load them (logged) does not hold the game up
-  return whenReady(Promise.all([state.cubes.get(state.cubes.start), townAssetsReady, syncEquippedWeapon(),
+  return whenReady(Promise.all([first, townAssetsReady, syncEquippedWeapon(),
     villagersReady.catch(() => null)]))
-    .then(([c]) => { enterCube(c); state.transitioning = false; });
+    .then(([c]) => {
+      if (state.cubes !== cubes) return;
+      if (spot && c.key === spot.cube) enterCube(c, null, null, spot.arrival); else enterCube(c);
+      state.transitioning = false;
+      if (restore) for (const k of restore.visited) shareVisit(k);   // the map comes back, nearest first
+    });
+}
+
+// a saved world's progress into the fresh run (newWorld)
+function restoreRun({ run, faces }) {
+  const r = state.run;
+  for (const id of run.defeated) r.defeated.add(id);
+  for (const k of run.gates) r.unlockedGates.add(k);
+  for (const id of run.chests) r.chests.add(id);
+  for (const s of run.dropped) r.dropped.add(s);
+  r.townPortal = run.townPortal;
+  takeLoot(run.loot);
+  for (const k of faces) state.openedFaces.add(k);
 }
 
 export function nextCube() {

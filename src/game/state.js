@@ -41,6 +41,7 @@ export const state = {
   visit: null,       // this cube as you came in: what a death restores (game/flow.js)
   fallFrom: null,    // falling through cubes: the cube the fall started in (game/fall.js)
   dev,   // debug tools (?dev=1)
+  keepHero: false,   // a saved hero is played (game/save.js): a new world (N) keeps it as it is
   devPassive: false,   // dev: enemies stand still and never attack (game/devspawn.js)
   baseSeed: params.has('seed') ? (parseInt(params.get('seed'), 10) >>> 0) : (Math.random() * 1e9) >>> 0,
 };
