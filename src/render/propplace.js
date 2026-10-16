@@ -20,7 +20,7 @@ function picker(theme, R) {
 }
 
 export function placeProps(m, theme) {
-  const out = [...(m.sitePlacements || [])], blockers = Array.from({ length: N * N }, () => []);
+  const out = [...(m.sitePlacements || []), ...(m.arenaPlacements || [])], blockers = Array.from({ length: N * N }, () => []);
   if (m.authoredProps) return { out: m.authoredProps, blockers };
   if (!props.ready || !theme.props) return { out, blockers };
   const R = mulberry32(hash32(m.seed ^ 0x9a0b5)), pick = picker(theme, R);
@@ -44,7 +44,7 @@ export function placeProps(m, theme) {
     && m.cols[idx(f.x + dx, f.z + dz)].some(g => g.fluid && Math.abs(g.surf - f.top) <= 3));
 
   for (const f of m.floors) {
-    if (f.encounter) continue;   // guardian arena: unobstructed sightlines and body clearance
+    if (f.arenaCell) continue;   // guardian arena: dressed with its terrain (cubegen/arenaprops.js)
     const col = m.cols[f.c], above = col[col.indexOf(f) + 1];
     const pieces = m.pieces[f.c], top = Math.max(...f.cs), ceiling = above ? above.bottom * LH : Infinity;
     const slope = top - Math.min(...f.cs), s = 0.85 + R() * 0.3;

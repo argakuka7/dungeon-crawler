@@ -6,6 +6,7 @@ import { key, faceKey } from './coords.js';
 import { MAX_DEPTH } from '../themes/depth.js';
 import { planSites } from './sites.js';
 import { planHordes } from './hordes.js';
+import { planArenas } from './arenas.js';
 
 // learn: world.html#route (see learn/README.md)
 export const MIN_ROUTE_ROOMS = 7, MAX_ROUTE_ROOMS = 14;
@@ -115,6 +116,6 @@ function build(seed, d, above) {
 
 export function makeLayouts(seed) {
   const cache = [];
-  const get = d => cache[d] || (cache[d] = build(seed, d, d ? get(d - 1) : null));
+  const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null)));
   return get;
 }

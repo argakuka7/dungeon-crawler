@@ -4,7 +4,7 @@
 //   PageDown / PageUp: go down / up a depth right away (finding the well / ring first)
 //   Alt + WASD / arrows: go to the adjacent cube on that side of the screen
 // None of them wait for guardians: locked portals are taken anyway (the gate stays locked).
-// The console's developer commands (game/devcommands.js: /find, /goto, /horde, /go) do the same.
+// The console's developer commands (game/devcommands.js: /find, /goto, /horde, /arena, /go) do the same.
 import * as THREE from 'three';
 import { camera, renderer } from '../render/scene.js';
 import { step } from '../world/coords.js';
@@ -78,6 +78,27 @@ export async function goHorde(depth = state.map?.depth ?? 0) {
     if (state.cubes !== cubes) return;
     enterCube(c, c.map.portals[0].dir);
     setStatus(`Wild horde · depth ${depth} · ${c.map.horde.count} enemies`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Jump into a guardian arena of a kind (world/arenas.js), the nearest depth first; with no
+// kind, this depth's way down. The gate stays locked: it is the real arena.
+export async function goArena(type, depth = state.map?.depth ?? 0) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, order = Array.from({ length: 20 }, (_, i) => i)
+    .sort((a, b) => Math.abs(a - depth) - Math.abs(b - depth) || a - b);
+  let key = null;
+  for (const d of type ? order : [Math.min(depth, 19)]) {
+    for (const [k, g] of cubes.layout(d).guardians) if (!type || g.arena === type) { key = k; break; }
+    if (key) break;
+  }
+  if (!key) { setStatus(`No ${type} arena in this world`); return; }
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(key));
+    if (state.cubes !== cubes) return;
+    enterCube(c, c.map.portals[0].dir);
+    setStatus(`Guardian arena · ${c.map.arena.type} · depth ${c.map.depth}`);
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 

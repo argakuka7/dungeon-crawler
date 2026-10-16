@@ -71,9 +71,53 @@ Committed attack wind-ups are not cancelled. Unlocking removes defence intention
 ## Generation
 
 `cubegen/guardian.js` builds a dry single-layer arena, with both side pads forced
-to the same ground level on both sides of their shared faces. All combat positions
-connect without jumps, ladders, cramped slabs, rivers or blocking clutter. Rails
-protect lower perimeter terrain. Void and waterfall shafts are disabled in arenas.
+to the same ground level on both sides of their shared faces. Void and waterfall
+shafts are disabled in arenas.
+
+### Arena types
+
+`world/arenas.js` gives each guardian one of eight arena types, using its own
+seeded stream per depth, so routes and terrain are unaffected. Within a depth no
+two arenas share a type.
+
+- Descents lean towards colosseum, dais, crater, henge and courtyard.
+- Side gates lean towards hills, gorge, henge, grove, crater and courtyard.
+- Caves favour gorges and courtyards over groves and hills.
+
+`cubegen/arenashapes.js` draws the terrain around the arena frame (entrance,
+guardian, gate):
+
+| Type | Terrain | Focal clutter |
+|---|---|---|
+| hills | rolling slopes, mounds up to four levels and a dip | a tree, stone or flag on each peak |
+| gorge | a winding channel between cliffs three to eight levels high | boulders at the cliff foot, scenery on the cliff tops, faces dressed |
+| colosseum | a flat oval of sand inside stepped seating, entered through cuts | columns and braziers around the rim, weapons and remains on the sand |
+| dais | square terraces down from the guardian's throne to a sunken court and up to the entrance, joined by a ramp; galleries flank the court | ritual circle and braziers in the court, obelisks at the ramp, columns on the galleries |
+| henge | gentle ground in a low berm | a ring of standing stones, an altar or ritual circle, cairns |
+| crater | a bowl two levels deep under a crisp rim, crossed by a trench ridge | toppled columns, boulders, weapon graves, scattered remains |
+| grove | gentle ground, some knolls | clumps of trees, logs, dense undergrowth |
+| courtyard | a ruined wall ring with breaches and stubs | columns at the wall ends, urns, statues, braziers |
+
+The fight zone (`encounter` floors) links only by slopes of one level and by flat
+edges. Terraces and lips are crisp steps that ramps join. Scenery next to the zone
+is at least two levels up, so it is a wall rather than a ledge. Lower ground beside
+the zone gets rails: two levels down for perimeter pockets, any drop for scenery.
+The doorway pads, a ring around them and the guardian's 3×3 spot stay exactly flat.
+
+`cubegen/arenaprops.js` dresses the arena with the terrain, inside the worker.
+The type decides the roles: cover, small, tree, debris, stone, wall, lip and
+remains, plus braziers and columns. The biome's palette fills each role.
+Blocking props are colliders in `map.staticBlockers`, the same map that
+navigation and spawns use. Each one stays inside its own cell, never on the
+doorways, the guardian's spot or the entrance-to-guardian lane. One is only
+placed if every free zone floor stays reachable. The generic scatter
+(`render/propplace.js`) leaves arena floors alone and only dresses the outer ring.
+
+An arena must hold its doubled population, plus at least eight free floors (more
+in crowded depths) away from the doorways. If it cannot, its blocking clutter
+thins out, then it falls back to hills, then crater, then the old flat arena.
+`map.arena` records `{ type, requested }`. The dev command `/arena [kind] [depth]`
+jumps into the nearest arena of a kind.
 
 `map.guardian` retains the floor, position, approach, exit and portal ID.
 `map.gateKeys` associates shared side faces with persistent gate identities;
@@ -88,6 +132,9 @@ npm test
 Layout tests sample 1,000 seeds across all depths, including full-discovery
 shortcuts and each side guardian's mandatory cut. Arena tests cover both tiers,
 shared pads, navigation/spacing, population, strength, retreat and persistence.
+`tests/arenas.test.js` forces every arena type on real guardian cubes. It checks
+the flat doorways, zone connectivity with clutter, out-of-reach scenery, rails,
+the roster fitting, how often each type falls back, and that the types differ.
 Browser checks exercise workers, assets, shaders, seals, charging and real travel:
 
 ```js

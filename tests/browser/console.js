@@ -46,7 +46,8 @@ export async function runConsoleChecks() {
     // ` opens it with the / typed: the commands are offered, Tab takes one
     key('Backquote', '`');
     check(chatOpen() && input().value === '/', '` must open the box with a /');
-    check(popup()[0] === 'clear' && popup().includes('weapon'), 'All the commands must be offered, in order: ' + popup());
+    check(popup().join() === [...popup()].sort().join() && popup().includes('clear') && popup().includes('weapon'),
+      'All the commands must be offered, in order: ' + popup());
     key('ArrowDown', 'ArrowDown', input()); key('ArrowDown', 'ArrowDown', input());
     check($('chat-popup').children[2].classList.contains('on'), 'Down must move through the suggestions');
     key('ArrowUp', 'ArrowUp', input()); key('ArrowUp', 'ArrowUp', input()); key('ArrowUp', 'ArrowUp', input());

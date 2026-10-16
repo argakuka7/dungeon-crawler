@@ -12,7 +12,8 @@ import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
-import { goTo, goHorde, goAdjacent } from './dev.js';
+import { goTo, goHorde, goArena, goAdjacent } from './dev.js';
+import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
 import { forceMood } from './music.js';
 import { nextCube, newWorld } from './flow.js';
@@ -64,6 +65,12 @@ dev({
 dev({
   name: 'horde', help: "a depth's wild horde (H)", args: [{ name: 'depth', type: 'depth', optional: true }],
   async run({ depth }) { await goHorde(depth === undefined ? undefined : Number(depth)); },
+});
+addType(commands, { name: 'arena', values: () => Object.keys(ARENA_WEIGHTS.descent).map(t => ({ value: t, label: t })) });
+dev({
+  name: 'arena', help: 'a guardian arena of this kind (nearest depth first)',
+  args: [{ name: 'kind', type: 'arena', optional: true }, { name: 'depth', type: 'depth', optional: true }],
+  async run({ kind, depth }) { await goArena(kind, depth === undefined ? undefined : Number(depth)); },
 });
 dev({
   name: 'newworld', help: 'start a new world (N), with this seed', args: [{ name: 'seed', type: 'int', optional: true, min: 0, max: 2 ** 32 - 1 }],
