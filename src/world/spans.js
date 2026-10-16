@@ -185,8 +185,9 @@ export function indexSpans(layout, spans, cells) {
 }
 
 // how a span's bridge is built: one of the theme's bridge styles, the same in all its cubes
+// (no stone arches over the sky: their piers would stand on nothing)
 export function spanStyle(span, weights) {
-  const w = Object.entries(weights);
+  const w = Object.entries(weights).filter(([s]) => !span.sky || s !== 'stone');
   let r = mulberry32(span.seed)() * w.reduce((s, [, v]) => s + v, 0);
   for (const [s, v] of w) if ((r -= v) < 0) return s;
   return 'plank';

@@ -93,6 +93,8 @@ test('a span\'s cubes meet at every face and carry one long bridge from pad to p
           for (const f of m.cols[p.c]) if (f.top * LH < deck) assert.ok(Math.max(...f.cs) < deck - 0.4, `${seed}: ${k} ground under the deck`);
         }
         assert.equal(m.archetype, 'gorge');
+        // over the sky nothing stands on the void under the bridge
+        if (s.sky) { assert.notEqual(r.style, 'stone'); assert.ok(!r.pillars?.length, `${seed}: ${k} legs into the void`); }
         bridges++;
       });
       // every portal of every span cube leads on (the bridge works both ways)
