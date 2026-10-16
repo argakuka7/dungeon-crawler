@@ -27,6 +27,7 @@ import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
 import { updateQuickbar } from './game/quickbar.js';
 import { updateTouch } from './game/touch.js';
+import './game/nozoom.js';   // the page never zooms, only the game's view
 import { updateLoot } from './game/loot.js';
 import { updateLootLabels } from './game/lootlabels.js';
 import { tickFloatText } from './render/floattext.js';

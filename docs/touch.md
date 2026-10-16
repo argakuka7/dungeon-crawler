@@ -33,9 +33,17 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   A ring fills under the finger.
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
   closer), twist to turn the view a quarter (each 35 degrees).
-- The page itself never zooms: no double-tap zoom (`touch-action: manipulation` on every
-  element; the game and the touch controls take all touches, `none`), and the viewport is not
-  scalable (`user-scalable=no`, for Android; iOS goes by `touch-action`).
+- The page itself never zooms (`src/game/nozoom.js`), only the game's view:
+  - no double-tap zoom: `touch-action: manipulation` on every element (the game and the touch
+    controls take all touches, `none`);
+  - no pinch zoom: the viewport is not scalable (`user-scalable=no`, enough for Android); iOS
+    ignores that, so Safari's own `gesturestart` / `gesturechange` events are called off, and
+    any `touchmove` with two or more fingers too (one finger still scrolls a list). The game's
+    pinch and twist read pointer events and go on;
+  - no zoom into a field getting focus (iOS does that for text under 16 px): fields have 16 px
+    text on touch screens (and `maximum-scale=1`);
+  - no browser zoom from a trackpad pinch (a wheel with Ctrl: over the game it still zooms the
+    game's view) or Ctrl/Cmd with + - 0.
 
 The menu button at the end of the quick bar opens the Esc menu (`src/game/escmenu.js`): playing
 together, the controls and the music. Respawning has no touch control yet.

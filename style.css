@@ -218,6 +218,9 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 /* no double-tap zoom anywhere (touch-action is per element, not inherited; the game's own pinch is below) */
 *, *::before, *::after { touch-action: manipulation; }
 body.touch canvas, #touch, #touch * { touch-action: none; }
+/* iOS zooms into a field with smaller text when it gets focus (game/nozoom.js) */
+body.touch :is(input, textarea, select) { font-size: 16px !important; }
+@media (pointer: coarse) { :is(input, textarea, select) { font-size: 16px !important; } }
 #touch { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
 #touch-stick { position: absolute; left: 0; bottom: 0; width: 45vw; height: 65vh; pointer-events: auto; }
 #touch-ring { position: fixed; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; box-sizing: border-box;
