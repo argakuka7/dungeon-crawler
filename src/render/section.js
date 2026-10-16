@@ -15,6 +15,7 @@ import { buildOf } from '../themes/builds.js';
 import { scene, camera, renderer } from './scene.js';
 import { U, inject, turnShape, CUT_KINDS } from './cutshader.js';
 import { WALL_CUT, CUT_HEIGHT } from './interior.js';
+import { showGhosts } from './ghosts.js';
 
 const RADIUS = 2.8;   // world units around the character
 
@@ -77,6 +78,7 @@ export function setCut(y, map, px, py, pz) {
   const on = y < CUBE_H;
   turnShape(performance.now() / 1000);
   U.uCutY.value = on ? y : 1e3;
+  showGhosts(on);   // the cut-away part as glass: only drawn inside a cut (ghosts.js)
   // cave walls (and the walls of a house, inside) on the camera's side come down to a little
   // over the character
   // inside a house they go entirely, down to the floor, with what hangs on them (not the door)
