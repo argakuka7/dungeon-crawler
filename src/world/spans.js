@@ -33,6 +33,7 @@ const HIGH = 8;
 // an island branch may take, budget: how many rooms an island branch may add. Returns the
 // spans, the cells they claim and `apart`: cubes no other room may border (a sky gorge, an
 // island and its gorge).
+// learn: world.html#bridges (see learn/README.md)
 export function planSpans(seed, d, spine, K, blocked, free, budget) {
   const cfg = themeAt(d).spans;
   const spans = [], cells = new Map(), lonely = new Set();

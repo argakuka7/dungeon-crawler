@@ -82,6 +82,8 @@
         <li lang="de"><b>Wächter:</b> Der Raum mit dem Brunnen bekommt immer den Brunnenwächter. Ein oder zwei Räume unterwegs bekommen Torwächter.</li>
         <li lang="en"><b>Side rooms:</b> some rooms get one extra room next to them, never more than 14 rooms per depth in total.</li>
         <li lang="de"><b>Nebenräume:</b> Manche Räume bekommen einen zusätzlichen Raum daneben, aber nie mehr als 14 Räume pro Tiefe insgesamt.</li>
+        <li lang="en"><b>Bridges:</b> on depths 1 and 2, a straight row of rooms may become a gorge with one long bridge across it, or a bridge out to a lonely island (see <a href="#bridges">the bridges</a>).</li>
+        <li lang="de"><b>Brücken:</b> In Tiefe 1 und 2 kann eine gerade Reihe von Räumen zu einer Schlucht mit einer langen Brücke darüber werden, oder zu einer Brücke hinaus zu einer einsamen Insel (siehe <a href="#bridges">die Brücken</a>).</li>
         <li lang="en"><b>No shortcuts:</b> side rooms never connect to other rooms, so you cannot sneak around a guardian.</li>
         <li lang="de"><b>Keine Abkürzungen:</b> Nebenräume sind nie mit anderen Räumen verbunden, also kannst du dich nicht an einem Wächter vorbeischleichen.</li>
         <li lang="en"><b>Treasure:</b> each depth plans four treasure sites, mostly in side rooms.</li>
@@ -188,6 +190,8 @@
         <li lang="de">wo ein <b>Fluss</b> darüber geht und wie breit er ist</li>
         <li lang="en">where the <b>portal</b> (the gate) stands, and on which floor</li>
         <li lang="de">wo das <b>Portal</b> (das Tor) steht und auf welchem Stockwerk</li>
+        <li lang="en">on a gorge: the valley's shape instead of noise, and a pad where the bridge crosses</li>
+        <li lang="de">bei einer Schlucht: die Form des Tals statt Rauschen, und ein Absatz, wo die Brücke hinübergeht</li>
       </ul>
       <p lang="en">Each face even has its own dice (its own seed), so it comes out the same no matter which cube decided it.</p>
       <p lang="de">Jede Seite hat sogar eigene Würfel (einen eigenen Seed). Darum kommt sie gleich heraus, egal welcher Würfel sie entschieden hat.</p>
@@ -203,6 +207,27 @@
   </div>
 </section>
 
+<section class="slide" id="bridges" data-lv="1" data-src="src/world/spans.js#planSpans src/cubegen/span.js#shapeGorge,spanBridge">
+  <h2 lang="en">Long bridges over gorges</h2>
+  <h2 lang="de">Lange Brücken über Schluchten</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">On the sky islands (depths 1 and 2), the planner sometimes picks a <b>straight row</b> of three or four rooms. The rooms in the middle become a <b>gorge</b>: a deep valley with a river, or just empty sky. Only one long bridge leads across.</p>
+      <p lang="de">Auf den Himmelsinseln (Tiefe 1 und 2) sucht sich der Planer manchmal eine <b>gerade Reihe</b> aus drei oder vier Räumen aus. Die Räume in der Mitte werden zu einer <b>Schlucht</b>: ein tiefes Tal mit einem Fluss, oder einfach leerer Himmel. Nur eine lange Brücke führt hinüber.</p>
+      <p lang="en">Every wall the bridge passes through gets a <b>height</b> for it. So a bridge can stay high over the valley, or come all the way down from the top of a cliff to the river bank. Where two gorge rooms meet, the bridge rests on a rock pillar.</p>
+      <p lang="de">Jede Wand, durch die die Brücke geht, bekommt eine <b>Höhe</b> für sie. So kann eine Brücke hoch über dem Tal bleiben oder von ganz oben auf einer Klippe bis zum Flussufer hinunterführen. Wo zwei Schluchträume sich treffen, ruht die Brücke auf einer Felssäule.</p>
+      <p lang="en">Sometimes the bridge leads <b>away</b> from the route, to a lonely island with a treasure. The bridge is the only way there, and from its start you can already see the island waiting.</p>
+      <p lang="de">Manchmal führt die Brücke <b>weg</b> von der Route, zu einer einsamen Insel mit einem Schatz. Die Brücke ist der einzige Weg dorthin, und schon von ihrem Anfang aus siehst du die Insel warten.</p>
+      <div class="card">
+        <h3 lang="en">Why not let the builder find it?</h3>
+        <h3 lang="de">Warum sucht der Baumeister sie nicht selbst?</h3>
+        <p lang="en">The builder's own bridges are short (up to 7 squares) and almost flat. A gorge bridge is 12 squares long and may climb half the height of the cube. So the builder gets it <b>ready-made</b>, from pad to pad, and the route just walks over it.</p>
+        <p lang="de">Die eigenen Brücken des Baumeisters sind kurz (bis zu 7 Felder) und fast flach. Eine Schluchtbrücke ist 12 Felder lang und kann die halbe Höhe des Würfels hochsteigen. Darum bekommt der Baumeister sie <b>fertig</b>, von Absatz zu Absatz, und die Route geht einfach darüber.</p>
+      </div>
+    </div>
+    <figure><img class="shot" src="img/sky-bridge.jpg" alt="A rope bridge over empty sky, from a rock pillar to the next island, and another rope bridge going back to where the hero came from" data-de-alt="Eine Hängebrücke über leerem Himmel, von einer Felssäule zur nächsten Insel, und eine zweite Hängebrücke zurück, wo der Held herkam"><figcaption lang="en">A gorge over the sky: the hero stands on the rock pillar between two gorge rooms.</figcaption> <figcaption lang="de">Eine Schlucht über dem Himmel: Der Held steht auf der Felssäule zwischen zwei Schluchträumen.</figcaption></figure>
+  </div>
+</section>
 
 <section class="slide" id="factory" data-lv="1">
   <h2 lang="en">The builder: try the real cube factory</h2>
@@ -251,14 +276,14 @@
       <li lang="de">Rampen und Stützen</li>
       <li lang="en">Pools and streams, then banks all around every water (no water in the air!)</li>
       <li lang="de">Teiche und Bäche, dann Ufer rund um jedes Wasser (kein Wasser in der Luft!)</li>
-      <li lang="en">Every possible move: walk, drop, jump, stairs, bridge, ladder</li>
-      <li lang="de">Jede mögliche Bewegung: gehen, fallen, springen, Treppe, Brücke, Leiter</li>
+      <li lang="en">Every possible move: walk, drop, jump, stairs, bridge, ladder (a gorge's long bridge is laid down whole)</li>
+      <li lang="de">Jede mögliche Bewegung: gehen, fallen, springen, Treppe, Brücke, Leiter (die lange Brücke einer Schlucht wird am Stück hingelegt)</li>
       <li lang="en">Routes between the portals, and to the horde and past it</li>
       <li lang="de">Routen zwischen den Portalen, und zur Horde und an ihr vorbei</li>
     </ol>
     <ol class="steps" style="counter-reset: s 12">
-      <li lang="en">Escape routes from places you could fall into</li>
-      <li lang="de">Fluchtwege aus Stellen, in die man fallen kann</li>
+      <li lang="en">Ways up onto cut-off platforms, and escape routes from places you could fall into</li>
+      <li lang="de">Wege hinauf auf abgeschnittene Plattformen, und Fluchtwege aus Stellen, in die man fallen kann</li>
       <li lang="en">Place the stairs, bridges and ladders</li>
       <li lang="de">Treppen, Brücken und Leitern aufstellen</li>
       <li lang="en">Smooth the ground</li>
@@ -323,8 +348,8 @@
       <p lang="de">Der Teil <code>hashKey(k) % 1000 * 1e-6</code> ist ein winziger Gleichstandsbrecher, damit zwei gleiche Würfel immer in derselben Reihenfolge gewählt werden.</p>
       <p lang="en">Then the marble bag picks a piece, and <code>layersOf</code> decides how many floors it gets (leaning towards what the neighbours have, so tall regions form).</p>
       <p lang="de">Dann wählt der Murmelbeutel ein Teil, und <code>layersOf</code> entscheidet, wie viele Stockwerke es bekommt (es lehnt sich an die Nachbarn an, damit hohe Gebiete entstehen).</p>
-      <p lang="en"><code>collapseDepth</code> collects every room of a depth and the cubes next to them, sorts them, and hands them all to <code>collapse</code> at once. <code>depths</code> remembers which depths are already done.</p>
-      <p lang="de"><code>collapseDepth</code> sammelt alle Räume einer Tiefe und die Würfel daneben, sortiert sie und gibt sie alle auf einmal an <code>collapse</code>. <code>depths</code> merkt sich, welche Tiefen schon fertig sind.</p>
+      <p lang="en"><code>collapseDepth</code> first pins the cubes of a gorge (<code>spanPins</code>): their edges follow the bridge, and they get one floor. Then it collects every room of a depth and the cubes next to them, sorts them, and hands them all to <code>collapse</code> at once. <code>depths</code> remembers which depths are already done.</p>
+      <p lang="de"><code>collapseDepth</code> legt zuerst die Würfel einer Schlucht fest (<code>spanPins</code>): Ihre Kanten richten sich nach der Brücke, und sie bekommen ein Stockwerk. Dann sammelt es alle Räume einer Tiefe und die Würfel daneben, sortiert sie und gibt sie alle auf einmal an <code>collapse</code>. <code>depths</code> merkt sich, welche Tiefen schon fertig sind.</p>
     </div>
   </div>
 </section>

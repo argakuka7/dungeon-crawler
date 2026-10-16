@@ -17,6 +17,7 @@ export const spanSag = (style, k) => style === 'rope' ? Math.min(0.9, 0.07 * k) 
 // cell (x, z) in span terms: u along the span (0 at the face towards end0), w across it
 const along = (dir, x, z) => [[x, z], [N - 1 - x, z], [z, x], [N - 1 - z, x]][dir];
 
+// learn: world.html#bridges (see learn/README.md)
 export function shapeGorge(ctx) {
   const { spec } = ctx, s = spec.span, back = s.dir ^ 1;
   const P0 = spec.faces[back].profile, P1 = spec.faces[s.dir].profile;
@@ -58,6 +59,7 @@ function put(ctx, i, v, under) {
 }
 
 // the gorge's bridge as a move from pad to pad (both ways), for the route search to take
+// learn: world.html#bridges (see learn/README.md)
 export function spanBridge(ctx) {
   const s = ctx.spec.span;
   if (s?.role !== 'gorge') return;
