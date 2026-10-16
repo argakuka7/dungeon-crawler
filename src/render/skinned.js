@@ -31,3 +31,16 @@ export function cullBySphere(mesh, pad = 1.5) {
   mesh.boundingSphere.radius *= pad;
   mesh.frustumCulled = true;
 }
+
+// three.js draws every shadow caster with one shared depth material, so a skinned or instanced
+// caster between plain ones makes it re-pick its program (an expensive cache lookup) each time
+// the kind changes. Skinned and instanced casters get depth materials of their own (the same as
+// three's: RGBA-packed depth); the shared one then only ever sees plain meshes.
+const depth = () => new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+const SKINNED_DEPTH = depth(), INSTANCED_DEPTH = depth();
+export function ownShadowDepth(root) {
+  root.traverse(o => {
+    if (o.isSkinnedMesh) o.customDepthMaterial = SKINNED_DEPTH;
+    else if (o.isInstancedMesh) o.customDepthMaterial = INSTANCED_DEPTH;
+  });
+}

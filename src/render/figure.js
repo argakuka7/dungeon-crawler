@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { ITEMS, outfitOf } from '../core/items.js';
-import { cloneSkinned, cullBySphere } from './skinned.js';
+import { cloneSkinned, cullBySphere, ownShadowDepth } from './skinned.js';
 
 const URL = 'assets/character.glb';
 const sanitize = name => THREE.PropertyBinding.sanitizeNodeName(name);
@@ -66,10 +66,12 @@ export function createFigure(color = null) {
     if (!o.isMesh) return;
     o.material = o.material.clone();
     if (color) o.material.color.set(color);
+    o.material.forceSinglePass = true;   // solid: one pass even when transparent (render/character.js)
     o.castShadow = true;
     if (o.isSkinnedMesh) cullBySphere(o); else o.frustumCulled = false;
     o.userData.sharedGeo = true;   // the rig owns the geometry
   });
+  ownShadowDepth(model);
   const group = new THREE.Group();
   group.add(model);
   const f = { group, model, ...bonesOf(model), worn: {} };

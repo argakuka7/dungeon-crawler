@@ -66,7 +66,7 @@ let poolTex = null, beamTex = null;
 // colour reads in daylight too, and only the beams and the runes add light
 const glowMat = (color, map, opacity, additive = true) => {
   const m = new THREE.MeshBasicMaterial({ color, map, transparent: true, opacity, depthWrite: false,
-    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, side: THREE.DoubleSide, fog: false });
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, side: THREE.DoubleSide, forceSinglePass: true, fog: false });
   m.userData.keep = true; m.userData.base = opacity;
   return m;
 };

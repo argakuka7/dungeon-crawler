@@ -115,7 +115,7 @@ export function removeAreaViews(list) {
 const DOTS = 64, SPACING = 0.22;
 const dotMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, depthTest: false, depthWrite: false });
 const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.035, 8, 6), dotMaterial, DOTS);
-const ringMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+const ringMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, depthTest: false, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true });
 const target = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2), ringMaterial);
 const fillMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.12, depthTest: false, depthWrite: false });
 const fill = new THREE.Mesh(disc, fillMaterial);

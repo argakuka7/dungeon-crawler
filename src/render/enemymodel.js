@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { cloneSkinned, cullBySphere } from './skinned.js';
+import { cloneSkinned, cullBySphere, ownShadowDepth } from './skinned.js';
 import { kindColors } from './recolor.js';
 
 const MAX_PARTS = 12;
@@ -97,7 +97,9 @@ export function partsMaterial(side = THREE.DoubleSide) {
   const fill = make => Array.from({ length: MAX_PARTS }, make);
   const uniforms = { color: fill(() => new THREE.Color(1, 1, 1)), emissive: fill(() => new THREE.Color(0, 0, 0)),
     finish: fill(() => new THREE.Vector2(1, 0)) };
-  const mat = new THREE.MeshStandardMaterial({ side, emissive: 0xffffff });
+  // transparent only to fade out: a solid body, drawn in one pass (three.js draws transparent
+  // double-sided materials twice, back faces first, re-checking the program each time)
+  const mat = new THREE.MeshStandardMaterial({ side, emissive: 0xffffff, forceSinglePass: true });
   const U = { uPartColor: { value: uniforms.color }, uPartEmissive: { value: uniforms.emissive }, uPartFinish: { value: uniforms.finish } };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -145,6 +147,7 @@ export function dressEnemy(prefab, profile) {
     return { ...p, color: (to?.color ?? p.color).clone(), emissive: (to?.emissive ?? p.emissive).clone() };
   });
   const material = mesh.material = partsMaterial(prefab.side);
+  ownShadowDepth(model);
   paintParts(material, parts);
   return { model, mesh, material, parts };
 }

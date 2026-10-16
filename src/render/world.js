@@ -16,6 +16,7 @@ import { openedChest, tickChests } from './chests.js';
 import { placeProps } from './propplace.js';
 import { buildVillagers, tickVillagers } from './villagers.js';
 import { themeAt } from '../themes/depth.js';
+import { ownShadowDepth } from './skinned.js';
 
 export function disposeWorld(world) {
   if (!world) return;
@@ -44,6 +45,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeGeometry(m), open =
   group.add(glass);
   adoptLights(group);
   makeFadable(group);
+  ownShadowDepth(group);   // the props' instanced meshes
   scene.add(group);
   const world = { group, glass, fluidMeshes, splashes, lights, villagers, ...markers };
   setTownPortal(world, townPad);

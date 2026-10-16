@@ -7,6 +7,7 @@ import { CHAR_SCALE } from '../core/constants.js';
 import { scene } from './scene.js';
 import { prepareHeld } from './held.js';
 import { rigReady } from './figure.js';
+import { ownShadowDepth } from './skinned.js';
 
 const SWORD_URL = 'assets/sword.glb';
 const FPS = 30;
@@ -73,6 +74,7 @@ function setup(gltf) {
   group.add(model);
   let mesh = null;
   model.traverse(o => { if (o.isSkinnedMesh) mesh = o; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  ownShadowDepth(model);
   // the body's meshes, for tintCharacter (not what is worn or held later)
   const clay = [];
   model.traverse(o => { if (o.isMesh) clay.push(o); });
@@ -85,6 +87,7 @@ function setup(gltf) {
   mesh.parent.add(ghost);
   // drawn after the silhouette, so the silhouette only shows where terrain hides the body
   mesh.material.transparent = true;
+  mesh.material.forceSinglePass = true;   // a solid body: one pass, not back faces and then front ones
   mesh.renderOrder = 1000;
   const light = new THREE.PointLight(0xffd9a0, 1.2, 3.5, 2);
   light.position.y = 0.9;

@@ -7,7 +7,7 @@ const mats = new Map();
 const mat = (color, onTop) => {
   const k = color + ':' + onTop;
   if (!mats.has(k)) mats.set(k, new THREE.MeshBasicMaterial(onTop
-    ? { color, side: THREE.DoubleSide, transparent: true, depthTest: false }   // drawn over the world
+    ? { color, side: THREE.DoubleSide, transparent: true, depthTest: false, forceSinglePass: true }   // drawn over the world
     : { color, side: THREE.DoubleSide }));
   return mats.get(k);
 };

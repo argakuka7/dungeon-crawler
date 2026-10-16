@@ -53,6 +53,7 @@ function build(slot, name) {
   ghost.userData.sharedGeo = true;
   mesh.parent.add(ghost);
   mesh.material.transparent = true;
+  mesh.material.forceSinglePass = true;   // a solid body (render/character.js)
   mesh.renderOrder = 1000;
   const light = new THREE.PointLight(shade(slot, 0.65), 0.8, 3, 2);
   light.position.y = 0.9;
