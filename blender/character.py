@@ -1598,6 +1598,7 @@ def main(scene=None, export_path=None, active_action="Walk"):
     mod = ob.modifiers.new("Armature", "ARMATURE")
     mod.object = rig
     compute_weights(ob)
+    figure.decimate(ob)
 
     make_animations(rig, ob)
     register_actions(rig, ("Walk", "Run", "Swim", "SwimIdle", "Climb", "Jump", "JumpLandSit",

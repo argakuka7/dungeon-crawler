@@ -144,6 +144,111 @@ def _clay_material():
     return mat
 
 
+# --- game budgets -------------------------------------------------------------
+# Triangles the game draws per model (mesh object name). The SDF meshes are fine (a voxel is
+# about a centimetre) and smooth; in the game a body is a few dozen to a few hundred pixels
+# tall and every skinned triangle is drawn three times (body, silhouette, shadow), so each
+# mesh is collapsed to this many before it is animated and exported (see decimate).
+# tests/assets.test.js holds the exported files to them.
+TRIANGLE_BUDGET = {
+    "Character": 6000,
+    "Spider": 6000, "Stunder": 6000, "Snake": 6000, "Octonaut": 6000, "FireFace": 6000,
+    "Triangle": 6000, "Spicy": 6000, "Wolk": 6000,
+    "FireCat": 8000, "Shraps": 8000, "Wolla": 8000,     # many parts
+    "FireFaceBall": 1500, "ShrapsIceBall": 1500, "TrianglePunch": 1500,   # projectiles
+}
+# How much the collapse spares material borders (joints: 1, kept outright). Fully kept, the
+# Fire-cat's stripes alone would eat its budget; at 0.9 they collapse late and stay clean.
+BORDER = 0.9
+
+
+def _protect(obj):
+    """A vertex group of what the collapse must keep: where two materials meet (stripes, eyes)
+    and where the bone a vertex mostly follows changes (the joints). A limb is straight in the
+    rest pose, so without its joint ring the collapse spans it hip to foot with long triangles
+    that stay straight when the knee bends."""
+    me = obj.data
+    n = len(me.vertices)
+    E = np.empty(len(me.edges) * 2, np.int32)
+    me.edges.foreach_get("vertices", E)
+    E = E.reshape(-1, 2)
+    keep = np.zeros(n, np.float32)
+    # material borders
+    first = np.full(n, -1, np.int64)
+    for p in me.polygons:
+        for vi in p.vertices:
+            if first[vi] < 0:
+                first[vi] = p.material_index
+            elif first[vi] != p.material_index:
+                keep[vi] = BORDER
+    # joints: the bone with the most weight differs across an edge
+    if obj.vertex_groups:
+        lead = np.full(n, -1, np.int64)
+        for v in me.vertices:
+            if v.groups:
+                lead[v.index] = max(v.groups, key=lambda g: g.weight).group
+        cut = lead[E[:, 0]] != lead[E[:, 1]]
+        keep[E[cut].ravel()] = 1.0
+    group = obj.vertex_groups.new(name="GameBudgetKeep")
+    for vi in np.flatnonzero(keep):
+        group.add([int(vi)], float(keep[vi]), "REPLACE")
+    return group
+
+
+def decimate(obj, budget=None):
+    """Collapse obj's mesh to at most its TRIANGLE_BUDGET triangles (Blender's Decimate,
+    collapse), in place, sparing material borders and joints (_protect). Material slots and
+    smooth shading stay; skin weights (vertex groups) are interpolated with the vertices, then
+    limited to four per vertex and normalised, as glTF wants. Other modifiers (the armature) are
+    left on but not applied. Returns (before, after)."""
+    budget = budget or TRIANGLE_BUDGET[obj.name]
+    me = obj.data
+    me.calc_loop_triangles()
+    before = len(me.loop_triangles)
+    if before <= budget:
+        return before, before
+    shown = [(m, m.show_viewport) for m in obj.modifiers]
+    for m, _ in shown:
+        m.show_viewport = False
+    keep = _protect(obj)   # (the last vertex group)
+    mod = obj.modifiers.new("GameBudget", "DECIMATE")
+    mod.decimate_type = "COLLAPSE"
+    mod.use_collapse_triangulate = True
+    mod.ratio = budget / before * 0.98
+    # inverted: unprotected vertices weigh 1 and collapse freely, the joints 0 and stay, the
+    # borders (0.1) go only late
+    mod.vertex_group, mod.invert_vertex_group = keep.name, True
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    low = bpy.data.meshes.new_from_object(obj.evaluated_get(depsgraph), preserve_all_data_layers=True, depsgraph=depsgraph)
+    obj.modifiers.remove(mod)
+    for m, v in shown:
+        m.show_viewport = v
+    name = me.name
+    obj.data = low
+    bpy.data.meshes.remove(me)
+    low.name = name
+    obj.vertex_groups.remove(obj.vertex_groups["GameBudgetKeep"])   # the last group: no index shifts
+    if obj.vertex_groups:
+        # read every vertex's weights first: removing from a group shifts v.groups under us
+        weights = []
+        for v in low.vertices:
+            ws = sorted(((g.weight, g.group) for g in v.groups if g.weight > 1e-5), reverse=True)[:4]
+            total = sum(w for w, _ in ws)
+            assert total > 0, f"{obj.name}: vertex {v.index} lost its weights"
+            weights.append([(gi, w / total) for w, gi in ws])
+        every = list(range(len(low.vertices)))
+        for g in obj.vertex_groups:
+            g.remove(every)
+        for vi, ws in enumerate(weights):
+            for gi, w in ws:
+                obj.vertex_groups[gi].add([vi], w, "REPLACE")
+    low.calc_loop_triangles()
+    after = len(low.loop_triangles)
+    assert after <= budget, (obj.name, before, after, budget)
+    print(f"{obj.name}: {before} -> {after} triangles")
+    return before, after
+
+
 def _sdf_to_mesh(name, sdf, lo, hi, voxel):
     lo = np.floor(np.asarray(lo) / voxel).astype(int)
     hi = np.ceil(np.asarray(hi) / voxel).astype(int)

@@ -577,6 +577,7 @@ def main(scene=None, export_path=None, active_action="SpiderWalk"):
     ob.parent = rig
     ob.modifiers.new("Armature", "ARMATURE").object = rig
     compute_weights(ob, owners)
+    F.decimate(ob)
     make_animations(rig, ob)
     add_eye_lights(rig)
     act = bpy.data.actions[active_action]

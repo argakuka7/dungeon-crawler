@@ -143,6 +143,10 @@ def clear_collection(name):
                 store.remove(data)
 
 
+# collapse a finished, weighted mesh to its game budget (figure.TRIANGLE_BUDGET)
+decimate = F.decimate
+
+
 # --- mesh assembly -----------------------------------------------------------
 class Parts:
     """Collects SDF parts; owners keep vertex ranges + metadata for skinning."""

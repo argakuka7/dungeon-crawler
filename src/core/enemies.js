@@ -160,7 +160,7 @@ const SHRAPS_THROW = {
   name: 'throw', clip: 'throw', weight: 1, reach: 5, minReach: 1.8, hitAt: 21 / 30, trackUntil: 0.6, attackTime: 1.3, hitReach: 0,
   arc: 0.5, power: 0.9, knock: 3, knockDown: false, hop: 3, reason: 'Hit by an ice ball!',
   projectile: { kind: 'iceball', speed: 7, radius: 0.16, range: 7, spin: 9,
-    muzzle: [0.056, 0.795, 0.937], chill: { time: 1.6, slow: 0.5 } },
+    muzzle: [0.056, 0.797, 0.937], chill: { time: 1.6, slow: 0.5 } },
 };
 const ICE_HEAD = ['ShrapsIce', 'ShrapsIceSpikes', 'ShrapsIceBall_glow'];
 const FIRE_HEAD = ['ShrapsFireCore_glow', 'ShrapsFlame_glow', 'ShrapsFlameTips_glow', 'ShrapsFireBall_glow'];

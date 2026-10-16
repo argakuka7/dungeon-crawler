@@ -375,6 +375,7 @@ def snout(rig, action, frame):
 
 def main(export_path=None, blend_path=None, previews=None):
     scene, rig, obj = build()
+    K.decimate(obj)
     animate(rig, obj)
     report = K.validate(rig, obj, CLIPS, held=("SnakeDeath",))
     report["bite"] = snout(rig, "SnakeAttack", HIT_FRAME)

@@ -297,6 +297,8 @@ def animate(rig, obj):
 
 def main(export_path=None, blend_path=None):
     scene, rig, obj, punch_obj = build()
+    K.decimate(obj)
+    K.decimate(punch_obj)
     muzzle = animate(rig, obj)
     report = K.validate(rig, obj, CLIPS, held=("TriDeath",))
     report["muzzle"] = muzzle

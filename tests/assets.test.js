@@ -21,6 +21,25 @@ function glb(name) {
   };
   return { json, floats, duration: clip => Math.max(...clip.samplers.flatMap(s => floats(s.input))) };
 }
+// every skinned triangle is drawn three times a frame (body, silhouette, shadow), for every
+// enemy on screen: the models keep to blender/figure.py TRIANGLE_BUDGET (mesh -> triangles)
+const BUDGETS = {
+  character: { Character: 6000 }, spider: { Spider: 6000 }, stunder: { Stunder: 6000 }, snake: { Snake: 6000 },
+  octonaut: { Octonaut: 6000 }, fireface: { FireFace: 6000, FireFaceBall: 1500 }, triangle: { Triangle: 6000, TrianglePunch: 1500 },
+  firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
+};
+test('characters and enemies keep to their triangle budgets', () => {
+  for (const [file, budget] of Object.entries(BUDGETS)) {
+    const { json: j } = glb(file);
+    const meshes = j.nodes.filter(n => n.mesh !== undefined);
+    assert.deepEqual(meshes.map(n => n.name).sort(), Object.keys(budget).sort(), file);
+    for (const n of meshes) {
+      const tris = j.meshes[n.mesh].primitives.reduce((sum, p) => sum + j.accessors[p.indices].count / 3, 0);
+      assert.ok(tris <= budget[n.name], `${file} ${n.name}: ${tris} triangles, budget ${budget[n.name]}`);
+    }
+  }
+});
+
 test('player is unarmed, retains both hand sockets and exports only its own clips', () => {
   const { json: j, duration } = glb('character');
   assert.ok(!j.nodes.some(n => n.name === 'Sword' || n.extras?.weapon));

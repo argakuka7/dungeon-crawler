@@ -493,6 +493,7 @@ def animate(rig, obj):
 
 def main(export_path=None, blend_path=None):
     scene, rig, obj = build()
+    K.decimate(obj)
     animate(rig, obj)
     report = K.validate(rig, obj, CLIPS, held=("CatDeath",))
     report["bite"] = mouth_point(rig, "CatPounce", HIT_FRAME)

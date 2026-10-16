@@ -25,7 +25,7 @@ export const MUZZLES = {
   bow: [0.015, 0.744, 0.523],
   crossbow: [-0.216, 0.753, 0.519],
   staff: [-0.171, 1.14, 0.821],
-  throw: [-0.14, 0.938, 0.233],   // the fist letting go of a flask (core/throws.js)
+  throw: [-0.146, 0.964, 0.24],   // the fist letting go of a flask (core/throws.js)
 };
 // the share of a spell's damage its burst deals to the others around where it hit
 export const BURST_SHARE = 0.5;

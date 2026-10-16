@@ -697,6 +697,8 @@ def preview(scene, rig, path):
 
 def main(export_path=None, blend_path=None, preview_path=None):
     scene, rig, obj, ball = build()
+    K.decimate(obj)
+    K.decimate(ball)
     muzzle = animate(rig, obj)
     report = K.validate(rig, obj, CLIPS, held=("ShrapsDeath",))
     report["muzzle"] = muzzle

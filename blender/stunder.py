@@ -965,6 +965,7 @@ bpy.ops.wm.save_as_mainfile(filepath={str(path)!r}, compress=True)
 
 def main(scene=None, export_path=None, blend_path=None):
     rig, obj = build(scene)
+    F.decimate(obj)
     setup_stage(scene)
     animate(rig, obj)
     report = validate(rig, obj)
