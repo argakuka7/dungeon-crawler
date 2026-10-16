@@ -27,6 +27,7 @@ import { generateClearing } from './town.js';
 import { generateGuardian } from './guardian.js';
 import { reserveSites, prepareSites, routeSites, finishSites } from './sites.js';
 import { reserveHorde, routeHorde, finishHorde } from './hordes.js';
+import { spanBridge } from './span.js';
 
 function indexFloors(ctx) {
   const floors = ctx.floors = [];
@@ -83,6 +84,7 @@ function tryGenerate(seed, spec) {
   indexFloors(ctx);
   if (ctx.portalFloors.some(f => !f)) return null;
   makeMoves(ctx);
+  spanBridge(ctx);
   if (!findRoute(ctx)) return null;
   routeSites(ctx);
   if (!routeHorde(ctx)) return null;

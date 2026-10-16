@@ -27,7 +27,8 @@ export function planSites(seed, layout, distance) {
   if (layout.down) roles.set(layout.down, 'descent');
   if (!layout.depth) return { plans, roles };
   const R = mulberry32(hash32(seed ^ Math.imul(layout.depth, 0x517e)));
-  const candidates = [...layout.exists].filter(k => k !== layout.up && k !== layout.down && !layout.guardians?.has(k) && !layout.hordes?.has(k))
+  const candidates = [...layout.exists].filter(k => k !== layout.up && k !== layout.down && !layout.guardians?.has(k) && !layout.hordes?.has(k)
+    && layout.spanCells?.get(k)?.role !== 'gorge')
     .map(key => ({ key, score: (distance.get(key) || 0) * 2 + R() }));
   candidates.sort((a, b) => b.score - a.score);
   // One major destination, plus modest discoveries. Exceptional loot is not guaranteed.

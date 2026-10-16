@@ -5,6 +5,8 @@
 //   fluids: weights [water, lava, acid] for pools and falls; river: fluid of the rivers
 //   tiles: weight multipliers for the WFC kinds; cave: below the ground (no sun, no sky)
 //   void: how much of a cube may be open to the depth below; relief: how tall highlands get
+//   spans: gorge spans (world/spans.js): chance per depth, at most `max`, the chance of one on
+//   the route where it fits and of a lonely island branch
 //   arche: weights of the cube archetypes (cubegen/archetypes.js); props: prop set (assets/props.glb), propDensity: chance of a prop per floor (0.32)
 //   light: sky [top, bottom, haze?, tint?] (backdrop, see render/sky.js), stars 0..1, hemi [sky, ground, intensity], sun [colour, intensity], fog 0..1
 //   music: the song (music/<name>.scrim) that plays here; the town and the core have their own (SONGS)
@@ -18,6 +20,7 @@ export const THEMES = [
     music: 'overworld',
     props: 'meadow', propDensity: 0.15,
     void: 0.5, relief: 0.5,
+    spans: { chance: 0.9, max: 2, route: 0.8, island: 0.6 },
     arche: { plain: 3, archipelago: 3, spire: 1, mesa: 1, chasm: 1 },
     top: [[0, '#3b6532'], [4, '#4c8a3c'], [8, '#76ad50'], [12, '#a3b26a'], [16, '#b7a888'], [20, '#d9d3c5']],
     side: [[0, '#4e382a'], [6, '#7a5638'], [11, '#7a6d62'], [20, '#9a948c']],

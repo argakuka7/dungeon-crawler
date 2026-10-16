@@ -285,6 +285,52 @@ that gives L0 54%, L1 28%, L2 15%, L3 4%.
   Over 3 worlds, no upper-layer edge cell differs on any of 1943 faces.
 - **How many:** about one cube in ten gets one.
 
+## Gorge spans (`world/spans.js`, `cubegen/span.js`)
+
+On the sky-island depths (themes with `spans`, now depths 1 and 2) some rooms are joined by
+one long bridge over a valley.
+
+- **The look:** a straight line of cubes. A room at one end, one or two gorge cubes, and at
+  the other end the next room on the route or a lonely island. The valley runs across the
+  line: a ledge along the room it starts from, a sheer drop to a floor just over the river,
+  the far bank. The bridge leaves from a pad at the face and lands on a pad at the far face.
+  Between two gorge cubes it rests on a rock pinnacle standing at the shared face.
+- **Levels:** every crossing face has a deck level. A span either stays level over the valley
+  (headland to headland, levels 10–15) or comes down from the top tier to the ground: a
+  headland at level 14–20 (18–22 over two gorge cubes) to a bank at level 4–6. Over two
+  cubes the pinnacle stands halfway. A high crossing is a headland: the room's edge rises to
+  it, so the bridge leaves from a cliff top instead of a floating slab.
+- **Islands:** a branch that goes straight out from a route room: one or two gorge cubes,
+  then an island plateau (levels 5–12) in the valley. Nothing else touches the gorge or the
+  island, so the bridge is the only way in. The island usually gets the depth's rare reward
+  site (sites prefer branch rooms far from the route).
+- **Planning:** `planSpans` runs on its own random stream after the horde, before branches.
+  On the route it looks for straight runs of the spine with one or two inner cubes, none of
+  them a guardian or the horde room, gorge cells two cubes apart. A depth gets at most two
+  spans (`spans` in the theme: chance, max, route, island). Gorge cubes get role `span`, no
+  reward sites and half the population.
+- **World:** the WFC pins span cubes before collapsing the depth: one layer, sockets from the
+  deck levels (`H` from level 8), `W` on the sides of the gorge cube with the river. They
+  never have void and nothing falls into them from above. `spanProfile` (`profile.js`) gives
+  the gorge cubes' side faces the valley's cross-section, so the valley runs on into the
+  cubes beside it; corners inside the span lie on the valley floor (`spanVertex`). Crossing
+  faces get the pad at the deck level (3 cells, ground portals), shoulders a level lower on a
+  headland or the island's edge, and the same position along the face (`faces.js`), so the
+  bridge runs straight.
+- **Generator:** gorge cubes and islands have their own archetypes (`shapeGorge`,
+  `shapeIsland`). The valley floor ramps up to low room ends, so falling off never leaves you
+  in a pit, and is kept a head's height under the deck. The bridge is not searched for:
+  `spanBridge` hands the route search a ready move from pad to pad (both ways), 12 cells
+  long and as steep as the levels say. It is placed like any bridge, in one style for the
+  whole span (from the theme's weights), with a deeper sag for rope and tall trestles under
+  plank and iron. Invisible side rails keep you on it like on every bridge.
+- **Dev:** `/span [n]` jumps to the start of the world's next (or n-th) span.
+- **Checks:** `tests/spans.test.js` covers the plan (straight, in budget, unguarded, islands
+  apart), the pads on both sides of every crossing, matching ground on every face of every
+  span cube, one bridge per gorge cube clear of the ground, every portal leading on, and the
+  same cubes whatever the exploration order. Over 200 seeds all 1271 span cubes and their
+  rooms generate, in 1.24 attempts on average.
+
 ## Cube archetypes (`cubegen/archetypes.js`)
 
 Every cube gets a big shape on top of the blended ground. The shaping fades out towards the
@@ -299,6 +345,7 @@ faces, so the outer ring still matches the neighbours.
 | archipelago | islands |
 | mesa | one big flat-topped block |
 | crater | a ring wall around a lake of the depth's fluid |
+| gorge, island | only in gorge spans (above) |
 
 Chasms, sinkholes and archipelagos open to the void where the world allows it. Elsewhere
 they hold the depth's fluid instead: a river gorge, an acid canal or a lava sea.

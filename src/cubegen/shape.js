@@ -4,6 +4,7 @@ import { LH, SHEAD, OPP, EDGE_CORNERS } from '../core/constants.js';
 import { runY } from '../core/surfaces.js';
 import { buildOf } from '../themes/builds.js';
 import { themeAt } from '../themes/depth.js';
+import { spanSag } from './span.js';
 
 export function shapeStructures(ctx) {
   const { R, cols, pieces, runs, pathFloors } = ctx;
@@ -54,6 +55,7 @@ export function shapeStructures(ctx) {
       r.style = bridgeStyle(solid, R);
       if (r.style === 'plank' && k >= 2) r.sag = Math.min(0.22, 0.05 * k);
       if (r.style === 'rope' && k >= 2) r.sag = Math.min(0.4, 0.09 * k);   // rope bridges hang deeper
+      if (r.span) { r.style = ctx.spec.span.style; r.sag = spanSag(r.style, k); }   // a span's long bridge (span.js)
       if (r.sag) r.pieces.forEach(pieceEnds);
     }
     r.pieces.forEach(p => {
@@ -71,6 +73,11 @@ export function shapeStructures(ctx) {
       for (const s of r.splits) {
         const p = r.pieces[Math.floor(s)];
         pillar(r, p.c, 0.5, 0.5, r.dx ? 0.2 : 0.42, r.dx ? 0.42 : 0.2, p.ground, runY(p, 0.5, 0.5) - 0.3);
+      }
+    } else if (r.span && r.style !== 'rope') {   // tall trestles under a span's long bridge
+      for (const j of [Math.round(k / 3), Math.round(2 * k / 3)]) {
+        const p = r.pieces[j];
+        for (const w of [-0.36, 0.36]) pillar(r, p.c, 0.5 + (r.dz ? w : 0), 0.5 + (r.dx ? w : 0), 0.09, 0.09, p.ground, runY(p, 0.5, 0.5) - 0.2);
       }
     } else if (k >= 3 && r.style !== 'rope') {   // rope bridges just hang
       r.pieces.forEach((p, j) => {

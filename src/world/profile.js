@@ -8,6 +8,7 @@ import { key, parse } from './coords.js';
 import { themeAt } from '../themes/depth.js';
 import { voidAllowed, isVoid } from './voids.js';
 import { isClearing, TOWN_LEVEL } from './town.js';
+import { spanFace, spanVertex, spanU, valleyFloor } from './spans.js';
 
 export const VOID = -1;
 
@@ -27,6 +28,7 @@ function sockAt(world, X, Y, Z, d) {
 function vertexLevel(world, vx, Y, vz) {
   const cubes = [key(vx - 1, Y, vz - 1), key(vx, Y, vz - 1), key(vx - 1, Y, vz), key(vx, Y, vz)];
   if (cubes.some(k => isClearing(k, world.seed))) return TOWN_LEVEL;
+  if (spanVertex(world, vx, Y, vz) === 'valley') return valleyFloor(world.noise, vx * N, vz * N, Y);
   if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y)) return VOID;
   const s = [sockAt(world, vx - 1, Y, vz - 1, 0), sockAt(world, vx - 1, Y, vz, 0), sockAt(world, vx - 1, Y, vz - 1, 2), sockAt(world, vx, Y, vz - 1, 2)];
   return levelAt(world.noise, s.filter(x => x === 'H').length > 2 ? 'H' : 'L', vx * N, vz * N, Y);
@@ -43,7 +45,37 @@ export function profile(world, fk, sock) {
   }
   out[0] = d === '0' ? vertexLevel(world, X + 1, Y, Z) : vertexLevel(world, X, Y, Z + 1);
   out[N - 1] = vertexLevel(world, X + 1, Y, Z + 1);
+  spanProfile(world, fk, out);
   return out;
+}
+
+// a span's faces (spans.js): the valley's cross-section on the gorge cubes' sides, the valley
+// floor around the island, and a pad at the deck's level where the bridge crosses (a
+// headland where that is high, a rock pinnacle between two gorge cubes)
+function spanProfile(world, fk, out) {
+  const s = spanFace(world, fk);
+  if (!s) return;
+  const [k, d] = fk.split('/'), [X, Y, Z] = parse(k);
+  const at = t => d === '0' ? [(X + 1) * N, Z * N + t + 0.5] : [X * N + t + 0.5, (Z + 1) * N];
+  const floor = t => valleyFloor(world.noise, ...at(t), Y);
+  if (s.kind === 'island') { for (let t = 1; t < N - 1; t++) out[t] = floor(t); return; }
+  if (s.kind === 'side') {
+    const { span, i } = s, t0 = span.dir % 2 ? N - 1 : 0, t1 = N - 1 - t0;
+    for (let t = 1; t < N - 1; t++) {
+      const u = spanU(span, i, ...at(t));
+      // the ledge along a room at the end: two cells at the corner's level, then the drop
+      if (i === 0 && u === 1) out[t] = out[t0];
+      else if (i === span.n - 1 && !span.island && u === N - 2) out[t] = out[t1];
+      else out[t] = floor(t);
+    }
+    return;
+  }
+  const { span, j } = s, level = span.levels[j], room = j === 0 || (j === span.n && !span.island);
+  if (!room) for (let t = 1; t < N - 1; t++) out[t] = floor(t);
+  // shoulders beside the pad: a headland (or the island's edge), not around a pinnacle
+  if (room || span.island && j === span.n)
+    for (const t of [span.pos - 2, span.pos + 2]) out[t] = Math.max(room ? out[t] : 0, level - 1);
+  for (let t = span.pos - 1; t <= span.pos + 1; t++) out[t] = level;
 }
 
 // cave depths: a rock wall along the face (both cubes build their half of it), open around the

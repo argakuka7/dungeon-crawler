@@ -109,6 +109,7 @@ export function makeMoves(ctx) {
       bridgeMoves(f, d, out);
       if (allowLandings) { ladderMoves(ctx, f, d, idx(nx, nz), out); jumpMoves(ctx, f, d, out); }
     }
+    for (const m of ctx.extraMoves?.get(f.id) || []) out.push(m);   // a span's bridge (span.js)
     return out;
   }
   Object.assign(ctx, { headOK, movesFrom, SZ: NL + N * N * 64 });

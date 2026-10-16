@@ -39,7 +39,7 @@ import { gameTime, pace } from './game/pace.js';
 import { teach, tickTeach } from './game/teach.js';
 import { updatePointer } from './game/pointer.js';
 import { depthOf } from './themes/depth.js';
-import { goHorde } from './game/dev.js';
+import { goHorde, goSpan } from './game/dev.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './game/devspawn.js';
 import { updateSpiders, spiders } from './game/spiders.js';
 import { stunders } from './game/stunders.js';
@@ -181,6 +181,6 @@ window.__game = {
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,
   devWear: state.dev ? devWear : undefined,   // devWear('wear_wizard_hat'), devWear(null)
-  ...(state.dev && { spawnEnemy: spawnEnemies, killEnemies, clearEnemies, goHorde }),   // (the console's /spawn, /kill ...)
+  ...(state.dev && { spawnEnemy: spawnEnemies, killEnemies, clearEnemies, goHorde, goSpan }),   // (the console's /spawn, /kill ...)
 };
 frame();

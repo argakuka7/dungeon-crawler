@@ -55,7 +55,7 @@ export function placeStructures(ctx) {
       return;
     }
     const lo = m.from.top <= m.to.top ? m.from : m.to, hi = lo === m.from ? m.to : m.from;
-    const run = { kind: m.kind, from: m.from, to: m.to, d: m.d, dx: m.dx, dz: m.dz, cells: m.cells, k: m.cells.length, sag: 0,
+    const run = { kind: m.kind, from: m.from, to: m.to, d: m.d, dx: m.dx, dz: m.dz, cells: m.cells, k: m.cells.length, sag: 0, span: !!m.span,
       layerLo: lo.layer, layerHi: hi.layer, layer: Math.min(lo.layer, hi.layer) };
     if (m.kind === 'stair') for (const cl of runClaims(m)) coverBelow(cl.c, cl.lo + 1);
     run.pieces = m.cells.map((c, j) => { const p = { kind: m.kind, c, j, dx: m.dx, dz: m.dz, run, y0: 0, y1: 0, base: 0 }; pieces[c].push(p); return p; });

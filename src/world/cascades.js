@@ -25,6 +25,7 @@ function decide(world, up) {
   const [X, Y, Z] = parse(up), d = -Y, R = world.wfc.rng(faceKey(up, 4), 0xfa11);
   if (Y > 0 || !world.layout(d).exists.has(up) || !voidAllowed(world, up) || R() > CHANCE) return null;
   const low = step(up, 4), avoid = [], inflow = Y < 0 && cascade(world, step(up, 5));
+  if (world.layout(d + 1).spanCells?.has(low)) return null;   // nothing pours across a span's bridge
   if (inflow) avoid.push([inflow.x, inflow.z]);   // its catch pool
   if (world.layout(d).down === up) avoid.push(portalAt(world, faceKey(up, 4)));    // the well here = the ring below
   if (world.layout(d).up === up) avoid.push(portalAt(world, faceKey(up, 5)));      // the ring here

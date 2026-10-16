@@ -11,6 +11,8 @@ import { makeLayouts } from './layout.js';
 import { voidAllowed, fallMask } from './voids.js';
 import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './town.js';
 import { generateInterior } from '../cubegen/interior.js';
+import { spanSpec } from './spans.js';
+import { buildOf } from '../themes/builds.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
 const LEAN = { highland: { mesa: 2, spire: 2, archipelago: 0.3 }, lake: { archipelago: 3, crater: 2 }, gorge: { chasm: 3 },
@@ -47,6 +49,7 @@ export class World {
   // learn: architecture.html#cube-journey (see learn/README.md)
   spec(k) {
     const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = themeAt(-Y);
+    const span = spanSpec(this.layout(-Y), k, buildOf(theme).bridges);
     const faces = [0, 1, 2, 3].map(d => {
       const f = this.faces.get(faceKey(k, d));
       return { sock: t.sock[d], profile: Int16Array.from(f.profile), river: f.river, portal: f.portal, wall: f.wall, spout: f.spout,
@@ -71,7 +74,7 @@ export class World {
       // islands without pillars: lakes, the sky islands near the top and the abyss
       floating: !isClearing(k, this.seed) && (t.kind === 'lake' || ((-Y <= 3 || -Y >= 19) && this.wfc.rng(k, 0xf10a7)() < 0.5)),
       seed: hash32(this.seed ^ hashKey(k)),
-      archetype: -Y === 0 ? 'plain' : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)),
+      archetype: span ? span.role : -Y === 0 ? 'plain' : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
     };
   }
 

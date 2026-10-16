@@ -7,6 +7,7 @@ import { parse, step, faceKey } from './coords.js';
 import { profile, caveWall, VOID } from './profile.js';
 import { cascade } from './cascades.js';
 import { spout } from './spouts.js';
+import { spanFace } from './spans.js';
 import { isTown, isMerchantCamp, townExitPosition } from './town.js';
 import { MAX_DEPTH } from '../themes/depth.js';
 
@@ -36,6 +37,7 @@ function sideFace(world, k, d, withPortal) {
   if (townDir !== null) pos = townExitPosition(townDir);
   else if (campDir !== null) pos = townExitPosition(campDir);
   else do pos = 3 + Math.floor(R() * 10); while (f.river && Math.abs(pos - f.river.pos - (f.river.w - 1) / 2) < 3.5);
+  if (spanFace(world, fk)?.kind === 'cross') pos = spanFace(world, fk).span.pos;   // one straight bridge
   // the portal's layer: any layer both cubes have, mostly the highest one (sky routes)
   const maxL = Math.min(world.wfc.tiles.get(k).K, world.wfc.tiles.get(step(k, d)).K) - 1;
   const layer = guardian ? 0 : maxL > 0 && R() < 0.5 ? maxL : Math.floor(R() * (maxL + 1));

@@ -10,6 +10,7 @@
 //   crater      a ring wall around a lake
 import { N, MAX_L } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
+import { shapeGorge, shapeIsland } from './span.js';
 
 // 0 at the faces, 1 from three cells in
 const inner = (x, z) => clamp((Math.min(x, z, N - 1 - x, N - 1 - z) - 1) / 2, 0, 1);
@@ -17,6 +18,8 @@ const inner = (x, z) => clamp((Math.min(x, z, N - 1 - x, N - 1 - z) - 1) / 2, 0,
 export function shapeCube(ctx) {
   const { R, ri, lvl0, void0, spec, noise } = ctx, kind = spec.archetype || 'plain';
   ctx.seaCells = [];
+  if (kind === 'gorge') return shapeGorge(ctx);   // a span's valley (cubegen/span.js)
+  if (kind === 'island') return shapeIsland(ctx);
   // open: void if allowed, else a pit (sea: filled with fluid)
   const open = (i, sea) => { if (spec.voidOK) void0[i] = 1; else { lvl0[i] = 0; if (sea) ctx.seaCells.push(i); } };
   const raise = (i, w, h) => { lvl0[i] = clamp(Math.round(lvl0[i] + w * h), 2, MAX_L); };

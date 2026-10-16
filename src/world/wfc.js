@@ -10,6 +10,7 @@ import { TILES, layersOf } from './tiles.js';
 import { OPP6, step, hashKey } from './coords.js';
 import { themeAt, depthOf } from '../themes/depth.js';
 import { TOWN_KEY, merchantCampKey } from './town.js';
+import { spanPins } from './spans.js';
 
 // tile weight at cube k: the base weight scaled by the depth's theme
 const weightAt = k => { const m = themeAt(depthOf(k)).tiles; return t => t.weight * (m[t.kind] ?? 1); };
@@ -44,6 +45,11 @@ export class WFC {
     if (this.depths.has(d)) return;
     this.depths.add(d);
     const region = new Set();
+    // span cubes (spans.js) are pinned first: their faces follow the span, they have one layer
+    for (const [k, sock] of spanPins(this.layout(d))) {
+      const tile = TILES.find(t => t.sock.every((s, i) => s === sock[i]));
+      if (!this.tiles.has(k)) this.tiles.set(k, { ...tile, K: 1 });
+    }
     for (const k of this.layout(d).exists) { region.add(k); for (let i = 0; i < 4; i++) region.add(step(k, i)); }
     this.collapse([...region].sort());
   }

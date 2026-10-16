@@ -81,6 +81,24 @@ export async function goHorde(depth = state.map?.depth ?? 0) {
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 
+// Jump to the start of a gorge span's bridge (world/spans.js) for playtesting: the n-th span of
+// the world (counted from 1, in depth order), else the next one after the last visited.
+let lastSpan = -1;
+export async function goSpan(n) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, spans = [];
+  for (let d = 1; d < 20; d++) spans.push(...(cubes.layout(d).spans || []));
+  if (!spans.length) { setStatus('No gorge span in this world'); return; }
+  const i = lastSpan = n === undefined ? (lastSpan + 1) % spans.length : (Math.max(1, n) - 1) % spans.length, span = spans[i];
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(span.keys[1]));
+    if (state.cubes !== cubes) return;
+    enterCube(c, span.dir ^ 1);
+    setStatus(`Span ${i + 1}/${spans.length} · depth ${c.map.depth} · ${span.island ? 'to an island' : 'on the route'} · deck ${span.levels.join(' → ')}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
 // Jump into a guardian arena of a kind (world/arenas.js), the nearest depth first; with no
 // kind, this depth's way down. The gate stays locked: it is the real arena.
 export async function goArena(type, depth = state.map?.depth ?? 0) {

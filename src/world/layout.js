@@ -7,6 +7,7 @@ import { MAX_DEPTH } from '../themes/depth.js';
 import { planSites } from './sites.js';
 import { planHordes } from './hordes.js';
 import { planArenas } from './arenas.js';
+import { planSpans, indexSpans } from './spans.js';
 
 // learn: world.html#route (see learn/README.md)
 export const MIN_ROUTE_ROOMS = 7, MAX_ROUTE_ROOMS = 14;
@@ -91,10 +92,23 @@ function build(seed, d, above) {
   // No loops: all sideways guardians are articulation points on the required route.
   const used = new Set(cells.map(id)), allowed = new Set(candidates.map(id));
   const branchBudget = Math.min(4, MAX_ROUTE_ROOMS - cells.length);
+  // gorge spans (spans.js): on the route, and maybe a lonely island branch over a bridge
+  const spanPlan = planSpans(seed, d, spine, K, k => guardians.has(k) || hordes.has(k),
+    c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1), branchBudget);
+  const lonely = new Set(spanPlan.spans.filter(s => s.island).flatMap(s => s.keys.slice(1)));
+  const nearSpan = c => [c, ...nb(c)].some(n => lonely.has(K(n)));
+  for (const span of spanPlan.spans) if (span.island) {
+    const line = span.keys.map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
+    for (let j = 1; j < line.length; j++) {
+      const c = line[j];
+      cells.push(c); used.add(id(c)); link(line[j - 1], c); exit.set(K(c), direction(c, line[j - 1]));
+      routeIndex.set(K(c), routeIndex.get(K(line[0]))); distance.set(K(c), j);
+    }
+  }
   for (const c of spine.slice(2, -1)) {
     if (cells.length >= spine.length + branchBudget) break;
-    if (guardians.has(K(c))) continue;
-    const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)));
+    if (guardians.has(K(c)) || spanPlan.cells.has(K(c))) continue;
+    const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n));
     if (!options.length || R() < .4) continue;
     const n = options[Math.floor(R() * options.length)];
     cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
@@ -103,6 +117,7 @@ function build(seed, d, above) {
   const layout = { depth: d, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex,
     exists: new Set(cells.map(K)), portals, exit, guardians, gateFaces, hordes,
     up: d ? K(start) : null, down: d < MAX_DEPTH ? K(end) : null, guardian: guardianDepth(seed, d) };
+  indexSpans(layout, spanPlan.spans, spanPlan.cells);
   const sites = planSites(seed, layout, distance);
   layout.sitePlans = sites.plans; layout.roles = sites.roles;
   for (const [k, g] of guardians) layout.roles.set(k, `${g.role}-guardian`);
@@ -111,6 +126,8 @@ function build(seed, d, above) {
     const i = layout.route.indexOf(k), before = layout.route[i - 1];
     if (i > (d === 0 ? 4 : 2) && !guardians.has(before)) layout.populationScale.set(before, .5);
   }
+  // a gorge is mostly air and valley floor: fewer enemies down there
+  for (const [k, s] of spanPlan.cells) if (s.role === 'gorge') { layout.roles.set(k, 'span'); layout.populationScale.set(k, .5); }
   return layout;
 }
 

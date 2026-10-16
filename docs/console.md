@@ -84,6 +84,7 @@ Developer (`?dev=1`):
 | `/goto <down\|up>`, `/find <down\|up>` | take the nearest way down / up (PgDn / PgUp), or stand next to it (G) |
 | `/go <east\|west\|south\|north>` | into the next cube (Alt + WASD) |
 | `/horde [depth]` | a depth's wild horde (H) |
+| `/span [n]` | the start of a gorge span's long bridge: the next one, or the n-th (docs/world.md) |
 | `/newworld [seed]` | a new world (N), not saved; a saved hero comes along as it is |
 | `/menu` | save and quit to the main menu |
 | `/give <item> [count]` | things into the bag (a weapon: a common one, equipped) |

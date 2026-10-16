@@ -1,0 +1,193 @@
+// Gorge spans: rooms joined by one long bridge over a valley (themes with `spans`). The layout
+// plans them from the seed alone: a straight line of cubes, a room at one end, one or two gorge
+// cubes in the middle and, at the other end, the next room on the route or a lonely island (a
+// branch reached by nothing but the bridge). Every crossing face along the line has a deck
+// level, so a span can stay level high over the valley or come down from the top of a headland
+// to the valley's far bank. The faces follow it (profile.js, faces.js): the gorge cubes' side
+// faces carry the valley's cross-section, so the valley runs on into the rock beside it, and
+// between two gorge cubes the bridge rests on a rock pinnacle. cubegen/span.js builds the cubes.
+//
+//   span: { id, keys: [end0, ...gorge, end1], dir (end0 -> end1), n (gorge cubes), pos (along
+//           every crossing face), levels (deck level at crossing face j, between keys[j] and
+//           keys[j + 1]), island (end1 is an island), river (gorge cube with the river, or -1),
+//           seed }
+import { mulberry32, hash32 } from '../core/util.js';
+import { N } from '../core/constants.js';
+import { key, parse, step, faceKey } from './coords.js';
+import { themeAt, MAX_DEPTH } from '../themes/depth.js';
+
+const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const id = c => c.join(',');
+const cheb = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
+const direction = (a, b) => AXES.findIndex(([x, z]) => a[0] + x === b[0] && a[1] + z === b[1]);
+
+// below this a crossing is on low ground (socket L), from here on a highland (H)
+const HIGH = 8;
+
+// the spans of depth d. spine: the route's cells ([x, z]), K: cell -> cube key, blocked(key):
+// cubes that may not be part of a span (guardians, the horde room), free(cell): an empty cell
+// an island branch may take, budget: how many rooms an island branch may add. Returns the
+// spans and the cells they claim.
+export function planSpans(seed, d, spine, K, blocked, free, budget) {
+  const cfg = themeAt(d).spans;
+  const spans = [], cells = new Map();
+  if (!cfg || d === 0 || d >= MAX_DEPTH) return { spans, cells };
+  const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x5ba9e7)));
+  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
+  if (R() >= cfg.chance) return { spans, cells };
+  const gorges = [];   // gorge cells of earlier spans: the next keeps two cubes away
+  const apart = list => list.every(c => gorges.every(g => cheb(c, g) >= 2));
+  const add = (line, island) => {
+    const n = line.length - 2, dir = direction(line[0], line[1]);
+    const span = { id: `${seed}:${K(line[0])}:span`, keys: line.map(K), dir, n, island, pos: ri(4, N - 5), seed: hash32(seed ^ spans.length * 0x9e37 ^ d) };
+    let a, b;   // deck levels at the two ends
+    if (island) {
+      // the island stands on a plateau in the valley (low enough for a reward site on it)
+      const r = R();
+      if (r < 0.35) { b = ri(9, 12); a = b; }                 // level: high over the valley
+      else if (r < 0.75) { b = ri(9, 12); a = ri(4, 6); }     // up from the valley's edge to the island
+      else { a = ri(15, 19); b = ri(5, 7); }                  // down from a headland to an islet
+    } else if (R() < 0.4) {
+      a = b = ri(10, 15);                                     // level, from headland to headland
+    } else {
+      const hi = n > 1 ? ri(18, 22) : ri(14, 20), lo = ri(4, 6);   // from the top tier down to the ground
+      [a, b] = R() < 0.5 ? [hi, lo] : [lo, hi];
+    }
+    span.levels = Array.from({ length: n + 1 }, (_, j) => Math.round(a + (b - a) * j / n));
+    span.river = R() < 0.8 ? ri(0, n - 1) : -1;
+    spans.push(span);
+    line.slice(1, -1).forEach((c, i) => { cells.set(K(c), { span, i, role: 'gorge' }); gorges.push(c); });
+    if (island) { cells.set(K(line.at(-1)), { span, i: n, role: 'island' }); gorges.push(line.at(-1)); }
+  };
+
+  // on the route: a straight run of the spine with one or two gorge cubes in the middle
+  const runs = [];
+  for (let i = 1; i < spine.length - 2; i++) for (const n of [2, 1]) {
+    const line = spine.slice(i - 1, i + n + 1);
+    if (line.length !== n + 2 || i + n >= spine.length) continue;
+    const dir = direction(line[0], line[1]);
+    if (!line.every((c, j) => !j || direction(line[j - 1], c) === dir)) continue;
+    if (line.some(c => blocked(K(c)))) continue;
+    runs.push({ line, score: n + R() * 1.5 });
+  }
+  runs.sort((a, b) => b.score - a.score);
+  for (const { line } of runs) {
+    if (spans.length >= cfg.max) break;
+    const inner = line.slice(1, -1);
+    if (!apart(line) || spans.some(s => s.keys.some(k => inner.some(c => K(c) === k)))) continue;
+    if (R() < cfg.route) add(line, false);
+  }
+
+  // a lonely island: off the route, straight out from a route room, its only way in the bridge
+  if (spans.length < cfg.max && R() < cfg.island) {
+    const options = [];
+    for (const c of spine.slice(2, -1)) {
+      if (blocked(K(c)) || cells.has(K(c))) continue;
+      for (const [dx, dz] of AXES) for (const n of [2, 1]) {
+        if (n + 1 > budget) continue;
+        const line = Array.from({ length: n + 2 }, (_, j) => [c[0] + dx * j, c[1] + dz * j]), out = line.slice(1);
+        // nothing else next to the gorge or the island: it stays apart from every other room
+        const near = out.flatMap(o => AXES.map(([x, z]) => [o[0] + x, o[1] + z])).filter(o => !line.some(l => id(l) === id(o)));
+        if (out.every(free) && near.every(free) && apart(line)) options.push({ line, score: n + R() });
+      }
+    }
+    options.sort((a, b) => b.score - a.score);
+    if (options.length) add(options[0].line, true);
+  }
+  return { spans, cells };
+}
+
+// the socket a span gives a face of one of its cubes, or null (the WFC pins span cubes)
+export function spanSocket(span, i, d) {
+  const back = (span.dir ^ 1);
+  if (d === span.dir) return span.levels[i + 1] >= HIGH ? 'H' : 'L';
+  if (d === back) return span.levels[i] >= HIGH ? 'H' : 'L';
+  return span.river === i ? 'W' : 'L';
+}
+
+// the WFC tiles of a depth's span cubes: gorge cubes and islands have one layer only
+export function spanPins(layout) {
+  const pins = new Map();
+  for (const [k, { span, i, role }] of layout.spanCells || []) {
+    pins.set(k, [0, 1, 2, 3].map(d => role === 'island' ? (d === (span.dir ^ 1) ? spanSocket(span, i - 1, span.dir) : 'L') : spanSocket(span, i, d)));
+  }
+  return pins;
+}
+
+// the valley floor at world cell (wx, wz): just over the river's surface
+export const valleyFloor = (noise, wx, wz, Y) => 2 + (noise(wx * 0.23 + 900, wz * 0.23 + Y * 17) > 0.62 ? 1 : 0);
+
+// what a span makes of side face fk (stored under the cube on its low side, d 0 or 2), or null:
+//   { kind: 'cross', span, j }   a crossing face (the deck passes over it at levels[j])
+//   { kind: 'side', span, i, g }  a side face of gorge cube i (g its key)
+//   { kind: 'island', span }      a face of the island other than its crossing
+export function spanFace(world, fk) {
+  const [k, ds] = fk.split('/'), d = +ds, d6 = -parse(k)[1];
+  if (d6 < 0 || d6 > MAX_DEPTH) return null;
+  const L = world.layout(d6);
+  if (!L.spans?.length) return null;
+  const cross = L.spanFaces.get(fk);
+  if (cross) return { kind: 'cross', ...cross };
+  for (const c of [k, step(k, d)]) {
+    const s = L.spanCells.get(c);
+    if (!s) continue;
+    if (s.role === 'island') return { kind: 'island', span: s.span };
+    if ((d >> 1) !== (s.span.dir >> 1)) return { kind: 'side', span: s.span, i: s.i, g: c };
+  }
+  return null;
+}
+
+// along-span coordinate of world cell column (wx, wz) inside gorge cube i: 0 at the face
+// towards end0, N - 1 at the face towards end1
+export function spanU(span, i, wx, wz) {
+  const [X, , Z] = parse(span.keys[i + 1]), lx = Math.floor(wx) - X * N, lz = Math.floor(wz) - Z * N;
+  return [lx, N - 1 - lx, lz, N - 1 - lz][span.dir];
+}
+
+// is world vertex (vx, vz) (in cubes) on a span's natural end, the crossing into a room? Those
+// keep their usual level; every other corner of a gorge cube or the island lies in the valley.
+export function spanVertex(world, vx, Y, vz) {
+  const L = world.layout(-Y);
+  if (!L.spans?.length) return null;
+  const around = [key(vx - 1, Y, vz - 1), key(vx, Y, vz - 1), key(vx - 1, Y, vz), key(vx, Y, vz)];
+  let span = null;
+  for (const c of around) { const s = L.spanCells.get(c); if (s) span = s.span; }
+  if (!span) return null;
+  // the vertex lies on crossing face j if it is a corner of that face
+  const [x0, , z0] = parse(span.keys[0]), along = span.dir < 2 ? vx : vz, a0 = span.dir < 2 ? x0 : z0;
+  const face = span.dir % 2 ? a0 - along : along - a0 - 1;   // index of the crossing plane (end0's face is 0)
+  if (face === 0) return 'natural';
+  if (face === span.n && !span.island) return 'natural';
+  return 'valley';
+}
+
+// the layout's lookup tables for its spans
+export function indexSpans(layout, spans, cells) {
+  layout.spans = spans;
+  layout.spanCells = cells;
+  layout.spanFaces = new Map();
+  for (const span of spans) for (let j = 0; j <= span.n; j++)
+    layout.spanFaces.set(faceKey(span.keys[j], span.dir), { span, j });
+  return layout;
+}
+
+// how a span's bridge is built: one of the theme's bridge styles, the same in all its cubes
+export function spanStyle(span, weights) {
+  const w = Object.entries(weights);
+  let r = mulberry32(span.seed)() * w.reduce((s, [, v]) => s + v, 0);
+  for (const [s, v] of w) if ((r -= v) < 0) return s;
+  return 'plank';
+}
+
+// what the generator needs to know about cube k's part in a span (cubegen/span.js), or null
+//   gorge:  { role, i, n, dir, pos, hi, lo, room0, room1, style } (hi / lo: the deck's level at
+//           the face towards end0 / end1; room0 / room1: that face leads into a room)
+//   island: { role, dir, pos, level }
+export function spanSpec(layout, k, weights) {
+  const s = layout.spanCells?.get(k);
+  if (!s) return null;
+  const { span, i, role } = s;
+  if (role === 'island') return { role, dir: span.dir, pos: span.pos, level: span.levels[span.n] };
+  return { role, i, n: span.n, dir: span.dir, pos: span.pos, hi: span.levels[i], lo: span.levels[i + 1],
+    room0: i === 0, room1: i === span.n - 1 && !span.island, style: spanStyle(span, weights) };
+}
