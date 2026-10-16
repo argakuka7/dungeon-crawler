@@ -1,10 +1,11 @@
 // The Esc menu (Esc, O, or the menu button on the touch quick bar): resume, play together,
-// the controls and the music. Alone it pauses the world (state.js worldPaused); playing
-// together the world goes on, only your own input stops.
+// the controls, the music, and save and quit to the main menu (game/menu.js). Alone it pauses
+// the world (state.js worldPaused); playing together the world goes on, only your own input
+// stops.
 //
 // Play together: host this world (friends come in with a four letter room code, or a link
 // with ?join=CODE, and drop out as they like), stop hosting, join a friend's game with their
-// code, leave it. Up to four play together (net/session.js); ?net=local plays between tabs of
+// code, leave it (back to the main menu). Up to four play together (net/session.js); ?net=local plays between tabs of
 // this browser instead of over the internet (for testing, net/transport.js). Your name is
 // your saved hero's (game/save.js); without one a field asks for it.
 import { state } from './state.js';
@@ -12,6 +13,7 @@ import { clearInput } from './inputstate.js';
 import { clearMouseInput } from './orders.js';
 import { setHelpOpen } from './help.js';
 import { savedHero } from './save.js';
+import { quitToMenu } from './menu.js';
 import { musicEnabled, toggleMusic } from '../audio/music.js';
 import { readCode } from '../net/protocol.js';
 import { online, together, playerColor } from '../net/online.js';
@@ -22,7 +24,7 @@ const overlay = $('menu-overlay'), params = new URLSearchParams(location.search)
 const local = params.get('net') === 'local';
 const NAME_KEY = 'cube-crawler-name';
 const CONFIRM_MS = 4000;
-let confirmUntil = 0;   // the stop / leave button asks again until then
+let confirmUntil = 0, quitUntil = 0;   // the stop hosting / the quit button asks again until then
 
 export const menuOpen = () => state.menuOpen;
 export function setMenuOpen(open) {
@@ -32,7 +34,7 @@ export function setMenuOpen(open) {
   if (open) {
     setHelpOpen(false);
     clearInput(); clearMouseInput();   // nothing walks on by itself while the menu is open
-    confirmUntil = 0;
+    confirmUntil = quitUntil = 0;
     render();
   } else document.activeElement?.blur?.();   // back to the game: keys play again
 }
@@ -86,6 +88,9 @@ function render() {
     : host ? asking ? 'Stop hosting? Your friends drop out' : 'Stop hosting'
     : 'Leave the game';
   $('menu-music').textContent = `Music: ${musicEnabled() ? 'on' : 'off'}`;
+  const quit = $('menu-quit'), sure = performance.now() < quitUntil;
+  quit.classList.toggle('confirm', sure);
+  quit.textContent = sure ? 'Quit? Your friends drop out' : savedHero() ? 'Save and quit to the menu' : 'Quit to the menu';
 }
 
 onSessionChange(s => {
@@ -120,7 +125,20 @@ $('menu-leave').onclick = () => {
     return;
   }
   confirmUntil = 0;
+  const guest = online.role === 'guest';
   leaveGame();
+  if (guest) { setMenuOpen(false); quitToMenu(); }   // a guest goes back to the main menu
+};
+// quitting a game friends are in asks first too
+$('menu-quit').onclick = () => {
+  if (online.role === 'host' && together() && performance.now() >= quitUntil) {
+    quitUntil = performance.now() + CONFIRM_MS;
+    render();
+    setTimeout(render, CONFIRM_MS + 50);
+    return;
+  }
+  setMenuOpen(false);
+  quitToMenu();
 };
 $('menu-copy').onclick = async () => {
   try { await navigator.clipboard.writeText(link(online.code)); $('menu-copy').textContent = 'Copied!'; }
@@ -132,9 +150,10 @@ $('menu-music').onclick = () => { toggleMusic(); render(); };
 // a clicked button lets go of the focus: Space and Enter belong to the game again
 overlay.addEventListener('click', e => { if (e.target.tagName === 'BUTTON') e.target.blur(); });
 
-// ?join=CODE: the menu opens (once every module is there: not while they are still loading)
-// and joins once the first cube is there
-const invited = readCode(params.get('join'));
+// ?join=CODE without the main menu (the dev tools, ?seed=; else game/menu.js asks for the hero
+// first): the menu opens (once every module is there: not while they are still loading) and
+// joins once the first cube is there
+const invited = state.mode === 'play' && readCode(params.get('join'));
 if (invited) {
   $('menu-code').value = invited;
   const wait = setInterval(() => {

@@ -13,7 +13,8 @@ import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { showStats, flash, fadeOut, fadeIn, whenReady } from './hud.js';
 import { resetCut } from './cut.js';
-import { resetEnemies, mirroring } from './enemies.js';
+import { resetEnemies, mirroring, detachEnemies } from './enemies.js';
+import { removeEnemyViews } from '../render/enemies.js';
 import { cancelSword } from './sword.js';
 import { drawMinimap } from './minimap.js';
 import { whenPropsReady } from '../render/props.js';
@@ -285,6 +286,18 @@ function restoreRun({ run, faces }) {
   r.townPortal = run.townPortal;
   takeLoot(run.loot);
   for (const k of faces) state.openedFaces.add(k);
+}
+
+// Back to the main menu (game/menu.js): the world goes, and nothing of it stays in the scene
+export function endWorld() {
+  cancelSword(true); cancelCast(); clearInput();
+  removeEnemyViews(detachEnemies());
+  clearNeighbors(); clearNeighborCache();
+  disposeWorld(state.world); state.world = null;
+  state.cubes?.dispose(); state.cubes = null;
+  Object.assign(state, { map: null, cubeKey: '', arrival: null, visit: null, fallFrom: null, cast: null, portalCharge: null,
+    portalLock: 0, boundaryLock: -1, inventoryOpen: false, transitioning: false, run: createRun() });
+  state.openedFaces.clear();
 }
 
 export function nextCube() {

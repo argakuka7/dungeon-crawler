@@ -74,7 +74,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #chat-popup .label { flex: none; }
 #chat-popup .hint { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #8a96a8; font-size: 11px; }
 
-#help-overlay { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; padding: 16px; pointer-events: none; }
+#help-overlay { position: fixed; inset: 0; z-index: 26; display: grid; place-items: center; padding: 16px; pointer-events: none; }
 #help-panel { pointer-events: auto; box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
   padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
 #help-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #8a96a8; font-size: 11px; }
@@ -104,8 +104,9 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .menu-row { display: flex; gap: 8px; }
 #menu-code { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 16px; }
 #menu-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
-#menu-room button, #menu-leave { display: block; width: 100%; }
-#menu-panel #menu-leave.confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
+#menu-room button, #menu-leave, #menu-quit { display: block; width: 100%; }
+#menu-quit { margin-top: 10px; }
+#menu-panel :is(#menu-leave, #menu-quit).confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
 #menu-players { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: #e6e9ef; }
 #menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
 #menu-status { min-height: 1.4em; color: #cfe2ff !important; }
@@ -253,3 +254,49 @@ body.touch #inventory-overlay { padding: calc(70px + env(safe-area-inset-top)) 1
 body.touch #inventory-panel { max-height: calc(100dvh - 84px); }
 @media (max-width: 640px) { body.touch #minimap { top: calc(70px + env(safe-area-inset-top)); width: 96px; } }
 body.touch #chat { width: min(420px, 44vw); min-width: 0; }
+
+/* the main menu (game/menu.js): the heroes, the worlds, joining a friend */
+body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #dev, #teach-pace) { display: none !important; }
+#title-overlay { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: 16px; overflow: auto; }
+#title-box { box-sizing: border-box; width: min(460px, 100%); }
+#title-logo { margin: 0 0 18px; text-align: center; color: #ffe4ae; font-size: 30px; font-weight: normal; letter-spacing: 8px; text-transform: uppercase;
+  text-shadow: 0 2px 0 #8a5a2a, 0 0 24px #ffb45a55; }
+#title-panel { padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px;
+  max-height: calc(100dvh - 120px); overflow: auto; }
+#title-panel h2 { margin: 0 0 10px; color: #fff; font-size: 14px; letter-spacing: 1px; }
+#title-panel h2 small { color: #8a96a8; font-size: 11px; letter-spacing: 0; margin-left: 6px; }
+#title-panel h3 { margin: 16px 0 6px; color: #c5cdbc; font-size: 12px; font-weight: normal; }
+#title-panel p { margin: 8px 0; color: #aab3c2; }
+#title-panel :is(button, input, .title-link) { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 6px 10px; }
+#title-panel button, .title-link { cursor: pointer; text-decoration: none; text-align: center; }
+#title-panel :is(button, .title-link):hover { background: #364052; color: #fff; }
+#title-panel :is(button, input, .title-link):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
+#title-panel .menu-big { display: block; width: 100%; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
+#title-panel .menu-big small { display: block; margin-top: 2px; color: #aab3c2; font-size: 11px; }
+#title-panel .menu-row > * { flex: 1; }
+#title-panel .menu-row input { flex: 3; min-width: 0; }
+.title-list { display: grid; gap: 10px; }
+.title-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.title-card { display: flex; align-items: stretch; gap: 6px; }
+#title-panel .title-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; padding: 6px 10px; }
+.title-pick img, .title-pick i { flex: none; width: 34px; height: 34px; object-fit: contain; }
+.title-pick span { min-width: 0; display: grid; }
+.title-pick b { color: #fff; font-weight: normal; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-pick em { color: #8fd48a; font-style: normal; font-size: 11px; margin-left: 4px; }
+.title-pick small { color: #8a96a8; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-actions { display: flex; flex-direction: column; gap: 4px; }
+#title-panel .title-actions button { padding: 2px 8px; font-size: 11px; color: #aab3c2; }
+#title-panel .title-actions button.confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
+#title-panel .title-empty button { flex: 1; padding: 14px; color: #8a96a8; border-style: dashed; background: none; }
+.title-form { display: flex; gap: 6px; }
+.title-form input { flex: 1; min-width: 0; }
+.title-rename { flex: 1; display: flex; gap: 6px; }
+.title-rename input { flex: 1; min-width: 0; }
+.title-new-world { flex-direction: column; margin-top: 8px; }
+.title-new-world label { display: grid; grid-template-columns: 4em 1fr; align-items: center; color: #c5cdbc; }
+#title-panel .title-new { display: block; width: 100%; margin-top: 6px; color: #8a96a8; border-style: dashed; background: none; }
+#title-code { text-transform: uppercase; letter-spacing: 4px; }
+#title-panel .title-back { margin-top: 16px; }
+.title-invite { color: #ffe4ae !important; }
+.title-status { color: #cfe2ff !important; min-height: 1.4em; }
+.title-note { color: #ffb3a3 !important; }

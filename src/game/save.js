@@ -52,6 +52,26 @@ export function play(heroId, worldId) {
   return started;
 }
 
+// Hero `heroId` goes into a friend's world (game/menu.js, before joining): the friend's world
+// is not ours to save, the hero is. false: there is no such hero.
+export function playAsGuest(heroId) {
+  const hero = store.hero(heroId);
+  if (!hero) return false;
+  saveNow();
+  Object.assign(player, heroStats(hero));
+  setHero(hero);
+  Object.assign(current, { world: null, cubes: null, visited: new Set() });
+  signature = ''; played = 0;
+  return true;
+}
+
+// Back to the main menu: what was played is saved a last time, then nothing is saved any more
+export function stopSaving() {
+  saveNow();
+  setHero(null);
+  Object.assign(current, { world: null, cubes: null, visited: new Set() });
+}
+
 // what newWorld restores (game/flow.js): the discovered cubes nearest to where the hero comes in first
 function restoreOf(world, heroId) {
   const spot = world.spots[heroId] ?? null, [X, Y, Z] = spot && !isInterior(spot.cube) ? parse(spot.cube) : [0, 0, 0];

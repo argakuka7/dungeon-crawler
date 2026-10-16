@@ -27,7 +27,7 @@ scene.add(group);
 
 // after the camera moved, so the bars face it this frame
 export function updatePlayerBar() {
-  group.visible = character.ready;
+  group.visible = character.ready && character.group.visible;   // (not in the main menu)
   if (!group.visible) return;
   group.position.set(player.x, player.visY + CHAR_H + 0.4, player.z);
   bars.quaternion.copy(camera.quaternion);

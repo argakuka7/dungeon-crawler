@@ -7,6 +7,8 @@ import { together } from '../net/online.js';
 
 const params = new URLSearchParams(location.search);
 const dev = params.get('dev') === '1';
+// the dev tools and ?seed= start in a world right away (?menu=1: in the main menu after all)
+const skipMenu = (dev || params.has('seed')) && params.get('menu') !== '1';
 
 // learn: architecture.html#notebook (see learn/README.md)
 export const player = {
@@ -29,6 +31,7 @@ export const player = {
 // learn: architecture.html#notebook (see learn/README.md)
 export const state = {
   map: null, world: null, time: 0,
+  mode: skipMenu ? 'play' : 'menu',   // 'menu': the main menu (game/menu.js); 'play': in a world
   showPath: false, transitioning: false, inventoryOpen: false, equipping: false,
   menuOpen: false,   // the Esc menu (game/escmenu.js)
   showLabels: false,   // X: name labels over every item on the floor (game/lootlabels.js)

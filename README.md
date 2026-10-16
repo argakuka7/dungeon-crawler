@@ -63,7 +63,9 @@ docs that explain how the game works, from the big ideas down to the real code:
 
 ```sh
 npm run serve            # uv run --no-project tools/serve.py [port]
-# http://localhost:8000/?seed=123   (?dev=1 for dev tools: ` opens their commands)
+# http://localhost:8000/            the main menu: heroes, worlds, joining a friend
+# http://localhost:8000/?seed=123   straight into that world, nothing saved
+#   (?dev=1 for dev tools: ` opens their commands; it skips the menu too, ?menu=1 shows it)
 # ?touch=1 forces the touch controls (docs/touch.md)
 # with RADIUS_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY set, the guide's tutor uses it through the server
 npm test

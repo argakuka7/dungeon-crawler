@@ -687,8 +687,9 @@ export function updateOnline() {
   // together our hero wears our colour, as the others see it; alone it is as it always was
   tintCharacter(peers.size && online.slot !== null ? playerTint(online.slot) : null);
   if (!peers.size) return;
-  // the host's world: start it once we are not on the way somewhere
-  if (pendingSeed !== null && !busy()) {
+  // the host's world: start it once we are not on the way somewhere (or at once, from the main
+  // menu: no world yet)
+  if (pendingSeed !== null && (!state.cubes || !busy())) {
     const seed = pendingSeed;
     pendingSeed = null;
     if (state.inventoryOpen) setInventoryOpen(false);

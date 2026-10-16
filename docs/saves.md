@@ -1,9 +1,29 @@
 # Saves: heroes and worlds
 
-Status: saving and loading are implemented (`src/core/save.js`, `src/game/save.js`), and can be
-used through the developer commands. The Esc menu (`src/game/escmenu.js`) hosts and stops
-hosting, joins and leaves. Still to come: the main menu (heroes, worlds, joining), "Save & quit
-to the menu" in the Esc menu, and the living cubes behind the main menu.
+Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
+(`src/game/menu.js`) and the Esc menu (`src/game/escmenu.js`). Still to come: the living cubes
+behind the main menu.
+
+## The menus
+
+- **The main menu** comes first (`state.mode` `'menu'`; the dev tools and `?seed=` skip it,
+  `?menu=1` shows it after all). Title: Continue (the hero and world played last), the heroes,
+  the controls, the guide. Heroes: three places, a new hero needs only a name; choose one, rename
+  it, delete it (the button asks again). Worlds, for the chosen hero: play one (a world the hero
+  was never in says so), rename, delete, or make a new one: a name and a seed, both optional (a
+  number is the seed itself, any other text is made into one, nothing: a random one; the name is
+  made up from the seed). Or join a friend's game with their code. Esc goes back a screen.
+- **`?join=CODE`** opens the heroes, with the code: the hero chosen (or made) joins at once.
+  A failed join comes back to the worlds and says why.
+- **The Esc menu** in a world: "Save and quit to the menu" (with friends in a hosted game it asks
+  first: they drop out). A guest's "Leave the game" goes back to the main menu too; when the
+  host leaves, the guest plays on in the friend's world, unsaved, until it quits.
+- Quitting (`menu.js quitToMenu`): the hero and world are saved a last time and no longer saved
+  (`stopSaving`), the game with friends ends, the screen goes dark and the world goes
+  (`flow.js endWorld`: the cubes, the enemies, the neighbours, the run). In the menu the frame
+  only draws the sky and lets a join go on (`main.js menuFrame`): the hero and its bars are
+  hidden, there is no music.
+- N (a new world) is a dev tool now: new worlds come from the menu.
 
 ## Heroes and worlds, apart
 
@@ -46,8 +66,8 @@ saves last as long as the page.
   drops, the floor loot, open faces, the town portal, discovered cubes) and then writes the hero
   and the world. Every 30 s anyway (the time played), and when the page is hidden or closed.
 - Not while on the way between cubes. Where the hero is, is only taken when it stands in a cube.
-- Only what came from the store (`play`) or went into it (`saveAs`) is saved: with `?dev=1` or
-  `?seed=` nothing is, until `/save` or `/load` (`docs/console.md`).
+- Only what came from the store (`play`, `playAsGuest`) or went into it (`saveAs`) is saved:
+  with `?dev=1` or `?seed=` nothing is, until `/save` or `/load` (`docs/console.md`).
 - A saved hero keeps its character through a new world (N, `state.keepHero`); that new world is
   not saved (the saved one is no longer played).
 

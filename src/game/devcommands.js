@@ -19,6 +19,7 @@ import { nextCube, newWorld } from './flow.js';
 import { pickFloor, pointer } from './pointer.js';
 import { heroLevel, MAX_WORLDS } from '../core/save.js';
 import { store, play, saveAs, newSavedWorld, savedHero, savedWorld, forget } from './save.js';
+import { quitToMenu } from './menu.js';
 
 const dev = cmd => addCommand(commands, { ...cmd, dev: true });
 const ahead = (d = 2.5) => ({ x: player.x + Math.sin(player.yaw) * d, y: player.y, z: player.z + Math.cos(player.yaw) * d });
@@ -158,6 +159,7 @@ dev({
     return `${savedHero().name} in ${savedWorld().name}`;
   },
 });
+dev({ name: 'menu', help: 'save and quit to the main menu', run() { quitToMenu(); } });
 dev({
   name: 'delete', help: 'delete a saved hero or world', args: [{ name: 'save', type: 'save' }],
   run({ save }) {

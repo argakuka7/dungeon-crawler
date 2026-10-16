@@ -308,21 +308,24 @@ import { updateEnemies } from './game/enemies.js';
 // ... about 50 more imports ...
 
 function frame() {
+  if (state.mode === 'menu') { menuFrame(); return; }   // the main menu: no world yet
   // ... listen, think, draw (see the next room) ...
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
-loadCube();
-setStatus('Welcome to town. Follow the path through the grove to leave.');
+if (state.mode === 'play') {   // developers (?dev=1): straight into a world
+  loadCube();
+  setStatus('Welcome to town. Follow the path through the grove to leave.');
+} else openMainMenu();         // everyone else: choose a hero and a world first
 frame();</code></pre>
     <div>
       <p lang="en"><code>import</code> lines borrow functions from other files. <code>./render/scene.js</code> means "the file <code>scene.js</code> in the folder <code>render</code> next to me". Every arrow in the picture of the parts is made of lines like these.</p>
       <p lang="de"><code>import</code>-Zeilen leihen sich Funktionen aus anderen Dateien. <code>./render/scene.js</code> heißt: "die Datei <code>scene.js</code> im Ordner <code>render</code> neben mir". Jeder Pfeil im Bild der Teile besteht aus solchen Zeilen.</p>
       <p lang="en"><code>function frame()</code> is the conductor's list. At the end it asks the browser: <i>"call <code>frame</code> again before the next picture"</i>. That is how it runs forever.</p>
       <p lang="de"><code>function frame()</code> ist die Liste des Dirigenten. Am Ende bittet sie den Browser: <i>"Ruf <code>frame</code> vor dem nächsten Bild nochmal auf."</i> So läuft sie für immer.</p>
-      <p lang="en">The last three lines run once: load the town cube, show the welcome message, start the heartbeat.</p>
-      <p lang="de">Die letzten drei Zeilen laufen nur einmal: den Stadtwürfel laden, die Begrüßung zeigen, den Herzschlag starten.</p>
+      <p lang="en">The last lines run once: open the main menu, where you choose your hero and a world (developers skip it: the town cube loads right away), then start the heartbeat.</p>
+      <p lang="de">Die letzten Zeilen laufen nur einmal: das Hauptmenü öffnen, wo du deinen Helden und eine Welt wählst (Entwickler überspringen es: Der Stadtwürfel lädt sofort), dann den Herzschlag starten.</p>
       <a class="deeper" data-lv="3" href="loop.html#frame-code" lang="en">The whole frame function, explained</a>
       <a class="deeper" data-lv="3" href="loop.html#frame-code" lang="de">Die ganze frame-Funktion, erklärt</a>
     </div>

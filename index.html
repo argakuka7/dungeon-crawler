@@ -46,10 +46,9 @@
       <dt>click, flask in hand</dt><dd>throw it where the arc points</dd>
       <dt><kbd>B</kbd></dt><dd>knock over</dd>
       <dt><kbd>R</kbd></dt><dd>respawn where you came in</dd>
-      <dt><kbd>N</kbd></dt><dd>new world</dd>
       <dt><kbd>P</kbd></dt><dd>show the generator path</dd>
       <dt><kbd>M</kbd></dt><dd>music on / off</dd>
-      <dt><kbd>Esc</kbd></dt><dd>the menu: play together, the controls, the music (alone, the game waits meanwhile)</dd>
+      <dt><kbd>Esc</kbd></dt><dd>the menu: play together, the controls, the music, save and quit (alone, the game waits meanwhile)</dd>
       <dt><kbd>O</kbd></dt><dd>play together with up to three friends (the menu)</dd>
       <dt><kbd>F</kbd></dt><dd>playing together: go to a friend (again: the next one)</dd>
       <dt><kbd>Enter</kbd></dt><dd>chat (playing together, your friends read it); the box keeps what happened</dd>
@@ -61,6 +60,7 @@
       <dl class="keys">
         <dt>click portal</dt><dd>take it, even past a guardian</dd>
         <dt><kbd>G</kbd></dt><dd>go to the next way down</dd>
+        <dt><kbd>N</kbd></dt><dd>a new world (not saved; a saved hero comes along)</dd>
         <dt><kbd>PgDn</kbd> <kbd>PgUp</kbd></dt><dd>change depth</dd>
         <dt><kbd>Alt</kbd> + <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>jump to the cube up-right / up-left / down-left / down-right</dd>
         <dt><kbd>`</kbd></dt><dd>developer commands: /spawn, /kill, /weapon, /give, /goto ... (/help)</dd>
@@ -101,7 +101,14 @@
     <button id="menu-leave" hidden>Leave</button>
     <p class="menu-note">Up to four play together, each with their own hero, in the host's world. Friends come and go as they like. Explore together or apart: the coloured dots on the map are your friends, F takes you to them. The monsters go after all of you, every kill gives each of you XP, the loot is shared: whoever gets to it first takes it. Knocked out, you lie there until a friend helps you up. Needs the internet: the browsers find the host through the PeerJS service and then talk to it directly.</p>
     <div class="menu-row menu-more"><button id="menu-controls">Controls</button><button id="menu-music">Music: off</button></div>
+    <button id="menu-quit">Save and quit to the menu</button>
   </section>
+</div>
+<div id="title-overlay" hidden>
+  <div id="title-box">
+    <h1 id="title-logo">Cube Crawler</h1>
+    <section id="title-panel" aria-live="polite"></section>
+  </div>
 </div>
 <div id="loot-labels"></div>
 <div id="inventory-overlay" hidden>

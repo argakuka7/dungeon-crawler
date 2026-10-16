@@ -43,6 +43,8 @@ addEventListener('keydown', e => {
     if (e.code === 'Escape' && state.menuOpen) { setMenuOpen(false); e.preventDefault(); }
     return;
   }
+  // the main menu (game/menu.js) has its own keys
+  if (state.mode === 'menu') return;
   // the Esc menu is open: Esc and O close it, the game gets no keys
   if (state.menuOpen) {
     if ((e.code === 'Escape' || e.code === 'KeyO') && !e.repeat) setMenuOpen(false);
@@ -77,7 +79,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyE') view.yawTarget += Math.PI / 2;
   if (e.code === 'KeyC') requestCollect();
   if (e.code === 'KeyR') { spawnEntry(); setStatus('Respawned where you came in'); }
-  if (e.code === 'KeyN') nextCube();
+  if (e.code === 'KeyN' && state.dev) nextCube();   // (new worlds come from the main menu)
   if (e.code === 'KeyX') toggleLabels();
   if (e.code === 'KeyF') goToFriend();   // playing together: over to the friend
   if (e.code === 'KeyK' || e.code === 'KeyL') { view.zoomTarget = stepZoom(view.zoomTarget, e.code === 'KeyK' ? -1 : 1); e.preventDefault(); }
@@ -160,7 +162,7 @@ function click(walk) {
   }
 }
 addEventListener('wheel', e => {
-  if (!state.inventoryOpen && !state.menuOpen) view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
+  if (!state.inventoryOpen && !state.menuOpen && state.mode === 'play') view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
 }, { passive: true });
 
 // desired direction in world space (WASD or the touch stick, relative to the camera)

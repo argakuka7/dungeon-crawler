@@ -28,7 +28,7 @@ being helped up and getting back in. Up to four players, co-op.
   its character (level, bag, gear); the floor loot and opened chests come in the `welcome`
   too (a guest getting back in takes the host's instead of its own). Every world is the
   same for the same seed, whatever the order cubes are visited in (`world/wfc.js`), so no
-  map goes over the wire. Only the host starts new worlds (N); the guests follow.
+  map goes over the wire. Only the host starts new worlds (with the dev tools, N); the guests follow.
 - Everyone sends `me` 20 times a second: cube, position, the character's 14 bone rotations
   (`render/partner.js capturePose`), weapon model, worn things, health and level. The
   others draw them as a figure in the player's colour, ~110 ms in the past, blending the two

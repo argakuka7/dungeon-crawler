@@ -65,12 +65,17 @@ import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
+import { openMainMenu, updateMenu, quitToMenu } from './game/menu.js';
+import { character } from './render/character.js';
 
 const clock = new THREE.Clock();
 
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
 function frame() {
-  const elapsed = Math.min(clock.getDelta(), 1 / 30), dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
+  const elapsed = Math.min(clock.getDelta(), 1 / 30);
+  if (state.mode === 'menu') { menuFrame(); return; }
+  if (character.ready) character.group.visible = true;
+  const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
   state.time += dt;
   if (dt > 0 && travelling()) updateTravel(dt);
@@ -117,8 +122,23 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
-loadCube();
-setStatus('Welcome to town. Follow the path through the grove to leave.');
+// The main menu (game/menu.js): no hero, no world, nothing to play yet; only joining a friend
+// goes on (their world starts here, net/session.js)
+function menuFrame() {
+  if (character.ready) character.group.visible = false;
+  updatePlayerBar(); updatePortalBar(); updateCastBar();   // (they hide with no hero and no world)
+  updateOnline();
+  updateMenu();
+  tickSky(performance.now() / 1000);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// the dev tools and ?seed= start in a world, everyone else in the main menu (game/state.js mode)
+if (state.mode === 'play') {
+  loadCube();
+  setStatus('Welcome to town. Follow the path through the grove to leave.');
+} else openMainMenu();
 // debug / test hooks
 window.__game = {
   get map() { return state.map; }, player, generate, loadCube, updatePlayer, groundAt,
@@ -130,6 +150,7 @@ window.__game = {
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go
   net: { online, hostGame, joinGame, leaveGame, status: sessionStatus },   // playing together (net/session.js)
   saves: { store, play, saveAs, saveNow, get hero() { return savedHero(); }, get world() { return savedWorld(); } },   // game/save.js
+  menu: { open: openMainMenu, quit: quitToMenu },   // the main menu (game/menu.js)
   chat: { open: openChat, close: closeChat, say, run: runCommand, chronicle },   // the chat box (game/console.js)
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,

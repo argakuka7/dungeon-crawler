@@ -69,7 +69,7 @@ export function closeChat() {
 
 // Enter: chat; `: a command (also with the inventory and the other panels' fields left alone)
 addEventListener('keydown', e => {
-  if (open || e.repeat || e.metaKey || e.ctrlKey || e.altKey || state.inventoryOpen || state.menuOpen) return;
+  if (open || e.repeat || e.metaKey || e.ctrlKey || e.altKey || state.inventoryOpen || state.menuOpen || state.mode !== 'play') return;
   if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target?.tagName)) return;
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); openChat(''); }
   else if (e.code === 'Backquote') { e.preventDefault(); openChat('/'); }
