@@ -22,7 +22,7 @@ const REST = 30000;                  // ms without stepping down after a step do
 
 export function resolutionController(max, min = Math.min(max, Math.max(0.6, max / 2))) {
   let ratio = max, sum = 0, work = 0, n = 0, span = 0;
-  let smooth = 0, calm = CALM, rest = 0, trial = null, raised = -1, clock = 0;
+  let smooth = 0, calm = CALM, rest = 0, trial = null, raised = -Infinity, clock = 0;
   const clamp = r => Math.min(max, Math.max(min, r));
   // interval: ms since the last frame; spent: ms the frame's own work took. Returns the new
   // ratio when it changes, else null.

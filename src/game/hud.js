@@ -5,6 +5,7 @@ import { themeAt } from '../themes/depth.js';
 import { isFaceOpen } from '../core/boundaries.js';
 import { state } from './state.js';
 import { population } from '../core/spawns.js';
+import { renderer } from '../render/scene.js';
 
 const $ = id => document.getElementById(id);
 const shown = {};
@@ -38,7 +39,10 @@ export function updateHud(player, map) {
   put('dev-layer', map ? `${player.layer + 1}/${map.K}` : '-');
   frames++;
   const now = performance.now();
-  if (now - since >= 500) { put('dev-fps', String(Math.round(frames * 1000 / (now - since)))); frames = 0; since = now; }
+  if (now - since >= 500) {
+    put('dev-fps', String(Math.round(frames * 1000 / (now - since)))); frames = 0; since = now;
+    put('dev-res', renderer.getPixelRatio().toFixed(2) + '×');   // pixels per CSS pixel (render/resolution.js)
+  }
 }
 
 export function flash() {

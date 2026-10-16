@@ -155,7 +155,6 @@ placeStars();
 let w = innerWidth, h = innerHeight;
 addEventListener('resize', () => {
   if (Math.abs(innerWidth * innerHeight - w * h) > 0.1 * w * h) { w = innerWidth; h = innerHeight; placeStars(); }
-  SU.scale.value = renderer.getPixelRatio();
 });
 
 // colours as linear THREE.Colors (as look.js blends them); stars: 0..1
@@ -168,4 +167,5 @@ export function setSkyLook(top, bottom, haze, tint, amount) {
   stars.visible = amount > 0.01;
 }
 
-export function tickSky(seconds) { SU.time.value = seconds; }
+// the stars' size is in CSS pixels: follow the pixel ratio (it changes with the frame rate)
+export function tickSky(seconds) { SU.time.value = seconds; SU.scale.value = renderer.getPixelRatio(); }

@@ -110,6 +110,8 @@
       <li lang="en">Once a second: if something changed, save the hero and the world.</li>
       <li lang="de">Einmal pro Sekunde: Wenn sich etwas geändert hat, den Helden und die Welt speichern.</li>
       <li><b lang="en">Draw everything.</b> <b lang="de">Alles malen.</b></li>
+      <li lang="en">Check how long the frames take: if the graphics card can't keep up, draw fewer pixels.</li>
+      <li lang="de">Nachschauen, wie lange die Bilder dauern: Kommt die Grafikkarte nicht mit, weniger Pixel malen.</li>
       <li lang="en">Ask the browser to call us again for the next frame.</li>
       <li lang="de">Den Browser bitten, uns fürs nächste Bild wieder aufzurufen.</li>
     </ol>
@@ -152,6 +154,8 @@
       <p lang="de"><code>gameTime</code> kommt aus <code>src/game/pace.js</code>: Normalerweise gibt es <code>elapsed</code> zurück. Wenn der Führer das Spiel anhält, gibt es 0, in Zeitlupe einen Teil davon. So kann der Führer die Zeit anhalten, um dir etwas zu zeigen.</p>
       <p lang="en">Notice that the music gets <code>elapsed</code>, not <code>dt</code>. Why? So the music keeps playing while the game is paused!</p>
       <p lang="de">Fällt dir auf, dass die Musik <code>elapsed</code> bekommt und nicht <code>dt</code>? Damit die Musik weiterspielt, während das Spiel pausiert!</p>
+      <p lang="en"><code>start</code> notes when the frame began. After drawing, <code>tickResolution(start)</code> looks at how long the frames take: when the graphics card can't keep up, the game draws fewer pixels, and more again once it can (<code>src/render/resolution.js</code>).</p>
+      <p lang="de"><code>start</code> merkt sich, wann das Bild angefangen hat. Nach dem Malen schaut <code>tickResolution(start)</code>, wie lange die Bilder dauern: Kommt die Grafikkarte nicht mit, malt das Spiel weniger Pixel, und wieder mehr, sobald sie es schafft (<code>src/render/resolution.js</code>).</p>
       <p lang="en"><code>requestAnimationFrame(frame)</code> asks the browser to call <code>frame</code> again right before it shows the next picture.</p>
       <p lang="de"><code>requestAnimationFrame(frame)</code> bittet den Browser, <code>frame</code> direkt vor dem nächsten Bild wieder aufzurufen.</p>
     </div>

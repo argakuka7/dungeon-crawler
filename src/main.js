@@ -22,6 +22,7 @@ import { tickProps } from './render/props.js';
 import { tickFluidDeath } from './render/fluiddeath.js';
 import { applyLook } from './render/look.js';
 import { tickSky } from './render/sky.js';
+import { tickResolution } from './render/resolution.js';
 import { updatePlayerBar } from './render/playerbar.js';
 import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
@@ -79,8 +80,9 @@ const clock = new THREE.Clock();
 
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
 function frame() {
+  const start = performance.now();
   const elapsed = Math.min(clock.getDelta(), 1 / 30);
-  if (state.mode === 'menu') { menuFrame(elapsed); return; }
+  if (state.mode === 'menu') { menuFrame(elapsed, start); return; }
   if (character.ready) character.group.visible = true;
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
@@ -126,6 +128,7 @@ function frame() {
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   renderer.render(scene, camera);
+  tickResolution(start);   // fewer pixels while the GPU cannot keep up (render/resolution.js)
   requestAnimationFrame(frame);
 }
 
@@ -134,7 +137,7 @@ function frame() {
 // joining a friend goes on (their world starts here, net/session.js)
 const menuFocus = new THREE.Vector3(N / 2, 2, N / 2);
 const SWAY = 0.6, SWAY_SPEED = 0.35;   // the hero in the menu turns a little to and fro (rad, rad/s)
-function menuFrame(dt) {
+function menuFrame(dt, start) {
   state.time += dt;
   if (character.ready && !portraitShown()) character.group.visible = false;
   if (portraitShown()) { player.yaw = Math.sin(state.time * SWAY_SPEED) * SWAY; animateCharacter(dt, state.time); }
@@ -153,6 +156,7 @@ function menuFrame(dt) {
   tickSky(performance.now() / 1000);
   renderer.render(scene, camera);
   drawPortrait(heroBox());
+  tickResolution(start);
   requestAnimationFrame(frame);
 }
 
