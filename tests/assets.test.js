@@ -6,7 +6,7 @@ import { assets } from './paths.js';
 import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } from '../src/core/combat.js';
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, fireAt } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 function glb(name) {
@@ -282,6 +282,25 @@ test('Spicy rolls on wheels, backs off and fires its laser on the profile timing
   assert.ok(body[1] > 0.6 && body[1] > 2 * body[0] && body[0] > body[2], 'toxic green');
   const [r, g, b] = j.materials.find(m => m.name === 'SpicyEyes_glow').emissiveFactor;
   assert.ok(r === 1 && g < 0.1 && b < 0.1, 'red eyes');
+});
+test('Wolk walks, strikes on the profile timings from the profile muzzle and can lose its limbs', () => {
+  const { j, a } = enemyClips('wolk', WOLK, { walk: 'WolkWalk', attack: 'WolkZap', death: 'WolkDeath' });
+  const zap = a.WolkZap.extras;
+  assert.equal(zap.attack_style, 'lightning');
+  assert.ok(Math.abs(zap.beam_frame / 30 - fireAt(WOLK)) < 1e-9, 'the spot shows for its time up to the strike');
+  assert.deepEqual(zap.muzzle, [...WOLK.beam.muzzle]);
+  const node = name => j.nodes.find(n => n.name === name), index = name => j.nodes.indexOf(node(name));
+  for (const bone of ['body', 'eye.L', 'eye.R', 'thigh.L', 'shin.R', 'arm_upper.L', 'arm_lower.R', 'hand.L']) assert.ok(node(bone), bone);
+  // the limbs hang from the root, not the cloud, so they can fall off and the cloud can squash
+  const root = node('root');
+  for (const limb of ['thigh.L', 'thigh.R', 'arm_upper.L', 'arm_upper.R']) assert.ok(root.children.includes(index(limb)), limb);
+  assert.ok(!node('body').children?.some(i => /thigh|arm/.test(j.nodes[i].name)));
+  // every material it recolours or darkens is in the model
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(WOLK.parts).flat()) assert.ok(names.has(m), m);
+  for (const role of WOLK.gloom.parts) assert.ok(WOLK.parts[role], role);
+  const cloud = j.materials.find(m => m.name === 'WolkCloud').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(cloud[2] > cloud[1] && cloud[1] > cloud[0] && cloud[0] > 0.3, 'light blue');
 });
 test('standalone sword is a small untextured, unskinned prop', () => {
   const { json: j } = glb('sword');

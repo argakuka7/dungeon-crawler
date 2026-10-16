@@ -126,3 +126,18 @@ Fire-face, Fire-cat and Spicy have `parts` (flame, fur, eyes; the Spicy's body, 
 eyes) but no kinds yet. A Spicy kind can give its laser a colour of its own with `beamColor`. A blue-fire kind
 would also need its embers, its light and its fireball trail recoloured through `sparks`
 and `light`.
+
+The Wolk has `parts` (body, limbs) but no kinds yet. Its `gloom` darkens the `body` role towards
+a colour of its own while it gathers its lightning, so a kind's cloud darkens from the kind's
+colour; a kind may set its own `gloom` too.
+
+## Guardians
+
+Every species' guardians are kinds as well (`GUARDIAN_KINDS`, `DESCENT_GUARDIAN_KINDS`):
+hot pink and amber with pale eyes ([guardians.md](guardians.md)). A species can dress them
+otherwise with `guardianLooks.side` and `.descent`, which replace those fields (`colors`,
+`light`, `sparks`, `ichor`, ...). The Wolk's side guardian is a grey rain cloud that darkens
+almost to black, its descent guardian a polished silver cloud: its `finish` (`{ parts,
+roughness, metalness, sheen, glints }`, `render/enemies.js`) makes those materials smoother and
+a little metallic, with a faint sheen of their own colour (the scene has no environment to
+mirror, so fully metallic would look dark) and white glints twinkling on it.

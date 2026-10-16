@@ -111,6 +111,22 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         noise(t + 0.55, 0.5, filter('bandpass', 1300 * p, 0.8, amp(t + 0.55, 0.005, 0.5, 0.45, out)));   // the splash
       },
     },
+    wolk: {     // a sad cloud: a sighing "ohh", a deep breath and a hum, a long falling sob
+      alert: (t, out, p) => {
+        bend(t, 0.6, 340 * p, 310 * p, 220 * p, 650 * p, 0.3, out);
+        noise(t, 0.45, filter('bandpass', 900 * p, 1, amp(t, 0.12, 0.05, 0.3, out)));   // the breath in it
+      },
+      windup: (t, out, p) => {   // (the crackle, the bolt and the thunder are their own sounds, game/juice.js)
+        noise(t, 0.4, filter('bandpass', 650 * p, 1.5, amp(t, 0.25, 0.07, 0.15, out)));
+        tone('sine', 196 * p, 233 * p, t + 0.2, 0.55, amp(t + 0.2, 0.12, 0.14, 0.42, out));
+      },
+      death: (t, out, p) => {   // and the plop of the cloud, and its sticks clattering down
+        bend(t, 1.0, 380 * p, 320 * p, 150 * p, 600 * p, 0.36, out);
+        noise(t + 0.72, 0.2, filter('lowpass', 450 * p, 0.8, amp(t + 0.72, 0.005, 0.55, 0.2, out)));
+        clicks(t + 0.68, 2, 0.05, 1300 * p, 0.35, out);
+        clicks(t + 0.9, 2, 0.06, 1600 * p, 0.3, out);
+      },
+    },
   };
   const out = {};
   for (const [species, kinds] of Object.entries(V)) for (const k of VOICE_KINDS) out[`${species}_${k}`] = kinds[k];

@@ -22,6 +22,7 @@ export const player = {
   burning: null,   // on fire (core/projectiles.js ignite)
   chilled: null,   // slowed by an ice ball (core/projectiles.js chillFrom)
   gust: null,      // blown back by a Wolla's storm (core/gusts.js pushStep)
+  shocked: 0,      // stunned by a Wolk's bolt: how long its sparks still crackle (render/shocked.js)
   // event counters the animator watches
   jumpCount: 0, landCount: 0, landImpact: 0,
   ragdoll: null, getUp: null,   // getting up after a ragdoll (game/ragdoll.js)

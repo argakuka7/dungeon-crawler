@@ -72,7 +72,7 @@ export async function runGuardianChecks() {
         samples.push(e);
       }
       animateEnemies(samples, 0);
-      check(samples.every(e => e.view?.label.visible), 'all fourteen guardian kinds have loaded models and labels');
+      check(samples.every(e => e.view?.label.visible), 'every guardian kind has a loaded model and a label');
       renderer.compile(scene, camera);
       removeEnemyViews(samples); samples.length = 0;
       damageEnemy(guard, guard.hp); updateEnemies(.001);

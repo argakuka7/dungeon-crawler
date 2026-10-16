@@ -27,6 +27,10 @@ Each species has two distinct registered kinds, excluded from ordinary rosters:
 | Side guardian | `GUARDIAN_KINDS` | Hot-pink body/glow, pink HP bar, `◆ Side guardian` label | `guardianRole: 'side'` |
 | Descent guardian | `DESCENT_GUARDIAN_KINDS` | Amber body/glow, wider amber HP bar, `♛ Descent guardian` label | `guardianRole: 'descent'`, `bossPlaceholder: true` |
 
+A species may replace the pink and amber look with its own (`guardianLooks` on its profile,
+[enemy-kinds.md](enemy-kinds.md#guardians)): the Wolk's guardians are a grey and a shining
+silver cloud. The HP bar and the label keep the tier's colour.
+
 `map.guardian.role` and `.bossPlaceholder`, spawn/enemy fields, kind profiles, and
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for later replacement by a custom boss; no boss-specific AI exists yet.

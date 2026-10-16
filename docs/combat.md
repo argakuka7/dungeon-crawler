@@ -144,6 +144,23 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   `physics/move.js`; walls stop it, ledges and fluids do not), with little steering meanwhile.
   It stops turning at 0.5 s, so stepping out of the cone then dodges it. A stagger ends the
   storm. Kinds: Bog wolla (green), Storm wolla (purple), Ember wolla (orange).
+- Wolk (`blender/wolk.py`): a sad little light blue cloud with a tear on its cheek, walking on
+  two long stick legs, two thin arms with three-fingered hands hanging from its belly. It
+  fights from afar (`style: 'ranged'`, 2.6–4.2 cells, from 4.5 cells). To strike it closes its
+  eyes and lifts its arms, and its cloud darkens to storm grey (`gloom`, `render/enemies.js`),
+  swelling and trembling, lightning flickering inside. Its lightning is a beam of kind `bolt`
+  (`game/beams.js`, `core/beams.js`): from 0.3 s a crackling ring with the cloud's dark shadow
+  shows on the floor under the player's feet, following them at 1.4 cells/s; for the last
+  0.35 s before the strike it holds still. At 1.1 s (clip frame 33) it throws its hands forward
+  and a jagged bolt jumps from the front of its belly to the spot (`render/beams.js`): a player
+  within 0.3 cells of it (body radius included) takes the blow and is stunned for 0.9 s
+  (`shock`: no moving, jumping or striking; sparks crackle over them, `render/shocked.js`).
+  The thunder rolls in after it, the later the further from the player it struck (0.45 s plus
+  0.11 s a cell, `game/juice.js`). Stepping off the spot once it holds still dodges it; a
+  stagger or death puts the lightning out. It dies falling apart: its legs topple away, the
+  cloud drops and squashes flat, its arms pop off and land beside it, and it turns light blue
+  again. Its side guardian is a grey rain cloud, its descent guardian a polished silver one
+  that glints (`guardianLooks` in `core/enemies.js`, `finish` in `render/enemies.js`).
 - The glow lives in `render/enemies.js`: each of the three (and the Fire shraps) carries a light from the
   shared light pool (`trackLight`), bones named `flame*` keep flickering over any clip,
   the Triangle's emissive materials pulse with its hover beat, fire sheds embers, and
@@ -182,7 +199,7 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
   - `skirmish` (spiders, snakes, Fire-cats): backs off after a blow, circles at `circle` cells
     (spiders scuttle sideways facing you, `strafe`; the others walk round), switching sides
     when blocked and now and then, and darts in once the cooldown is over.
-  - `ranged` (Fire-face, Triangle, Spicy, Wolla): backs away while closer than `keep[0]`, sidesteps while the
+  - `ranged` (Fire-face, Triangle, Spicy, Wolla, Wolk): backs away while closer than `keep[0]`, sidesteps while the
     throw recovers, and moves for a clear shot when it has none.
   - `brute` (Stunder, Octonaut, Shraps): holds its ground. The Stunder `charge`s: it runs the
     last 1.5–5 cells at 1.8× its chase speed when it can strike again.
@@ -295,7 +312,7 @@ these do not change inventory or combat stats. Swimming / climbing hides the pro
 vertical speed advances its phase, descent reverses it, and stopping holds
 the grip. Regenerate via the Blender commands in
 `character.py`, `spider.py`, `stunder.py`, `snake.py`, `octonaut.py`, `fireface.py`,
-`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py` and `sword.py` (the SDF creatures share `blender/creature.py`
+`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py`, `wolk.py` and `sword.py` (the SDF creatures share `blender/creature.py`
 and can also be rebuilt from a Blender MCP session; previews land in `blender/previews/`). Tests check balance, hit timing,
 direction / reach / height, cancellations, deterministic spawns, clearance,
 navigation and the exported asset/clip contract.

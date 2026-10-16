@@ -56,9 +56,9 @@ A roster entry is `species chance count (packs) [kinds]`:
 | Depth | mix | Roster |
 |---:|---:|---|
 | 0 | 1 | snakes 1–2 |
-| 1 | 2 | snakes 2–4, Stunders 20% 1 |
-| 2 | 3 | snakes 2–5 [80% Grass snake, 20% Sand viper], spiders 60% 2–4 (packs ≤2), Stunders 25% 1 |
-| 3 | 3 | spiders 8–14 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], Shraps 20% 1, Triangles 12% 1 |
+| 1 | 2 | snakes 2–4, Stunders 20% 1, Wolks 25% 1 |
+| 2 | 3 | snakes 2–5 [80% Grass snake, 20% Sand viper], spiders 60% 2–4 (packs ≤2), Stunders 25% 1, Wolks 35% 1–2 |
+| 3 | 3 | spiders 8–14 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], Shraps 20% 1, Wolks 40% 1–2, Triangles 12% 1 |
 | 4 | 3 | snakes 3–6 (packs ≤2) [67% Sand viper, 22% Grass snake, 11% Blood viper], spiders 80% 4–8 (packs ≤3) [80% Spider, 20% Redback], Stunders 60% 1–2 [50% Stone stunder, 50% Stunder] |
 | 5 | 3 | spiders 6–10 (packs ≤3) [75% Spider, 25% Bog spider], snakes 80% 3–6 (packs ≤2) [67% Grass snake, 33% Sand viper], Stunders 60% 1–2 [67% Stunder, 33% Stone stunder], Wollas 30% 1–2 |
 | 6 | 3 | spiders 7–12 (packs ≤3) [67% Spider, 22% Bog spider, 11% Redback], snakes 80% 4–7 (packs ≤2) [29% Grass snake, 57% Sand viper, 14% Blood viper], Stunders 60% 1–3 [67% Stunder, 33% Stone stunder], Wollas 40% 1–2, Octonauts 20% 1 |
@@ -82,7 +82,8 @@ The design rules behind the table:
 - **The surface ramps up slowly.** Depth 1 has only snakes and a rare Stunder. Depth 2 adds
   a few spiders. Depth 3 is the first spider-heavy depth, with more Stunders and a rare
   Triangle as a mini-boss. Depth 4 mixes snakes, spiders and Stunders.
-- **Each theme has one or two signature species:** Octonauts and Shraps in the frozen caves,
+- **Each theme has one or two signature species:** Wolks under the open sky of the meadows and the
+  snowy peaks, Octonauts and Shraps in the frozen caves,
   snakes and Spicies in the swamp, Wollas (by kind) from the root caves down, spiders in the nests, Triangles in the mines and ruins, Fire-faces,
   Fire-cats and Fire shraps in the volcanic depths and the abyss.
 - **Kinds follow the theme and get stronger with depth.** Frost spiders and Frost stunders
@@ -93,10 +94,10 @@ The design rules behind the table:
   Shadow mambas (ruins and volcanic depths). Spiders go from plain spiders to Redbacks.
 - **Rare guests preview the next theme.** A 10–20% roll lets a species show up a theme
   early: an Octonaut at 6, a Shraps at 3, a Triangle at 8 and 12, a Fire-face at 10, Fire-cats at 15.
-- **Ranged species stay few.** Fire-faces, Triangles, Shraps, Spicies and Wollas never go above 4 per
+- **Ranged species stay few.** Fire-faces, Triangles, Shraps, Spicies, Wollas and Wolks never go above 4 per
   cube, because several shooters at once are hard to read and to dodge. The Shraps throws and
   pinches, so it stays at 1–3; so does the Spicy, whose lasers are easy to dodge one at a time
-  but not from three sides.
+  but not from three sides. The Wolk, whose lightning also stuns, comes alone or in twos.
 - **Melee species get more numerous.** Spiders go from 2–4 at depth 2 to 8–14 at 3, 20–28 in
   the nests, and up to 26 in the core. They spawn in packs, and the packs get bigger the
   deeper you go. Snakes grow the same way, but more slowly.
@@ -147,9 +148,9 @@ enemies' own levels, before the player's level scales it.
 | Depth | Enemies | Max | XP | Depth | Enemies | Max | XP |
 |---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 2.8 | 7 | 163 | 11 | 26.9 | 56 | 2746 |
-| 1 | 4.7 | 12 | 233 | 12 | 27.6 | 54 | 3187 |
-| 2 | 7.2 | 14 | 380 | 13 | 14.1 | 34 | 2772 |
-| 3 | 15.0 | 32 | 766 | 14 | 12.8 | 32 | 3760 |
+| 1 | 5.0 | 12 | 253 | 12 | 27.6 | 54 | 3187 |
+| 2 | 8.0 | 18 | 425 | 13 | 14.1 | 34 | 2772 |
+| 3 | 14.7 | 28 | 770 | 14 | 12.8 | 32 | 3760 |
 | 4 | 12.4 | 26 | 880 | 15 | 15.1 | 32 | 4033 |
 | 5 | 15.0 | 28 | 1036 | 16 | 21.0 | 62 | 5559 |
 | 6 | 17.7 | 36 | 1435 | 17 | 14.3 | 36 | 5134 |
@@ -186,6 +187,7 @@ and coins by `1 + 0.25 (L − 1)`, and round.
 | Shraps | medium, throws | 110 | 22 (ice ball 20, chills) | 70 | 16–28 | 0.8 s |
 | Spicy | medium, laser | 100 | 26 (laser burst) | 72 | 16–30 | 0.6 s |
 | Wolla | medium, storm | 95 | 22 (storm, pushes back) | 64 | 14–26 | 0.6 s |
+| Wolk | medium, lightning | 85 | 20 (bolt, stuns 0.9 s) | 60 | 12–24 | 0.5 s |
 | Stunder | heavy | 140 | 30 | 80 | 20–35 | 1.5 s |
 | Fire-face | strong, ranged | 120 | 22 (+6 burn) | 90 | 24–40 | 0.8 s |
 | Fire-cat | strong | 130 | 26 | 95 | 22–38 | 0.4 s |

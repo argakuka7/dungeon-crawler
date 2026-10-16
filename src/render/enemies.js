@@ -13,6 +13,13 @@
 // faster while it gathers its storm and blows, and still once it is dead. Its storm cloud's
 // lightning (the attack's `thunder` times) flashes a light, and it leaves a wet trail
 // (trails.js).
+// A kind's `finish` ({ parts, roughness, metalness, sheen, glints }: the Wolk's silver descent
+// guardian) polishes the materials of those parts: smoother, a little metallic, with a faint sheen
+// of their own colour (the scene has no environment to mirror, so they stay mostly diffuse),
+// and white glints twinkle on its body `glints` times a second.
+// Gloom (a species with `gloom`: the Wolk): the materials of its `gloom.parts` darken towards
+// `gloom.color` while it gathers its lightning, flicker with it inside and flash at the strike,
+// then lighten again, and as it dies.
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
 import { spiderModel } from './spidermodel.js';
@@ -25,18 +32,20 @@ import { fireCatModel } from './firecatmodel.js';
 import { shrapsModel } from './shrapsmodel.js';
 import { spicyModel } from './spicymodel.js';
 import { wollaModel } from './wollamodel.js';
+import { wolkModel } from './wolkmodel.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { glow, emit, rand } from './particles.js';
 import { wetTrail, removeTrail } from './trails.js';
 import { cloneEnemy } from './enemymodel.js';
 import { kindColors, recolor, hideParts } from './recolor.js';
 import { attackOf } from '../core/enemies.js';
+import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { player } from '../game/state.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
-  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel };
+  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel };
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
 // clip's beat (twice per hover loop); embers: per second, rising from `from` (a bone, or
 // a height above the body); flicker: extra flame motion
@@ -114,6 +123,49 @@ function thunder(v, e) {
   v.flash.intensity = 8 * k;
   if (k <= 0.03) { untrackLight(v.flash); v.flash = null; }
 }
+// how dark its cloud is (0..1): darkening up to just before the strike, dark through it, then
+// lightening again until the attack is over
+const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+function gloomOf(e) {
+  if (e.mode !== 'attack') return 0;
+  const a = attackOf(e), hit = a.hitAt, end = a.attackTime ?? e.profile.attackTime;
+  return e.t < hit + 0.15 ? ease(e.t / (hit - 0.2)) : 1 - ease((e.t - hit - 0.15) / (end - hit - 0.15));
+}
+// lightning inside the cloud while it gathers (sparse flickers, more as the strike nears), and
+// the flash of the strike itself
+function glimmer(e, v) {
+  if (e.mode !== 'attack') return 0;
+  const hit = attackOf(e).hitAt;
+  if (e.t >= hit) return Math.exp(-(e.t - hit) * 10);
+  const n = Math.sin(e.t * 53 + v.seed) * Math.sin(e.t * 31 + 2 * v.seed);
+  return n > 0.82 - 0.25 * e.t / hit ? 0.5 : 0;
+}
+const tint = new THREE.Color(), spark = new THREE.Color(0xf2f6ff);
+// the colour each material shows before the hit flash and the hover tint
+function baseColor(v, m) {
+  if (!m.gloom || v.gloom < 0.001 && v.glimmer < 0.001) return m.color;
+  return tint.copy(m.color).lerp(v.gloomColor, v.gloom).lerp(spark, v.glimmer * 0.6);
+}
+function gloomStep(v, e, dt) {
+  if (!v.gloomColor) return;
+  const dead = e.mode === 'dead';
+  v.gloom += ((dead ? 0 : gloomOf(e)) - v.gloom) * Math.min(1, dt * (dead ? 2.5 : 10));
+  v.glimmer = dead ? 0 : glimmer(e, v);
+}
+function polish(material, { roughness = 0.2, metalness = 0.5, sheen = 0 }) {
+  material.roughness = roughness; material.metalness = metalness;
+  if (sheen && material.emissive) material.emissive.copy(material.color).multiplyScalar(sheen);
+}
+function glints(v, e, dt) {
+  const rate = e.profile.finish?.glints;
+  if (!rate || Math.hypot(e.x - player.x, e.z - player.z) > 12) return;
+  const s = Math.sin(v.yaw), c = Math.cos(v.yaw), h = e.profile.height, w = e.profile.radius;
+  for (let i = Math.floor(rate * dt + Math.random()); i > 0; i--) {
+    const lx = rand(-1, 1) * w, lz = rand(-0.5, 0.5) * w, p = v.group.position;
+    emit(glow, p.x + lx * c + lz * s, p.y + rand(0.7, 0.95) * h, p.z - lx * s + lz * c,
+      { life: rand(0.18, 0.3), size: rand(0.08, 0.13), grow: -0.6, color: '#ffffff', alpha: 0.95 });
+  }
+}
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
 function makeView(e, prefab) {
@@ -121,10 +173,13 @@ function makeView(e, prefab) {
   model.scale.multiplyScalar(size);
   hideParts(model, e.profile);
   group.add(model); scene.add(group);
-  const materials = [], colors = kindColors(e.profile, prefab);
+  const materials = [], colors = kindColors(e.profile, prefab), gloom = e.profile.gloom;
+  const named = roles => new Set((roles ?? []).flatMap(role => e.profile.parts?.[role] ?? [role]));
+  const gloomy = named(gloom?.parts), finish = e.profile.finish, polished = named(finish?.parts);
   model.traverse(o => {
     if (!o.isMesh) return;
-    const own = m => { const c = recolor(m.clone(), colors); c.transparent = true; materials.push({ material: c, color: c.color.clone(), glow: c.emissiveIntensity ?? 0 }); return c; };
+    const own = m => { const c = recolor(m.clone(), colors); c.transparent = true;
+      if (polished.has(c.name)) polish(c, finish); materials.push({ material: c, color: c.color.clone(), glow: c.emissiveIntensity ?? 0, gloom: gloomy.has(c.name) }); return c; };
     o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
   });
   // silhouette shown where the body is hidden behind terrain (like the player's); drawn
@@ -164,7 +219,8 @@ function makeView(e, prefab) {
   }
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
   return { group, model, mixer, actions, prefab, materials, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
-    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100 };
+    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
+    gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0 };
 }
 // the hover clip's beat (matches blender/triangle.py): sharp, twice per loop
 const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
@@ -195,7 +251,8 @@ function dying(v, e, dt, off) {
   }
   v.actions.death.time = Math.min(e.deadT, v.actions.death.getClip().duration);
   const fade = Math.max(0, 1 - Math.max(0, e.deadT - e.profile.deathTime - 0.5) / 0.8);
-  for (const { material } of v.materials) material.opacity = fade;
+  gloomStep(v, e, dt);
+  for (const m of v.materials) { m.material.opacity = fade; if (m.gloom) m.material.color.copy(baseColor(v, m)); }
   v.ghost.opacity = GHOST_OPACITY * fade;
   v.bar.visible = false; v.label.visible = false; v.mark.visible = false;
   v.group.visible = fade > 0;
@@ -235,7 +292,8 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
       A[name].setEffectiveWeight(v.weights[name]);
     }
     const flash = Math.min(0.6, e.hurtT / 0.22 * 0.6);
-    for (const { material, color } of v.materials) material.color.copy(color).lerp(flash > 0.1 || !e.hovered ? white : hover, Math.max(flash, e.hovered ? 0.22 : 0));
+    gloomStep(v, e, dt);
+    for (const m of v.materials) m.material.color.copy(baseColor(v, m)).lerp(flash > 0.1 || !e.hovered ? white : hover, Math.max(flash, e.hovered ? 0.22 : 0));
     v.bar.visible = !!e.guardian || !!e.hovered || !e.hordeId && e.hp < e.profile.hp;
     v.label.visible = v.bar.visible || !e.hordeId && Math.hypot(e.x - player.x, e.z - player.z) < e.profile.aggro + 1;
     inverseYaw.setFromAxisAngle(up, -v.yaw);
@@ -247,7 +305,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mark.scale.setScalar(0.5 * (e.mode === 'alert' ? 1 + 0.35 * Math.sin(Math.PI * v.markT) : v.markT));
     v.mixer.update(0);
     spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
-    glowFx(v, e, dt, 1);
+    glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }
 export function removeEnemyViews(list) {

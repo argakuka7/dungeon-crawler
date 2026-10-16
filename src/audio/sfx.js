@@ -1,6 +1,6 @@
 // Generated sound effects (Web Audio, no sample files): a sword whoosh, a bow's draw and twang,
 // a crossbow's shot and reload, a spell's cast and burst, shots striking walls, hits, kills,
-// getting hurt, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, the player's body (jumps,
+// getting hurt, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, lightning and thunder, the player's body (jumps,
 // falls, knock-downs, fluid deaths), travel, items and the bag, and the enemies' voices
 // (voices.js). Footsteps are footsteps.js, the continuous sounds loops.js. The audio context
 // lives in context.js.
@@ -307,6 +307,27 @@ const SOUNDS = {
     noise(t + 0.04, 1.15, rumble);
     tone('sine', 70 * p, 38 * p, t + 0.03, 0.7, amp(t + 0.03, 0.02, 0.4, 0.65, out));
   },
+  charge(t, out, p) {    // the Wolk's lightning gathering for its 0.8 s: a hum and static, crackling ever faster
+    tone('sawtooth', 70 * p, 150 * p, t, 0.82, filter('lowpass', 650 * p, 3, amp(t, 0.3, 0.2, 0.5, out)));
+    sweep(t, 0.8, 2500 * p, 4200 * p, 7500 * p, 1.5, 0.1, out, 0.45, 'highpass');
+    for (let i = 0; i < 14; i++) {
+      const u = i / 14, at = t + 0.78 * Math.sqrt(u);
+      noise(at, 0.015, filter('highpass', 3500 * p, 1, amp(at, 0.001, 0.1 + 0.25 * u, 0.015, out)));
+    }
+  },
+  lightning(t, out, p) { // the Wolk's bolt striking: a blinding crack, a sizzle and a thump
+    noise(t, 0.05, filter('highpass', 3000 * p, 0.7, amp(t, 0.0005, 0.9, 0.05, out)));
+    noise(t + 0.01, 0.25, filter('bandpass', 1800 * p, 0.8, amp(t + 0.01, 0.002, 0.45, 0.25, out)));
+    tone('square', 2400 * p, 120 * p, t, 0.2, filter('lowpass', 4000, 1, amp(t, 0.001, 0.16, 0.2, out)));
+    tone('sine', 140 * p, 40 * p, t, 0.3, amp(t, 0.002, 0.8, 0.3, out));
+  },
+  rumble(t, out, p) {    // the thunder after the Wolk's bolt: a low roll that swells twice and dies away
+    const roll = filter('lowpass', 300 * p, 1.2, amp(t, 0.12, 0.9, 1.7, out));
+    roll.frequency.setValueAtTime(520 * p, t); roll.frequency.exponentialRampToValueAtTime(90 * p, t + 1.85);
+    noise(t, 1.9, roll);
+    noise(t + 0.45, 0.9, filter('lowpass', 220 * p, 1, amp(t + 0.45, 0.15, 0.6, 0.75, out)));
+    tone('sine', 55 * p, 32 * p, t, 1.4, amp(t, 0.1, 0.45, 1.3, out));
+  },
   gust(t, out, p) {      // the Wolla blowing: a roaring wind that swells and howls away
     sweep(t, 0.65, 300 * p, 1100 * p, 450 * p, 1.2, 0.75, out, 0.05);
     sweep(t + 0.05, 0.55, 1400 * p, 2600 * p, 900 * p, 6, 0.12, out, 0.08);   // the howl
@@ -428,9 +449,9 @@ export async function renderSfx(name, pitch = 1) {
 }
 
 const ndc = new THREE.Vector3();
-// sfx(name, { at: {x,y,z} (pans by screen position), pitch, volume })
+// sfx(name, { at: {x,y,z} (pans by screen position), pitch, volume, delay (s, from now) })
 // learn: sound.html#coin-code #recipe (see learn/README.md)
-export function sfx(name, { at = null, pitch = 1, volume = 1 } = {}) {
+export function sfx(name, { at = null, pitch = 1, volume = 1, delay = 0 } = {}) {
   if (!ctx || ctx.state !== 'running') return;
   const now = ctx.currentTime;
   if (name === 'coin') {
@@ -446,5 +467,5 @@ export function sfx(name, { at = null, pitch = 1, volume = 1 } = {}) {
     pan.pan.value = Math.max(-1, Math.min(1, ndc.x * 0.6));
     out.connect(pan).connect(master);
   } else out.connect(master);
-  SOUNDS[name](now + 0.005, out, pitch * (0.95 + Math.random() * 0.1));
+  SOUNDS[name](now + 0.005 + Math.max(0, delay), out, pitch * (0.95 + Math.random() * 0.1));
 }

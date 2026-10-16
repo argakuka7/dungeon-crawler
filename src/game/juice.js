@@ -5,6 +5,7 @@ import { emit, glow, soft, rand } from '../render/particles.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { muzzleAt } from '../core/beams.js';
+import { strikeBolt } from '../render/beams.js';
 
 let stop = 0;
 // world-space camera offset that springs back (camera.js)
@@ -119,6 +120,7 @@ export function projectileFx(pr, what) {
 // the Spicy's laser (game/beams.js) switched on ('start'), went off ('burst') or was put out
 // because its enemy was staggered or killed ('fizzle')
 export function beamFx(b, what) {
+  if (b.spec.kind === 'bolt') { boltFx(b, what); return; }
   const color = b.profile?.beamColor ?? b.spec.color ?? '#7dff3a', colors = ['#ffffff', color, '#d8ff7a'];
   if (what === 'start') { sfx('laser', { at: b }); return; }
   if (what === 'fizzle') {
@@ -144,6 +146,40 @@ export function beamFx(b, what) {
   }
   sfx('zapburst', { at: { x, y, z } });
   if (Math.hypot(x - player.x, z - player.z) < 3) cameraKick(x - player.x, z - player.z, 0.06, 0.02);
+}
+
+// The Wolk's lightning (a beam of kind 'bolt', game/beams.js): it starts gathering ('start'),
+// is put out ('fizzle'), or strikes ('burst'): a jagged flash from the cloud to the spot
+// (render/beams.js), sparks and a puff of smoke there, a crack, and the thunder rolling in after
+// it, later the further from the player it struck (about a second at five cells).
+const THUNDER_DELAY = 0.45, THUNDER_PER_CELL = 0.11;
+export const thunderDelay = d => Math.min(2, THUNDER_DELAY + THUNDER_PER_CELL * d);
+function boltFx(b, what) {
+  const color = b.profile?.beamColor ?? b.spec.color ?? '#fff6b0', colors = ['#ffffff', color, '#9fd0ff'];
+  if (what === 'start') { sfx('charge', { at: b }); return; }
+  if (what === 'fizzle') {
+    for (let i = 0; i < 8; i++)
+      emit(glow, b.x, b.y, b.z, { v: [rand(-1, 1), rand(-0.5, 0.8), rand(-1, 1)], life: rand(0.15, 0.3), size: rand(0.04, 0.08), color: colors[i % 3], drag: 2 });
+    sfx('fizzle', { at: b, pitch: 1.2, volume: 0.6 });
+    return;
+  }
+  const { ex: x, ey: y, ez: z } = b, d = Math.hypot(x - player.x, z - player.z);
+  strikeBolt(b);
+  emit(glow, x, y + 0.1, z, { life: 0.18, size: 1.4, grow: 1.2, color: '#ffffff', alpha: 0.9 });
+  emit(glow, x, y + 0.1, z, { life: 0.3, size: 0.9, grow: 1.5, color, alpha: 0.7 });
+  for (let i = 0; i < 30; i++)
+    emit(glow, x, y + 0.05, z, { v: [rand(-3, 3), rand(1, 4.5), rand(-3, 3)], life: rand(0.25, 0.5), size: rand(0.05, 0.11),
+      color: colors[i % 3], gravity: 8, drag: 1.5 });
+  for (let i = 0; i < 5; i++)   // a puff of smoke off the scorched floor
+    emit(soft, x + rand(-0.15, 0.15), y + 0.1, z + rand(-0.15, 0.15), { v: [rand(-0.3, 0.3), rand(0.4, 0.9), rand(-0.3, 0.3)],
+      life: rand(0.8, 1.3), size: rand(0.2, 0.32), grow: 0.9, color: '#5a5f68', alpha: 0.4, drag: 0.6 });
+  sfx('lightning', { at: { x, y, z } });
+  sfx('rumble', { at: { x, y, z }, delay: thunderDelay(d), volume: Math.max(0.5, 1 - d / 14) });
+  if (d < 4) cameraKick(x - player.x || 0.01, z - player.z, 0.08, 0.05);
+}
+// the player stunned by a bolt (game/enemycombat.js)
+export function zappedFx() {
+  floatText('Zapped!', q => q.set(player.x, player.visY + 1.65, player.z), { color: '#fff3a0', size: 0.22, life: 0.9, rise: 0.6 });
 }
 
 // The Wolla's storm (game/gusts.js), spec g: lightning out of its cloud ('thunder', i: which

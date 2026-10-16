@@ -8,6 +8,7 @@ import { makeLayouts, guardianDepth } from '../src/world/layout.js';
 import { faceKey, step } from '../src/world/coords.js';
 import { voidAllowed } from '../src/world/voids.js';
 import { guardianColor, guardianTitle } from '../src/core/guardians.js';
+import { parseColor } from '../src/core/oklch.js';
 import { ENEMY_PROFILES, ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, GUARDIAN_TIERS, enemyProfile, makeEnemy, threat, guardianLevel, depthLevel } from '../src/core/enemies.js';
 import { guardianId, gateLocked, portalLocked, restoreDefeated } from '../src/core/guardians.js';
 import { createRun, createPlayerStats, awardKill } from '../src/core/progression.js';
@@ -156,6 +157,23 @@ test('descent guardians are explicit stronger boss placeholders for every specie
   }
 });
 
+test('guardians are pink and amber, except where a species dresses them otherwise: the Wolk goes grey and silver', () => {
+  for (const base of ENEMY_PROFILES) {
+    if (base.guardianLooks) continue;
+    for (const [kinds, hue] of [[GUARDIAN_KINDS, 350], [DESCENT_GUARDIAN_KINDS, 65]])
+      for (const [role, color] of Object.entries(kinds[base.species].colors)) if (role !== 'eyes') assert.equal(parseColor(color).h, hue, base.type);
+  }
+  const side = GUARDIAN_KINDS.wolk, descent = DESCENT_GUARDIAN_KINDS.wolk, wolk = ENEMY_KINDS.wolk;
+  const grey = parseColor(side.colors.body), silver = parseColor(descent.colors.body);
+  assert.ok(grey.c < 0.03 && grey.l > 0.5 && grey.l < 0.8, 'a grey side guardian');
+  assert.ok(silver.c < 0.03 && silver.l > 0.85, 'a light silver descent guardian');
+  assert.ok(descent.finish.metalness > 0 && descent.finish.roughness < 0.3 && descent.finish.glints > 0, 'that shines');
+  assert.equal(side.finish, undefined); assert.equal(wolk.finish, undefined);
+  for (const k of [side, descent]) {
+    assert.ok(parseColor(k.gloom.color).l < parseColor(k.colors.body).l, 'still darkens to strike');
+    assert.ok(k.hp > wolk.hp * 3 && k.guardian, k.type);
+  }
+});
 test('side gates lock full-face and debug travel, preserve retreat, and stay unlocked after death', () => {
   for (const seed of [0, 1, 7, 42]) for (const depth of [0, 1, 12, 19]) {
     const w = new World(seed), L = w.layout(depth), run = createRun(), hero = createPlayerStats();

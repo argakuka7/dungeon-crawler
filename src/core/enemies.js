@@ -222,7 +222,41 @@ export const WOLLA = {
   style: 'ranged', keep: [1.5, 2.8],
   seedSalt: 0x3a77e1a, spacing: 4,
 };
-export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA];
+// A sad little cloud on long stick legs (blender/wolk.py). To strike it closes its eyes and
+// lifts its arms, and its cloud darkens from light blue to storm grey (`gloom`: the colour its
+// `parts` turn, render/enemies.js). Its lightning is a beam of kind 'bolt' aimed at the feet:
+// from the beam's start a crackling spot under its target shows where it will strike, following
+// the target at `track` cells/s until `lock` s before the strike, then holding still. At the hit
+// frame a bolt jumps from the cloud's belly to the spot (core/beams.js, game/beams.js): a body
+// within `radius` of it is hurt and stunned for `shock` s. The thunder follows a little later,
+// the later the further away it struck (game/juice.js). Stepping off the spot once it holds
+// still dodges it; a stagger puts the lightning out.
+export const WOLK = {
+  type: 'wolk', species: 'wolk', label: 'Wolk', hp: 85, damage: 20, knock: 2,
+  xp: 60, coins: [12, 24],
+  radius: 0.4, height: 1.35, bodyHeight: 1.1, mass: 1.2,
+  aggro: 5.5, giveUp: 9, chase: 1.4, wander: 0.5, homeSpeed: 0.8,
+  reach: 4.5, hitReach: 0, hitAt: 33 / 30, trackUntil: 0.9, attackTime: 1.7, cooldown: 2.1,
+  arc: 0.5, knockDown: false, hop: 3, reason: 'Struck by a Wolk!', ichor: ['#d4ecff', '#6a9cc8'], pitch: 1,
+  beam: { kind: 'bolt', aim: 'feet', time: 0.8, track: 1.4, lock: 0.35, radius: 0.3, range: 7, shock: 0.9,
+    color: '#fff6b0', muzzle: [0, 0.837, 0.251] },
+  gloom: { color: 'oklch(0.46 0.02 255)', parts: ['body'] },
+  poise: 0.5, hitStun: 0.25, deathTime: 2, corpseTime: 4,
+  parts: { body: ['WolkCloud', 'WolkCloudBelly'], limbs: ['WolkLimbs'] },
+  // its guardians are no pink or amber clouds: a heavy grey rain cloud, and a shining silver one
+  guardianLooks: {
+    side: { colors: { body: 'oklch(0.76 0.01 250)', limbs: 'oklch(0.4 0.02 255)' },
+      gloom: { color: 'oklch(0.32 0.015 255)', parts: ['body'] },
+      light: '#c4ccd8', sparks: ['#c4ccd8', '#f0f3f8'], ichor: ['#c8ccd4', '#4a4f58'] },
+    descent: { colors: { body: 'oklch(0.9 0.008 250)', limbs: 'oklch(0.64 0.012 250)' },
+      finish: { parts: ['body', 'limbs'], roughness: 0.16, metalness: 0.5, sheen: 0.12, glints: 4 },
+      gloom: { color: 'oklch(0.42 0.012 250)', parts: ['body'] },
+      light: '#e6eeff', sparks: ['#ffffff', '#dfe8ff'], ichor: ['#eef2f8', '#7a808a'] },
+  },
+  style: 'ranged', keep: [2.6, 4.2],
+  seedSalt: 0x6c1d2f5, spacing: 4,
+};
+export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -401,13 +435,16 @@ const guardianMods = (base, t) => ({
   xp: t.xp / base.xp,
 });
 // Hot pink (hue 350) is reserved for side guardians, amber for descent guardians; eyes remain
-// pale for contrast.
+// pale for contrast. A species may dress its guardians otherwise (`guardianLooks.side` /
+// `.descent`: colours, glow, `finish` and the like, in place of these): the Wolk's are grey and
+// silver.
 export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
   type: 'guardian' + base.type, label: 'Guardian ' + base.label.toLowerCase(), guardian: true, guardianRole: 'side', bossPlaceholder: false,
   colors: Object.fromEntries(Object.keys(base.parts).map(role => [role,
     role === 'eyes' ? 'oklch(0.97 0.025 350)' : 'oklch(0.70 0.25 350)'])),
   light: '#ff3fa8', sparks: ['#ff3fa8', '#ffd0ee'], ichor: ['#ff3fa8', '#9b165d'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.side.poise), mods: guardianMods(base, GUARDIAN_TIERS.side),
+  ...base.guardianLooks?.side,
 })]));
 // Explicit future-boss hook: a separate kind, not a level-dependent recolouring.
 export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
@@ -417,6 +454,7 @@ export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base
     role === 'eyes' ? 'oklch(0.97 0.025 65)' : 'oklch(0.78 0.19 65)'])),
   light: '#ff9b35', sparks: ['#ff9b35', '#fff0cc'], ichor: ['#ff9b35', '#9b4b16'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.descent.poise), mods: guardianMods(base, GUARDIAN_TIERS.descent),
+  ...base.guardianLooks?.descent,
 })]));
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
@@ -459,13 +497,15 @@ export function lungeAt(lunge, t) {
   return u * u * (3 - 2 * u);
 }
 
-// what a strike (or a projectile) does to the player
+// what a strike (or a projectile) does to the player; a gust's blow also pushes (`push`), a
+// bolt's stuns (`shock`, s)
 export function blowOf(profile, a = profile) {
   const damage = Math.round(profile.damage * (a.power ?? 1));
   return { damage, knock: a.knock ?? profile.knock,
     knockDown: !!a.knockDown, hop: a.hop, reason: a.reason, burn: a.projectile?.burn ?? a.burn ?? null,
     chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage),
-    ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }) };
+    ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }),
+    ...(a.beam?.shock && { shock: a.beam.shock }) };
 }
 
 // a level-1 value grown to `level`

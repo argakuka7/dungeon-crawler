@@ -4,7 +4,7 @@
 import { player, state, setStatus } from './state.js';
 import { takeDamage } from '../core/progression.js';
 import { flash } from './hud.js';
-import { playerHurtFx, burnHurtFx, poisonHurtFx } from './juice.js';
+import { playerHurtFx, burnHurtFx, poisonHurtFx, zappedFx } from './juice.js';
 import { knockDown } from './ragdoll.js';
 import { canMove } from '../physics/canmove.js';
 import { walkable, stepEnemy } from '../physics/enemynav.js';
@@ -13,7 +13,7 @@ import { ignite, burnStep, burntOut, chillFrom, chillStep } from '../core/projec
 import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
 
-export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; };
+export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.shocked = 0; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
 export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
@@ -27,7 +27,8 @@ export function poisonPlayer(toxin, reason, by = null) {
 }
 export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
 // a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz); a gust's
-// blow (its `push`) goes on blowing the player that way for a moment (physics/move.js)
+// blow (its `push`) goes on blowing the player that way for a moment (physics/move.js), and a
+// bolt's (its `shock`) stuns: no moving, jumping or striking for that long (render/shocked.js)
 export function hitPlayer(blow, fx, fz, nx, nz) {
   const p = player;
   p.vx = nx * blow.knock; p.vz = nz * blow.knock;
@@ -44,6 +45,8 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   if (blow.damage > 0) p.lastHurt = { reason: blow.reason, by };
   takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
+  const shock = blow.shock;
+  if (shock > 0 && shock < 3) { p.stun = Math.max(p.stun, shock); p.shocked = shock; zappedFx(); }
   const push = blow.push;
   if (push && push.speed > 0 && push.speed < 30 && push.time > 0 && push.time < 3)
     p.gust = { vx: nx * push.speed, vz: nz * push.speed, t: push.time, time: push.time };

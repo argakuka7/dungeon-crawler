@@ -11,7 +11,7 @@
 //     always-present species are kept first, the others in a random order weighted by chance.
 //   The lead: one present species (picked by chance) dominates the cube. It draws its count
 //     from the top half of its range, every other species from the bottom half.
-// Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla) stay at a few per cube; the melee ones, the spiders
+// Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla, Wolk) stay at a few per cube; the melee ones, the spiders
 // above all, come in larger and larger packs further down.
 import { mulberry32, hash32 } from './util.js';
 import { ENEMY_KINDS } from './enemies.js';
@@ -21,10 +21,11 @@ export const D = (mix, ...roster) => ({ mix, roster: roster.map(([type, chance, 
 
 export const DEPTH_SPAWNS = [
   /*  0 road out of town */ D(1, ['snake', 1, 1, 2]),
-  /*  1 meadow islands */ D(2, ['snake', 1, 2, 4], ['stunder', .2, 1, 1]),
-  /*  2 meadow islands */ D(3, ['snake', 1, 2, 5, 1, { snake: 4, sandviper: 1 }], ['spider', .6, 2, 4, 2], ['stunder', .25, 1, 1]),
+  /*  1 meadow islands */ D(2, ['snake', 1, 2, 4], ['stunder', .2, 1, 1], ['wolk', .25, 1, 1]),
+  /*  2 meadow islands */ D(3, ['snake', 1, 2, 5, 1, { snake: 4, sandviper: 1 }], ['spider', .6, 2, 4, 2], ['stunder', .25, 1, 1],
+    ['wolk', .35, 1, 2]),
   /*  3 snowy peaks */ D(3, ['spider', 1, 8, 14, 3, { frostspider: 3, spider: 1 }], ['stunder', .5, 1, 2, 1, { froststunder: 1 }], ['shraps', .2, 1, 1],
-    ['triangle', .12, 1, 1]),
+    ['wolk', .4, 1, 2], ['triangle', .12, 1, 1]),
   /*  4 badlands */ D(3, ['snake', 1, 3, 6, 2, { sandviper: 3, snake: 1, bloodviper: .5 }], ['spider', .8, 4, 8, 3, { spider: 2, redback: .5 }],
     ['stunder', .6, 1, 2, 1, { stonestunder: 1, stunder: 1 }]),
   /*  5 root caves */ D(3, ['spider', 1, 6, 10, 3, { spider: 3, bogspider: 1 }], ['snake', .8, 3, 6, 2, { snake: 2, sandviper: 1 }],

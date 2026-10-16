@@ -50,10 +50,12 @@ import { fireCats } from './game/firecats.js';
 import { shraps } from './game/shraps.js';
 import { spicies } from './game/spicy.js';
 import { wollas } from './game/wolla.js';
+import { wolks } from './game/wolk.js';
 import { projectiles } from './game/projectiles.js';
 import { beams } from './game/beams.js';
 import { tickBurning } from './render/burning.js';
 import { tickChill } from './render/chilled.js';
+import { tickShock } from './render/shocked.js';
 import { tickStatuses } from './render/statuses.js';
 import { updateEffects } from './game/effects.js';
 import { updateAim } from './game/throws.js';
@@ -93,7 +95,7 @@ function frame() {
   updateFootsteps();   // on the cycle the animator just advanced
   updateSounds(dt); updateAmbience(dt);
   tickFluidDeath(dt);
-  tickBurning(dt); tickChill(dt); tickStatuses(allEnemies(), dt);
+  tickBurning(dt); tickChill(dt); tickShock(dt); tickStatuses(allEnemies(), dt);
   drawTravelEnemies(dt);
   updateLoot(dt, state.time);
   tickFloatText(dt);
@@ -141,7 +143,7 @@ function menuFrame(dt) {
   updateMenu();
   updateShowcase(dt);
   if (state.map && !state.transitioning) updateEnemies(dt);
-  tickBurning(dt); tickChill(dt); tickStatuses(allEnemies(), dt);
+  tickBurning(dt); tickChill(dt); tickShock(dt); tickStatuses(allEnemies(), dt);
   tickFloatText(dt); tickParticles(dt);
   tickProps(state.time);
   if (state.world) animateWorld(state.world, dt, state.time);
@@ -164,7 +166,7 @@ window.__game = {
   get map() { return state.map; }, player, generate, loadCube, updatePlayer, groundAt,
   get transitioning() { return state.transitioning; }, get spiders() { return spiders; }, updateSpiders, state,
   get stunders() { return stunders; }, get snakes() { return snakes; }, get octonauts() { return octonauts; },
-  get fireFaces() { return fireFaces; }, get triangles() { return triangles; }, get fireCats() { return fireCats; }, get shraps() { return shraps; }, get spicies() { return spicies; }, get wollas() { return wollas; },
+  get fireFaces() { return fireFaces; }, get triangles() { return triangles; }, get fireCats() { return fireCats; }, get shraps() { return shraps; }, get spicies() { return spicies; }, get wollas() { return wollas; }, get wolks() { return wolks; },
   get projectiles() { return projectiles; }, get beams() { return beams; },
   get enemies() { return allEnemies(); }, updateEnemies,
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go

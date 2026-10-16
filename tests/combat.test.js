@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, makeEnemy, attackOf, pickAttack,
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, makeEnemy, attackOf, pickAttack,
   attacksInReach, isRanged, attackDamage, blowOf, lungeDistance, lungeAt, retreatAt, fireAt, shotOf } from '../src/core/enemies.js';
-import { startBeam, aimBeam, castBeam, beamHits, beamDistance, muzzleAt } from '../src/core/beams.js';
+import { startBeam, aimBeam, castBeam, beamHits, beamDistance, muzzleAt, aiming, aimPoint } from '../src/core/beams.js';
 import { launch, touches, stepProjectile, ignite, burnStep, burntOut, chillFrom, chillStep, chillFactor, THAW } from '../src/core/projectiles.js';
 import { SWORD, HEAVY_HIT, swordState, startSwing, advanceSwing, cancelSwing, inSwordArc, swordHit, softTarget, damageEnemy } from '../src/core/combat.js';
 
@@ -271,6 +271,35 @@ test('a beam follows its target slowly, stops at walls and bodies, and hits what
   assert.ok(Math.abs(b.az - SPICY.beam.track * t) < 1e-6, 'the aim follows at its track speed');
   const still = { ...p, z: b.az };
   assert.ok(beamHits(b, still));
+});
+test('the Wolk lightning shows for 0.8 s, then strikes from its cloud to the floor under its target and stuns', () => {
+  assert.ok(isRanged(WOLK)); assert.equal(shotOf(WOLK), WOLK.beam);
+  assert.equal(WOLK.beam.kind, 'bolt');
+  assert.ok(Math.abs(fireAt(WOLK) - 0.3) < 1e-9, 'it shows where it will strike from 0.3 s');
+  assert.equal(blowOf(WOLK).damage, WOLK.damage); assert.equal(blowOf(WOLK).shock, WOLK.beam.shock);
+  assert.ok(WOLK.beam.shock > 0.5 && WOLK.beam.shock < 1.5);
+  assert.equal(blowOf(SPICY).shock, undefined, 'a laser does not stun');
+  const e = { x: 0, y: 0, z: 0, yaw: Math.PI / 2 }, floor = (x, y) => y < 0;   // facing +x, on a floor at y = 0
+  const p = { x: 3.5, y: 0, z: 0, r: 0.22, h: 0.85 };
+  const b = castBeam(startBeam(e, WOLK.beam, aimPoint(p, WOLK.beam)), floor, p);
+  assert.ok(b.y > 0.7, 'it leaves the cloud');
+  assert.ok(Math.abs(b.ex - p.x) < 0.3 && b.ey < 0.15, 'it ends at the feet: ' + [b.ex, b.ey]);
+  assert.ok(beamHits(b, p), 'standing still is struck');
+  // the aim follows until it holds still for the last `lock` s
+  const { time, lock, track } = WOLK.beam;
+  b.t = time - lock - 0.01; assert.ok(aiming(b));
+  b.t = time - lock + 0.01; assert.ok(!aiming(b));
+  // walking off once it holds still dodges it
+  const walk = 1.9, moved = { ...p, z: walk * lock };
+  castBeam(b, floor, moved);
+  assert.ok(!beamHits(b, moved), 'dodged: ' + beamDistance(b, moved));
+  // the spot only creeps after a runner while it still follows
+  const c = startBeam(e, WOLK.beam, aimPoint(p, WOLK.beam)), runner = { ...p };
+  for (let k = 0; k < 20; k++) { runner.z += 2.8 * 0.025; aimBeam(c, aimPoint(runner, WOLK.beam), 0.025); }
+  assert.ok(Math.abs(c.az - track * 0.5) < 1e-6);
+  // a bolt runs no further than just past its aim: over a drop it does not fall on
+  const over = castBeam(startBeam(e, WOLK.beam, aimPoint(p, WOLK.beam)), () => false);
+  assert.ok(over.length < Math.hypot(p.x - WOLK.beam.muzzle[2], WOLK.beam.muzzle[1]) + 0.35);
 });
 test('the Fire-cat pounce stops short of its target and eases through the leap', () => {
   const { lunge } = FIRECAT;

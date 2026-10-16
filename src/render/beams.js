@@ -2,6 +2,12 @@
 // floating eyes (the model's eye bones; the muzzle while it has no view), meet where the beam
 // ends. Each is a bright core in a soft glow; both swell and flicker harder as the burst comes
 // near. Where it ends a light flickers and sparks sizzle off.
+// The Wolk's lightning (a beam of kind 'bolt') shows where it will strike before it does: the
+// cloud's dark shadow on the floor under its target, ringed by crackling light that tightens
+// and flashes once it holds still (drawn plainly, not added on, so it reads on bright floors),
+// sparks gathering under the cloud, and in its last moments faint leaders flickering down
+// towards the spot. The strike itself (strikeBolt, from game/juice.js) is a jagged flash from
+// the cloud to the spot, with a branch or two, that flickers twice and lights up the floor.
 import * as THREE from 'three';
 import { scene } from './scene.js';
 import { glow, emit, rand } from './particles.js';
@@ -13,6 +19,7 @@ const EYES = ['eye.L', 'eye.R'].map(n => THREE.PropertyBinding.sanitizeNodeName(
 const up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), start = new THREE.Vector3(), end = new THREE.Vector3();
 
 function makeView(b) {
+  if (b.spec.kind === 'bolt') return makeBoltView(b);
   const color = new THREE.Color(b.profile?.beamColor ?? b.spec.color ?? '#7dff3a');
   const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
   const core = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff').lerp(color, 0.3), ...additive });
@@ -34,8 +41,10 @@ function eyeAt(b, i, off, out) {
   return out.set(b.x + off.x, b.y + off.y, b.z + off.z);
 }
 export function drawBeams(list, dt, off = { x: 0, y: 0, z: 0 }) {
+  drawStrikes(dt, off);
   for (const b of list) {
     const v = b.view || (b.view = makeView(b));
+    if (b.spec.kind === 'bolt') { drawBolt(b, v, dt, off); continue; }
     const k = Math.min(1, b.t / b.spec.time), t = b.t;
     const flick = 0.75 + 0.25 * Math.sin(t * 61) * Math.sin(t * 23) + 0.3 * k * Math.sin(t * 97);
     end.set(b.ex + off.x, b.ey + off.y, b.ez + off.z);
@@ -61,3 +70,153 @@ export function removeBeamViews(list) {
     b.view.owned.forEach(m => m.dispose()); b.view = null;
   }
 }
+
+// --- the Wolk's lightning ---------------------------------------------------------------------
+const flat = new THREE.RingGeometry(0.72, 1, 40).rotateX(-Math.PI / 2), disc = new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2);
+const side = new THREE.Vector3(), lift = new THREE.Vector3(), a = new THREE.Vector3(), b2 = new THREE.Vector3();
+const boltColor = b => b.profile?.beamColor ?? b.spec.color ?? '#fff6b0';
+const GLOW_BLUE = '#9fd0ff', RING_BLUE = new THREE.Color('#4fb2ff'), RING_FLASH = new THREE.Color('#ffffff');
+
+// a zigzag line of `n` segments from `from` to `to`, kinked sideways by up to `amp` × its length
+// (most in the middle, the ends fixed): world points
+function zigzag(from, to, n, amp) {
+  dir.subVectors(to, from);
+  const length = dir.length();
+  side.crossVectors(dir, up); if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+  side.normalize(); lift.crossVectors(side, dir).normalize();
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const k = i / n, w = i === 0 || i === n ? 0 : amp * length * (0.4 + 0.6 * Math.sin(Math.PI * k));
+    pts.push(from.clone().addScaledVector(dir, k).addScaledVector(side, (Math.random() - 0.5) * 2 * w)
+      .addScaledVector(lift, (Math.random() - 0.5) * w));
+  }
+  return pts;
+}
+// segments (a bright core in a glow, like the laser) along `pts`; spare ones are hidden
+function makeSegments(group, count, core, halo) {
+  return Array.from({ length: count }, () => {
+    const c = new THREE.Mesh(tube, core), h = new THREE.Mesh(tube, halo);
+    c.frustumCulled = h.frustumCulled = false; c.visible = h.visible = false;
+    group.add(c, h);
+    return { core: c, halo: h };
+  });
+}
+function layOut(segments, pts, width, from = 0) {
+  let i = from;
+  for (let k = 0; k + 1 < pts.length && i < segments.length; k++, i++) {
+    const s = segments[i];
+    a.copy(pts[k]); dir.subVectors(pts[k + 1], a);
+    const length = dir.length();
+    for (const [m, w] of [[s.core, width], [s.halo, width * 2.6]]) {
+      m.position.copy(a); m.quaternion.setFromUnitVectors(up, dir.normalize());
+      m.scale.set(w, length, w); m.visible = true;
+    }
+  }
+  return i;
+}
+const hideFrom = (segments, i) => { for (; i < segments.length; i++) segments[i].core.visible = segments[i].halo.visible = false; };
+
+function makeBoltView(b) {
+  const color = new THREE.Color(boltColor(b)), blue = new THREE.Color(GLOW_BLUE);
+  const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
+  const plain = { transparent: true, depthWrite: false };
+  const ringMat = new THREE.MeshBasicMaterial({ color: RING_BLUE, opacity: 0.85, ...plain });
+  const fillMat = new THREE.MeshBasicMaterial({ color: '#1a2233', opacity: 0.2, ...plain });
+  const core = new THREE.MeshBasicMaterial({ color: '#ffffff', opacity: 0.4, ...additive });
+  const halo = new THREE.MeshBasicMaterial({ color, opacity: 0.12, ...additive });
+  const group = new THREE.Group(), ring = new THREE.Mesh(flat, ringMat), fill = new THREE.Mesh(disc, fillMat);
+  ring.renderOrder = fill.renderOrder = 2;
+  group.add(ring, fill);
+  const leaders = makeSegments(group, 16, core, halo);
+  const light = new THREE.PointLight(blue, 0, 2.2, 2); light.position.y = 0.35;
+  scene.add(group); trackLight(light, ring);
+  return { group, ring, fill, leaders, light, owned: [ringMat, fillMat, core, halo], colors: ['#ffffff', '#' + color.getHexString(), GLOW_BLUE],
+    leaderT: 0, from: new THREE.Vector3(), to: new THREE.Vector3() };
+}
+function drawBolt(b, v, dt, off) {
+  const k = Math.min(1, b.t / b.spec.time), t = b.t, held = b.spec.lock && b.t >= b.spec.time - b.spec.lock;
+  const r = b.spec.radius + 0.12, x = b.ex + off.x, y = b.ey + off.y, z = b.ez + off.z;
+  // the ring gathers in from wide, tightens to the spot once it holds still and flashes faster
+  const flick = held ? 0.6 + 0.4 * Math.sign(Math.sin(t * 70)) : 0.8 + 0.2 * Math.sin(t * 23);
+  v.ring.position.set(x, y + 0.03, z); v.fill.position.set(x, y + 0.025, z);
+  const gather = Math.min(1, k / (1 - (b.spec.lock || 0) / b.spec.time));   // 0 -> 1 until it holds still
+  v.ring.scale.setScalar(r * (1.6 - 0.6 * gather) * (1 + 0.04 * Math.sin(t * 31)));
+  v.ring.rotation.y = t * 2.5;
+  v.fill.scale.setScalar(r);
+  v.owned[0].opacity = 0.5 + 0.45 * k * flick;
+  v.owned[0].color.copy(RING_BLUE).lerp(RING_FLASH, held ? 0.5 + 0.5 * Math.max(0, Math.sin(t * 70)) : 0);
+  v.owned[1].opacity = 0.12 + 0.28 * k;   // its shadow deepens
+  v.light.intensity = (0.3 + 0.8 * k) * flick;
+  // crackles round the ring, sparks gathering under the cloud
+  for (let i = Math.floor((10 + 40 * k) * dt + Math.random()); i > 0; i--) {
+    const ang = Math.random() * Math.PI * 2;
+    emit(glow, x + Math.cos(ang) * r, y + 0.05, z + Math.sin(ang) * r, { v: [rand(-0.4, 0.4), rand(0.5, 1.6), rand(-0.4, 0.4)],
+      life: rand(0.12, 0.25), size: rand(0.04, 0.07), color: v.colors[i % 3], gravity: 3, drag: 2 });
+  }
+  v.from.set(b.x + off.x, b.y + off.y, b.z + off.z);
+  for (let i = Math.floor((8 + 30 * k) * dt + Math.random()); i > 0; i--)
+    emit(glow, v.from.x + rand(-0.25, 0.25), v.from.y + rand(-0.05, 0.1), v.from.z + rand(-0.15, 0.15),
+      { v: [rand(-0.6, 0.6), rand(-0.8, 0.2), rand(-0.6, 0.6)], life: rand(0.08, 0.18), size: rand(0.03, 0.06), color: v.colors[i % 3], drag: 3 });
+  // faint leaders feeling their way down, now and then, once it holds still
+  v.leaderT -= dt;
+  if (held && v.leaderT <= 0) {
+    v.leaderT = rand(0.05, 0.12);
+    let used = 0;
+    if (Math.random() < 0.75) {
+      v.to.set(x, y + 0.05, z);
+      const reach = rand(0.3, 0.75), pts = zigzag(v.from, b2.copy(v.from).lerp(v.to, reach), 6, 0.18);
+      used = layOut(v.leaders, pts, 0.008);
+    }
+    hideFrom(v.leaders, used);
+  } else if (!held) hideFrom(v.leaders, 0);
+}
+
+// strikes in flight: { from, to (world), t, view }
+let strikes = [];
+const STRIKE = 0.34;   // how long a strike lights up
+export function strikeBolt(b) {
+  const color = new THREE.Color(boltColor(b));
+  const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
+  const core = new THREE.MeshBasicMaterial({ color: '#ffffff', ...additive });
+  const halo = new THREE.MeshBasicMaterial({ color: new THREE.Color(GLOW_BLUE).lerp(color, 0.25), opacity: 0.35, ...additive });
+  const group = new THREE.Group(), anchor = new THREE.Object3D();
+  group.add(anchor);
+  const segments = makeSegments(group, 26, core, halo);
+  const light = new THREE.PointLight(color, 0, 6, 2); light.position.y = 0.6;
+  scene.add(group); trackLight(light, anchor);
+  strikes.push({ from: new THREE.Vector3(b.x, b.y, b.z), to: new THREE.Vector3(b.ex, b.ey, b.ez), t: 0, shape: -1, pts: null,
+    view: { group, anchor, segments, light, owned: [core, halo] } });
+}
+// bright, a dim gap, a second stroke, then fading
+const strength = t => t < 0.06 ? 1 : t < 0.1 ? 0.2 : t < 0.16 ? 0.95 : Math.max(0, 0.95 * (1 - (t - 0.16) / (STRIKE - 0.16)));
+const offset = (v, off) => b2.set(v.x + off.x, v.y + off.y, v.z + off.z);
+function drawStrikes(dt, off) {
+  strikes = strikes.filter(s => {
+    s.t += dt;
+    const v = s.view;
+    if (s.t >= STRIKE) { removeStrike(s); return false; }
+    const shape = s.t < 0.1 ? 0 : 1;   // each stroke takes its own path
+    if (shape !== s.shape) {
+      s.shape = shape;
+      const from = s.from.clone().add(off), to = offset(s.to, off).clone();
+      const main = zigzag(from, to, 12, 0.09);
+      let used = layOut(v.segments, main, 0.013);
+      for (let n = 0; n < 2; n++) {   // a branch or two off the main stroke
+        const at = main[2 + Math.floor(Math.random() * 7)], end = at.clone().lerp(to, rand(0.25, 0.5))
+          .add(new THREE.Vector3(rand(-0.5, 0.5), 0, rand(-0.5, 0.5)));
+        used = layOut(v.segments, zigzag(at, end, 5, 0.2), 0.007, used);
+      }
+      hideFrom(v.segments, used);
+    }
+    const k = strength(s.t);
+    v.owned[0].opacity = k; v.owned[1].opacity = 0.35 * k;
+    v.anchor.position.copy(offset(s.to, off));
+    v.light.intensity = 9 * k;
+    return true;
+  });
+}
+function removeStrike(s) {
+  scene.remove(s.view.group); untrackLight(s.view.light);
+  s.view.owned.forEach(m => m.dispose());
+}
+export function clearStrikes() { strikes.forEach(removeStrike); strikes = []; }
