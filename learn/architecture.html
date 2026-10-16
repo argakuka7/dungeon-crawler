@@ -308,7 +308,7 @@ import { updateEnemies } from './game/enemies.js';
 // ... about 50 more imports ...
 
 function frame() {
-  if (state.mode === 'menu') { menuFrame(); return; }   // the main menu: no world yet
+  if (state.mode === 'menu') { menuFrame(elapsed); return; }   // the main menu: a cube, no hero
   // ... listen, think, draw (see the next room) ...
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

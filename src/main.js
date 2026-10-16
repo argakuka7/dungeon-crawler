@@ -66,6 +66,8 @@ import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './ne
 import { online } from './net/online.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 import { openMainMenu, updateMenu, quitToMenu } from './game/menu.js';
+import { updateShowcase } from './game/showcase.js';
+import { N } from './core/constants.js';
 import { character } from './render/character.js';
 
 const clock = new THREE.Clock();
@@ -73,7 +75,7 @@ const clock = new THREE.Clock();
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
 function frame() {
   const elapsed = Math.min(clock.getDelta(), 1 / 30);
-  if (state.mode === 'menu') { menuFrame(); return; }
+  if (state.mode === 'menu') { menuFrame(elapsed); return; }
   if (character.ready) character.group.visible = true;
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
@@ -122,13 +124,24 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
-// The main menu (game/menu.js): no hero, no world, nothing to play yet; only joining a friend
-// goes on (their world starts here, net/session.js)
-function menuFrame() {
+// The main menu (game/menu.js): no hero, nothing to play; behind it a random cube lives on
+// (game/showcase.js), and joining a friend goes on (their world starts here, net/session.js)
+const menuFocus = new THREE.Vector3(N / 2, 2, N / 2);
+function menuFrame(dt) {
+  state.time += dt;
   if (character.ready) character.group.visible = false;
-  updatePlayerBar(); updatePortalBar(); updateCastBar();   // (they hide with no hero and no world)
+  updatePlayerBar(); updatePortalBar(); updateCastBar();   // (they hide with no hero)
   updateOnline();
   updateMenu();
+  updateShowcase(dt);
+  if (state.map && !state.transitioning) updateEnemies(dt);
+  tickBurning(dt); tickChill(dt); tickStatuses(allEnemies(), dt);
+  tickFloatText(dt); tickParticles(dt);
+  tickProps(state.time);
+  if (state.world) animateWorld(state.world, dt, state.time);
+  updateCamera(dt);
+  applyLook(state.lookDepth, camera.position.distanceTo(menuFocus));
+  updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

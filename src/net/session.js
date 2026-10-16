@@ -688,8 +688,8 @@ export function updateOnline() {
   tintCharacter(peers.size && online.slot !== null ? playerTint(online.slot) : null);
   if (!peers.size) return;
   // the host's world: start it once we are not on the way somewhere (or at once, from the main
-  // menu: no world yet)
-  if (pendingSeed !== null && (!state.cubes || !busy())) {
+  // menu: it takes the place of the cubes behind it)
+  if (pendingSeed !== null && (state.mode === 'menu' || !busy())) {
     const seed = pendingSeed;
     pendingSeed = null;
     if (state.inventoryOpen) setInventoryOpen(false);

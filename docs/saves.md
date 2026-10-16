@@ -1,8 +1,8 @@
 # Saves: heroes and worlds
 
 Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
-(`src/game/menu.js`) and the Esc menu (`src/game/escmenu.js`). Still to come: the living cubes
-behind the main menu.
+(`src/game/menu.js`), the living cubes behind it (`src/game/showcase.js`) and the Esc menu
+(`src/game/escmenu.js`).
 
 ## The menus
 
@@ -21,8 +21,19 @@ behind the main menu.
 - Quitting (`menu.js quitToMenu`): the hero and world are saved a last time and no longer saved
   (`stopSaving`), the game with friends ends, the screen goes dark and the world goes
   (`flow.js endWorld`: the cubes, the enemies, the neighbours, the run). In the menu the frame
-  only draws the sky and lets a join go on (`main.js menuFrame`): the hero and its bars are
+  runs the showcase and lets a join go on (`main.js menuFrame`): the hero and its bars are
   hidden, there is no music.
+- **Behind the main menu** (`showcase.js`): a random cube of a random world (a new seed each time
+  the menu opens), at any depth, every 10 s another, with a fade between. Its enemies and
+  villagers go about their business: the hero waits far away, so nothing notices it, and the
+  enemies idle and wander about their homes. The camera goes round slowly, the whole cube in
+  view (zoom 1: it does not lean towards the parked hero). With no hero there is no hero's light,
+  so from depth 5 on a lamp over the middle of the cube lights the caves instead. The next cube is
+  made in the world worker while one shows (5 to 40 ms; building it about 2 ms) and the one
+  before is dropped, so the menu can stay open for hours. Wide screens have the menu on the left
+  and the picture moved right (`camera.setViewOffset`), a phone held upright has it at the bottom
+  and the picture moved up. Starting a game or a friend's world coming in takes its place (it is
+  the game's own world machinery: `state.cubes`, `state.map`, the enemies).
 - N (a new world) is a dev tool now: new worlds come from the menu.
 
 ## Heroes and worlds, apart

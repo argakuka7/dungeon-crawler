@@ -6,10 +6,12 @@
 //            seed, both left empty: made up); or join a friend's game with their code
 //   joining  waiting for the friend's game; the hero comes along, the world is theirs
 // ?join=CODE: straight to the heroes, and the chosen one joins that game.
-import { state } from './state.js';
+import { state, view } from './state.js';
 import { setHelpOpen, helpOpen } from './help.js';
 import { fadeOut } from './hud.js';
 import { endWorld } from './flow.js';
+import { startShowcase, stopShowcase, showcaseCubes } from './showcase.js';
+import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } from './save.js';
 import { cleanName, worldName, heroLevel, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
 import { ITEMS } from '../core/items.js';
@@ -58,15 +60,21 @@ export function openMainMenu() {
   document.body.classList.add('in-menu');
   overlay.hidden = false;
   playSong(null);   // no music in the menu
+  startShowcase();   // the living cubes behind it
   screen = invite ? 'heroes' : 'title';
   form = !store.heroes().length && screen === 'heroes' ? 'hero' : null;
   note = '';
   render();
 }
+// off to play: the screen goes dark (the game's first cube fades it in), the showcase stops
+// (the game's world takes its place) and the view is the game's again
 function closeMainMenu() {
+  fadeOut();
   overlay.hidden = true;
   document.body.classList.remove('in-menu');
   setHelpOpen(false);
+  stopShowcase();
+  view.yaw = view.yawTarget = -Math.PI / 4; view.zoom = view.zoomTarget = DEFAULT_ZOOM;
   state.mode = 'play';
 }
 
@@ -156,7 +164,7 @@ function start(hero, world) {
   closeMainMenu();
   play(hero, world).catch(e => {   // (the game files did not come: the server or the connection)
     console.error('could not start', e);
-    stopSaving(); endWorld(); openMainMenu();
+    stopSaving(); endWorld(); openMainMenu();   // (another showcase)
     note = 'That world would not start. Try again?'; render();
   });
 }
@@ -268,7 +276,7 @@ onSessionChange(s => {
 
 // main.js, every frame in the menu: the friend's world started (net/session.js): off we go
 export function updateMenu() {
-  if (joining && state.cubes && online.role === 'guest') { joining = null; closeMainMenu(); }
+  if (joining && state.cubes && state.cubes !== showcaseCubes() && online.role === 'guest') { joining = null; closeMainMenu(); }
 }
 
 // The Esc menu's "Save and quit": the hero and world are saved a last time, a game with friends
