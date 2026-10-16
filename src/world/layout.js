@@ -95,8 +95,7 @@ function build(seed, d, above) {
   // gorge spans (spans.js): on the route, and maybe a lonely island branch over a bridge
   const spanPlan = planSpans(seed, d, spine, K, k => guardians.has(k) || hordes.has(k),
     c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1), branchBudget);
-  const lonely = new Set(spanPlan.spans.filter(s => s.island).flatMap(s => s.keys.slice(1)));
-  const nearSpan = c => [c, ...nb(c)].some(n => lonely.has(K(n)));
+  const nearSpan = c => [c, ...nb(c)].some(n => spanPlan.apart.has(K(n)));
   for (const span of spanPlan.spans) if (span.island) {
     const line = span.keys.map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
     for (let j = 1; j < line.length; j++) {

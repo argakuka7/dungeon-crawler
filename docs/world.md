@@ -304,6 +304,10 @@ one long bridge over a valley.
   then an island plateau (levels 5–12) in the valley. Nothing else touches the gorge or the
   island, so the bridge is the only way in. The island usually gets the depth's rare reward
   site (sites prefer branch rooms far from the route).
+- **Over the sky:** half the spans with no other room beside their gorge (and no room may be
+  placed beside it later) cross bottomless sky instead (`sky`): the valley is void, the rock
+  pinnacle rises out of nothing and the island floats. The pads stand right at the edge (no
+  ground is made solid around them, `portals.js`); falling off is falling out of the world.
 - **Planning:** `planSpans` runs on its own random stream after the horde, before branches.
   On the route it looks for straight runs of the spine with one or two inner cubes, none of
   them a guardian or the horde room, gorge cells two cubes apart. A depth gets at most two
@@ -332,8 +336,9 @@ one long bridge over a valley.
 - **Checks:** `tests/spans.test.js` covers the plan (straight, in budget, unguarded, islands
   apart), the pads on both sides of every crossing, matching ground on every face of every
   span cube, one bridge per gorge cube clear of the ground, every portal leading on, and the
-  same cubes whatever the exploration order. Over 200 seeds all 1271 span cubes and their
-  rooms generate, in 1.24 attempts on average.
+  same cubes whatever the exploration order; the character walks every bridge both ways and
+  pushing sideways halfway across keeps it on the deck. Over 200 seeds all 1274 span cubes and
+  their rooms generate, in 1.28 attempts on average.
 
 ## Cube archetypes (`cubegen/archetypes.js`)
 

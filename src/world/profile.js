@@ -28,7 +28,8 @@ function sockAt(world, X, Y, Z, d) {
 function vertexLevel(world, vx, Y, vz) {
   const cubes = [key(vx - 1, Y, vz - 1), key(vx, Y, vz - 1), key(vx - 1, Y, vz), key(vx, Y, vz)];
   if (cubes.some(k => isClearing(k, world.seed))) return TOWN_LEVEL;
-  if (spanVertex(world, vx, Y, vz) === 'valley') return valleyFloor(world.noise, vx * N, vz * N, Y);
+  const sv = spanVertex(world, vx, Y, vz);
+  if (sv && !sv.natural) return valleyFloor(sv.span, world.noise, vx * N, vz * N, Y);
   if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y)) return VOID;
   const s = [sockAt(world, vx - 1, Y, vz - 1, 0), sockAt(world, vx - 1, Y, vz, 0), sockAt(world, vx - 1, Y, vz - 1, 2), sockAt(world, vx, Y, vz - 1, 2)];
   return levelAt(world.noise, s.filter(x => x === 'H').length > 2 ? 'H' : 'L', vx * N, vz * N, Y);
@@ -57,7 +58,7 @@ function spanProfile(world, fk, out) {
   if (!s) return;
   const [k, d] = fk.split('/'), [X, Y, Z] = parse(k);
   const at = t => d === '0' ? [(X + 1) * N, Z * N + t + 0.5] : [X * N + t + 0.5, (Z + 1) * N];
-  const floor = t => valleyFloor(world.noise, ...at(t), Y);
+  const floor = t => valleyFloor(s.span, world.noise, ...at(t), Y);
   if (s.kind === 'island') { for (let t = 1; t < N - 1; t++) out[t] = floor(t); return; }
   if (s.kind === 'side') {
     const { span, i } = s, t0 = span.dir % 2 ? N - 1 : 0, t1 = N - 1 - t0;

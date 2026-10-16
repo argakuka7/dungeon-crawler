@@ -3,13 +3,24 @@ import assert from 'node:assert/strict';
 import { World } from '../src/world/world.js';
 import { makeLayouts } from '../src/world/layout.js';
 import { step, faceKey, parse } from '../src/world/coords.js';
-import { N, LH } from '../src/core/constants.js';
-import { runY } from '../src/core/surfaces.js';
+import { N, LH, CHAR_R } from '../src/core/constants.js';
+import { runY, floorY } from '../src/core/surfaces.js';
+import { state } from './fixtures.js';
+import { player } from '../src/game/state.js';
+import { movePlayer } from '../src/physics/move.js';
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i);
 // cell j steps in from face d at position t (portals.js edgeCell)
 const edge = (d, t, j) => d === 0 ? t * N + N - 1 - j : d === 1 ? t * N + j : d === 2 ? (N - 1 - j) * N + t : j * N + t;
 const ground = (m, c) => m.cols[c].find(f => f.layer === 0);
+const DT = 1 / 60;
+
+function place(m, x, y, z) {
+  state.map = m;
+  Object.assign(player, { x, y, z, vx: 0, vy: 0, vz: 0, visY: y, grounded: true, swimming: false, fluid: 0,
+    stun: 0, coyote: 0, jumpBuf: 0, r: CHAR_R, h: .85, support: null });
+  movePlayer(DT, 0, 0, false, false);
+}
 
 test('spans are planned from the seed on the sky-island depths, straight and in budget', () => {
   let route = 0, island = 0, long = 0;
@@ -101,4 +112,37 @@ test('span cubes are the same whichever way the depth is explored', () => {
     assert.deepEqual(back, fwd);
     for (const k of keys) assert.ok(parse(k)[1] < 0);
   }
+});
+
+test('the character walks every span bridge both ways without falling off', () => {
+  let walks = 0;
+  for (const seed of SEEDS.slice(0, 8)) {
+    const w = new World(seed);
+    for (const d of [1, 2]) for (const s of w.layout(d).spans) s.keys.slice(1, s.n + 1).forEach(k => {
+      const m = w.cube(k).map, r = m.runs.find(q => q.span);
+      const ends = [r.from, r.to].map(f => ({ x: f.x + 0.5, z: f.z + 0.5, y: floorY(f, 0.5, 0.5) }));
+      for (const [a, b] of [ends, [...ends].reverse()]) {
+        place(m, a.x, a.y, a.z);
+        const lowest = Math.min(a.y, b.y) - 1;
+        let i = 0;
+        for (; i < 1200; i++) {
+          const dx = b.x - player.x, dz = b.z - player.z, dist = Math.hypot(dx, dz);
+          if (dist < 0.15) break;
+          movePlayer(DT, dx / dist, dz / dist, true, false);
+          assert.ok(player.y > lowest, `${seed}: ${k} fell off the bridge at ${player.x.toFixed(2)}, ${player.z.toFixed(2)}`);
+        }
+        assert.ok(i < 1200, `${seed}: ${k} never got across (${player.x.toFixed(2)}, ${player.y.toFixed(2)}, ${player.z.toFixed(2)})`);
+        assert.ok(Math.abs(player.y - b.y) < 0.3, `${seed}: ${k} arrived at the wrong height`);
+        walks++;
+      }
+      // the side rails: pushing sideways in the middle keeps you on the deck
+      const p = r.pieces[r.k >> 1], cx = p.c % N + 0.5, cz = Math.floor(p.c / N) + 0.5, y = runY(p, 0.5, 0.5);
+      for (const side of [-1, 1]) {
+        place(m, cx, y, cz);
+        for (let i = 0; i < 120; i++) movePlayer(DT, r.dz * side, r.dx * side, true, false);
+        assert.ok(Math.abs(player.y - y) < 0.5, `${seed}: ${k} pushed off the bridge`);
+      }
+    });
+  }
+  assert.ok(walks > 20);
 });

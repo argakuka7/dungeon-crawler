@@ -12,8 +12,9 @@ const KIND = ['side', 'side', 'side', 'side', 'down', 'up'];
 export function placePortals(ctx) {
   const { R, ri, spec, lvl0, K, B } = ctx;
   const prot0 = new Uint8Array(N * N), portals = [];
-  // pads (and the ground right around them) are never open to the depth below
-  const solid = c => { const x = c % N, z = (c / N) | 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, nz = z + dz; if (nx > 0 && nz > 0 && nx < N - 1 && nz < N - 1) ctx.void0[idx(nx, nz)] = 0; } };
+  // pads (and the ground right around them) are never open to the depth below; a sky span's
+  // pads stand at the edge of the void on purpose (cubegen/span.js)
+  const solid = c => { if (spec.span?.sky) return; const x = c % N, z = (c / N) | 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, nz = z + dz; if (nx > 0 && nz > 0 && nx < N - 1 && nz < N - 1) ctx.void0[idx(nx, nz)] = 0; } };
   const add = p => { p.id = portals.length + 1; portals.push(p); if (!p.layer) for (const c of p.cells) { lvl0[c] = p.level; prot0[c] = p.id; solid(c); } };
   const groundLevel = cells => clamp(Math.max(...cells.map(c => lvl0[c])), 3, 14);
   // a free 3x3 spot (with a cell of margin) as close as possible to (x, z)
