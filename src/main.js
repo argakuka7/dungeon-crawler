@@ -65,10 +65,11 @@ import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
-import { openMainMenu, updateMenu, quitToMenu } from './game/menu.js';
+import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
 import { updateShowcase } from './game/showcase.js';
 import { N } from './core/constants.js';
 import { character } from './render/character.js';
+import { drawPortrait, portraitShown } from './render/portrait.js';
 
 const clock = new THREE.Clock();
 
@@ -124,12 +125,15 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
-// The main menu (game/menu.js): no hero, nothing to play; behind it a random cube lives on
-// (game/showcase.js), and joining a friend goes on (their world starts here, net/session.js)
+// The main menu (game/menu.js): nothing to play; behind it a cube lives on (game/showcase.js:
+// the chosen hero's, else random ones), the chosen hero stands over it (render/portrait.js), and
+// joining a friend goes on (their world starts here, net/session.js)
 const menuFocus = new THREE.Vector3(N / 2, 2, N / 2);
+const SWAY = 0.6, SWAY_SPEED = 0.35;   // the hero in the menu turns a little to and fro (rad, rad/s)
 function menuFrame(dt) {
   state.time += dt;
-  if (character.ready) character.group.visible = false;
+  if (character.ready && !portraitShown()) character.group.visible = false;
+  if (portraitShown()) { player.yaw = Math.sin(state.time * SWAY_SPEED) * SWAY; animateCharacter(dt, state.time); }
   updatePlayerBar(); updatePortalBar(); updateCastBar();   // (they hide with no hero)
   updateOnline();
   updateMenu();
@@ -144,6 +148,7 @@ function menuFrame(dt) {
   updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
   renderer.render(scene, camera);
+  drawPortrait(heroBox());
   requestAnimationFrame(frame);
 }
 

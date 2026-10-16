@@ -1,7 +1,9 @@
-// The living cubes behind the main menu (game/menu.js): every SWAP seconds another random cube
-// of a random world, at any depth, with its enemies and villagers going about their business and
-// the camera slowly going round. Nobody is there for the enemies to notice: the hero waits far
-// away, hidden (main.js menuFrame), so they idle and wander about their homes.
+// The living cubes behind the main menu (game/menu.js): the cube the chosen hero left its world
+// in (with what it did there: the enemies it defeated stay gone, the chests it opened stay
+// open), or, with no hero or one without a world, every SWAP seconds another random cube of a
+// random world, at any depth. Their enemies and villagers go about their business and the camera
+// slowly goes round. Nobody is there for the enemies to notice: the hero waits far away (it is
+// shown over the menu instead, render/portrait.js), so they idle and wander about their homes.
 //
 // It is the game's own world machinery (state.cubes, state.map, state.world, the enemies), only
 // without a hero: starting a game (game/flow.js newWorld) or a friend's world coming in
@@ -38,29 +40,45 @@ lamp.position.set(N / 2, 9, N / 2);
 scene.add(lamp);
 const LAMP = 22;             // its strength deep down (from depth 5 on)
 
-// show: { cubes (its world client), t (s the cube has shown), next (the next cube, coming),
+// show: { key (what it shows: a focus's, or null: random cubes), focus, cubes (its world
+// client; null: not made yet), t (s the cube has shown), next (the next cube, coming), last,
 // swapping }; null: none (the menu is closed, or a game took its place)
 let show = null;
 
 export const showcaseCubes = () => show?.cubes ?? null;
 
-// the menu opened: a new world each time (its seed is never seen)
-export function startShowcase() {
-  stopShowcase();
-  const cubes = new WorldClient((Math.random() * 2 ** 32) >>> 0);
-  state.cubes = cubes; state.run = createRun(); state.openedFaces.clear();
-  show = { cubes, t: 0, next: null, last: null, swapping: false };
+// Show `focus` behind the menu: { key, seed, cube (null: the town), run } (a saved world's run:
+// defeated, gates, chests), or null: random cubes of a new random world (its seed is never
+// seen). The same as already shown: nothing changes; else the old fades out first.
+export function startShowcase(focus = null) {
+  const key = focus?.key ?? null;
+  if (show && show.key === key) return;
+  const prev = show, s = { key, focus, cubes: null, t: 0, next: null, last: null, swapping: true };
+  show = s;
   park();
   view.zoom = view.zoomTarget = ZOOM;
-  show.next = pick(show);
-  swap(show, true);
+  const begin = () => {
+    if (show !== s) return;
+    if (prev?.cubes && state.cubes === prev.cubes) { prev.cubes.dispose(); state.cubes = null; }
+    const cubes = new WorldClient(focus ? focus.seed : (Math.random() * 2 ** 32) >>> 0);
+    s.cubes = cubes;
+    state.cubes = cubes; state.run = createRun(); state.openedFaces.clear();
+    if (focus) {
+      for (const id of focus.run.defeated) state.run.defeated.add(id);
+      for (const k of focus.run.gates) state.run.unlockedGates.add(k);
+      for (const id of focus.run.chests) state.run.chests.add(id);
+    }
+    s.next = focus?.cube ? cubes.get(focus.cube).catch(() => cubes.get(cubes.start)) : focus ? cubes.get(cubes.start) : pick(s);
+    swap(s, true);
+  };
+  if (prev?.cubes) { fadeOut(); setTimeout(begin, FADE_MS); } else begin();
 }
 
 // the menu closed: a game takes over (it disposes our world client: newWorld)
 export function stopShowcase() { show = null; camera.clearViewOffset(); lamp.intensity = 0; }
 
 // the hero is not in the showcase: far away, where nothing notices it
-function park() {
+export function park() {
   Object.assign(player, { x: -1e4, y: -1e4, z: -1e4, vx: 0, vy: 0, vz: 0, visY: -1e4, ragdoll: null, down: null, getUp: null, climb: null });
 }
 
@@ -82,7 +100,8 @@ async function swap(s, first = false) {
     await Promise.all([townAssetsReady, villagersReady.catch(() => null)]);   // (a town needs them)
   } catch (e) {
     console.warn('showcase cube failed', e);
-    if (show === s) { s.next = pick(s); s.swapping = false; s.t = SWAP - 1; }   // another one in a moment
+    // another one in a moment (the hero's cube would not come: random ones)
+    if (show === s) { s.focus = null; s.next = pick(s); s.swapping = false; s.t = SWAP - 1; }
     return;
   }
   if (!first) { fadeOut(); await new Promise(r => setTimeout(r, FADE_MS)); }
@@ -109,12 +128,12 @@ function enter(s, c) {
 // main.js menuFrame: the camera goes round, and after SWAP s the next cube comes
 export function updateShowcase(dt) {
   if (!show) return;
-  if (state.cubes !== show.cubes) { show = null; return; }   // a game (or a friend's world) took over
+  if (show.cubes && state.cubes !== show.cubes) { show = null; return; }   // a game (or a friend's world) took over
   view.yawTarget += TURN * dt;
   lamp.intensity = LAMP * Math.min(1, Math.max(0, state.lookDepth - 4));
   const w = innerWidth, h = innerHeight;
   if (w > WIDE) camera.setViewOffset(w, h, -w * SHIFT, 0, w, h);
   else if (h > w * TALL) camera.setViewOffset(w, h, 0, h * RISE, w, h);
   else camera.clearViewOffset();
-  if ((show.t += dt) >= SWAP && !show.swapping) swap(show);
+  if ((show.t += dt) >= SWAP && !show.swapping && !show.focus) swap(show);   // (the hero's cube stays)
 }

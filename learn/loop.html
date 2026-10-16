@@ -142,8 +142,8 @@
     <div>
       <p lang="en"><code>clock.getDelta()</code> measures the time since the last frame. <code>Math.min(..., 1 / 30)</code> is the hiccup guard.</p>
       <p lang="de"><code>clock.getDelta()</code> misst die Zeit seit dem letzten Bild. <code>Math.min(..., 1 / 30)</code> ist der Schluckauf-Schutz.</p>
-      <p lang="en">In the main menu there is no hero yet: <code>menuFrame()</code> runs a random cube behind the menu, with its monsters walking about and the camera going round, and <code>return</code> skips the rest (there is nobody to move).</p>
-      <p lang="de">Im Hauptmenü gibt es noch keinen Helden: <code>menuFrame()</code> lässt hinter dem Menü einen zufälligen Würfel laufen, mit Monstern, die herumlaufen, und einer Kamera, die sich dreht, und <code>return</code> überspringt den Rest (es gibt niemanden zu bewegen).</p>
+      <p lang="en">In the main menu nobody plays yet: <code>menuFrame()</code> runs the cube your hero was last in behind the menu, with its monsters walking about and the camera going round, draws your hero standing next to the menu, and <code>return</code> skips the rest (there is nobody to move).</p>
+      <p lang="de">Im Hauptmenü spielt noch niemand: <code>menuFrame()</code> lässt hinter dem Menü den Würfel laufen, in dem dein Held zuletzt war, mit Monstern, die herumlaufen, und einer Kamera, die sich dreht, malt deinen Helden neben das Menü, und <code>return</code> überspringt den Rest (es gibt niemanden zu bewegen).</p>
       <p lang="en"><code>worldPaused() ? 0 : ...</code> means: "if the world is paused, use 0, otherwise ...". That is the pause. The world is paused while the inventory or the menu is open, unless you play together with a friend.</p>
       <p lang="de"><code>worldPaused() ? 0 : ...</code> heißt: "Wenn die Welt angehalten ist, nimm 0, sonst ...". Das ist die Pause. Die Welt ist angehalten, solange das Inventar oder das Menü offen ist, außer du spielst mit einem Freund zusammen.</p>
       <p lang="en"><code>timeScale</code> comes from <code>src/game/juice.js</code>: it is 1 normally and 0.03 during a hit pause.</p>

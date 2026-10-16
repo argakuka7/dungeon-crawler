@@ -11,14 +11,21 @@
 //   characters  up to three heroes (core/save.js MAX_HEROES): choose, rename, delete, make one
 //   manage      the worlds: copy a name to share it, delete
 // ?join=CODE opens Join Game with the code filled in (state.js: never skipped).
-import { state, view } from './state.js';
+//
+// Behind the menu the cube the chosen hero left its world in (game/showcase.js), and over it the
+// hero, with the weapon in its hand (render/portrait.js, in the box heroBox gives): a click on
+// it is Choose Character. No hero, or one without a world: random cubes.
+import { state, view, player } from './state.js';
 import { setHelpOpen, helpOpen } from './help.js';
 import { fadeOut } from './hud.js';
 import { endWorld } from './flow.js';
-import { startShowcase, stopShowcase, showcaseCubes } from './showcase.js';
+import { startShowcase, stopShowcase, showcaseCubes, park } from './showcase.js';
+import { syncEquippedWeapon } from './equipment.js';
+import { showPortrait } from '../render/portrait.js';
+import { isInterior } from '../world/town.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } from './save.js';
-import { cleanName, heroLevel, savedWorldName, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
+import { cleanName, heroLevel, heroStats, savedWorldName, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
 import { readSeed } from '../core/names.js';
 import { ITEMS } from '../core/items.js';
 import { playSong } from '../audio/music.js';
@@ -38,6 +45,7 @@ const params = new URLSearchParams(location.search), local = params.get('net') =
 // room code typed so far; joining: the code of the game we wait for
 let screen = 'title', from = 'title', form = null, asked = { id: null, until: 0 }, note = '', copied = null;
 let invite = state.mode === 'menu' ? readCode(params.get('join')) : null, code = invite ?? '', joining = null;
+let shownHero = '';   // the hero over the menu, as it was saved (id, when): its bag is the player's
 
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 function ago(t) {
@@ -62,10 +70,9 @@ export function openMainMenu() {
   document.body.classList.add('in-menu');
   overlay.hidden = false;
   playSong(null);   // no music in the menu
-  startShowcase();   // the living cubes behind it
   screen = invite ? 'join' : 'title';
-  form = null; note = '';
-  render();
+  form = null; note = ''; shownHero = '';
+  render();   // (and the living cubes behind it)
 }
 // off to play: the screen goes dark (the game's first cube fades it in), the showcase stops
 // (the game's world takes its place) and the view is the game's again
@@ -75,6 +82,7 @@ function closeMainMenu() {
   document.body.classList.remove('in-menu');
   setHelpOpen(false);
   stopShowcase();
+  showPortrait(false); $('title-hero').hidden = true;
   view.yaw = view.yawTarget = -Math.PI / 4; view.zoom = view.zoomTarget = DEFAULT_ZOOM;
   state.mode = 'play';
 }
@@ -173,7 +181,54 @@ function render() {
   panel.innerHTML = screens[screen]() + (note ? `<p class="title-note" role="alert">${esc(note)}</p>` : '');
   panel.dataset.screen = screen;
   panel.querySelector('#title-rename, #title-name, #title-seed')?.focus();
+  updateScene();
 }
+
+// The chosen hero over the menu, with its bag (the weapon in its hand), and its world's cube behind
+// it. Not while joining: the friend's world is coming.
+function updateScene() {
+  if (joining) return;
+  const hero = chosen();
+  $('title-hero').hidden = !hero;
+  showPortrait(!!hero);
+  if (hero) {
+    $('title-hero-name').textContent = hero.name;
+    $('title-hero-level').textContent = `Level ${heroLevel(hero)}`;
+    const k = `${hero.id} ${hero.updated}`;
+    if (k !== shownHero) {
+      shownHero = k;
+      Object.assign(player, heroStats(hero));
+      park();   // (heroStats put it at the start: nothing should notice it)
+      syncEquippedWeapon();
+    }
+  }
+  const w = hero?.world ? store.world(hero.world) : null, spot = w?.spots[hero.id];
+  const cube = spot && !isInterior(spot.cube) ? spot.cube : null;   // (in a house: the town)
+  startShowcase(w ? { key: `${w.id} ${cube}`, seed: w.seed, cube, run: w.run } : null);
+}
+
+// main.js menuFrame: where the hero over the menu is drawn (CSS pixels; null: nowhere). Beside
+// the menu, as tall as it, roughly in the middle of the screen; on a narrow screen (a phone held
+// upright) above it; with no room, not at all.
+export function heroBox() {
+  const el = $('title-hero');
+  if (state.mode !== 'menu' || el.hidden) return null;
+  const r = $('title-box').getBoundingClientRect(), W = innerWidth, H = innerHeight;
+  let b = null;
+  if (W - r.right >= 220) {
+    const h = Math.min(r.height, H * 0.85), w = h * 0.5;
+    const cx = Math.min(Math.max(W / 2, r.right + w / 2 + 24), W - w / 2 - 8);
+    b = { left: cx - w / 2, top: r.top + (r.height - h) / 2, width: w, height: h };
+  } else if (r.top >= 160) {
+    const h = Math.min((r.top - 16) * 0.7, H * 0.32), w = h * 0.6;   // (standing on the menu, the cube still seen)
+    b = { left: (W - w) / 2, top: r.top - h - 8, width: w, height: h };
+  }
+  el.style.visibility = b ? '' : 'hidden';
+  if (!b) return null;
+  Object.assign(el.style, { left: `${b.left}px`, top: `${b.top}px`, width: `${b.width}px`, height: `${b.height}px` });
+  return $('title-hero-view').getBoundingClientRect();
+}
+$('title-hero').addEventListener('click', () => { if (state.mode === 'menu' && !joining) act('characters'); });
 // what the world name or number typed so far is
 function updatePreview() {
   const t = $('title-seed').value.trim(), seed = t ? readSeed(t) : null;

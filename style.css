@@ -316,3 +316,11 @@ body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #de
 #title-panel .title-back { margin-top: 16px; }
 .title-status { color: #cfe2ff !important; min-height: 1.4em; }
 .title-note { color: #ffb3a3 !important; }
+/* the chosen hero, drawn into #title-hero-view (render/portrait.js); placed by game/menu.js heroBox */
+#title-hero { position: fixed; display: flex; flex-direction: column; align-items: center; padding: 0 0 4px; background: none; border: none;
+  cursor: pointer; font: inherit; color: #ffe4ae; }
+#title-hero-view { flex: 1; align-self: stretch; }
+#title-hero b { font-weight: normal; font-size: 16px; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+#title-hero small { color: #aab3c2; font-size: 11px; text-shadow: 0 1px 4px #000; }
+#title-hero:hover b { color: #fff; }
+#title-hero:focus-visible { outline: 2px solid #ffcf7a; outline-offset: 2px; border-radius: 6px; }

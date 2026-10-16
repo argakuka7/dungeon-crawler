@@ -27,11 +27,22 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
 - Quitting (`menu.js quitToMenu`): the hero and world are saved a last time and no longer saved
   (`stopSaving`), the game with friends ends, the screen goes dark and the world goes
   (`flow.js endWorld`: the cubes, the enemies, the neighbours, the run). In the menu the frame
-  runs the showcase and lets a join go on (`main.js menuFrame`): the hero and its bars are
-  hidden, there is no music.
-- **Behind the main menu** (`showcase.js`): a random cube of a random world (a new seed each time
-  the menu opens), at any depth, every 10 s another, with a fade between. Its enemies and
-  villagers go about their business: the hero waits far away, so nothing notices it, and the
+  runs the showcase, draws the hero over it and lets a join go on (`main.js menuFrame`): the
+  hero's bars are hidden, there is no music.
+- **The chosen hero over the menu** (`render/portrait.js`): the player's own figure with the
+  chosen hero's bag (the weapon in its hand, `syncEquippedWeapon`), idling and turning a little
+  to and fro, its name and level under it; a click on it is Choose Character. It stands in a
+  little scene of its own (its own camera and lights, the same far fog so no shaders change),
+  drawn after the world into a box: beside the menu, as tall as it, roughly in the middle of a
+  wide screen; above the menu on a phone held upright; not at all without room
+  (`menu.js heroBox`). There is one figure: in the menu it moves into that scene, in a game
+  back into the world's.
+- **Behind the main menu** (`showcase.js`): the cube the chosen hero left its world in (the town
+  if it was never there, or left it in a house), with what it did there (its defeated enemies
+  stay gone, its chests open); choosing another hero or world fades over to theirs. With no
+  hero, or one without a world: a random cube of a random world (a new seed each time the menu
+  opens), at any depth, every 10 s another, with a fade between. Their enemies and villagers go
+  about their business: the hero waits far away, so nothing notices it, and the
   enemies idle and wander about their homes. The camera goes round slowly, the whole cube in
   view (zoom 1: it does not lean towards the parked hero). With no hero there is no hero's light,
   so from depth 5 on a lamp over the middle of the cube lights the caves instead. The next cube is
