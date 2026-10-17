@@ -80,6 +80,32 @@ export function pathToward(a, x, y, z, maxLen, height = 0.9) {
   for (let f = best; f; f = prev.get(f)) path.unshift(f);
   return path;
 }
+// Breadth-first like findPath, within maxLen steps: the path to the nearest node (fewest steps,
+// a itself included) that `ok` accepts; else, given `score`, to the reached node that scores
+// highest (a itself, unless one beats it); else null.
+export function nearest(a, ok, maxLen, height = 0.9, score = null) {
+  if (!a || !walkable(a, height)) return null;
+  const prev = new Map([[a, null]]);
+  let front = [a], hit = ok(a) ? a : null, best = a, top = score && !hit ? score(a) : -Infinity;
+  for (let d = 0; d < maxLen && front.length && !hit; d++) {
+    const next = [];
+    for (const f of front) {
+      for (const g of neighbors(f, height)) {
+        if (prev.has(g)) continue;
+        prev.set(g, f); next.push(g);
+        if (ok(g)) { hit = g; break; }
+        if (score) { const s = score(g); if (s > top) { best = g; top = s; } }
+      }
+      if (hit) break;
+    }
+    front = next;
+  }
+  const end = hit ?? (score ? best : null);
+  if (!end) return null;
+  const path = [];
+  for (let f = end; f; f = prev.get(f)) path.unshift(f);
+  return path;
+}
 export function around(f, n, height = 0.9) {
   const seen = new Set([f]);
   let front = [f];

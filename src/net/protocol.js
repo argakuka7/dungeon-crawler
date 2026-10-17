@@ -164,7 +164,8 @@ export function isMe(m) {
 
 // --- the enemies (net/foes.js) --------------------------------------------------------------------
 
-export const MODES = ['idle', 'walk', 'home', 'alert', 'chase', 'attack', 'search', 'defend', 'dead'];
+// (new modes go at the end: an older game reads one it does not know as idle)
+export const MODES = ['idle', 'walk', 'home', 'alert', 'chase', 'attack', 'search', 'defend', 'dead', 'hide'];
 export const BURNING = 1, TOXIC = 2;
 const r2 = x => Math.round(x * 100) / 100;
 

@@ -444,6 +444,71 @@ export async function runFireChecks() {
   });
 }
 
+// Out of reach and hit from afar, with the real AI: a spider shot from across a river takes
+// cover out of the bow's range at once; one that sees the player but cannot get at them glares
+// a moment, then backs off out of reach; one that can get at them comes, and so does a
+// Fire-face to the bank it can shoot from.
+export async function runTacticsChecks() {
+  check(spiderModel.ready && fireFaceModel.ready, 'Wait for the spider / Fire-face assets to load');
+  check(!state.transitioning && !state.inventoryOpen, 'Close inventory and wait for portal travel to finish');
+  return paused(async () => {
+    const originalMap = state.map, saved = { ...player }, savedRun = state.run, passive = state.devPassive, results = [];
+    const run = (n, until) => { for (let i = 0; i < n; i++) { updateEnemies(1 / 60); drawEnemies(1 / 60); if (until?.()) return i; } return n; };
+    const river = on => { for (let x = 0; x < N; x++) for (const z of [9, 10]) at(x + 0.5, z + 0.5).fluid = on; };
+    const away = e => Math.hypot(e.x - player.x, e.z - player.z);
+    try {
+      state.run = createRun(); state.map = arena(); resetEnemies(); state.devPassive = false;
+      for (const e of allEnemies()) place(e, 1.5, 1.5);
+      const spider = spiders[0], ff = makeEnemy({ f: at(13.5, 14.5), x: 13.5, y: 0, z: 14.5, yaw: Math.PI }, FIREFACE);
+      fireFaces.push(ff); place(ff, 13.5, 14.5);
+      const armed = z => {
+        hero(); addItem(player.inventory, 'weapon_bow_recurve');
+        equipItem(player.inventory, player.inventory.slots.find(s => s?.itemId === 'weapon_bow_recurve').instanceId);
+        player.z = z; player.support = at(6.5, z);
+        return combatStats(player).range;
+      };
+      river(true); const range = armed(8.5);
+      place(spider, 6.5, 13.5); state.enemyGrace = 0; run(1); damageEnemy(spider, 1);
+      const took = run(60, () => spider.mode === 'hide');
+      check(took < 60, 'Shot across a river it cannot cross, it takes cover at once: ' + spider.mode);
+      run(240);
+      check(away(spider) > range && spider.speed === 0 && spider.mode === 'hide', 'It lies low out of the bow\'s range: ' + away(spider).toFixed(2));
+      results.push(`shot out of reach: takes cover ${away(spider).toFixed(1)} cells off (range ${range})`);
+      const before = away(spider); let closest = before;
+      damageEnemy(spider, 1); run(90, () => { closest = Math.min(closest, away(spider)); });
+      check(spider.mode === 'hide' && closest > before - 0.1, 'Hit again in cover, it does not step out towards the player: ' + (before - closest).toFixed(2));
+
+      place(spider, 6.5, 11.4); spider.think = 0; spider.t = 0; spider.provoked = 0; player.z = 8.6;
+      const noticed = run(60, () => spider.mode === 'chase'), hid = run(300, () => spider.mode === 'hide');
+      check(noticed < 60 && hid < 300 && hid / 60 > 1.2, 'Out of reach it glares a moment, then backs off: ' + hid / 60);
+      run(240);
+      check(away(spider) > Math.min(range, 4), 'Out of the player\'s reach: ' + away(spider).toFixed(2));
+      results.push(`seen out of reach: glares ${(hid / 60).toFixed(1)}s, then backs off`);
+      river(false); player.x = spider.x; player.z = spider.z - 2.5; player.support = at(player.x, player.z);
+      check(run(120, () => spider.mode === 'chase' || spider.mode === 'attack') < 120, 'A way to the player in sight: out of cover and back at them');
+      results.push('back into the fight once it sees a way');
+
+      river(false); place(spider, 6.5, 15.5); spider.provoked = 0; armed(6.5);
+      check(away(spider) > SPIDER.giveUp, 'Further off than it can see');
+      damageEnemy(spider, 1);
+      const came = run(600, () => spider.mode === 'attack');
+      check(came < 600, 'Shot from afar where it can get at the player, it comes and bites');
+      results.push(`shot from 9 cells: comes and attacks after ${(came / 60).toFixed(1)}s`);
+
+      place(spider, 1.5, 1.5); river(true); armed(8.5);
+      place(ff, 13.5, 14.5); state.enemyGrace = 0; damageEnemy(ff, 1);
+      const shot = run(600, () => ff.mode === 'attack' || ff.mode === 'hide');
+      check(shot < 600 && ff.mode === 'attack' && ff.z > 10.9, 'A Fire-face shot across the river shoots back from its bank: ' + ff.mode + ' ' + ff.z.toFixed(2));
+      results.push('a Fire-face goes to its bank and shoots back');
+      return results;
+    } finally {
+      state.map = originalMap; state.run = savedRun; state.devPassive = passive;
+      Object.assign(player, saved); cancelSwing(player, true);
+      clearProjectiles(); resetEnemies();
+    }
+  });
+}
+
 // Real key events: always running after a short ramp, left Ctrl walks (Ctrl+W too), Space jumps,
 // held Shift auto-attacks only an enemy within reach, F does nothing.
 export async function runControlChecks() {

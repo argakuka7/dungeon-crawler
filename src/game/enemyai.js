@@ -13,8 +13,13 @@
 // and hears one right next to it. It turns towards a player it half notices, reacts a moment
 // after it notices, and calls the others near it. A hunt follows the player over the floor
 // graph (stairs, ramps, bridges and landings included) to where it last knew the player stood,
-// or as close to that as it gets; out of sight it keeps hunting for a while, then searches
-// around that spot and only then goes home. A hit makes it hunt for longer.
+// or to the nearest floor it can strike (or shoot) them from; out of sight it keeps hunting for a
+// while, then searches around that spot and only then goes home. A hit makes it hunt for longer,
+// and further: it knows where the shot came from and goes there.
+// One that cannot get at the player (no way to them, and no spot to shoot them from) takes cover
+// (`hide`): hit, almost at once; else after a moment glaring from as close as it gets. It runs to the
+// nearest floor out of the player's sight or out of their weapon's range, lies low there and
+// comes back into the fight once it sees a way to them, or goes home after a while.
 // In the fight its `style` decides what it does between blows: a skirmisher backs off and
 // circles, then darts in again; a ranged one keeps its distance and sidesteps; a brute holds
 // its ground (and a `charge`r runs at the player from a few cells away). Throws are aimed a
@@ -23,7 +28,9 @@ import { player, state } from './state.js';
 import { party, chooseTarget, alive as canHurt } from './party.js';
 import { playerFloor, strikePlayer } from './enemycombat.js';
 import { stepEnemy, findPath, pathToward, around, clearLine } from '../physics/enemynav.js';
-import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, isRanged, shotOf } from '../core/enemies.js';
+import { postPath, coverPath, covered } from './tactics.js';
+import { combatStats } from '../core/combat.js';
+import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, shotOf } from '../core/enemies.js';
 import { launchProjectile } from './projectiles.js';
 import { fireBeam } from './beams.js';
 import { tryHordeAttack } from './hordes.js';
@@ -38,8 +45,13 @@ const CALL = 5;            // cells: how far a call to arms carries
 const MEMORY = 3;          // s it hunts on out of sight
 const PROVOKED = 6;        // s after a hit it hunts on out of sight
 const SEARCH = 4;          // s it searches around the spot it lost the player at
-const STRANDED = 4;        // s it waits as close as it gets to a player it cannot reach
+const STRANDED = 1.5;      // s it glares from as close as it gets at a player it cannot reach
+const BALK = 0.4;          // s, after a hit: a player out of reach for this long sends it into cover
 const HUNT = 24;           // longest path (steps) it plans on a hunt
+const FAR = 40;            // longest path (steps) it plans after a hit, and to cover
+const HIDE = 6;            // s it lies low in cover before it goes home
+const DANGER = 8;          // cells: how far a player whose weapon it cannot tell hits from
+const SAFE = 4;            // cells: the least it keeps away from a player it hides from
 const LEAD = 0.5;          // how much of a running player's way a throw is aimed ahead
 
 // Calls to arms: where an enemy noticed the player (or was hit), heard by idle allies nearby.
@@ -97,10 +109,12 @@ export function notices(e, p = foe(e)) {
   const ahead = Math.cos(Math.atan2(p.x - e.x, p.z - e.z) - e.yaw) > AHEAD;
   return sees(e, e.profile.aggro * (ahead ? 1 : BEHIND), 1.6, p);
 }
-// remember where the player is (and the floor they stand on, if this enemy can walk it)
+// remember where the player is (and the floor they stand on, if this enemy can walk it; in the
+// air, the one they stood on while they are still above it)
 function spot(e) {
-  const p = foe(e), f = playerFloor(e.profile.height, p);
-  e.seen = { x: p.x, y: p.y, z: p.z, f: f ?? e.seen?.f ?? null };
+  const p = foe(e), f = playerFloor(e.profile.height, p), old = e.seen?.f;
+  const over = old && Math.abs(p.x - old.x - 0.5) < 1 && Math.abs(p.z - old.z - 0.5) < 1;
+  e.seen = { x: p.x, y: p.y, z: p.z, f: f ?? (over && !p.grounded ? old : null) };
   e.lost = 0;
 }
 function notice(e, delay, loud) {
@@ -108,36 +122,80 @@ function notice(e, delay, loud) {
   e.mode = 'alert'; e.t = delay; e.speed = 0; e.path = null;
   if (loud) call(e);
 }
-// a hit: it knows where the shot came from, hunts for longer and calls the others
+// a hit: it goes after whoever struck it, knows where the shot came from, hunts for longer and
+// calls the others
 function provoke(e) {
+  const by = e.lastHit == null ? player : party().find(b => b.slot === e.lastHit);
+  if (canHurt(by) && (by === player || by.here)) e.target = by;
   spot(e); e.provoked = PROVOKED;
   if (e.horde || e.defence) return;   // their groups decide
   call(e);
   if (e.mode !== 'attack' && e.mode !== 'chase') { e.mode = 'chase'; e.think = 0; }
 }
-function goHome(e) { e.mode = 'home'; e.path = findPath(e.f, e.home, 40, e.profile.height) || [e.f]; e.provoked = 0; }
+function goHome(e) { e.mode = 'home'; e.path = findPath(e.f, e.home, 40, e.profile.height) || [e.f]; e.provoked = 0; e.shy = false; }
+// searching: to where it lost the player (as close as it gets), then about there
 function search(e) {
+  const s = e.seen, h = e.profile.height;
   e.mode = 'search'; e.t = SEARCH; e.pause = 0; e.look = e.yaw;
-  e.path = e.seen?.f ? findPath(e.f, e.seen.f, HUNT, e.profile.height) : null;
+  e.path = s ? (s.f && findPath(e.f, s.f, HUNT, h)) || pathToward(e.f, s.x, s.y, s.z, HUNT, h) : null;
+  e.lair = e.path?.at(-1) ?? e.f;
 }
-// Hunting: a path to the floor the player stands on (else to where it last saw them, else as
-// close to that as it gets); out of sight for too long, or stuck short of a player it cannot
-// reach, it starts searching.
+// how far player p can hit it from: their shot's range (a friend's it cannot tell), at least SAFE
+function danger(p) {
+  const stats = p === player ? combatStats(player) : null;
+  return Math.max(SAFE, p === player ? (stats?.ranged ? stats.range : 0) : DANGER) + 1;
+}
+// the way to where it can attack the player it remembers: to the floor they stand on, else to
+// the nearest floor it can strike (or shoot) them from
+function way(e, far) {
+  const s = e.seen;
+  return (s.f && findPath(e.f, s.f, far, e.profile.height)) || postPath(e, s, far);
+}
+// taking cover from a player it cannot get at
+function hide(e) {
+  const p = foe(e), s = e.seen ?? p;
+  e.mode = 'hide'; e.t = HIDE; e.recheck = 1; e.stranded = 0; e.shy = true;
+  e.path = coverPath(e, s, danger(p), FAR) ?? [e.f];
+}
+// Hunting: a way to the player (to their floor, else to a spot to strike them from); with none,
+// it goes as close as it gets and takes cover after glaring there a moment (soon after a hit:
+// the player has it in their sights). Out of sight for too long, or there and the player gone,
+// it starts searching.
 function hunt(e) {
   const p = foe(e), cfg = e.profile, d = Math.hypot(p.x - e.x, p.z - e.z);
   if (sees(e, Math.max(cfg.aggro, cfg.giveUp), 4) || d < HEAR) spot(e);   // a quarry up a stair stays in sight
   else e.lost += THINK;
   if (!e.seen) { search(e); return; }
-  const goal = e.seen.f;
-  e.path = goal && findPath(e.f, goal, HUNT, cfg.height);
-  const short = !e.path;
-  if (short) e.path = pathToward(e.f, e.seen.x, e.seen.y, e.seen.z, HUNT, cfg.height);
-  // (a thrower that has the player in sight is not stuck: it shoots from there)
-  e.stranded = short && e.path?.length <= 1 && !(isRanged(cfg) && e.lost === 0) ? (e.stranded || 0) + THINK : 0;
+  const provoked = e.provoked > 0;
+  e.path = way(e, provoked ? FAR : HUNT);
+  if (e.path) { e.stranded = 0; e.shy = false; }
+  else {
+    // (hit in cover, with still no way to the player: on to other cover at once)
+    if (provoked && e.shy) { hide(e); return; }
+    e.path = pathToward(e.f, e.seen.x, e.seen.y, e.seen.z, HUNT, cfg.height);
+    const stuck = provoked || (e.lost === 0 && e.path?.length <= 1);
+    e.stranded = stuck ? (e.stranded || 0) + THINK : 0;
+    if (e.stranded > (provoked ? BALK : STRANDED)) { hide(e); return; }
+  }
   const memory = e.provoked > 0 ? PROVOKED : MEMORY;
   // out of sight: on to where it last saw the player, then look around there
   const there = e.lost > 0.6 && (!e.path || e.path.length <= 1);
-  if (e.lost > memory || there || e.stranded > STRANDED) search(e);
+  if (e.lost > memory || there) search(e);
+}
+// Lying low: once it sees the player and a way to them, back into the fight; out of cover
+// again (the player moved where it saw them), on to other cover; after a while, home.
+function lie(e) {
+  const p = foe(e), cfg = e.profile;
+  if (sees(e, Math.max(cfg.aggro, cfg.giveUp), 4) || Math.hypot(p.x - e.x, p.z - e.z) < HEAR) {
+    spot(e);
+    const path = way(e, HUNT);
+    if (path) { e.mode = 'chase'; e.path = path; e.side = side(); e.shy = false; return; }
+  }
+  if (e.t <= 0) { goHome(e); return; }
+  if ((e.recheck -= THINK) > 0 || (e.path && e.path.at(-1) !== e.f)) return;
+  e.recheck = 1;
+  const s = e.seen ?? p, far = danger(p);
+  if (!covered(cfg, s, far)(e.f)) e.path = coverPath(e, s, far, FAR) ?? [e.f];
 }
 // learn: enemies.html#decide-code #state-machine, paths.html#bfs (see learn/README.md)
 function decide(e) {
@@ -164,8 +222,8 @@ function decide(e) {
     return;
   }
   if (e.mode === 'attack' || e.mode === 'alert') return;
-  if (e.mode === 'chase') {
-    if (alive) hunt(e); else goHome(e);
+  if (e.mode === 'chase' || e.mode === 'hide') {
+    if (!alive) goHome(e); else if (e.mode === 'chase') hunt(e); else lie(e);
     return;
   }
   // unaware: idle, walking about, going home or searching
@@ -290,6 +348,13 @@ function act(e, dt) {
     return;
   }
   if (e.mode === 'chase') { fight(e, dt); return; }
+  if (e.mode === 'hide') {   // runs for cover, then lies low there, facing where it saw the player
+    e.t -= dt;
+    if (!follow(e, cfg.chase, dt)) return;
+    e.speed = 0;
+    if (e.seen) turn(e, Math.atan2(e.seen.x - e.x, e.seen.z - e.z), dt, 3);
+    return;
+  }
   if (e.mode === 'defend') {
     if (follow(e, e.guardian ? cfg.homeSpeed : cfg.chase, dt)) turn(e, toPlayer(e), dt, 2);
     return;
@@ -299,7 +364,7 @@ function act(e, dt) {
     if (!follow(e, (cfg.wander + cfg.chase) / 2, dt)) return;
     e.speed = 0; turn(e, e.look, dt, 3);
     if ((e.pause -= dt) > 0) return;
-    const spots = around(e.seen?.f ?? e.f, 2, cfg.height);
+    const spots = around(e.lair ?? e.f, 2, cfg.height);
     e.path = findPath(e.f, spots[Math.floor(Math.random() * spots.length)], 6, cfg.height);
     e.look = e.yaw + (Math.random() - 0.5) * 3; e.pause = 0.5 + Math.random() * 0.7;
     return;

@@ -188,13 +188,23 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
   within 5 cells react a little later. A hit (any damage, also unstaggered ones) makes it hunt at
   once, for longer, and calls the others too. Hordes and guardian defenders keep their group
   logic ([hordes.md](hordes.md), [guardians.md](guardians.md)).
-- **Hunting** (`chase`): a path (up to 24 steps) to the node you stand on; while you are not on
-  one it can walk (jumping, swimming, on a ladder, under a ceiling too low for it), to where
-  it last saw you stand; if that is out of reach, as close as it gets (`pathToward`). It sees
-  you within the larger of `aggro` and `giveUp`, all around and up to 4 above or below. Out of
-  sight it keeps going for 3 s (6 s after a hit); once it reaches the spot where it lost you,
-  stays stuck short of you for 4 s (unless it can shoot from there) or runs out of memory, it
-  `search`es: it looks around near that spot for 4 s, then goes home.
+- **Hunting** (`chase`): a path (up to 24 steps; 40 for 6 s after a hit) to the node you stand
+  on; while you are not on one it can walk (jumping, swimming, on a ladder, under a ceiling too
+  low for it), to the one you jumped from while you are above it; else to the nearest node it
+  can start an attack on you from (`game/tactics.js` `postPath`: a blow's reach from the edge of
+  the cell, a throw's within its reach with a clear line from its muzzle), so a thrower goes to
+  the bank across the river and shoots. It sees you within the larger of `aggro` and `giveUp`,
+  all around and up to 4 above or below. A hit tells it where you stand even out of sight, so
+  shot from afar it comes. Out of sight it keeps going for 3 s (6 s after a hit); once it
+  reaches the spot where it lost you or runs out of memory, it `search`es: it walks as close
+  to that spot as it gets, looks around near there for 4 s, then goes home.
+- **Out of reach** (`hide`): with no way to you and no spot to attack you from, it walks as
+  close as it gets, glares for 1.5 s and takes cover; after a hit it does not stand there as a
+  target: it takes cover after 0.4 s. Cover (`coverPath`) is the nearest node (by steps, up to
+  40) out of your sight or further than your weapon shoots (its range, at least 4; a friend's
+  counts as 8) plus a cell; with none, the furthest it gets. It lies low there for 6 s, facing
+  where it saw you, moves on when you come where you see it again, comes back out once it sees
+  a way to you, and else goes home. Hit again, it picks cover anew.
 - **Between blows**, by the profile's `style`:
   - `skirmish` (spiders, snakes, Fire-cats): backs off after a blow, circles at `circle` cells
     (spiders scuttle sideways facing you, `strafe`; the others walk round), switching sides
@@ -326,6 +336,7 @@ await checks.runCombatChecks(); // real input (click on an enemy, Shift), contro
 await checks.runControlChecks(); // run ramp / left Ctrl walk (not right) / Ctrl+W, Space jump, Shift auto-attack only in reach, F unbound
 await checks.runNewEnemyChecks(); // snake bite, Octonaut slap / spin kick, their clips and corpses
 await checks.runFireChecks(); // fireball + burning, Triangle punch / dodge / walls, Fire-cat chase and pounce
+await checks.runTacticsChecks(); // out of reach: shot takes cover, seen glares then hides, back out; shot from afar comes; a thrower shoots from its bank
 await checks.runClimbChecks(); // ladder controller, reverse / hold / exits, dynamic weapon
 await checks.runGetUpChecks(); // knockdown -> ragdoll -> GetUpFront / GetUpBack, move time, idle pose
 await checks.runRangedChecks(); // bow / crossbow / staff: sockets, hold pose, drawn string and arrow, range and walking up, pierce, reload, burst

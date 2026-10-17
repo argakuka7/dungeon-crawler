@@ -54,7 +54,7 @@ function bar(id, a, b, color, width = 0.04, opacity = 0.85) {
 }
 
 const MOOD = { idle: '#7dffa0', walk: '#7dffa0', home: '#7dd3ff', search: '#c49cff', alert: '#ffb347', chase: '#ff5a4a',
-  attack: '#ff2a2a', defend: '#ffd34a' };
+  attack: '#ff2a2a', defend: '#ffd34a', hide: '#5ad1c4' };
 const UNAWARE = new Set(['idle', 'walk', 'home', 'search']);
 const living = () => allEnemies().filter(e => e.mode !== 'dead');
 const chosen = name => { const of = on.get(name)?.of; return living().filter(e => !of || of.has(e)); };
@@ -118,7 +118,7 @@ function paths() {
     if (e.path?.length > 1)
       view(`path:${id}`, `${e.path.map(f => f.id ?? `${f.x},${f.z}`).join(' ')}:${color}`,
         () => tube(e.path.map(centre), { color, width: 0.08, opacity: 0.8, head: true }));
-    if (e.seen && (e.mode === 'chase' || e.mode === 'search' || e.mode === 'alert')) {
+    if (e.seen && (e.mode === 'chase' || e.mode === 'search' || e.mode === 'alert' || e.mode === 'hide')) {
       const p = view(`path-seen:${id}`, color, () => { const g = pin({ color }), q = label('?', { color, size: 0.22 }); q.position.y = 1.35; g.add(q); return g; });
       p.position.set(e.seen.x, e.seen.y, e.seen.z);
     }
