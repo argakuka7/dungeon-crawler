@@ -92,7 +92,7 @@
     "src/core/progression.js#xpScale": "8a49f4e3",
     "src/core/progression.js#xpToNext": "2edcdb3d",
     "src/core/shots.js#stepShot": "a2c694d1",
-    "src/core/townportal.js": "dba3b070",
+    "src/core/townportal.js": "11455db2",
     "src/core/townportal.js#CAST_TIME": "7406ff19",
     "src/core/townportal.js#onPad": "c03adcc8",
     "src/core/townportal.js#TOWN_PORTAL_CHARGE": "f331e600",

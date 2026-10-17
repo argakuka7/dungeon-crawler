@@ -13,6 +13,7 @@ import { barEntry } from '../../src/core/inventory.js';
 import { CAST_TIME } from '../../src/core/townportal.js';
 import { TOWN_KEY } from '../../src/world/town.js';
 import { paused } from './combat.js';
+import { N } from '../../src/core/constants.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -67,6 +68,12 @@ export async function runTownPortalChecks() {
 
       enterCube(await state.cubes.get(DUNGEON), 2);
       const start = { x: player.x, y: player.y, z: player.z };
+      // no room anywhere around (a well on every cell): the scroll is not read at all
+      const portals = state.map.portals;
+      state.map.portals = [...portals, { kind: 'down', cells: Array.from({ length: N * N }, (_, i) => i) }];
+      press('Digit1');
+      state.map.portals = portals;
+      check(!state.cast && state.statusMsg === 'No room for a portal here', 'Without room no cast starts');
       press('Digit1');
       check(state.cast?.duration === CAST_TIME, 'Using the scroll starts a 5 s cast');
       updateQuickbar();
@@ -89,6 +96,7 @@ export async function runTownPortalChecks() {
       check(tp?.key === DUNGEON && townFx().length === 1 && !state.cast, 'A finished cast opens a portal in this cube: ' + state.statusMsg + ' ' + JSON.stringify(state.cast));
       check(Math.hypot(tp.pad.x - player.x, tp.pad.z - player.z) > 1 && Math.hypot(tp.back.x - player.x, tp.back.z - player.z) < 1e-6,
         'The portal opens in front of you and remembers where you stand');
+      results.push('no room: no cast');
       results.push('5 s cast / interrupts (move, hurt, key, inventory) / portal opens');
 
       stepIn(tp.pad);
@@ -114,7 +122,7 @@ export async function runTownPortalChecks() {
       spawnAt(start.x + 0.01, start.y, start.z);
       player.yaw += Math.PI;
       press('Digit1'); steps(CAST_TIME * 10 + 1);
-      check(state.run.townPortal !== first && townFx().length === 1, 'Casting again moves the portal');
+      check(state.run.townPortal !== first && townFx().length === 1, 'Casting again moves the portal: ' + state.statusMsg + ' ' + JSON.stringify({ cast: state.cast, p: [player.x, player.z, player.yaw], first: first.pad, now: state.run.townPortal?.pad }));
       await newWorld(3);
       check(!state.run.townPortal && !state.cast && barEntry(player.inventory, 0)?.itemId === TOWN_PORTAL.id, 'A new world closes the portal');
       results.push('recast replaces / new world resets');

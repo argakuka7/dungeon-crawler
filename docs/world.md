@@ -638,10 +638,13 @@ The Town Portal Scroll (quick bar slot 1) opens a two-way portal to town:
   attacking, taking damage, being knocked over, falling, swimming, climbing, travel, opening the
   inventory or using the scroll again cancels it. It cannot be cast in town; anywhere else
   (merchant camp and guardian rooms included) it can.
-- **The pad:** a finished cast opens the portal on free ground 1.3–2.7 cells in front of the
-  player (else around them). The spot must be dry, flat, supported, on the player's level, off
-  the cube's own portal pads and reachable in a straight line. If nowhere fits: "No room for a
-  portal here". The run keeps one portal, `run.townPortal = { key, depth, pad, back }`, where
+- **The pad:** a finished cast opens the portal on free ground around the player, best 1.6
+  cells in front, else nearer, farther (up to 2.7) or to the side, down to right beside them
+  (just out of its trigger; `padOffsets`, `core/townportal.js`). Its whole disc (radius 0.62)
+  must be dry, flat, supported, on the player's level, off the cube's own portal pads and
+  reachable in a straight line, so a 1.5 x 1.5 cell spot is enough. The room is checked when
+  the scroll is used: if nowhere fits, "No room for a portal here" and no cast starts (and
+  again when the cast ends). The run keeps one portal, `run.townPortal = { key, depth, pad, back }`, where
   `back` is the exact spot the player cast it from. Casting again moves it.
 - **Town end:** the town plan reserves a fixed spot for it, east of the plaza
   (`TOWN_PORTAL_SPOT`, `world/town.js`, rotated with the exit). Clutter keeps off it and town

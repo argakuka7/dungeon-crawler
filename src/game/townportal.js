@@ -1,10 +1,12 @@
 // The town portal scroll. Using it starts a 5 s cast; moving, jumping, attacking, being hurt or
-// knocked over interrupts it. Then a portal opens on free ground in front of you. It works like
+// knocked over interrupts it. Then a portal opens on free ground in front of you (or beside you:
+// a 1.5 x 1.5 cell spot is enough). Without such a spot the scroll is not read at all. It works like
 // a well: stand in it (it charges for a second) and the screen fades to town, where its other
 // end stands beside the plaza. Stepping into that end fades you back to exactly where you cast
 // it, and both ends close. Casting again moves the portal; a new world closes it.
-import { N, STEP } from '../core/constants.js';
-import { CAST_TIME, PAD_RADIUS } from '../core/townportal.js';
+import { N, STEP, DIRS } from '../core/constants.js';
+import { isFaceOpen, faceDistance } from '../core/boundaries.js';
+import { CAST_TIME, PAD_RADIUS, padOffsets } from '../core/townportal.js';
 import { TOWN_KEY, isTown, isInterior } from '../world/town.js';
 import { groundAt, blockedAt } from '../physics/collide.js';
 import { respawnPoint, supportedPoint } from '../physics/respawn.js';
@@ -41,6 +43,8 @@ export function useTownPortal() {
   if (state.cast) { cancelCast('Portal cancelled'); return false; }
   const why = castBlocked();
   if (why) { say(why); return false; }
+  // look for room first: no point standing still for 5 s to learn there is none
+  if (!padSpot()) { say(NO_ROOM); sfx('fizzle'); return false; }
   state.cast = { kind: 'townPortal', t: 0, duration: CAST_TIME, x: player.x, z: player.z, since: state.time };
   sfx('castStart');
   clearMouseInput();
@@ -67,19 +71,27 @@ export function tickCast(dt, moving) {
   if (c.t >= c.duration) { state.cast = null; openTownPortal(); }
 }
 
-// on (or right next to) one of the cube's own portal pads
-const nearPortal = (x, z) => state.map.portals.some(q => q.cells.some(c => {
+// on (or right next to) one of the cube's own portal pads: wells and rings (a side gate is
+// only a way across its face: edgeClear keeps the pad off that)
+const nearPortal = (x, z) => state.map.portals.some(q => (q.kind === 'up' || q.kind === 'down') && q.cells.some(c => {
   const cx = c % N, cz = Math.floor(c / N);
   return Math.hypot(x - Math.max(cx, Math.min(cx + 1, x)), z - Math.max(cz, Math.min(cz + 1, z))) < PAD_RADIUS + 0.4;
 }));
 
-// a spot for the pad: dry, flat, supported ground a step or two in front of the player (else
-// around them), on their level, clear of the cube's own portals and reachable in a straight line
+const NO_ROOM = 'No room for a portal here';
+// the disc stays inside the cube, and off an open face: whoever stands in it is not
+// crossing over (they cross within 0.4 of it, game/portals.js)
+const edgeClear = (x, z) => DIRS.every((_, d) => faceDistance({ x, z }, d)
+  >= (isFaceOpen(state.openedFaces, state.cubeKey, d) ? 1 : PAD_RADIUS + 0.1));
+
+// a spot for the pad: dry, flat, supported ground under its whole disc, best a step or two in
+// front of the player, else anywhere around them down to right beside them (core/townportal.js
+// padOffsets), on their level, clear of the cube's own portals and reachable in a straight line
 function padSpot() {
   const p = player, ring = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [.7, .7], [.7, -.7], [-.7, .7], [-.7, -.7]];
-  for (const r of [1.6, 2.1, 1.3, 2.7]) for (const da of [0, .4, -.4, .8, -.8, 1.3, -1.3, 1.9, -1.9, 2.5, -2.5, Math.PI]) {
-    const a = p.yaw + da, x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
-    if (x < 1.2 || z < 1.2 || x > N - 1.2 || z > N - 1.2) continue;
+  for (const [dx, dz] of padOffsets(p.yaw, p.r)) {
+    const x = p.x + dx, z = p.z + dz;
+    if (!edgeClear(x, z)) continue;
     const s = supportedPoint(x, p.y, z);
     if (!s || Math.abs(s.y - p.y) > STEP) continue;
     if (nearPortal(x, z)) continue;
@@ -95,7 +107,7 @@ function padSpot() {
 
 function openTownPortal() {
   const pad = padSpot();
-  if (!pad) { say('No room for a portal here'); return; }
+  if (!pad) { say(NO_ROOM); sfx('fizzle'); return; }
   const back = respawnPoint({ x: player.x, y: player.y, z: player.z });
   state.run.townPortal = { key: state.cubeKey, depth: state.map.depth, pad, back };
   setTownPortal(state.world, pad);
