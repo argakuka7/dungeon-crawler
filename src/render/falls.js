@@ -1,35 +1,19 @@
-// Waterfall sheets with splash rings, and point lights over lava.
+// Where falls land: splash rings, and point lights over lava. The sheets themselves are part of
+// the cube's geometry (render/parts.js), drawn by the cube and its proxy alike.
 import * as THREE from 'three';
-import { N, LH, LAVA, ACID, DIRS } from '../core/constants.js';
-import { fallTex } from './materials.js';
+import { N, LH, LAVA, DIRS } from '../core/constants.js';
+import { FLUID_LOOK } from './materials.js';
 import { cutMaterial } from './section.js';
 
-function fallMaterial(type) {
-  return cutMaterial(new THREE.MeshStandardMaterial({
-    map: fallTex[type], transparent: true, opacity: type === LAVA ? 1 : 0.85, depthWrite: false, roughness: 0.3,
-    emissive: type === LAVA ? 0xff4a00 : type === ACID ? 0x2a7a10 : 0x0a2a4a,
-    emissiveMap: type === LAVA ? fallTex[LAVA] : null, emissiveIntensity: type === LAVA ? 1.3 : 1,
-  }));
-}
-
-// a sheet pouring over the slab edge, plus a splash ring where it lands
+// a splash ring where a fall lands (render/parts.js fallSheets has the sheet)
 export function buildFalls(m, group) {
   const splashes = [], lights = [];
   for (const f of m.falls) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
     const yTop = f.top * LH - 0.04, yBot = f.bot * LH - 0.08, h = yTop - yBot;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
-    const geo = new THREE.BoxGeometry(dx ? 0.22 : 0.84, h, dx ? 0.84 : 0.22);
-    const uv = geo.attributes.uv;
-    for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * h * 0.7);
-    const mat = fallMaterial(f.type);
-    const sheet = new THREE.Mesh(geo, mat);
-    sheet.position.set(ex + dx * 0.12, yBot + h / 2, ez + dz * 0.12);
-    sheet.renderOrder = 10 * f.layer + 3;
-    group.add(sheet);
-
     if (f.out) continue;   // pours out through the bottom of the cube: no splash here
-    const foam = f.type === LAVA ? 0xffc06a : f.type === ACID ? 0xd8ff9a : 0xeaf6ff;
+    const foam = FLUID_LOOK[f.type].foam;
     const splash = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 0.05, 14),
       cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, opacity: 0.55, depthWrite: false })));
     splash.position.set(ex + dx * 0.3, yBot + 0.06, ez + dz * 0.3);

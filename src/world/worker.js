@@ -5,7 +5,8 @@
 import { World } from './world.js';
 import { faceKey } from './coords.js';
 import { isInterior } from './town.js';
-import { buildCubeGeometry, buffers } from '../render/cubegeo.js';
+import { buildCubeParts } from '../render/cubegeo.js';
+import { partBuffers } from '../render/parts.js';
 
 let world = null;
 
@@ -24,8 +25,8 @@ onmessage = ({ data }) => {
   if (data.type === 'cube') {
     try {
       const c = world.cube(data.key);
-      const geo = buildCubeGeometry(c.map);
-      postMessage({ type: 'cube', key: data.key, map: c.map, geo, info: info(data.key) }, buffers(geo));
+      const geo = buildCubeParts(c.map);
+      postMessage({ type: 'cube', key: data.key, map: c.map, geo, info: info(data.key) }, partBuffers(geo));
     } catch (e) {
       postMessage({ type: 'error', key: data.key, message: String(e.message || e) });
     }

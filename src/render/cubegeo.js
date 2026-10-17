@@ -1,7 +1,9 @@
 // The static geometry of a cube (terrain, structures, fluid volumes) as plain typed arrays per
-// layer. Runs in the world worker; the main thread only wraps the arrays into meshes, for the
-// active cube as well as for the low-detail neighbours.
+// layer, and packed into the parts it is drawn from (render/parts.js). Runs in the world worker;
+// the main thread only wraps the parts into meshes, for the active cube as well as for the
+// low-detail neighbours.
 import { N, BASE, FLUIDS } from '../core/constants.js';
+import { packParts } from './parts.js';
 import { GeoBuilder } from './builder.js';
 import { BEDROCK, usePalette } from './palette.js';
 import { themeOf } from '../themes/depth.js';
@@ -31,9 +33,5 @@ export function buildCubeGeometry(m) {
   }));
 }
 
-// the buffers to transfer (instead of copy) when posting the geometry
-export function buffers(geo) {
-  const out = [];
-  for (const L of geo) for (const a of [L.terrain, L.stone, L.wood, ...Object.values(L.fluids)]) if (a) out.push(a.pos.buffer, a.nor.buffer, a.col.buffer);
-  return out;
-}
+// what the main thread gets: the cube's parts (render/parts.js packParts)
+export const buildCubeParts = m => packParts(buildCubeGeometry(m), m);

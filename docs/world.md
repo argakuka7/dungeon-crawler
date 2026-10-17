@@ -715,33 +715,58 @@ stratum, within 48 world units (three cube widths) of the player's horizontal po
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.
 
-`render/neighbors.js` merges terrain/wood and fluids into render-only proxies, without
-props, enemies, lights or shadows. Whole-cube bounds are frustum-culled after the camera
-updates, including both sets during travel; fully fogged cubes are skipped too. A separate
-culling parent preserves travel's fade visibility. Foreground proxy solids/fluids use the
-screen-space cutaway region to reveal the player, independent of the active cube's cut
-height; this reveal is disabled during travel.
+A cube is drawn from parts (`render/parts.js`): terrain, structure stone, wood, a surface per
+fluid and the falls of each fluid. The worker packs each part once: merged over the layers,
+indexed and quantized (Int16 positions at 1/1024 units, Int8 normals, Uint16 colours, all padded
+to four components): about 20 bytes a vertex and 1.6 vertices a triangle instead of 36 bytes and
+three. The active cube (`render/partmeshes.js`) and its proxy draw the same parts, and both take
+their materials from one table of looks (`render/materials.js`: 'full' is PBR, cut, shadowed and
+animated, 'proxy' is Lambert and darker). So lava stays lava and acid stays acid out there,
+falls pour there too, and a new part or fluid shows in both or neither.
 
-Merged proxy geometry uses an LRU cache keyed by worker geometry identity, with a
-64-entry / 32 MiB budget. Live proxies pin their geometry (so the live set can exceed the
-budget); unused entries are evicted and world resets clear the cache. Each proxy retains
-independent materials for fades. Refreshes and travel reuse overlapping proxies rather
-than merging/drawing duplicate geometry or fading the surroundings out and back in.
+`render/neighbors.js` draws every proxy as instances in shared `BatchedMesh`es, one per part
+plus one for all landmarks (the only props shown; their glowing parts still glow), without
+enemies, lights or shadows. Every proxy's glass box is one instanced draw for the panes and one
+for the outlines (`render/glass.js glassBatch`). All the surroundings take at most a dozen draw
+calls, however many cubes they are. A proxy's fades (travel dissolve, inverted cross-fade and
+distance) live per instance in a small data texture of each batch; its `group` is a stand-in
+holding those values and the position travel moves, and `cullNeighbors` writes them into the
+batches once a frame (disposing proxies writes at once too: the main menu draws without culling,
+and the glass of a world just left must not stay). Whole-cube bounds are frustum-culled there after the camera updates,
+including both sets during travel; fully fogged cubes are skipped too. Proxy solids and fluids
+use the screen-space cutaway region to reveal the player, independent of the active cube's cut
+height; this reveal is disabled during travel. Proxies are pushed back a little in depth
+(polygon offset): a cube and its neighbour both have a cliff wall on their shared face, and the
+proxy's must lose there, or it fights the section caps seen through a cut. Lava pulses in proxies as in the cube you are in;
+the falls' textures stream in both.
 
-Checks: `npm test` covers discovery, stratum filtering, conservative selection and distance
-fades. Run `await (await import('./tests/browser/neighbor.js')).runNeighborChecks()`
-for geometry/material ownership, refresh/revisit reuse, opened panes, frustum rotation,
-distance culling, fade isolation, shader compilation, travel rebasing and cache eviction.
-`runExpandedTravelChecks()` in the same module verifies continuous proxy reuse and cleanup
-during real travel through a fully explored stratum.
+Proxy geometry uses an LRU cache keyed by worker geometry identity, with a 64-entry / 32 MiB
+budget (of packed parts). Live proxies pin their geometry (so the live set can exceed the
+budget); unused entries leave the batches and world resets clear the cache. Batches compact
+their space before they grow. Refreshes and travel reuse overlapping proxies rather than
+uploading duplicate geometry or fading the surroundings out and back in.
+
+Checks: `npm test` covers discovery, stratum filtering, conservative selection, distance
+fades and the parts (`tests/parts.test.js`: every builder layer is a part, packing keeps every
+triangle in place, falls, transfer). Run `await (await import('./tests/browser/neighbor.js')).runNeighborChecks()`
+for shared batches and geometry, per-proxy fades, fluid looks, refresh/revisit reuse, opened
+panes, frustum rotation, distance culling, fade isolation, shader compilation, travel rebasing
+and cache eviction. `runExpandedTravelChecks()` in the same module verifies continuous proxy
+reuse and cleanup during real travel through a fully explored stratum, and
+`runPartParityChecks()` that every cube generated so far draws the same parts full and as a
+proxy. `runProxyIntegrityChecks(trips, explore)` travels sideways, down and up (through explored
+or new cubes) and jumps between cubes, checking after each step and while sliding that only
+discovered cubes of the live sets are drawn, each instance active with its own geometry, placed,
+faded and shown as its proxy, the batches' draw lists and contents match, the glass boxes are
+exactly the shown proxies', and nothing stays drawn after leaving the world.
 
 ## Off the main thread (`world/worker.js`, `world/client.js`)
 
 The world lives in a module worker. That covers WFC, faces, map generation and the cube
-geometry (`render/cubegeo.js`, which builds typed arrays per layer). The main thread
-receives each map by structured clone (the object graph survives) and the geometry as
-transferred buffers, and only wraps them into meshes. The surroundings view merges those
-buffers once per cached cube; the merged arrays are additional memory.
+geometry (`render/cubegeo.js` builds typed arrays per layer, `render/parts.js` packs them into
+parts). The main thread receives each map by structured clone (the object graph survives) and
+the parts as transferred buffers, and only wraps them into meshes; the proxies' batches copy
+them once per cached cube.
 
 After entering a cube, the cubes behind its portals are prefetched, so travel usually
 starts at once. If a cube is not ready, the player waits in the portal and a

@@ -12,6 +12,9 @@ const DITHER = `
     bool keep = threshold < uFade;
     if (keep == (uFadeInv > 0.5) || threshold >= uRangeFade) discard;
   }`;
+// the same test on other GLSL values: the batched proxies keep their fades per instance, not in
+// materials of their own (render/neighbors.js, render/glass.js)
+export const dither = (fade, inv, range) => DITHER.replaceAll('uFadeInv', inv).replaceAll('uRangeFade', range).replaceAll('uFade', fade);
 
 function patch(mat, u, inv, range) {
   if (mat.userData.fadeU) return;

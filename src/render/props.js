@@ -3,6 +3,7 @@
 // on their own); props with `sway` move in the wind; glowing props add light sources.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cutMaterial } from './section.js';
 import { buildChests } from './chests.js';
 
@@ -56,11 +57,47 @@ function swayMaterial(mat, sway) {
   return mat;
 }
 
+const qt = new THREE.Quaternion(), tilt = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), at = new THREE.Vector3(), size = new THREE.Vector3();
+// where a placed prop { x, y, z, yaw, s, normal } stands, in its cube (also the proxies' landmarks)
+export function propMatrix(q, target = new THREE.Matrix4()) {
+  qt.setFromAxisAngle(up, q.yaw);
+  if (q.normal) qt.premultiply(tilt.setFromUnitVectors(up, new THREE.Vector3(...q.normal).normalize()));
+  return target.compose(at.set(q.x, q.y, q.z), qt, size.setScalar(q.s ?? 1));
+}
+
+// A prop's parts as one plain geometry for the proxies' batch (render/neighbors.js): position,
+// normal, color (vertex colour times the part's colour) and glow (its emissive light times
+// `glow`), so glowing windows and braziers still glow in the surroundings.
+export function propBatchGeometry(p, glow) {
+  const parts = p.parts.map(({ geometry, material }) => {
+    const g = geometry.index ? geometry.toNonIndexed() : geometry.clone(), n = g.attributes.position.count;
+    const base = material.color || new THREE.Color(1, 1, 1);
+    const light = (material.emissive || new THREE.Color(0, 0, 0)).clone().multiplyScalar((material.emissiveIntensity ?? 1) * glow);
+    const src = g.attributes.color, color = new Float32Array(n * 3), lit = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      color[i * 3] = (src ? src.getX(i) : 1) * base.r; color[i * 3 + 1] = (src ? src.getY(i) : 1) * base.g; color[i * 3 + 2] = (src ? src.getZ(i) : 1) * base.b;
+      lit[i * 3] = light.r; lit[i * 3 + 1] = light.g; lit[i * 3 + 2] = light.b;
+    }
+    const vec3 = a => { const v = new Float32Array(n * 3); for (let i = 0; i < n; i++) { v[i * 3] = a.getX(i); v[i * 3 + 1] = a.getY(i); v[i * 3 + 2] = a.getZ(i); } return v; };
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.Float32BufferAttribute(vec3(g.attributes.position), 3));
+    out.setAttribute('normal', new THREE.Float32BufferAttribute(vec3(g.attributes.normal), 3));
+    out.setAttribute('color', new THREE.Float32BufferAttribute(color, 3));
+    out.setAttribute('glow', new THREE.Float32BufferAttribute(lit, 3));
+    g.dispose();
+    return out;
+  });
+  const merged = mergeGeometries(parts);
+  parts.forEach(g => g.dispose());
+  merged.setIndex([...Array(merged.attributes.position.count).keys()]);
+  return merged;
+}
+
 // placed: [{ name, x, y, z, yaw, s, tint }] -> instanced meshes (and light sources) in group
 export function buildProps(placed, group) {
   const byName = new Map();
   for (const q of placed) { if (!byName.has(q.name)) byName.set(q.name, []); byName.get(q.name).push(q); }
-  const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), tilt = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+  const m4 = new THREE.Matrix4(), col = new THREE.Color();
   let lights = 0;
   for (const [name, list] of byName) {
     const p = props.byName.get(name);
@@ -72,10 +109,7 @@ export function buildProps(placed, group) {
       mesh.name = p.name;
       mesh.userData.sharedGeo = true;   // the catalog owns the geometry
       list.forEach((q, i) => {
-        qt.setFromAxisAngle(up, q.yaw);
-        if (q.normal) qt.premultiply(tilt.setFromUnitVectors(up, new THREE.Vector3(...q.normal).normalize()));
-        m4.compose(new THREE.Vector3(q.x, q.y, q.z), qt, new THREE.Vector3(q.s, q.s, q.s));
-        mesh.setMatrixAt(i, m4);
+        mesh.setMatrixAt(i, propMatrix(q, m4));
         mesh.setColorAt(i, col.set(q.tint || '#ffffff'));
       });
       // glowing parts (windows, lantern glass) are light, not matter: no shadow

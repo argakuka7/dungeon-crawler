@@ -7,9 +7,10 @@
 // the inner faces seen through the cut read as a single flat lid.
 // Cut fluids get flat caps.
 import * as THREE from 'three';
-import { N, LH, CUBE_H, LAVA, ACID } from '../core/constants.js';
+import { N, LH, CUBE_H } from '../core/constants.js';
 import { GeoBuilder } from './builder.js';
 import { C, gradient } from './palette.js';
+import { FLUID_LOOK } from './materials.js';
 import { themeOf } from '../themes/depth.js';
 import { buildOf } from '../themes/builds.js';
 import { scene, camera, renderer } from './scene.js';
@@ -57,7 +58,7 @@ export function cutMaterial(mat, caps = false, ghost = !!caps) {
 const fluidCaps = new THREE.Mesh(new THREE.BufferGeometry(), inject(new THREE.MeshBasicMaterial({ vertexColors: true }),
   fs => fs.replace('#include <clipping_planes_fragment>', 'if (cutRegion(false) < 0.5) discard;\n#include <clipping_planes_fragment>'), 'cut-fluid-cap'));
 scene.add(fluidCaps);
-const capColor = t => C(t === LAVA ? '#c2410a' : t === ACID ? '#4f9a24' : '#1f5d99');
+const capColor = t => C(FLUID_LOOK[t].cap);
 
 const tmp = new THREE.Vector3(), right = new THREE.Vector3();
 let key = '', capKey = '';
