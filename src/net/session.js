@@ -39,6 +39,7 @@ import { cancelCast } from '../game/townportal.js';
 import { clearMouseInput } from '../game/orders.js';
 import { setInventoryOpen } from '../game/inventory.js';
 import { lockPortalsHere } from '../game/portals.js';
+import { truePosition } from '../game/travel.js';
 import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
 import { capturePose, capturedLook, showPartner, showHelp, removePartner, playerTint } from '../render/partner.js';
@@ -51,7 +52,6 @@ import { online, relay } from './online.js';
 import { Runner, Viewer, canBeHit } from './foes.js';
 import { setOthers } from '../game/party.js';
 import { allEnemies, adoptEnemies, shareDefeat } from '../game/enemies.js';
-import { drawMinimap } from '../game/minimap.js';
 import { hitEnemy } from '../game/sword.js';
 import { afflictEnemy } from '../game/statuses.js';
 import { hitPlayer } from '../game/enemycombat.js';
@@ -73,7 +73,6 @@ import { detachWorld } from '../game/save.js';
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
 const SETTLED = 1000;    // ms in a cube: then a friend coming in is the one who arrived (handover)
-const MAP_EVERY = 500;   // ms between redraws of the minimap's dots for the friends
 const AFFLICT_EVERY = 500;   // ms: a viewer tells the runner about a status at most this often
 
 let room = null, myName = 'Friend', local = false, rejoin = null;
@@ -84,8 +83,8 @@ let link = null, lastHeard = 0;
 let lastSend = 0, ping = null;
 // lastKey / cubeSince: the cube we are in and since when; following: a fade to a friend is
 // under way; pendingSeed: a world the host asked for, started once we are not travelling;
-// announced: the seed the guests were told about (host); mapAt / mapKey: the minimap's dots
-let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null, mapAt = 0, mapKey = '';
+// announced: the seed the guests were told about (host)
+let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null;
 // how many open faces the others know of (a face once open stays open: more is new)
 let facesSent = 0;
 // the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's)
@@ -269,7 +268,6 @@ function apart() {
   setOthers([]);
   online.buddies = [];
   removePartner();
-  if (state.cubes) drawMinimap();
 }
 
 // --- the host: guests coming and going ---------------------------------------------------------
@@ -629,9 +627,9 @@ function send(now) {
   const pose = capturePose();
   if (!pose || !state.cubes || !state.cubeKey) return;
   const weapon = (readiedFlask(player) ?? equippedWeapon(player))?.model ?? null;
-  const p = player, r = x => Math.round(x * 1000) / 1000;
+  const p = player, at = truePosition(), r = x => Math.round(x * 1000) / 1000;
   const m = { t: 'me', ts: now, seed: state.cubes.seed, cube: state.cubeKey, busy: busy(), pose,
-    body: [p.x, p.y, p.z, p.vx, p.vz].map(r), ground: p.grounded ? 1 : 0, swim: p.swimming ? 1 : 0, down: p.ragdoll ? 1 : 0,
+    body: [at.x, at.y, at.z, p.vx, p.vz].map(r), ground: p.grounded ? 1 : 0, swim: p.swimming ? 1 : 0, down: p.ragdoll ? 1 : 0,
     ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() };
   if (online.role === 'host') { m.from = 0; passMe(m, 0); }
   else link?.send(m);
@@ -719,15 +717,9 @@ export function updateOnline() {
       p.body.support = p.body.grounded ? groundAt(x, z, y + 0.05, 0).s : null;
     }
     if (m && m.seed === seed) buddies.push({ slot: p.slot, name: p.name, cube: m.cube, here: p.here,
-      x: m.body[0], y: m.body[1], z: m.body[2], hp: m.hp, out: !!m.ko });
+      x: m.body[0], y: m.body[1], z: m.body[2], yaw: m.pose?.yaw, hp: m.hp, out: !!m.ko });
   }
-  online.buddies = buddies;
-  // the friends on the minimap: when they change cubes, and now and then as they move
-  const key = buddies.map(b => `${b.slot}${b.cube}`).join(' ');
-  if (key !== mapKey || (buddies.length && now - mapAt > MAP_EVERY)) {
-    mapKey = key; mapAt = now;
-    if (state.cubes) drawMinimap();
-  }
+  online.buddies = buddies;   // (the minimap shows them: game/minimap.js)
   updateRunner(now);
   if (now - lastSend >= SEND_EVERY) { lastSend = now; send(now); }
   if (foes instanceof Runner) {

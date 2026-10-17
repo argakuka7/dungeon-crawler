@@ -18,7 +18,6 @@ import { whenReady, fadeOut, fadeIn } from './hud.js';
 import { enterCube } from './flow.js';
 import { cancelSword } from './sword.js';
 import { clearMouseInput } from './orders.js';
-import { drawMinimap } from './minimap.js';
 
 const FADE_MS = 380;
 
@@ -121,7 +120,6 @@ function openTownPortal() {
   setTownPortal(state.world, pad);
   sfx('portal', { at: pad });
   setStatus('A portal to town opens');
-  drawMinimap();
 }
 
 // where you stand in town: beside the town end, towards the plaza

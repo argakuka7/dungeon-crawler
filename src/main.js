@@ -73,6 +73,7 @@ import { online } from './net/online.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
 import { updateShowcase } from './game/showcase.js';
+import { drawMinimap } from './game/minimap.js';
 import { N } from './core/constants.js';
 import { character } from './render/character.js';
 import { drawPortrait, portraitShown } from './render/portrait.js';
@@ -115,6 +116,7 @@ function frame() {
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Teacher (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items
+  drawMinimap();   // after the camera too: the map turns with it
   updateAim(allEnemies());   // the arc a flask in hand would fly (game/throws.js)
   tickTeach();   // what the Teacher draws over the world (game/teach.js)
   // the look follows the depth smoothly (also while sliding down / up)

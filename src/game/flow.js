@@ -16,7 +16,6 @@ import { resetCut } from './cut.js';
 import { resetEnemies, mirroring, detachEnemies } from './enemies.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { cancelSword } from './sword.js';
-import { drawMinimap } from './minimap.js';
 import { whenPropsReady } from '../render/props.js';
 import { townAssetsReady } from '../render/townassets.js';
 import { villagersReady } from '../render/villagers.js';
@@ -144,7 +143,7 @@ export function shareVisit(k) {
     if (state.cubes !== cubes || c.visits) return;
     c.visits = 1;
     if (openDiscoveredFaces() && state.world) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
-    updateNeighbors(); drawMinimap();
+    updateNeighbors();
   }, () => {});
 }
 export const visitedKeys = () => [...state.cubes.cubes.values()].filter(c => c.visits).map(c => c.key);
@@ -157,7 +156,7 @@ export function shareFaces(keys) {
   for (const k of keys) state.openedFaces.add(k);
   if (state.openedFaces.size === before) return;
   if (state.world) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
-  updateNeighbors(); drawMinimap();
+  updateNeighbors();
 }
 
 function openDiscoveredFaces() {
@@ -170,7 +169,7 @@ function openDiscoveredFaces() {
 export function refreshOpenFaces() {
   if (!openDiscoveredFaces() || !state.world) return;
   setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
-  updateNeighbors(); drawMinimap();
+  updateNeighbors();
 }
 
 // which portals lead somewhere already explored
@@ -210,13 +209,12 @@ export function enterCube(c, from = null, back = null, at = null) {
   fadeIn();
 }
 
-// HUD, minimap and neighbours for the cube we are in now
+// HUD and neighbours for the cube we are in now
 // learn: architecture.html#cube-journey (see learn/README.md)
 export function settleIn(neighbors = true) {
   const c = state.cubes.cubes.get(state.cubeKey);
   showStats(c.map, state.cubeKey, state.cubes.seed, c.visits);
   noteDepth(c.map, state.cubes.seed);   // the first time this deep: into the chronicle
-  drawMinimap();
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
   if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
   // get the cubes behind our portals (and doors) ready in the background

@@ -39,11 +39,12 @@ being helped up and getting back in. Up to four players, co-op.
 - **Colours:** every player has one colour, by their number (`PLAYER_COLORS` in
   `src/net/online.js`: host blue, then green, orange, violet), the same on every screen: their
   hero's clay (`render/partner.js playerTint`; our own hero wears ours too while together,
-  `render/character.js tintCharacter`, and goes back to its own look alone) and their dot on
+  `render/character.js tintCharacter`, and goes back to its own look alone) and their arrow on
   the minimap; over a friend's head their health bar is in their colour too (your own stays
   red, like playing alone).
-- Each explores where they like. Each friend is a dot in their colour on the minimap (or a
-  line under it: another depth, in a house). Going over to a friend (`session.js goToFriend`:
+- Each explores where they like. Each player is an arrow in their colour on the minimap, pointing
+  where they face (a friend off the map is a line under it: another depth, in a house, far
+  away). The map is round, follows you and turns with the camera (`game/minimap.js`). Going over to a friend (`session.js goToFriend`:
   beside them and locked out of any portal you arrive in, `game/portals.js lockPortalsHere`;
   again: the next friend) has no key for now; an item is to do it.
 - A fifth player is turned away (`full`), another version too (`version`, `PROTOCOL` in

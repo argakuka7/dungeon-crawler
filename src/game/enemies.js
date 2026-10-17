@@ -30,7 +30,6 @@ import { dropLoot } from './loot.js';
 import { coordinateDefence } from './defence.js';
 import { createHordeGroups, coordinateHordes } from './hordes.js';
 import { setGuardianGate } from '../render/world.js';
-import { drawMinimap } from './minimap.js';
 import { refreshOpenFaces } from './flow.js';
 import { sfx } from '../audio/sfx.js';
 import { party, nearestTo } from './party.js';
@@ -104,7 +103,7 @@ function awardKills(list) {
     log('kill', { count: killed, xp });
   }
   if (levels) log('level', { level: player.level }, { share: true });
-  if (unlocked) { setGuardianGate(state.world, false); refreshOpenFaces(); drawMinimap(); sfx('unlock'); }
+  if (unlocked) { setGuardianGate(state.world, false); refreshOpenFaces(); sfx('unlock'); }
   if (levels) sfx('levelUp');
   return unlocked;
 }
@@ -125,7 +124,7 @@ export function shareDefeat(id, gate) {
   if (!gate || state.run.unlockedGates.has(gate)) return;
   state.run.unlockedGates.add(gate);
   if (gate === state.cubeKey) setGuardianGate(state.world, false);
-  refreshOpenFaces(); drawMinimap();
+  refreshOpenFaces();
 }
 
 // Playing together, a cube's enemies change hands when the two players meet or part

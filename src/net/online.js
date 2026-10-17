@@ -7,13 +7,13 @@ export const online = {
   slot: null,       // our player number while together: the host 0, the guests 1 to 3
   peers: new Map(), // the others, once connected: slot -> { name }
   // the others as of their last word (in this world): [{ slot, name, cube, here (in our
-  // cube, not travelling), x, y, z (in their cube), hp, out (downed: game/downed.js) }]
+  // cube, not travelling), x, y, z (in their cube), yaw (facing), hp, out (downed: game/downed.js) }]
   buddies: [],
 };
 export const together = () => online.peers.size > 0;
 
 // Every player's colour, by player number: the same on every screen (their hero, our own too
-// while together, their health bar and minimap dot: render/partner.js, render/character.js
+// while together, their health bar and minimap arrow: render/partner.js, render/character.js
 // tintCharacter, game/minimap.js)
 export const PLAYER_COLORS = ['#6fb4e8', '#7cc96e', '#e8a352', '#bb8ce8'];
 export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];

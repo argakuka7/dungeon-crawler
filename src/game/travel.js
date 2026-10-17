@@ -34,6 +34,11 @@ const off = new THREE.Vector3(), oldOff = new THREE.Vector3();
 const ease = t => t * t * (3 - 2 * t);
 
 export const travelling = () => !!tr;
+// Where the player really is: while travelling, the point on the walk in the new cube's
+// coordinates (player.x / z also carry the slide offset, as everything drawn slides with it).
+// What the minimap shows and the others are told (net/session.js), so neither jumps a cube
+// ahead and back as the slide starts.
+export const truePosition = () => tr ? (tr.last ?? tr.S) : player;
 
 // the cube behind the portal may still be generating: wait for it (frozen in the portal).
 // A side portal into a cube not drawn yet gets a cloud to walk onto (render/portalcloud.js).
