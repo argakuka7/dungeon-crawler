@@ -14,7 +14,7 @@ import { buildInteriorWalls } from './interior.js';
 export function buildCubeGeometry(m) {
   usePalette(themeOf(m));
   const layers = Array.from({ length: m.K }, () => ({
-    terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder(),
+    terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder(), flags: new GeoBuilder({ sway: true }),
     fluids: Object.fromEntries(FLUIDS.map(t => [t, new GeoBuilder()])),
   }));
   // bedrock under every column that is not open to the depth below
@@ -28,7 +28,7 @@ export function buildCubeGeometry(m) {
   if (m.interior) buildInteriorWalls(m, layers);
   const arr = b => b.pos.length ? b.arrays() : null;
   return layers.map(L => ({
-    terrain: arr(L.terrain), stone: arr(L.stone), wood: arr(L.wood),
+    terrain: arr(L.terrain), stone: arr(L.stone), wood: arr(L.wood), flags: arr(L.flags),
     fluids: Object.fromEntries(FLUIDS.map(t => [t, arr(L.fluids[t])])),
   }));
 }

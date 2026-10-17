@@ -528,7 +528,7 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
   | `chain` | plank deck hung by rods from two chains between iron towers | 3 cells or more, room for the towers over both ends |
   | `ice` | a slab of ice, shards along its edges, icicles under it | anywhere |
   | `rockarch` | one rough natural arch of the ground's rock, grass on top, its feet on the ground | like `stone`; on a span only a level one |
-  | `flags` | a rope bridge with tall poles and strings of prayer flags along and across it | room for the poles over both ends |
+  | `flags` | a rope bridge with tall poles and strings of prayer flags along and across it, fluttering in the wind | room for the poles over both ends |
 
 - **Style mix:** each theme weights the styles (`BUILDS[theme].bridges`):
 
@@ -910,8 +910,11 @@ stratum, within 48 world units (three cube widths) of the player's horizontal po
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.
 
-A cube is drawn from parts (`render/parts.js`): terrain, structure stone, wood, a surface per
-fluid and the falls of each fluid. The worker packs each part once: merged over the layers,
+A cube is drawn from parts (`render/parts.js`): terrain, structure stone, wood, prayer flags, a
+surface per fluid and the falls of each fluid. The flags part (`sway`) carries a uv per vertex,
+how far it swings (0 where a flag hangs from its string, 1 at its lower edge); the active cube
+flutters them in the wind in the vertex shader (`swayMaterial`, `WIND` in
+`render/materials.js`), the proxies and the shadows keep them still. The worker packs each part once: merged over the layers,
 indexed and quantized (Int16 positions at 1/1024 units, Int8 normals, Uint16 colours, all padded
 to four components): about 20 bytes a vertex and 1.6 vertices a triangle instead of 36 bytes and
 three. The active cube (`render/partmeshes.js`) and its proxy draw the same parts, and both take

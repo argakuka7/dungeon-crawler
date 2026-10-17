@@ -57,6 +57,30 @@ export function fallMaterial(t, detail) {
     emissiveIntensity: F.emissiveIntensity });
 }
 
+// The wind that flutters what hangs (prayer flags): its time, advanced by render/world.js
+export const WIND = { value: 0 };
+
+// a solid's material that swings each vertex with the wind as far as its uv's u says (0: fixed,
+// 1: the hanging end), along a gusty wind across the cube, rippling with the place it is at.
+// scale: the part's position units (render/parts.js packs positions in units of the cube's scale)
+export function swayMaterial(mat, scale) {
+  const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+  mat.onBeforeCompile = (sh, r) => {
+    compile?.call(mat, sh, r);
+    sh.uniforms.uWind = WIND;
+    sh.uniforms.uSwayScale = { value: scale };
+    sh.vertexShader = 'uniform float uWind, uSwayScale;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      {
+        vec3 wp = position.xyz * uSwayScale;
+        float ph = uWind * 4.2 + wp.x * 2.9 + wp.z * 2.3 - wp.y * 1.3, gust = 0.75 + 0.25 * sin(uWind * 0.7 + wp.x * 0.2);
+        vec3 push = vec3(0.62, 0.12, 0.78) * (sin(ph) * 0.045 + sin(ph * 2.3 + 1.7) * 0.018) * gust;
+        transformed += push * uv.x / uSwayScale;
+      }`);
+  };
+  mat.customProgramCacheKey = () => key + '-sway';
+  return mat;
+}
+
 // part: an entry of render/parts.js PARTS
 export function partMaterial(part, detail) {
   if (part.kind === 'solid') return solidMaterial(detail);

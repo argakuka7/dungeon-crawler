@@ -251,17 +251,24 @@ export function buildRockArch(r, L) {
 }
 
 // prayer flag bridge: a rope bridge with tall poles at its ends, strings of flags from pole to
-// pole along both sides and across each end
+// pole along both sides and across each end. The flags go into their own part (L.flags, when
+// there is one) and flutter in the wind: each swings more the further down it hangs.
 export function buildFlagsBridge(r, L) {
   buildRopeBridge(r, L);
-  const W = L.wood, F = runFrame(r), k = r.k, H = BRIDGE_STYLES.flags.towers, R = rngOf(r);
+  const W = L.wood, Fl = L.flags || L.wood, F = runFrame(r), k = r.k, H = BRIDGE_STYLES.flags.towers, R = rngOf(r);
   for (const s of [0, k]) for (const side of [-0.45, 0.45]) {
     const [px, py, pz] = F.P(s, side, F.Y(s));
     W.box(px - 0.03, py + 0.5, pz - 0.03, px + 0.03, py + H, pz + 0.03, POST, POST);
     W.box(px - 0.045, py + H, pz - 0.045, px + 0.045, py + H + 0.05, pz + 0.045, BEAM, BEAM);
   }
   let c = Math.floor(R() * FLAGS.length);
-  const flag = () => FLAGS[c++ % FLAGS.length];
+  // a flag hanging from the string at yt (yt0 / yt1 at its two edges), h long, along s or across w
+  const flag = (s0, s1, w0, w1, yt0, yt1, h, tilt) => {
+    const col = FLAGS[c++ % FLAGS.length], top = Math.max(yt0, yt1);
+    if (Fl.uv) Fl.swayAt = y => Math.min(1, Math.max(0, (top - y) / h));
+    slab(Fl, F, s0, s1, w0, w1, yt0 - h - tilt, yt0 - 0.01, yt1 - h + tilt, yt1 - 0.01, col, col);
+    if (Fl.uv) Fl.swayAt = () => 0;
+  };
   // along the sides: the string dips, but stays well over the hand lines
   const top0 = F.Y(0) + H - 0.03, top1 = F.Y(k) + H - 0.03, dip = Math.min(0.3, 0.05 * k);
   const line = s => { const T = s / k; return Math.max(F.Y(s) + 0.95, top0 + (top1 - top0) * T - dip * 4 * T * (1 - T)); };
@@ -270,8 +277,8 @@ export function buildFlagsBridge(r, L) {
     for (let j = 0; j <= k * 4; j++) { const s = j / 4, p = F.P(s, side, line(s)); if (last) W.beam(last, p, 0.012, 0.012, ROPE); last = p; }
     const n = Math.max(2, Math.round(k / 0.16));
     for (let i = 0; i < n; i++) {
-      const sc = (i + 0.5) * k / n, sa = sc - 0.055, sb = sc + 0.055, h = 0.12 + R() * 0.04, tilt = (R() - 0.5) * 0.03, col = flag();
-      slab(W, F, sa, sb, side - 0.004, side + 0.004, line(sa) - h - tilt, line(sa) - 0.01, line(sb) - h + tilt, line(sb) - 0.01, col, col);
+      const sc = (i + 0.5) * k / n, sa = sc - 0.055, sb = sc + 0.055;
+      flag(sa, sb, side - 0.004, side + 0.004, line(sa), line(sb), 0.12 + R() * 0.04, (R() - 0.5) * 0.03);
     }
   }
   // across each end, from pole to pole
@@ -280,8 +287,8 @@ export function buildFlagsBridge(r, L) {
     W.beam(F.P(s, -0.45, y), F.P(s, 0, across(0)), 0.012, 0.012, ROPE);
     W.beam(F.P(s, 0, across(0)), F.P(s, 0.45, y), 0.012, 0.012, ROPE);
     for (let i = 0; i < 6; i++) {
-      const wc = -0.45 + (i + 0.5) * 0.9 / 6, h = 0.12 + R() * 0.04, yt = Math.min(across(wc - 0.05), across(wc + 0.05)), col = flag();
-      slab(W, F, s - 0.004, s + 0.004, wc - 0.05, wc + 0.05, yt - h, yt - 0.01, yt - h, yt - 0.01, col, col);
+      const wc = -0.45 + (i + 0.5) * 0.9 / 6, yt = Math.min(across(wc - 0.05), across(wc + 0.05));
+      flag(s - 0.004, s + 0.004, wc - 0.05, wc + 0.05, yt, yt, 0.12 + R() * 0.04, 0);
     }
   }
 }

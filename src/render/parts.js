@@ -5,12 +5,14 @@
 // (render/materials.js). A new part added here shows up in both the cube and its proxy.
 import { N, LH, DIRS, FLUIDS, FLUID_NAME } from '../core/constants.js';
 
-// kind: 'solid' (vertex coloured, cut with a section cap of `cap`), 'fluid' (a surface of
+// kind: 'solid' (vertex coloured, cut with a section cap of `cap`; `sway`: with uvs saying how
+// far each vertex swings in the wind, render/materials.js swayMaterial), 'fluid' (a surface of
 // `fluid`), 'fall' (a sheet of `fluid` pouring over an edge, with uvs for its scrolling streaks)
 export const PARTS = [
   { name: 'terrain', kind: 'solid', cap: 'rock' },
   { name: 'stone', kind: 'solid', cap: 'stone' },
   { name: 'wood', kind: 'solid', cap: 'wood' },
+  { name: 'flags', kind: 'solid', cap: 'wood', sway: true },   // prayer flags (render/bridges.js)
   ...FLUIDS.map(t => ({ name: FLUID_NAME[t], kind: 'fluid', fluid: t })),
   ...FLUIDS.map(t => ({ name: FLUID_NAME[t] + '-fall', kind: 'fall', fluid: t })),
 ];
@@ -20,7 +22,7 @@ export const PARTS = [
 //   position Int16 x4 in units of `scale` (1/1024: +-32 world units, a cube spans -0.6..17)
 //   normal   Int8 x4, normalized
 //   color    Uint16 x4, normalized (solids only; alpha 1); linear colours keep their dark shades
-//   uv       Float32 x2 (falls only)
+//   uv       Float32 x2 (falls and swaying solids only)
 // 20 bytes a vertex for solids instead of 36, and shared corners are stored once.
 const SCALE = 1 / 1024, LIMIT = 32767;
 
@@ -41,7 +43,7 @@ export function packParts(layers, m) {
   let scale = SCALE;
   while (Math.max(...bounds.map(Math.abs).filter(Number.isFinite), 0) / scale > LIMIT) scale *= 2;
   const parts = {};
-  for (const part of PARTS) if (sources[part.name].length) parts[part.name] = pack(sources[part.name], scale, part.kind);
+  for (const part of PARTS) if (sources[part.name].length) parts[part.name] = pack(sources[part.name], scale, part);
   if (!Number.isFinite(bounds[0])) bounds.fill(0);
   return { parts, scale, bounds };
 }
@@ -54,8 +56,8 @@ export function partBuffers(geo) {
 }
 
 // triangle soup -> indexed, quantized arrays; identical corners (after quantizing) are merged
-function pack(list, scale, kind) {
-  const color = kind === 'solid', uvs = kind === 'fall';
+function pack(list, scale, { kind, sway }) {
+  const color = kind === 'solid', uvs = kind === 'fall' || !!sway;
   let total = 0;
   for (const a of list) total += a.pos.length / 3;
   const pos = new Int16Array(total * 4), nor = new Int8Array(total * 4);

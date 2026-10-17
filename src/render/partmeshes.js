@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { LAVA } from '../core/constants.js';
 import { PARTS } from './parts.js';
-import { partMaterial } from './materials.js';
+import { partMaterial, swayMaterial } from './materials.js';
 import { cutMaterial } from './section.js';
 
 // one part's arrays as geometry, in units of the cube's `scale` (the mesh or instance scales it)
@@ -30,7 +30,8 @@ export function partMeshes(geo, group, shadowless = []) {
   for (const part of PARTS) {
     const arrays = geo.parts[part.name];
     if (!arrays) continue;
-    const mesh = new THREE.Mesh(partGeometry(arrays), cutMaterial(partMaterial(part, 'full'), part.cap || false));
+    const material = cutMaterial(partMaterial(part, 'full'), part.cap || false);
+    const mesh = new THREE.Mesh(partGeometry(arrays), part.sway ? swayMaterial(material, geo.scale) : material);
     mesh.scale.setScalar(geo.scale);
     mesh.renderOrder = PART_ORDER[part.kind];
     if (part.kind === 'solid') { mesh.castShadow = !shadowless.includes(part.name); mesh.receiveShadow = true; }

@@ -1,8 +1,13 @@
-// Accumulates triangles with vertex colours into one BufferGeometry.
+// Accumulates triangles with vertex colours into one BufferGeometry. A builder made with
+// { sway: true } also keeps a uv per vertex: u = how far it swings in the wind (0..1, from
+// `swayAt(y)`, set while drawing something that hangs), v unused (render/parts.js 'flags').
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 
 export class GeoBuilder {
-  constructor() { this.pos = []; this.nor = []; this.col = []; this.smoothKeys = []; }
+  constructor({ sway = false } = {}) {
+    this.pos = []; this.nor = []; this.col = []; this.smoothKeys = [];
+    if (sway) { this.uv = []; this.swayAt = () => 0; }
+  }
 
   // triangle; `want` is the intended facing (winding gets flipped to match);
   // smooth=true shares normals with other smooth vertices at the same position
@@ -18,6 +23,7 @@ export class GeoBuilder {
       this.pos.push(v[0], v[1], v[2]);
       this.nor.push(nx / len, ny / len, nz / len);
       this.col.push(col.r, col.g, col.b);
+      if (this.uv) this.uv.push(this.swayAt(v[1]), 0);
     }
     if (smooth) [a, b, c].forEach((v, k) =>
       this.smoothKeys.push([base + k, v[0].toFixed(3) + ',' + v[1].toFixed(3) + ',' + v[2].toFixed(3), nx, ny, nz]));
@@ -64,7 +70,9 @@ export class GeoBuilder {
       const a = acc.get(key), l = Math.hypot(a[0], a[1], a[2]) || 1;
       this.nor[vi * 3] = a[0] / l; this.nor[vi * 3 + 1] = a[1] / l; this.nor[vi * 3 + 2] = a[2] / l;
     }
-    return { pos: new Float32Array(this.pos), nor: new Float32Array(this.nor), col: new Float32Array(this.col) };
+    const out = { pos: new Float32Array(this.pos), nor: new Float32Array(this.nor), col: new Float32Array(this.col) };
+    if (this.uv) out.uv = new Float32Array(this.uv);
+    return out;
   }
 
   build() { return toGeometry(this.arrays()); }
