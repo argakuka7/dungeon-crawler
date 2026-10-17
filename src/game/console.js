@@ -3,8 +3,8 @@
 // friends read it in the box and over our head (net/session.js). A line that starts with / is
 // a command (game/commands.js, with the developer ones under ?dev=1, game/devcommands.js):
 // while typing one, the box offers what fits (the game's items, enemies, rarities ...), Tab
-// takes the highlighted one, and Enter runs the line, filling in what clearly fits, and closes
-// the box. ` (the key
+// takes the highlighted one, and Enter runs the line, filling in what clearly fits (or the
+// suggestion picked with Up and Down), and closes the box. ` (the key
 // left of 1) opens it with the / typed. Up and Down move through the suggestions while they
 // show, else through the lines typed before (kept across reloads); Esc hides the suggestions,
 // then closes the box. The game goes on meanwhile.
@@ -36,6 +36,7 @@ const HISTORY_KEY = 'cube-crawler-history', HISTORY_MAX = 50;
 let open = false, filter = 'all', shown = -1, expanded = new Set();
 // what fits the word being typed (core/commands.js complete), and which of it is highlighted
 let comp = null, sel = 0, dismissed = false;
+let picked = false;   // the highlighted suggestion was chosen with Up / Down: Enter takes it too
 // the lines typed before; browsing: where in them (null: not), draft: the line before that
 let history = loadHistory(), browsing = null, draft = '';
 let hinted = false;   // told that nobody hears us (alone)
@@ -88,11 +89,11 @@ input.addEventListener('keydown', e => {
     e.preventDefault();
     const step = e.key === 'ArrowUp' ? -1 : 1;
     // the suggestions while they show (going through the history: on through it)
-    if (items.length && browsing === null) { sel = (sel + step + items.length) % items.length; showPopup(); }
+    if (items.length && browsing === null) { sel = (sel + step + items.length) % items.length; picked = true; showPopup(); }
     else browse(step);
     return;
   }
-  if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  if (e.key === 'Enter') { e.preventDefault(); if (picked && items.length) take(sel); submit(); }
 });
 input.addEventListener('input', () => { browsing = null; dismissed = false; refreshCompletion(); });
 // the cursor moved: the word under it may be another
@@ -143,6 +144,7 @@ function refreshCompletion(fresh = true) {
   const before = comp?.items[sel]?.value;
   comp = complete(commands, input.value, input.selectionStart ?? input.value.length, { dev: state.dev }, SUGGEST);
   sel = fresh ? 0 : Math.max(0, comp?.items.findIndex(i => i.value === before) ?? 0);
+  if (fresh) picked = false;
   showPopup();
 }
 // put the highlighted value in place of the word being typed

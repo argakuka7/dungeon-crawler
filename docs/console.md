@@ -131,7 +131,8 @@ rarity's colour, a depth's theme), how the command goes with the argument being 
 and greyed out after the cursor the rest of the highlighted value (or what it is). **Tab** puts
 the highlighted value (its id) in place of the word. **Enter** runs the line: an argument that
 clearly fits one value (the only one, or a better fit than any other) is read as that one, so
-`/give gr he` + Enter works without Tab; when it could be several, the box says which.
+`/give gr he` + Enter works without Tab; when it could be several, the box says which. A
+suggestion picked with Up / Down is taken by Enter as well (`/height`, Down to `spiral`, Enter).
 
 ## Files and checks
 
