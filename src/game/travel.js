@@ -10,6 +10,7 @@ import { step, D6, OPP6, faceKey } from '../world/coords.js';
 import { buildWorld, setWorldOpenFaces } from '../render/world.js';
 import { setGlassFaces } from '../render/glass.js';
 import { blockedAt, groundAt } from '../physics/collide.js';
+import { railedFace } from '../physics/canmove.js';
 import { respawnPoint } from '../physics/respawn.js';
 import { detachNeighbors, buildNeighbors, showsNeighbor } from '../render/neighbors.js';
 import { showPortalCloud, hidePortalCloud, CLOUD_DELAY } from '../render/portalcloud.js';
@@ -69,8 +70,9 @@ function slide(p, c, cloud) {
   const A = crossing ? boundaryArrival(player, p.dir) : fall ? fall.air : arrivalPoint(arr);
   // No route/safety adjustment: just respect solid terrain at the destination, as walking
   // would. A body-sized footprint also prevents sliding into a pillar or cliff beside it.
-  if (crossing && [[0, 0], [player.r, 0], [-player.r, 0], [0, player.r], [0, -player.r]].some(([dx, dz]) =>
-    blockedAt(A.x + dx, A.z + dz, A.y, player.swimming ? SWIM_STEP : STEP))) {
+  // Nor onto a stair or bridge over its side rail (physics/canmove.js railedFace).
+  if (crossing && (railedFace(A.x, A.z, A.y, OPP6[p.dir]) || [[0, 0], [player.r, 0], [-player.r, 0], [0, player.r], [0, -player.r]].some(([dx, dz]) =>
+    blockedAt(A.x + dx, A.z + dz, A.y, player.swimming ? SWIM_STEP : STEP)))) {
     state.map = oldMap; state.transitioning = false; hidePortalCloud();
     setStatus('The way across is blocked');
     return;

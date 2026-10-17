@@ -2,7 +2,9 @@
 // Vertical portals charge while standing in the circle: 0.75s down, 1.5s up; the town portal
 // (game/townportal.js) for 1s.
 import { N, DIRS } from '../core/constants.js';
-import { isFaceOpen, approachingFace, faceDistance } from '../core/boundaries.js';
+import { isFaceOpen, approachingFace, faceDistance, boundaryArrival } from '../core/boundaries.js';
+import { step, OPP6 } from '../world/coords.js';
+import { railedFace } from '../physics/canmove.js';
 import { player, state, setStatus } from './state.js';
 import { portalLocked, guardianLockMessage } from '../core/guardians.js';
 import { startTravel } from './travel.js';
@@ -23,6 +25,13 @@ function inside(q) {
   return Math.abs(along) < 1.5 && out > -0.4;
 }
 
+// a stair or bridge along open face d keeps its side rail there: on it, or on the one beside
+// where we would arrive (the neighbour is discovered, so its map is here)
+function railedAcross(d) {
+  const next = state.cubes?.cubes.get(step(state.cubeKey, d))?.map, at = boundaryArrival(player, d);
+  return railedFace(player.x, player.z, player.y, d) || !!next && railedFace(at.x, at.z, at.y, OPP6[d], next);
+}
+
 // Arriving somewhere other than through a portal (following a friend, src/net/session.js):
 // a portal or an open face we happen to stand in does not take us on until we step out of it.
 export function lockPortalsHere() {
@@ -39,6 +48,7 @@ export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge
   // open side faces take you across anywhere along them, whether they ever had a gate or not
   for (let d = 0; d < 4; d++) {
     if (!isFaceOpen(state.openedFaces, state.cubeKey, d) || state.boundaryLock === d || !approachingFace(player, d, dx, dz)) continue;
+    if (railedAcross(d)) continue;
     if (portalLocked(state.map, state.run, { dir: d })) { setStatus(guardianLockMessage(state.map)); continue; }
     startTravel(state.map.portals.find(q => q.kind === 'side' && q.dir === d) || { kind: 'side', dir: d });
     return true;

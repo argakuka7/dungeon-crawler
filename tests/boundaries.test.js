@@ -5,7 +5,7 @@ import { faceKey, step, OPP6 } from '../src/world/coords.js';
 import { isFaceOpen, openedSides, faceDistance, approachingFace, boundaryArrival, discoveredFaces } from '../src/core/boundaries.js';
 import { flatMap, state } from './fixtures.js';
 import { player } from '../src/game/state.js';
-import { canMove } from '../src/physics/canmove.js';
+import { canMove, railedFace } from '../src/physics/canmove.js';
 import { stepEnemy } from '../src/physics/enemynav.js';
 
 const atFace = (dir, distance, along = 9.3, y = 7.2) => ({
@@ -83,4 +83,32 @@ test('opening faces does not change cube-local player collision or enemy contain
     assert.equal(e.x, N - 0.3);
     assert.equal(e.f, f);
   } finally { state.openedFaces.clear(); }
+});
+
+test('a stair or bridge along an open face keeps its side rail there, not its ends or what is under it', () => {
+  const m = flatMap(), other = flatMap(2);
+  state.map = m;
+  // a bridge deck at height 2 along the east face (running along z), one along the south face
+  // (running along x), and a landing on the east face
+  const piece = (map, x, z, kind, dx, dz) => {
+    const p = { kind, c: z * N + x, j: 0, dx, dz, run: { kind, y0: 2, y1: 2, k: 1, sag: 0 }, base: 0 };
+    map.pieces[p.c].push(p);
+  };
+  piece(m, N - 1, 8, 'bridge', 0, 1); piece(m, 5, N - 1, 'stair', 1, 0); piece(m, N - 1, 3, 'landing', 1, 0);
+  piece(other, 0, 8, 'bridge', 0, 1);
+  Object.assign(player, { grounded: true, swimming: false });
+  assert.equal(railedFace(N - 0.3, 8.5, 2, 0), true);     // its side lies on the face
+  player.grounded = false;
+  assert.equal(railedFace(N - 0.3, 8.5, 2.5, 0), false);  // a jump goes over the rail
+  player.grounded = true;
+  assert.equal(railedFace(N - 0.3, 8.5, 0, 0), false);    // walking under it
+  assert.equal(railedFace(N - 0.3, 9.5, 2, 0), false);    // beside it, on the ground
+  assert.equal(railedFace(5.5, N - 0.3, 2, 2), true);     // the other axis
+  assert.equal(railedFace(N - 0.3, N - 0.3, 2, 2), false);
+  piece(m, 8, N - 1, 'bridge', 0, 1);                     // a run leaving through the face: its end
+  assert.equal(railedFace(8.5, N - 0.3, 2, 2), false);
+  assert.equal(railedFace(N - 0.3, 3.5, 2, 0), false);    // landings are not railed on faces
+  // where a crossing would arrive: the neighbour's map
+  assert.equal(railedFace(0.6, 8.5, 2, 1, other), true);
+  assert.equal(railedFace(0.6, 8.5, 2, 1), false);
 });

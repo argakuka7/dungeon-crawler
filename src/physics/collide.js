@@ -14,13 +14,14 @@ const inPillar = (p, fx, fz) => fx >= p.x0 && fx <= p.x1 && fz >= p.z0 && fz <= 
 const local = (x, z) => [x - Math.floor(x), z - Math.floor(z)];
 
 // highest walkable surface at (x,z) that is not above y+step: { h, s (floor or piece), i (cell) }
-export function groundAt(x, z, y, step) {
+// map: the active cube's, or another one's (a neighbour across an open face)
+export function groundAt(x, z, y, step, map = state.map) {
   const i = cellAt(x, z);
   if (i < 0) return { h: -Infinity, s: null, i };
   const [fx, fz] = local(x, z);
   let h = -Infinity, s = null;
-  for (const f of state.map.cols[i]) { const t = floorY(f, fx, fz); if (t <= y + step && t > h) { h = t; s = f; } }
-  for (const p of state.map.pieces[i]) {
+  for (const f of map.cols[i]) { const t = floorY(f, fx, fz); if (t <= y + step && t > h) { h = t; s = f; } }
+  for (const p of map.pieces[i]) {
     if (p.kind === 'pillar') continue;
     const t = runY(p, fx, fz);
     if (t <= y + step && t > h) { h = t; s = p; }
