@@ -8,6 +8,7 @@ import { profile, caveWall, VOID } from './profile.js';
 import { cascade } from './cascades.js';
 import { spout } from './spouts.js';
 import { spanFace } from './spans.js';
+import { areaPad, isInnerFace } from './areas.js';
 import { isTown, isMerchantCamp, townExitPosition } from './town.js';
 import { MAX_DEPTH } from '../themes/depth.js';
 
@@ -30,7 +31,9 @@ function sideFace(world, k, d, withPortal) {
     // ground under the crossing and a bank on either side of it (never water next to the void)
     for (let t = f.river.pos - 1; t <= f.river.pos + f.river.w; t++) if (f.profile[t] === VOID) f.profile[t] = 3;
   }
-  if (!withPortal) { f.spout = guardian ? null : spout(world, fk, f, LAYER_BASE); f.wall = caveWall(world, fk, f); return f; }
+  // the faces inside a large area (areas.js) are open, never walled
+  const wall = () => isInnerFace(world, fk) ? null : caveWall(world, fk, f);
+  if (!withPortal) { f.spout = guardian ? null : spout(world, fk, f, LAYER_BASE); f.wall = wall(); return f; }
   const townDir = isTown(k) ? d : isTown(step(k, d)) ? d ^ 1 : null;
   const campDir = isMerchantCamp(k, world.seed) ? d : isMerchantCamp(step(k, d), world.seed) ? d ^ 1 : null;
   let pos;
@@ -38,6 +41,7 @@ function sideFace(world, k, d, withPortal) {
   else if (campDir !== null) pos = townExitPosition(campDir);
   else do pos = 3 + Math.floor(R() * 10); while (f.river && Math.abs(pos - f.river.pos - (f.river.w - 1) / 2) < 3.5);
   if (spanFace(world, fk)?.kind === 'cross') pos = spanFace(world, fk).span.pos;   // one straight bridge
+  pos = areaPad(world, fk)?.pos ?? pos;   // where a large area's ramp or ridge meets the face
   // the portal's layer: any layer both cubes have, mostly the highest one (sky routes)
   const maxL = Math.min(world.wfc.tiles.get(k).K, world.wfc.tiles.get(step(k, d)).K) - 1;
   const layer = guardian ? 0 : maxL > 0 && R() < 0.5 ? maxL : Math.floor(R() * (maxL + 1));
@@ -48,7 +52,7 @@ function sideFace(world, k, d, withPortal) {
   }
   f.portal = { pos, layer, level };
   f.spout = guardian ? null : spout(world, fk, f, LAYER_BASE);
-  f.wall = caveWall(world, fk, f);
+  f.wall = wall();
   return f;
 }
 

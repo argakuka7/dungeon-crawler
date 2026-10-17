@@ -38,9 +38,12 @@ export function planSites(seed, layout, distance) {
   if (layout.down) roles.set(layout.down, 'descent');
   if (!layout.depth) return { plans, roles };
   const R = mulberry32(hash32(seed ^ Math.imul(layout.depth, 0x517e)));
+  // a large area's rooms (world/areas.js) only where nothing else is left, and only those you walk
+  // about in on foot: the foot of a spiral or a hairpin, a hairpin's summit
+  const open = k => { const a = layout.areaCells?.get(k); return !a || (a.i === 0 || (a.piece.kind === 'hairpin' && a.i === 5)); };
   const candidates = [...layout.exists].filter(k => k !== layout.up && k !== layout.down && !layout.guardians?.has(k) && !layout.hordes?.has(k)
-    && layout.spanCells?.get(k)?.role !== 'gorge')
-    .map(key => ({ key, score: (distance.get(key) || 0) * 2 + R() }));
+    && layout.spanCells?.get(k)?.role !== 'gorge' && open(k))
+    .map(key => ({ key, score: (distance.get(key) || 0) * 2 + R() - (layout.areaCells?.has(key) ? 100 : 0) }));
   candidates.sort((a, b) => b.score - a.score);
   // One major destination, plus modest discoveries. Exceptional loot is not guaranteed.
   const tiers = [R() < 0.2 ? 'exceptional' : 'rare', 'uncommon', 'basic', 'basic'];

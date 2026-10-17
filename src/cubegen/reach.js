@@ -34,7 +34,8 @@ export function graph(ctx, real) {
       }
       if (!below || !stand(below)) continue;
       if (level(below) === h || (real && f.link[d] === below)) { if (headOK(below, h)) add(f, below); }
-      else if (headOK(below, h + 1) && !fenced(f, n, h * LH)) add(f, below);   // drop
+      // (a spiral's ramp is railed all along: before the rails exist, no drop off it either)
+      else if (headOK(below, h + 1) && !fenced(f, n, h * LH) && (real || !ctx.railed?.has(f.c) || ctx.railed.has(n))) add(f, below);   // drop
     }
   }
   // route walks become slopes when smoothing (smooth.js): both ways, before it as well

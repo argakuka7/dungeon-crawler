@@ -40,6 +40,8 @@ export function placeProps(m, theme) {
   const fits = (p, y, s, lo, hi) => y + p.minY * s >= lo && y + p.maxY * s + 0.1 <= hi;
   const add = (p, x, y, z, yaw, s, normal) => out.push({ name: p.name, x, y, z, yaw, s,
     tint: p.set === 'any' ? theme.side[1][1] : null, ...(normal ? { normal } : {}) });
+  // a mostly empty set piece (cubegen/setpieces.js): a few things here and there, nothing in the way
+  const sparse = m.sparse ? 0.25 : 1;
   const shoreOf = f => DIRS.some(([dx, dz]) => inb(f.x + dx, f.z + dz)
     && m.cols[idx(f.x + dx, f.z + dz)].some(g => g.fluid && Math.abs(g.surf - f.top) <= 3));
 
@@ -52,8 +54,8 @@ export function placeProps(m, theme) {
     const focal = reserved(f);
 
     // Ordinary objects retain the sparse one-prop draw. Shore items are never inland.
-    if (dry && !f.prot && !focal && R() < (theme.propDensity ?? 0.32) * CLUTTER) {
-      const blockOK = !nearRoute(f) && !nearPortal(f) && !nearSite(f) && !nearHorde(f) && slope < 0.25;
+    if (dry && !f.prot && !focal && R() < (theme.propDensity ?? 0.32) * CLUTTER * sparse) {
+      const blockOK = !m.sparse && !nearRoute(f) && !nearPortal(f) && !nearSite(f) && !nearHorde(f) && slope < 0.25;
       const p = pick('ground', p => !p.cover && (!p.shore || shoreOf(f)) && (blockOK || !p.blocking));
       if (p) {
         const room = Math.max(0, 0.9 - 2 * p.radius * s), fx = 0.5 + (R() - 0.5) * room, fz = 0.5 + (R() - 0.5) * room;
@@ -66,7 +68,7 @@ export function placeProps(m, theme) {
     }
 
     // Ground cover can dress routes and slopes, but not structure decks or focal footprints.
-    if (dry && (!focal || f.hordeReserved) && R() < (f.hordeReserved ? .12 : .55) * CLUTTER)
+    if (dry && (!focal || f.hordeReserved) && R() < (f.hordeReserved ? .12 : .55) * CLUTTER * (m.sparse ? 0.4 : 1))
       for (let n = f.hordeReserved ? 1 : 1 + Math.floor(R() * 2); n > 0; n--) {
       const p = pick('ground', p => p.cover && !p.blocking);
       if (!p) break;

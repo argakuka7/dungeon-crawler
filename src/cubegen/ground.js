@@ -15,7 +15,7 @@ export function chooseLayers(ctx) {
 function relief(ctx) {
   const { R, ri, noise, spec } = ctx;
   const extra = new Float32Array(N * N);
-  if (spec.height || spec.pinnacle) return extra;   // shaped whole (cubegen/heights.js)
+  if (spec.height || spec.pinnacle || spec.area || spec.peak || spec.lake) return extra;   // shaped whole (cubegen/heights.js, areas.js, setpieces.js)
   const hills = spec.kind === 'highland' ? 0 : ri(1, 2);
   for (let h = 0; h < hills; h++) {
     const cx = 3 + R() * (N - 6), cz = 3 + R() * (N - 6), rad = 2.2 + R() * 2.5, amp = ri(1, 3 + Math.round(2 * spec.relief));

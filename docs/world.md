@@ -215,7 +215,12 @@ Which cubes exist and how they connect depends only on the world seed:
 - **Branches:** optional one-room detours fit within 14 total rooms per depth. No portal
   loops or discovered-face shortcuts can bypass undiscovered route rooms or guardians.
 - **Guardians:** every well has a stronger descent guardian (future boss placeholder),
-  with one or two mandatory side guardian arenas on its approach.
+  with one or two mandatory side guardian arenas on its approach. They stand at evenly
+  spaced rooms, moved to the nearest free one off a large area (and the room after it).
+- **Large areas:** a depth's large area (see "Large areas" below) is built into the route:
+  the search lays its rooms down whole at a chosen step (a template, any way round) and
+  backtracks as usual where it does not fit. On its own random stream, so a depth without
+  one keeps its route.
 
 Layer counts are part of the WFC state. A collapsing cube's count is drawn towards its
 neighbours' counts, so tall regions form. A face's portal sits on any layer both cubes
@@ -349,7 +354,11 @@ often on the sky islands, the peaks and the badlands, now and then in the caves.
 
 Planned with the layout from the seed alone, on their own random stream (after the spans,
 before the branches), as often as the theme says (`heightsOf`: `heights` in the theme can
-override the defaults; the canyon has more).
+override the defaults; the canyon has more). Every depth has two slots, rolled on a stream of
+their own (`planSlots`): the **large area** (75%: a tableland, or one of the large areas below,
+by the theme's weights; at most one per depth) and the **set piece** (70%: a pinnacle, or one of
+the set-piece cubes below). Over 300 worlds about 60% of the depths get a large area (a
+spiral 32%, a tableland 18%, a hairpin 10%) and about 62% a set piece.
 
 - **Tableland:** three rooms in a row on the route (never its ends, nothing guarded, no horde,
   not beside a span), at most one per depth:
@@ -365,7 +374,8 @@ override the defaults; the canyon has more).
       ordinary drop). Landing on something soft never hurts or knocks you over
       (`landingSpeed` in `physics/move.js`). A ladder usually stands beside it for the way
       back.
-    - **great shaft:** a hole (radius 2.6–3.2) open to the depth below, a ramp winding down
+    - **great shaft:** a hole (radius 2.6–3.2) open to the depth below (only over an ordinary
+      room: no horde, large area or set piece, and no river crossing it, `shaftOf`), a ramp winding down
       round it from the plateau's side (the long way round, railed) to a cut leading out to
       the exit, and a rim up high everywhere else. Nothing may cross the hole (`noCross`: no
       stairs, bridges, landings or jumps over it). Only where the depth below has an ordinary
@@ -390,13 +400,81 @@ override the defaults; the canyon has more).
   cost 40 more, so the way up winds round it (`pinnacleRoute`).
 - **Kept cells:** what these shapes depend on (`ctx.keep`) gets no slabs, sites, hordes, pools
   or stream falls.
-- **Dev:** `/height <ascent|plateau|descent|shaft|pinnacle|tunnel>` jumps to the next one.
+- **Dev:** `/height <ascent|plateau|descent|shaft|pinnacle|spiral|hairpin|peak|lake|tunnel>` jumps to the next one.
 - **Checks:** `tests/heights.test.js`: the plan (seeded, on the route, clear of guardians,
   hordes and spans, no branches), the faces (the plateau high all round, the pads up there,
   the same whichever cube decides them), every tableland of 8 worlds generating with the route
   climbing, crossing and coming down (leaping onto something soft in a plunge), the shaft's
   open hole, its ramp and the dry basin below, the pinnacle's site on top reached by the ramp,
   and the character landing softly after a plunge.
+
+## Large areas: spiral and hairpin (`world/areas.js`, `cubegen/areas.js`)
+
+A stretch of the route laid out as one place over several cubes, planned with the layout from the
+seed alone. The layout builds the area's shape into the route (above), so its rooms follow each
+other on the route in a fixed order: never the first room, the room after it never the last, no
+guardian in it nor in the room after it, no horde, no branch beside it, no span next to it.
+Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or spout.
+
+- **Open from the start:** the faces between an area's cubes are open as soon as you come into
+  any of them (`map.area.faces`, `game/flow.js revealArea`): no gates, no glass, no cave walls
+  (`isInnerFace`), and at corners where such a face ends no face is walled, so the corner cells
+  of all four cubes agree (`innerCorner`). The other cubes are then shown (`seen`: drawn as proxies
+  and on the minimap, but not discovered; discovery and the faces it opens still take a visit).
+- **Spiral (2x2):** a mountain on the corner the four cubes share, a ramp winding once round it
+  (radius 4.6 to 8 cells) from the foot, where the route comes in (level 5), up to the top (19–21
+  under the sky, 14–16 under rock walls), then a ridge out to the exit's headland on the last
+  cube's face. The ground is one function of world position (`spiralAt`: core, ramp, ridge or
+  foot), used by the faces (`areaProfile`, `areaVertex`: the mountain's level at the shared
+  corner) and by the cubes alike, so they agree by construction. The face between the first and
+  the last cube carries the mountain across the ramp's band. The foot (the rest, low ground) is
+  capped a level over the ramp's start.
+  - **Railed all along:** every cliff edge of the ramp and the ridge gets a rail (`ctx.railed`),
+    and before the rails exist the reach graph allows no drop off them (`reach.js`). So the foot
+    of the later cubes is out of reach in the cube, gets no escapes and no ways up (`ctx.foot`),
+    decor keeps off the ramp and an area's rims, and escapes never climb onto a rim. Walking the
+    foot through the open faces leads nowhere: the way up is the ramp.
+  - **The route walks it** (`areaRoute`): every move but a walk that starts or ends on the ramp
+    costs 40 more, and no drop or jump leaves it over the side.
+  - **The mountain** stands three levels over the top of the ramp: never walked onto.
+- **Hairpin (2x3):** `a b c` out, `d e f` back. Two spans (`twin`, `world/spans.js`) side by
+  side, gorges `b` and `e`, whose valleys meet in one canyon (no river: the low bridge starts too
+  low for its banks). The low bridge goes out from the foot `a` (about 5 to 10), the turn rooms
+  `c` and `d` climb (a pad between them, `turn`), the high bridge comes back (about 14 to the top,
+  19–22, in caves lower) to the summit `f`: high all round, its faces and corners at the top, so
+  the room after it comes down from a high face. The foot is capped low, the summit's face over it
+  a cliff. Over the sky (`sky`, as often as the theme's sky spans) the canyon is bottomless, only
+  where no room lies beside it. A hairpin counts as one of the depth's spans.
+- **Reward sites:** none in an area but where nothing else is left (then on the foot of either,
+  or the hairpin's summit, as high as the ground goes there).
+- **Dev:** `/height spiral` or `/height hairpin` goes in at the foot.
+- **Checks:** `tests/areas.test.js`: the plan (seeded, in its shape and order on the route,
+  never guarded, about one large area per depth), the open faces (exactly the inner ones, and a
+  side guardian still cuts every way to the descent with them open), matching ground on every
+  face of every area cube whichever cube decided it, one layer, the spiral's route walked from
+  the foot to the top, pushing off the ramp where it is high keeps you on it, no structure from
+  the foot onto the ramp, the hairpin's two bridges, summit and foot, and the same cubes whatever
+  the exploration order.
+
+## Set pieces: lone peak and great lake (`cubegen/setpieces.js`)
+
+Mostly empty rooms built round one thing (`spec.sparse`: one layer, no cave pillars, no decor,
+a quarter of the props and nothing in the way, `render/propplace.js`). Enemies come as usual.
+
+- **Lone peak:** in one of the depth's discoveries (a reward site not built round a landmark),
+  never next to a pinned cube, its sockets pinned low (a flat field). A steep block of 4x4 cells
+  (5x5 for a bigger site) 10–13 levels over the worn-flat field, the discovery on top. Stairs,
+  bridges and jumps onto or off the top cost 40 more (`setPieceRoute`), so the way up is a ladder.
+- **Great lake:** in a room of the route or a branch (not the entrance, arenas or the horde room),
+  one layer (its sockets as the WFC made them). Water of the depth's river fluid from three cells
+  in (four in places), at the rivers' level, so a river coming in runs into it and ends there. The
+  route keeps to the shore (every fluid is deadly; no jumps in a lake cube). A discovery there
+  waits on an islet (level with the shore, water all round it) reached by a bridge. A fall from
+  the cube above lands in the lake (it is its catch pool).
+- **Dev:** `/height peak`, `/height lake`.
+- **Checks:** `tests/areas.test.js`: the peak's discovery on top and only a ladder onto it, the
+  lake's water never on the outer ring but where a river comes in, its route dry, the islet's
+  discovery reached by a bridge.
 
 ## Tunnels (`cubegen/tunnel.js`)
 
@@ -432,6 +510,8 @@ faces, so the outer ring still matches the neighbours.
 | crater | a ring wall around a lake of the depth's fluid |
 | gorge, island | only in gorge spans (above) |
 | ascent, plateau, descent, pinnacle | only for the big height pieces (above) |
+| spiral, foot, turn, summit | only in the large areas (above) |
+| peak, lake | only for the set pieces (above) |
 
 Chasms, sinkholes and archipelagos open to the void where the world allows it. Elsewhere
 they hold the depth's fluid instead: a river gorge, an acid canal or a lava sea.

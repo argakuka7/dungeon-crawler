@@ -131,7 +131,24 @@ function returnFromFall(dead) {
 // discovered cubes are checked again.
 export function discover(c) {
   if (!c.visits++) relay.visited?.(c.key);   // playing together: the friend's map shows it too
-  return openDiscoveredFaces();
+  const opened = revealArea(c);
+  return openDiscoveredFaces() || opened;
+}
+
+// A large area (world/areas.js) is one place: coming into any of its cubes opens the faces between
+// them and shows the others (seen: drawn and on the minimap, as soon as they are made, but not
+// discovered: that still takes a visit)
+function revealArea(c) {
+  const area = c.map?.area, cubes = state.cubes;
+  if (!area) return false;
+  const before = state.openedFaces.size;
+  for (const f of area.faces) state.openedFaces.add(f);
+  for (const k of area.keys) if (k !== c.key) cubes.get(k).then(o => {
+    if (state.cubes !== cubes || o.seen) return;
+    o.seen = true;
+    updateNeighbors();
+  }, () => {});
+  return state.openedFaces.size !== before;
 }
 
 // Playing together, the friend discovered cube k (net/session.js): it is discovered here too,

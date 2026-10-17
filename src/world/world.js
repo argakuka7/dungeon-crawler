@@ -13,6 +13,7 @@ import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './t
 import { generateInterior } from '../cubegen/interior.js';
 import { spanSpec } from './spans.js';
 import { heightSpec, heightsOf, shaftAbove } from './heights.js';
+import { areaSpec } from './areas.js';
 import { bridgesOf } from '../themes/builds.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
@@ -53,7 +54,7 @@ export class World {
   // learn: architecture.html#cube-journey (see learn/README.md)
   spec(k) {
     const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = this.layout(-Y).theme, L = this.layout(-Y);
-    const span = spanSpec(L, k, bridgesOf(theme, this.opts.bridge)), height = heightSpec(this, k);
+    const span = spanSpec(L, k, bridgesOf(theme, this.opts.bridge)), height = heightSpec(this, k), area = areaSpec(this, k);
     const faces = [0, 1, 2, 3].map(d => {
       const f = this.faces.get(faceKey(k, d));
       return { sock: t.sock[d], profile: Int16Array.from(f.profile), river: f.river, portal: f.portal, wall: f.wall, spout: f.spout,
@@ -66,14 +67,20 @@ export class World {
       if (f?.portal) portals.push({ dir: d, ...f.portal });
     }
     const outflow = this.faces.get(faceKey(k, 4))?.fall || null, inflow = this.faces.get(faceKey(k, 5))?.fall || null;
-    const special = isClearing(k, this.seed) || L.guardians.has(k) || span || height;
+    const special = isClearing(k, this.seed) || L.guardians.has(k) || span || height || area;
     // a needle with a reward site on top (heights.js), where no river runs
     const R = this.wfc.rng(k, 0x9e1d7), top = heightsOf(theme).top;
     const pinnacle = L.pinnacle === k && !special && !t.sock.includes('W')
       ? { x: 6 + Math.floor(R() * 4), z: 6 + Math.floor(R() * 4), top: top[0] + Math.floor(R() * (top[1] - top[0] + 1)) } : null;
+    // the set-piece cubes (cubegen/setpieces.js): a lone peak with a discovery on top, up a ladder,
+    // in a flat empty field; a great lake, a discovery on an islet in it
+    const discovery = (L.sitePlans.get(k) || []).find(i => !i.landmark), Rs = this.wfc.rng(k, 0x5e7c);
+    const peak = L.peak === k && !special ? { x: 5 + Math.floor(Rs() * 3), z: 5 + Math.floor(Rs() * 3),
+      side: discovery && discovery.prestige !== 'basic' ? 5 : 4, rise: 10 + Math.floor(Rs() * 4) } : null;
+    const lake = L.lake === k && !special ? { islet: discovery ? { x: 7 + Rs(), z: 7 + Rs(), r: discovery.prestige === 'basic' ? 2.3 : 2.9 } : null } : null;
     // a short tunnel the way leads through (cubegen/tunnel.js): not where rivers run, falls come
     // or go, spouts pour, a horde waits, or something else shapes the cube
-    const tunnel = -Y > 0 && !special && !pinnacle && !L.hordes.has(k) && !t.sock.includes('W') && !outflow && !inflow
+    const tunnel = -Y > 0 && !special && !pinnacle && !peak && !lake && !L.hordes.has(k) && !t.sock.includes('W') && !outflow && !inflow
       && faces.every(f => !f.spout) && R() < heightsOf(theme).tunnel;
     return {
       key: k, X, Y, Z, kind: t.kind, exit: this.layout(-Y).exit.get(k) ?? null, K: t.K, B: LAYER_BASE.slice(0, t.K), faces, portals,
@@ -85,10 +92,11 @@ export class World {
       roomRole: this.layout(-Y).roles.get(k), rewardSites: this.layout(-Y).sitePlans.get(k) || [],
       fluid: theme.river, fluidMix: theme.fluids, voidOK: voidAllowed(this, k), fallIn: fallMask(this, k),
       outflow, inflow, relief: theme.relief, height, pinnacle, tunnel, shaftBottom: special ? null : shaftAbove(this, k),
+      area, peak, lake, sparse: !!(peak || lake),   // sparse: mostly empty (few props, render/propplace.js)
       // islands without pillars: lakes, the sky islands near the top and the abyss
       floating: !isClearing(k, this.seed) && (t.kind === 'lake' || ((-Y <= 3 || -Y >= 19) && this.wfc.rng(k, 0xf10a7)() < 0.5)),
       seed: hash32(this.seed ^ hashKey(k)),
-      archetype: span ? span.role : height ? height.role : pinnacle ? 'pinnacle' : -Y === 0 ? 'plain'
+      archetype: span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 ? 'plain'
         : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
       forceBridge: this.opts.bridge || null, forceLadder: this.opts.ladder || null,
     };

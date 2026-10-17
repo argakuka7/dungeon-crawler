@@ -30,23 +30,46 @@ const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const direction = (a, b) => AXES.findIndex(([x, z]) => a[0] + x === b[0] && a[1] + z === b[1]);
 const cheb = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
 
-// a theme's height pieces: how likely a depth gets a tableland, a pinnacle, and a cube a tunnel
-// (cubegen/tunnel.js), and the shelf levels (lower under a cave's or canyon's rock walls)
+// a theme's height pieces: the depth's large area (one at most: a tableland or one of the large areas,
+// world/areas.js, by weight) and its set piece (a pinnacle, or one of the set-piece cubes,
+// cubegen/setpieces.js), each by chance; how likely a cube gets a tunnel (cubegen/tunnel.js); the
+// shelf levels and the pinnacle's top (lower under a cave's or canyon's rock walls)
 export function heightsOf(theme) {
-  const walled = theme.cave || theme.walls;
-  return { tableland: 0.6, pinnacle: 0.45, tunnel: walled ? 0.4 : 0.25, shelf: walled ? [13, 15] : [17, 20],
-    top: walled ? [14, 16] : [19, 21], ...theme.heights };
+  const walled = theme.cave || theme.walls, o = theme.heights || {};
+  const big = { chance: 0.75, tableland: 0.45, spiral: walled ? 0.45 : 0.35, hairpin: walled ? 0.1 : theme.spans?.sky ? 0.35 : 0.2 };
+  const small = { chance: 0.7, pinnacle: 0.4, peak: 0.3, lake: 0.3 };
+  return { tunnel: walled ? 0.4 : 0.25, shelf: walled ? [13, 15] : [17, 20], top: walled ? [14, 16] : [19, 21], ...o,
+    big: { ...big, ...o.big }, small: { ...small, ...o.small } };
 }
 
-// the height pieces of depth d (spine: the route's cells, K: cell -> cube key, blocked(cell):
-// cubes no piece may use)
+// one of the weighted kinds ({ kind: weight }) at r in [0, 1)
+function weighted(weights, r) {
+  const list = Object.entries(weights).filter(([, w]) => w > 0);
+  let x = r * list.reduce((s, [, w]) => s + w, 0);
+  for (const [k, w] of list) if ((x -= w) < 0) return k;
+  return list.at(-1)?.[0] ?? null;
+}
+
+// the depth's two slots, on their own random stream: big (tableland, spiral, hairpin) and small
+// (pinnacle, peak, lake), each null when the depth gets none; pick: where the small one goes
 // learn: world.html#heights (see learn/README.md)
-export function planHeights(seed, d, theme, spine, K, blocked) {
+export function planSlots(seed, d, theme) {
+  if (d === 0 || d >= MAX_DEPTH) return { big: null, small: null, pick: 0 };
+  const cfg = heightsOf(theme), R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x51a75) ^ 0x3e9));
+  const { chance: bc, ...bw } = cfg.big, { chance: sc, ...sw } = cfg.small;
+  const big = R() < bc ? weighted(bw, R()) : null, small = R() < sc ? weighted(sw, R()) : null;
+  return { big, small, pick: R() };
+}
+
+// the height pieces of depth d (spine: the route's cells, K: cell -> cube key,
+// blocked(cell): cubes no piece may use), if the depth's large area is a tableland (planSlots)
+// learn: world.html#heights (see learn/README.md)
+export function planHeights(seed, d, theme, spine, K, blocked, tableland) {
   const pieces = [], cells = new Map();
   if (d === 0 || d >= MAX_DEPTH) return { pieces, cells };
   const cfg = heightsOf(theme), R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x6e1a2b3d) ^ 0x4e19));
   const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
-  if (R() < cfg.tableland) {
+  if (tableland) {
     // [before, ascent, plateau, descent, after], never at the ends of the route
     const runs = [];
     for (let i = 1; i + 3 < spine.length; i++) {
@@ -62,16 +85,31 @@ export function planHeights(seed, d, theme, spine, K, blocked) {
       ['ascent', 'plateau', 'descent'].forEach((role, i) => cells.set(piece.keys[i], { piece, role }));
     }
   }
-  return { pieces, cells, pinnacle: R() < cfg.pinnacle, pick: R() };
+  return { pieces, cells };
 }
 
-// a lonely needle of rock for one of the depth's discoveries (a reward site that is not built
-// round a landmark), in a room no other piece uses
-export function planPinnacle(layout, plan) {
-  if (!plan.pinnacle) return null;
-  const options = [...layout.sitePlans].filter(([k, intents]) => !layout.heightCells.has(k) && !layout.spanCells.has(k)
-    && intents.every(i => !i.landmark)).map(([k]) => k).sort();
-  return options.length ? options[Math.floor(plan.pick * options.length)] : null;
+// the depth's set piece (planSlots), in a room no other piece uses: { pinnacle, peak, lake } (cube
+// keys, at most one of them set). A pinnacle or a lone peak stands in one of the depth's
+// discoveries (a reward site that is not built round a landmark) and carries it on top; the peak's
+// field is pinned flat, so it keeps off the cubes that are pinned already. A great lake fills a
+// room of the route or a branch (not the entrance with its ring, nor the arenas or the horde room);
+// a discovery there waits on an islet.
+// learn: world.html#heights (see learn/README.md)
+export function planSetPiece(layout, slots) {
+  const out = { pinnacle: null, peak: null, lake: null };
+  if (!slots.small) return out;
+  const busy = k => layout.heightCells.has(k) || layout.spanCells.has(k) || layout.areaCells?.has(k);
+  const near = k => [0, 1, 2, 3].some(d => busy(step(k, d)));
+  const discovery = [...layout.sitePlans].filter(([k, intents]) => !busy(k) && intents.every(i => !i.landmark)).map(([k]) => k).sort();
+  const options = {
+    pinnacle: discovery,
+    peak: discovery.filter(k => !near(k)),
+    lake: [...layout.exists].filter(k => !busy(k) && !near(k) && k !== layout.up && k !== layout.down && !layout.guardians.has(k)
+      && !layout.hordes.has(k) && !(layout.sitePlans.get(k) || []).some(i => i.landmark)).sort(),
+  };
+  for (const kind of [slots.small, ...['pinnacle', 'peak', 'lake'].filter(x => x !== slots.small)])
+    if (options[kind].length) { out[kind] = options[kind][Math.floor(slots.pick * options[kind].length)]; break; }
+  return out;
 }
 
 // is cell c (in cubes) next to (or on) one of the cells in `list`?
@@ -137,13 +175,17 @@ export function heightVertex(world, vx, Y, vz) {
 }
 
 // may the descent of this tableland be a great shaft? Only over a room of the depth below that
-// nothing else shapes (no guardian, span or height piece): the shaft opens into it
+// nothing else shapes (no guardian, horde, span, height piece, large area or set piece) and no river
+// crosses (its channel would run under the hole): the shaft opens into it. (Without the WFC, on the
+// main thread, the rivers are not known: the dev tools ask so.)
 export function shaftOf(world, piece) {
   if (piece.descent !== 'shaft') return null;
   const k = piece.keys[2], [X, Y, Z] = parse(k), d = -Y;
   if (d + 1 >= MAX_DEPTH) return null;
   const below = key(X, Y - 1, Z), L = world.layout(d + 1);
-  if (!L.exists.has(below) || L.guardians.has(below) || L.spanCells?.has(below) || L.heightCells?.has(below)) return null;
+  if (!L.exists.has(below) || L.guardians.has(below) || L.hordes.has(below) || L.spanCells?.has(below) || L.heightCells?.has(below)
+    || L.areaCells?.has(below) || L.peak === below || L.lake === below) return null;
+  if (world.wfc) { world.wfc.collapseDepth(d + 1); if (world.wfc.tiles.get(below).sock.includes('W')) return null; }
   return below;
 }
 

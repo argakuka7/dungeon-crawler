@@ -85,7 +85,7 @@ dev({
 });
 addType(commands, { name: 'feature', values: () => FEATURES.map(f => ({ value: f, label: f })) });
 dev({
-  name: 'height', help: 'the next of the big height pieces: a tableland\'s ascent, plateau or descent, a great shaft, a pinnacle, a tunnel',
+  name: 'height', help: 'the next of the big height pieces: a tableland\'s ascent, plateau or descent, a great shaft, a pinnacle, a spiral or hairpin (in at its foot), a lone peak, a great lake, a tunnel',
   args: [{ name: 'kind', type: 'feature' }],
   async run({ kind }) { await goFeature(kind); },
 });

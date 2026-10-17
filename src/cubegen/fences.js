@@ -53,8 +53,9 @@ export function addFences(ctx) {
       }
       if (wall || my - nt < 0.9) continue;
       stats.cliffs++;
-      // (the ramps round a pinnacle and down a great shaft are railed, cubegen/heights.js)
-      const p = lava ? 0.85 : runsF || ctx.rails?.has(f.c) ? 0.9 : f.layer > 0 && my - nt > 2 ? 0.3 : 0.06;
+      // (the ramps round a pinnacle and down a great shaft are railed, cubegen/heights.js; a
+      // spiral's ramp all along, cubegen/areas.js)
+      const p = ctx.railed?.has(f.c) ? 1 : lava ? 0.85 : runsF || ctx.rails?.has(f.c) ? 0.9 : f.layer > 0 && my - nt > 2 ? 0.3 : 0.06;
       if (R() < p) { addFence(f.c, d, (fx, fz) => floorY(f, fx, fz), f.layer); fenceList[fenceList.length - 1].cliff = f.id; stats.fences++; }
     }
   }

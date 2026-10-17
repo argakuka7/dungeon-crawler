@@ -29,6 +29,8 @@ import { reserveSites, prepareSites, routeSites, finishSites } from './sites.js'
 import { reserveHorde, routeHorde, finishHorde } from './hordes.js';
 import { spanBridge } from './span.js';
 import { descentRoute, pinnacleRoute } from './heights.js';
+import { areaRoute } from './areas.js';
+import { setPieceRoute } from './setpieces.js';
 
 function indexFloors(ctx) {
   const floors = ctx.floors = [];
@@ -88,6 +90,8 @@ function tryGenerate(seed, spec) {
   spanBridge(ctx);
   descentRoute(ctx);
   pinnacleRoute(ctx);
+  areaRoute(ctx);
+  setPieceRoute(ctx);
   if (!findRoute(ctx)) return null;
   routeSites(ctx);
   if (!routeHorde(ctx)) return null;
@@ -117,6 +121,9 @@ function tryGenerate(seed, spec) {
     kind: spec.kind, archetype: spec.archetype, key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: !!spec.walled, enemyFree: !!spec.enemyFree,
     // the big height pieces (cubegen/heights.js, tunnel.js): a great shaft's hole and the room under it
     tunnel: ctx.tunnel || null, shaft: spec.height?.hole ? { ...spec.height.hole, below: spec.height.below } : null,
+    // a large area (world/areas.js): its cubes and the faces between them, open from the start
+    area: spec.area ? { id: spec.area.id, kind: spec.area.kind, role: spec.area.role, keys: spec.area.keys, faces: spec.area.faces } : null,
+    sparse: !!spec.sparse,   // a mostly empty set piece (cubegen/setpieces.js): few props
     routes: ctx.segments.map(s => pathPoints(ctx, s)),   // each portal -> the exit, then the way back
   };
 }

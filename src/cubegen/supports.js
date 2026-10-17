@@ -28,7 +28,8 @@ export function addRamps(ctx) {
         if (!inb(x, z)) continue;
         let g = null;
         for (const f of cols[idx(x, z)]) if (f.top < e.top - 1) g = f;
-        if (!g || g.fluid || g.prot || g.site || g.top >= target || ctx.border(g)) continue;
+        // (never on ground something else is shaped with: a tunnel's aprons, cubegen/tunnel.js)
+        if (!g || g.fluid || g.prot || g.site || g.top >= target || ctx.border(g) || (g.layer === 0 && ctx.keep?.has(g.c))) continue;
         const a = nextAbove(g);
         if (a && a.bottom < target + HEAD) continue;
         g.top = target; g.ramp = true; any = true; made++;

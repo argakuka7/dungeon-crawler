@@ -79,11 +79,15 @@ export function reserveSites(ctx) {
     const portalCells = new Set(ctx.portals.flatMap(p => p.cells));
     const shapes = intent.landmark && ['camp', 'monument'].includes(intent.role)
       ? [siteShape(intent, rank, 1), siteShape(intent, rank, -1)] : [siteShape(intent, rank)];
-    // on a pinnacle (cubegen/heights.js) the site is its top: only there, facing any way
-    const pin = ctx.spec.pinnacle && !ctx.sites.length && !intent.landmark ? ctx.spec.pinnacle : null;
+    // on a pinnacle (cubegen/heights.js) the site is its top: only there, facing any way; likewise
+    // on a lone peak's top or a great lake's islet (cubegen/setpieces.js)
+    const first = !ctx.sites.length && !intent.landmark, sp = ctx.spec;
+    const pin = !first ? null : sp.pinnacle ? { ...sp.pinnacle, fixed: true, ok: c => Math.hypot(c % N - sp.pinnacle.x, Math.floor(c / N) - sp.pinnacle.z) < PINNACLE_TOP, level: ctx.pinnacleTop }
+      : ctx.peakTop?.size ? { ok: c => ctx.peakTop.has(c), level: ctx.pinnacleTop }
+        : ctx.islet?.size ? { ok: c => ctx.islet.has(c), level: ctx.isletLevel } : null;
     for (const shape of shapes) for (const layer of pin ? [0] : [...new Set([ctx.K - 1, 0])]) for (let turn = 0; turn < 4; turn++) {
       for (let cz = 2; cz < N - 2; cz++) for (let cx = 2; cx < N - 2; cx++) {
-        if (pin && (cx !== pin.x || cz !== pin.z)) continue;
+        if (pin?.fixed && (cx !== pin.x || cz !== pin.z)) continue;
         const site = { ...intent, ...shape, rank, cx, cz, turn, layer }, cells = [];
         const { u0, u1, v0, v1 } = shape;
         for (let v = v0; v <= v1; v++) for (let u = u0; u <= u1; u++) {
@@ -94,12 +98,12 @@ export function reserveSites(ctx) {
         if (cells.length !== (u1 - u0 + 1) * (v1 - v0 + 1)) continue;
         if (cells.some(({ c }) => occupied.has(c) || portalCells.has(c) || (!pin && ctx.sky.has(c))
           || ctx.spouts.some(s => s.cells.includes(c)))) continue;
-        if (pin && cells.some(({ c }) => Math.hypot(c % N - pin.x, Math.floor(c / N) - pin.z) >= PINNACLE_TOP)) continue;
+        if (pin && cells.some(({ c }) => !pin.ok(c))) continue;
         if (!layer && cells.some(({ c }) => ctx.fluid0[c] || ctx.void0[c])) continue;
         // Top-layer platforms preserve fluids/void below; never crush existing ground.
-        // (as high as the ground goes on a tableland's shelves and a pinnacle's top, where there
-        // are no slabs; elsewhere under the first layer)
-        site.level = layer ? ctx.B[layer] : pin ? ctx.pinnacleTop : Math.min(ctx.spec.height ? MAX_L - 2 : 12, Math.max(4,
+        // (as high as the ground goes on a tableland's shelves, a pinnacle's top and in a large
+        // area, where there are no slabs; elsewhere under the first layer)
+        site.level = layer ? ctx.B[layer] : pin ? pin.level : Math.min(ctx.spec.height || ctx.spec.area ? MAX_L - 2 : 12, Math.max(4,
           Math.round(cells.reduce((sum, { c }) => sum + ctx.lvl0[c], 0) / cells.length)));
         if (cells.some(({ c, u, v }) => {
           const h = heightAt(site, u, v);

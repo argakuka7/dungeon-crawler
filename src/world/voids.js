@@ -10,7 +10,7 @@ import { shaftAbove } from './heights.js';
 export function voidAllowed(world, k) {
   const [X, Y, Z] = parse(k), d = -Y;
   return !isClearing(k, world.seed) && !world.layout(d).guardians.has(k) && !world.layout(d).spanCells?.has(k)
-    && !world.layout(d).heightCells?.has(k)
+    && !world.layout(d).heightCells?.has(k) && !world.layout(d).areaCells?.has(k) && world.layout(d).peak !== k && world.layout(d).lake !== k
     && d < MAX_DEPTH && world.layout(d).theme.void > 0 && world.layout(d + 1).exists.has(key(X, Y - 1, Z));
 }
 

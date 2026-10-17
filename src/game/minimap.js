@@ -92,7 +92,7 @@ export function drawMinimap() {
   g.translate(C, C); g.rotate(view.yaw);
   for (let dz = -REACH; dz <= REACH; dz++) for (let dx = -REACH; dx <= REACH; dx++) {
     const k = key(X0 + dx, Y, Z0 + dz), c = W.cubes.get(k);
-    if (!c?.visits) continue;
+    if (!c?.visits && !c?.seen) continue;   // (seen: a large area's, game/flow.js)
     const t = c.info;
     const px = (dx - fx) * CELL, pz = (dz - fz) * CELL;
     g.fillStyle = KIND_COLOR[t.kind]; g.fillRect(px + 1, pz + 1, CELL - 2, CELL - 2);

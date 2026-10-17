@@ -12,6 +12,7 @@ import { depthOf } from '../themes/depth.js';
 import { TOWN_KEY, merchantCampKey } from './town.js';
 import { spanPins } from './spans.js';
 import { heightPins } from './heights.js';
+import { areaPins } from './areas.js';
 
 // tile weight at cube k: the base weight scaled by the depth's theme (layout: depth -> layout)
 const weightAt = (layout, k) => { const m = layout(depthOf(k)).theme.tiles; return t => t.weight * (m[t.kind] ?? 1); };
@@ -46,14 +47,18 @@ export class WFC {
     if (this.depths.has(d)) return;
     this.depths.add(d);
     const region = new Set();
-    // span cubes (spans.js) and tablelands (heights.js) are pinned first: their faces follow
-    // the span or the escarpment, they have one layer
-    for (const [k, sock] of [...spanPins(this.layout(d)), ...heightPins(this.layout(d))]) {
+    // span cubes (spans.js), tablelands (heights.js) and large areas (areas.js) are pinned first:
+    // their faces follow the span, the escarpment or the area, they have one layer; so does a lone
+    // peak's flat field (cubegen/setpieces.js)
+    const L = this.layout(d), peak = L.peak ? [[L.peak, ['L', 'L', 'L', 'L']]] : [];
+    for (const [k, sock] of [...spanPins(L), ...heightPins(L), ...areaPins(L), ...peak]) {
       const tile = TILES.find(t => t.sock.every((s, i) => s === sock[i]));
       if (!this.tiles.has(k)) this.tiles.set(k, { ...tile, K: 1 });
     }
-    for (const k of this.layout(d).exists) { region.add(k); for (let i = 0; i < 4; i++) region.add(step(k, i)); }
+    for (const k of L.exists) { region.add(k); for (let i = 0; i < 4; i++) region.add(step(k, i)); }
     this.collapse([...region].sort());
+    // a great lake (cubegen/setpieces.js) keeps the sockets it got, but no layers over the water
+    if (L.lake) this.tiles.set(L.lake, { ...this.tiles.get(L.lake), K: 1 });
   }
 
   // learn: world.html#wfc #wfc-code (see learn/README.md)

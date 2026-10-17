@@ -13,7 +13,9 @@ export function carveRiver(ctx) {
   // surface one level below the lowest bank, bed two below the surface
   const fill = (cells, type, S) => { for (const i of cells) { fluid0[i] = type; surf0[i] = S; lvl0[i] = Math.max(0, S - 2); ctx.void0[i] = 0; } };
 
-  const ends = spec.faces.map((f, d) => f.river && { d, ...f.river }).filter(Boolean), lake = spec.kind === 'lake';
+  // (a great lake, cubegen/setpieces.js, is its own lake: rivers run into it and end there)
+  const ends = spec.faces.map((f, d) => f.river && { d, ...f.river }).filter(Boolean), lake = spec.kind === 'lake' && !spec.lake;
+  const sea = new Set(ctx.seaCells || []);
   if (ends.length || lake) {
     const jx = ri(6, 9), jz = ri(6, 9), cells = new Set();
     for (const e of ends) {
@@ -22,13 +24,13 @@ export function carveRiver(ctx) {
       const mark = () => { for (let k = 0; k < e.w; k++) if (inb(x + lat[0] * k, z + lat[1] * k)) cells.add(idx(x + lat[0] * k, z + lat[1] * k)); };
       mark();
       for (let s = 0; s < 2; s++) { x -= DIRS[e.d][0]; z -= DIRS[e.d][1]; mark(); }   // straight in from the face
-      for (let guard = 0; (x !== jx || z !== jz) && guard < 60; guard++) {
+      for (let guard = 0; (x !== jx || z !== jz) && guard < 60 && !(spec.lake && sea.has(idx(x, z))); guard++) {
         const dx = jx - x, dz = jz - z, alongX = R() < (Math.abs(dx) > Math.abs(dz) ? 0.75 : 0.25);
         if ((alongX && dx) || !dz) x += Math.sign(dx); else z += Math.sign(dz);
         mark();
       }
     }
-    if (lake || ends.length === 1) {   // a lake, or a pool where a lone river ends
+    if (lake || ends.length === 1 && !spec.lake) {   // a lake, or a pool where a lone river ends
       const rad = lake ? 3.4 + R() * 1.8 : 1.8 + R() * 0.8;
       for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) if (Math.hypot(x - jx, z - jz) < rad) cells.add(idx(x, z));
     }
@@ -37,13 +39,14 @@ export function carveRiver(ctx) {
   }
 
   // archetype seas and crater lakes (where the cube could not open to the void)
-  const sea = (ctx.seaCells || []).filter(i => !prot0[i] && !fluid0[i]);
-  if (sea.length) { fill(sea, spec.fluid, RIVER_SURF); stats.fluids.push(FLUID_NAME[spec.fluid] + ' sea'); }
+  const seas = (ctx.seaCells || []).filter(i => !prot0[i] && !fluid0[i]);
+  if (seas.length) { fill(seas, spec.fluid, RIVER_SURF); stats.fluids.push(FLUID_NAME[spec.fluid] + (spec.lake ? ' lake' : ' sea')); }
 
   // pools keep a dry rim: never next to other fluid (it would stand at another level) or the void
   const wet = i => fluid0[i] || ctx.void0[i];
   const rim = (x, z) => DIRS.some(([dx, dz]) => wet(idx(x + dx, z + dz)));
-  for (let p = ri(1, 3); p > 0; p--) {
+  // (none on a hairpin's summit, cubegen/areas.js: it stays level; none round a lone peak: mostly empty)
+  for (let p = spec.area?.role === 'summit' || spec.peak ? 0 : ri(1, 3); p > 0; p--) {
     const type = pickFluid();
     const cx = 3 + R() * (N - 6), cz = 3 + R() * (N - 6), rad = 1.1 + R() * 1.4;
     const cells = [];
@@ -53,7 +56,7 @@ export function carveRiver(ctx) {
     }
     if (!cells.length) continue;
     // on the big height pieces never over the edge of a cliff (it would cut a pit into it)
-    if ((spec.height || spec.pinnacle) && Math.max(...cells.map(i => lvl0[i])) - Math.min(...cells.map(i => lvl0[i])) > 2) continue;
+    if ((spec.height || spec.pinnacle || spec.area || spec.peak) && Math.max(...cells.map(i => lvl0[i])) - Math.min(...cells.map(i => lvl0[i])) > 2) continue;
     const set = new Set(cells);
     let S = Infinity;
     for (const i of cells) {

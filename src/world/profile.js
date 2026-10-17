@@ -9,6 +9,7 @@ import { voidAllowed, isVoid } from './voids.js';
 import { isClearing, TOWN_LEVEL } from './town.js';
 import { spanFace, spanVertex, spanU, valleyFloor } from './spans.js';
 import { heightProfile, heightVertex } from './heights.js';
+import { areaProfile, areaVertex, innerCorner } from './areas.js';
 
 export const VOID = -1;
 
@@ -31,7 +32,7 @@ function vertexLevel(world, vx, Y, vz) {
   if (cubes.some(k => isClearing(k, world.seed))) return TOWN_LEVEL;
   const sv = spanVertex(world, vx, Y, vz);
   if (sv && !sv.natural) return valleyFloor(sv.span, world.noise, vx * N, vz * N, Y);
-  const hv = heightVertex(world, vx, Y, vz);
+  const hv = heightVertex(world, vx, Y, vz) ?? areaVertex(world, vx, Y, vz);
   if (hv !== null) return hv;
   const theme = world.layout(-Y).theme;
   if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y, theme.void)) return VOID;
@@ -56,6 +57,7 @@ export function profile(world, fk, sock) {
     const wx = d === '0' ? (X + 1) * N : X * N + t + 0.5, wz = d === '0' ? Z * N + t + 0.5 : (Z + 1) * N;
     return levelAt(world.noise, sock, wx, wz, Y, theme.relief);
   });
+  areaProfile(world, fk, out);   // the large areas (areas.js)
   return out;
 }
 
@@ -96,8 +98,11 @@ export function caveWall(world, fk, f) {
   const theme = world.layout(-Y).theme;
   if (!theme.cave && !theme.walls) return null;
   const out = new Int16Array(N);
+  // (none at a corner where a large area's open inner face ends, areas.js)
+  const open = [innerCorner(world, d === '0' ? X + 1 : X, Y, d === '0' ? Z : Z + 1), innerCorner(world, X + 1, Y, Z + 1)];
   for (let t = 0; t < N; t++) {
     if ((f.portal && Math.abs(t - f.portal.pos) <= 2) || (f.spout && Math.abs(t - f.spout.pos) <= 2)) continue;
+    if ((t === 0 && open[0]) || (t === N - 1 && open[1])) continue;
     if (f.river && t >= f.river.pos - 1 && t <= f.river.pos + f.river.w) continue;
     const a = t === 0 ? 0 : t === N - 1 ? N : t + 0.5;
     const wx = d === '0' ? (X + 1) * N : X * N + a, wz = d === '0' ? Z * N + a : (Z + 1) * N;

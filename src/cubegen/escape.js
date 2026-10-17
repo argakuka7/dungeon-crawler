@@ -24,7 +24,8 @@ export function addAccess(ctx) {
   const { hub, floors, jitter, have } = ctx;
   if (!hub) return;
   ctx.bigLadders = true;
-  const stand = f => f && !f.fluid && !f.prot && !f.siteBlocked && !f.landing && !ctx.border(f);   // never onto the cube's rim
+  // never onto the cube's rim, nor from the foot of a spiral's mountain (cubegen/areas.js: the way up is the ramp)
+  const stand = f => f && !f.fluid && !f.prot && !f.siteBlocked && !f.landing && !ctx.border(f) && !ctx.foot?.has(f.c);
   const failed = new Set();
   for (let n = 0; n < ACCESS; n++) {
     const seen = reachable(ctx, false), adj = graph(ctx, false), und = new Map();
@@ -74,7 +75,8 @@ export function addEscapes(ctx) {
       if (!from || f.top < from.top) from = f;
     }
     if (!from) break;
-    const seg = search(ctx, from, f => safe.has(f.id), jitter, have);
+    // (in a large area never up onto the rim: its faces are open, the rim is the next cube's edge too)
+    const seg = search(ctx, from, f => safe.has(f.id) && !(ctx.spec.area && !f.landing && ctx.border(f) && !f.prot), jitter, have);
     if (!take(ctx, seg)) { failed.add(from.id); continue; }
     ctx.stats.escapes = (ctx.stats.escapes || 0) + 1;
   }

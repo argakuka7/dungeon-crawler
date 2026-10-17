@@ -139,9 +139,11 @@ export async function goStructure(kind, style, from) {
 }
 
 // Jump into the next of the big height pieces (world/heights.js) for playtesting: a tableland's
-// ascent, plateau or descent, a great shaft, a pinnacle, or a cube with a tunnel (cubegen/tunnel.js;
-// those are only known once made, so the cubes of this depth and the ones below are made in turn).
-export const FEATURES = ['ascent', 'plateau', 'descent', 'shaft', 'pinnacle', 'tunnel'];
+// ascent, plateau or descent, a great shaft, a pinnacle, a large area (world/areas.js: in at the
+// foot of a spiral or a hairpin), a set piece (a lone peak, a great lake), or a cube with a tunnel
+// (cubegen/tunnel.js; those are only known once made, so the cubes of this depth and the ones
+// below are made in turn).
+export const FEATURES = ['ascent', 'plateau', 'descent', 'shaft', 'pinnacle', 'spiral', 'hairpin', 'peak', 'lake', 'tunnel'];
 const lastFeature = {};
 export async function goFeature(kind) {
   if (state.transitioning || state.inventoryOpen) return;
@@ -154,7 +156,12 @@ export async function goFeature(kind) {
       // in at the foot of the ascent, from the plateau into the descent
       found.push({ key: piece.keys[at], dir: at === 0 ? piece.ways[0] : piece.dirs[at - 1] ^ 1 });
     }
-    if (kind === 'pinnacle' && L.pinnacle) found.push({ key: L.pinnacle });
+    for (const kind2 of ['pinnacle', 'peak', 'lake']) if (kind === kind2 && L[kind2]) found.push({ key: L[kind2] });
+    // a large area: in by the face the route comes in by
+    for (const piece of L.areas) if (piece.kind === kind) {
+      const k = piece.keys[0], before = L.route[L.route.indexOf(k) - 1];
+      found.push({ key: k, dir: [0, 1, 2, 3].find(d => step(k, d) === before) });
+    }
   }
   clearMouseInput(); state.transitioning = true;
   try {
@@ -168,6 +175,16 @@ export async function goFeature(kind) {
     } else if (found.length) {
       const i = (found.findIndex(f => f.key === lastFeature[kind]) + 1) % found.length;
       pick = found[i];
+      // a planned shaft over a room a river crosses is a plunge (world/heights.js shaftOf: the
+      // rivers are only known to the worker): the next one that came out a shaft
+      if (kind === 'shaft') {
+        pick = null;
+        for (let j = 0; j < found.length && !pick; j++) {
+          const f = found[(i + j) % found.length], c = await whenReady(cubes.get(f.key));
+          if (state.cubes !== cubes) return;
+          if (c.map.shaft) pick = f;
+        }
+      }
     }
     if (!pick) { setStatus(`No ${kind} found`); return; }
     lastFeature[kind] = pick.key;

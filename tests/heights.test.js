@@ -56,13 +56,15 @@ test('tablelands and pinnacles come from the seed alone, on the route, clear of 
       }
     }
   }
-  assert.ok(tablelands > 600 && pinnacles > 800, JSON.stringify({ tablelands, pinnacles }));
+  // (a tableland shares the depth's large-area slot with the large areas, world/areas.js; a pinnacle
+  // the set-piece slot with the lone peak and the great lake)
+  assert.ok(tablelands > 300 && pinnacles > 550, JSON.stringify({ tablelands, pinnacles }));
   assert.deepEqual([...kinds].sort(), ['plunge', 'shaft', 'stairs']);
 });
 
 // every tableland of a few worlds, with its world
-function* tablelands() {
-  for (const seed of SEEDS) {
+function* tablelands(seeds = SEEDS) {
+  for (const seed of seeds) {
     const w = new World(seed);
     for (const d of DEPTHS) for (const piece of w.layout(d).heights) yield { w, piece, seed, d };
   }
@@ -91,7 +93,7 @@ test("a tableland's faces: high all round the plateau, the pads up there, the es
 
 test('every tableland generates: the route climbs the escarpment, crosses the plateau and comes down', () => {
   const seen = { plunge: 0, shaft: 0, stairs: 0 };
-  for (const { w, piece, seed, d } of tablelands()) {
+  for (const { w, piece, seed, d } of tablelands(Array.from({ length: 20 }, (_, i) => i))) {
     const [a, b, c] = piece.keys.map(k => w.cube(k).map);
     assert.equal(a.archetype, 'ascent'); assert.equal(b.archetype, 'plateau'); assert.equal(c.archetype, 'descent');
     for (const m of [a, b, c]) for (const p of m.portals) assert.equal(m.safe[p.floor.id], 1, `${seed}/${d}: ${m.key} portal ${p.dir}`);
@@ -113,7 +115,7 @@ test('every tableland generates: the route climbs the escarpment, crosses the pl
 
 test('a great shaft opens into the room below: a hole nothing crosses, a ramp round it, a dry basin under it', () => {
   let shafts = 0;
-  for (const { w, piece, seed, d } of tablelands()) {
+  for (const { w, piece, seed, d } of tablelands(Array.from({ length: 24 }, (_, i) => i))) {
     const below = shaftOf(w, piece);
     if (!below) continue;
     shafts++;
@@ -198,9 +200,11 @@ test('tunnels: a roof over a passage two cells wide, and the way leads through m
 });
 
 test('walking through a tunnel and plunging onto something soft', () => {
-  const w = new World(3, { themes: ['canyon'] });
+  const worlds = [];
   let tunnel = null, plunge = null;
-  for (const d of [5, 6, ...DEPTHS]) {
+  for (const seed of [3, 4, 5, 6, 7, 8]) for (const d of [5, 6, ...DEPTHS]) {
+    if (tunnel && plunge) break;
+    const w = worlds[seed] ||= new World(seed, { themes: ['canyon'] });
     for (const k of w.layout(d).exists) {
       w.prepare(k);
       const spec = w.spec(k);

@@ -40,11 +40,17 @@ export function cascadeGround(ctx) {
   if (inn) {
     // the catch pool sits on the line the sheet comes down (the fall cell's entry edge)
     const fc = idx(inn.x, inn.z), [dx, dz] = DIRS[inn.d];
-    for (let z = inn.z - 2; z <= inn.z + 2; z++) for (let x = inn.x - 2; x <= inn.x + 2; x++) void0[idx(x, z)] = 0;
-    const [cells, S] = pool(ctx, inn.x + 0.5 - dx * 0.5, inn.z + 0.5 - dz * 0.5, 1.7, inn.type);
-    for (const c of cells) sky.add(c);
-    shaft(fc); shaft(fc - dx - dz * N);
-    list.push({ c: fc, d: inn.d, top: TOP, bot: S, type: inn.type, layer: 0, in: true });
+    if (spec.lake && ctx.fluid0[fc]) {
+      // into a great lake (cubegen/setpieces.js): the lake is its catch pool
+      shaft(fc); shaft(fc - dx - dz * N);
+      list.push({ c: fc, d: inn.d, top: TOP, bot: ctx.surf0[fc], type: inn.type, layer: 0, in: true });
+    } else {
+      for (let z = inn.z - 2; z <= inn.z + 2; z++) for (let x = inn.x - 2; x <= inn.x + 2; x++) void0[idx(x, z)] = 0;
+      const [cells, S] = pool(ctx, inn.x + 0.5 - dx * 0.5, inn.z + 0.5 - dz * 0.5, 1.7, inn.type);
+      for (const c of cells) sky.add(c);
+      shaft(fc); shaft(fc - dx - dz * N);
+      list.push({ c: fc, d: inn.d, top: TOP, bot: S, type: inn.type, layer: 0, in: true });
+    }
   }
   if (list.length) bankGround(ctx, new Set(list.map(f => f.c)));   // the pools spill only into their falls
 }

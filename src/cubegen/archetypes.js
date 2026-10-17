@@ -8,21 +8,27 @@
 //   archipelago islands in void (or in a sea)
 //   mesa        one big flat-topped block
 //   crater      a ring wall around a lake
-// and the big height pieces (cubegen/heights.js): ascent, plateau, descent, pinnacle; then the
-// basin under a great shaft and a tunnel (cubegen/tunnel.js) where the spec asks for them
+// and the big height pieces (cubegen/heights.js): ascent, plateau, descent, pinnacle; the large
+// areas (cubegen/areas.js): spiral, and the hairpin's foot, turn and summit; the set pieces
+// (cubegen/setpieces.js): peak, lake; then the basin under a great shaft and a tunnel
+// (cubegen/tunnel.js) where the spec asks for them
 import { N, MAX_L } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
 import { shapeGorge, shapeIsland } from './span.js';
 import { shapeAscent, shapePlateau, shapeDescent, shapePinnacle, shapeShaftBottom } from './heights.js';
 import { carveTunnel } from './tunnel.js';
+import { shapeSpiral, shapeFoot, shapeTurn, shapeSummit } from './areas.js';
+import { shapePeak, shapeLake } from './setpieces.js';
 
-const PIECES = { ascent: shapeAscent, plateau: shapePlateau, descent: shapeDescent, pinnacle: shapePinnacle };
+const PIECES = { ascent: shapeAscent, plateau: shapePlateau, descent: shapeDescent, pinnacle: shapePinnacle,
+  spiral: shapeSpiral, foot: shapeFoot, turn: shapeTurn, summit: shapeSummit, peak: shapePeak, lake: shapeLake };
 
 // 0 at the faces, 1 from three cells in
 const inner = (x, z) => clamp((Math.min(x, z, N - 1 - x, N - 1 - z) - 1) / 2, 0, 1);
 
 export function shapeCube(ctx) {
   ctx.seaCells = []; ctx.keep = new Set(); ctx.soft = new Set(); ctx.roofs = new Map(); ctx.noCross = new Set(); ctx.pinnacle = new Set(); ctx.rails = new Set();
+  ctx.ramp = new Set(); ctx.railed = new Set(); ctx.peakTop = new Set(); ctx.islet = new Set(); ctx.foot = new Set();
   shapeArchetype(ctx);
   if (ctx.spec.shaftBottom) shapeShaftBottom(ctx);
   if (ctx.spec.tunnel) carveTunnel(ctx);

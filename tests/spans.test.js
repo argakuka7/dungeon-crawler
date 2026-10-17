@@ -35,7 +35,8 @@ test('spans are planned from the seed and the theme on every depth, straight and
       assert.deepEqual(L.spans.map(s => s.keys), b(d).spans.map(s => s.keys));
       if (d === 0 || d === MAX_DEPTH) { assert.equal(L.spans.length, 0); continue; }
       const cfg = L.theme.spans;
-      assert.ok(L.spans.length <= cfg.max);
+      // (a hairpin's twin spans, world/areas.js, count as one)
+      assert.ok(L.spans.filter(s => !s.twin).length + (L.spans.some(s => s.twin) ? 1 : 0) <= cfg.max);
       for (const s of L.spans) {
         s.island ? island++ : route++;
         at.add(d); if (L.theme.cave) cave++;

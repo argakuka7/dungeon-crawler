@@ -80,6 +80,8 @@
       <ul>
         <li lang="en"><b>Guardians:</b> the room with the well always gets the descent guardian. One or two rooms along the way get side guardians.</li>
         <li lang="de"><b>Wächter:</b> Der Raum mit dem Brunnen bekommt immer den Brunnenwächter. Ein oder zwei Räume unterwegs bekommen Torwächter.</li>
+        <li lang="en"><b>A big place:</b> on many depths the planner lays a whole shape into the path: four rooms round one mountain, or six rooms in a hairpin bend with two bridges (see <a href="#heights">the heights</a>). When the path gets to the chosen step, it puts down all the shape's rooms at once, any way round. If the shape does not fit, it backs up, like at any other dead end. Guardians never stand in it.</li>
+        <li lang="de"><b>Ein großer Ort:</b> In vielen Tiefen legt der Planer eine ganze Form in den Weg: vier Räume rund um einen Berg, oder sechs Räume in einer Haarnadelkurve mit zwei Brücken (siehe <a href="#heights">die Höhen</a>). Wenn der Weg beim gewählten Schritt ankommt, legt er alle Räume der Form auf einmal hin, egal wie herum. Passt die Form nicht, geht er zurück, wie bei jeder anderen Sackgasse. Wächter stehen nie darin.</li>
         <li lang="en"><b>Side rooms:</b> some rooms get one extra room next to them, never more than 14 rooms per depth in total.</li>
         <li lang="de"><b>Nebenräume:</b> Manche Räume bekommen einen zusätzlichen Raum daneben, aber nie mehr als 14 Räume pro Tiefe insgesamt.</li>
         <li lang="en"><b>Bridges:</b> on almost every depth, a straight row of rooms may become a gorge with one long bridge across it, or a bridge out to a lonely island. How often is up to the depth's theme (see <a href="#bridges">the bridges</a>).</li>
@@ -235,9 +237,9 @@
   </div>
 </section>
 
-<section class="slide" id="heights" data-lv="1" data-src="src/world/heights.js#planHeights src/cubegen/heights.js#shapeShaft,shapePinnacle src/cubegen/tunnel.js#carveTunnel">
-  <h2 lang="en">Cliffs, needles, shafts and tunnels</h2>
-  <h2 lang="de">Klippen, Felsnadeln, Schächte und Tunnel</h2>
+<section class="slide" id="heights" data-lv="1" data-src="src/world/heights.js#planHeights,planSlots,planSetPiece src/cubegen/heights.js#shapeShaft,shapePinnacle src/cubegen/tunnel.js#carveTunnel src/world/areas.js#spiralAt src/cubegen/setpieces.js#shapePeak,shapeLake">
+  <h2 lang="en">Cliffs, mountains, needles, lakes and tunnels</h2>
+  <h2 lang="de">Klippen, Berge, Felsnadeln, Seen und Tunnel</h2>
   <div class="cols">
     <div>
       <p lang="en">Big height differences are planned like the gorges, from the seed, before any cube is built:</p>
@@ -247,15 +249,25 @@
         <li lang="de">Ein <b>Tafelberg</b>: drei Räume nacheinander auf der Route. Im ersten stehst du am Fuß einer steilen Klippe und kletterst hinauf. Der zweite ist eine hohe Hochebene. Vom Rand des dritten kommst du wieder hinunter: Du <b>springst</b> auf etwas Weiches (Sand, Schnee, Moos, ein Netz), kletterst hinunter, oder gehst auf einer Rampe um einen <b>großen Schacht</b> herum nach unten, ein Loch, das bis in die Tiefe darunter geht. Durch das Loch kannst du sogar den Raum dort unten sehen!</li>
         <li lang="en">A <b>pinnacle</b>: a needle of rock with a path winding round it to a treasure on top.</li>
         <li lang="de">Eine <b>Felsnadel</b>: eine Säule aus Fels, mit einem Weg, der sich um sie herum zu einem Schatz oben hinaufwindet.</li>
+        <li lang="en">A <b>spiral</b>: four rooms round one mountain in the corner they share. A railed ramp winds round it, from its foot where you come in to a ridge high up where you go out.</li>
+        <li lang="de">Eine <b>Spirale</b>: vier Räume rund um einen Berg in der Ecke, die sie sich teilen. Eine Rampe mit Geländer windet sich um ihn herum, von seinem Fuß, wo du hereinkommst, bis zu einem Grat hoch oben, wo du hinausgehst.</li>
+        <li lang="en">A <b>hairpin</b>: six rooms. A low bridge goes out over a canyon, two rooms climb at the turn, and a high bridge comes back over the same canyon to a summit. From up there you see the bridge you crossed below.</li>
+        <li lang="de">Eine <b>Haarnadel</b>: sechs Räume. Eine niedrige Brücke führt über eine Schlucht hinaus, zwei Räume steigen in der Kurve an, und eine hohe Brücke kommt über dieselbe Schlucht zurück zu einem Gipfel. Von dort oben siehst du die Brücke, über die du unten gegangen bist.</li>
+        <li lang="en">A <b>lone peak</b>: an almost empty field with one block of rock in the middle, and a ladder up to a treasure on top. A <b>great lake</b>: water from shore to shore, the way round it on the shore, and sometimes an islet with a treasure and a bridge out to it.</li>
+        <li lang="de">Ein <b>einsamer Gipfel</b>: ein fast leeres Feld mit einem Felsblock in der Mitte und einer Leiter hinauf zu einem Schatz. Ein <b>großer See</b>: Wasser von Ufer zu Ufer, der Weg führt am Ufer herum, und manchmal gibt es eine kleine Insel mit einem Schatz und einer Brücke hinüber.</li>
         <li lang="en">A <b>tunnel</b>: a ridge of rock across a room, with a short passage through it. In the caves and the canyon the ridge goes from wall to wall, so the way leads through.</li>
         <li lang="de">Ein <b>Tunnel</b>: ein Felsrücken quer durch einen Raum, mit einem kurzen Durchgang. In den Höhlen und in der Schlucht geht der Rücken von Wand zu Wand, also führt der Weg hindurch.</li>
       </ul>
+      <p lang="en">A depth gets at most one big place (a tableland, a spiral or a hairpin) and at most one special room (a pinnacle, a lone peak or a lake), each by chance. The walls inside a big place are open from the start, so it feels like one place.</p>
+      <p lang="de">Eine Tiefe bekommt höchstens einen großen Ort (einen Tafelberg, eine Spirale oder eine Haarnadel) und höchstens einen besonderen Raum (eine Felsnadel, einen einsamen Gipfel oder einen See), jeweils durch Zufall. Die Wände in einem großen Ort sind von Anfang an offen, damit er sich wie ein Ort anfühlt.</p>
     </div>
     <div class="card">
       <h3 lang="en">Making the route take the scenic way</h3>
       <h3 lang="de">Damit die Route den schönen Weg nimmt</h3>
       <p lang="en">The route search always wants the cheapest way. A ladder straight up the needle is much shorter than the ramp round it! So in these rooms, ladders and stairs onto the needle, or down off the cliff, cost extra. Now the ramp and the leap are the cheapest, and the route takes them. The ladders are still there for the way back.</p>
       <p lang="de">Die Routensuche will immer den billigsten Weg. Eine Leiter gerade die Nadel hinauf ist viel kürzer als die Rampe außen herum! Darum kosten in diesen Räumen Leitern und Treppen auf die Nadel oder die Klippe hinunter extra. Jetzt sind die Rampe und der Sprung am billigsten, und die Route nimmt sie. Die Leitern gibt es trotzdem, für den Rückweg.</p>
+      <p lang="en">The spiral works the same way: anything but walking onto its ramp costs extra, so you really go all the way round. On the lone peak it is the other way round: there only the ladder is cheap.</p>
+      <p lang="de">Bei der Spirale ist es genauso: Alles außer Gehen auf ihre Rampe kostet extra, also gehst du wirklich ganz herum. Beim einsamen Gipfel ist es umgekehrt: Dort ist nur die Leiter billig.</p>
       <p lang="en">A tunnel's roof is just one more floor, over the floor you walk on. The cutaway cuts it open around you, like the upper floors.</p>
       <p lang="de">Das Dach eines Tunnels ist einfach noch ein Boden, über dem Boden, auf dem du gehst. Der Schnitt öffnet es um dich herum, wie die oberen Stockwerke.</p>
     </div>
@@ -419,6 +431,8 @@
       <p lang="de">Sonst probiert sie jeden freien Nachbarn. <code>out.push</code> geht vorwärts. Wenn das tiefere <code>visit()</code> scheitert, geht <code>out.pop()</code> zurück, und die Schleife probiert den nächsten Nachbarn.</p>
       <p lang="en">Each cell gets a random <code>priority</code> once, so the order of trying is shuffled by the seed.</p>
       <p lang="de">Jede Zelle bekommt einmal eine zufällige <code>priority</code>, so mischt der Seed die Reihenfolge des Ausprobierens.</p>
+      <p lang="en">With a <code>template</code>, at step <code>at</code> it does not try single neighbours: it tries the whole shape of a big place at once, every way round, and takes it all back if what comes after does not work out.</p>
+      <p lang="de">Mit einem <code>template</code> probiert sie beim Schritt <code>at</code> keine einzelnen Nachbarn: Sie probiert die ganze Form eines großen Orts auf einmal, in jeder Richtung, und nimmt alles zurück, wenn es danach nicht klappt.</p>
     </div>
   </div>
 </section>

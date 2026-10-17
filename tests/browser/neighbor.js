@@ -23,12 +23,15 @@ const check = (condition, message) => { if (!condition) throw Error(message); };
 export async function runShaftViewChecks() {
   const { state } = await import('../../src/game/state.js');
   const { goFeature } = await import('../../src/game/dev.js');
+  const { newWorld } = await import('../../src/game/flow.js');
   const { CUBE_H, BASE } = await import('../../src/core/constants.js');
   const show = state.showNeighbors, out = [];
   try {
     state.showNeighbors = true;
-    for (let n = 0; n < 3; n++) {
+    // (great shafts are rare: other worlds where this one has none)
+    for (let n = 0, seed = 0; n < 3; n++) {
       await goFeature('shaft');
+      if (!state.map?.shaft && !out.length && seed < 12) { await newWorld(++seed); n--; continue; }
       const m = state.map;
       if (!m?.shaft) break;
       check(!state.cubes.cubes.get(m.shaft.below)?.visits, `${m.key}: the room below was visited already`);

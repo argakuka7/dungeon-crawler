@@ -53,9 +53,12 @@ usual population.
 
 Big heights (every depth but the town and the core, see
 [world.md](world.md#big-heights-tablelands-pinnacles-great-shafts-worldheightsjs-cubegenheightsjs)):
-a tableland on the route (an escarpment to climb, a plateau, and a way down: a leap onto
-something soft, a ramp round a great shaft into the depth below, or a climb), a pinnacle with a
-reward site on top, and short tunnels through ridges of rock, most of all under rock walls.
+at most one large area on the route (a tableland: an escarpment to climb, a plateau, and a way
+down: a leap onto something soft, a ramp round a great shaft into the depth below, or a climb; a
+spiral: four rooms round a mountain, a railed ramp winding up it; a hairpin: two bridges over one
+canyon, out low and back high), at most one set piece (a pinnacle or a lone peak with a reward
+site on top, or a great lake), and short tunnels through ridges of rock, most of all under rock
+walls. See [world.md](world.md#large-areas-spiral-and-hairpin-worldareasjs-cubegenareasjs).
 
 ## Enemies per depth
 

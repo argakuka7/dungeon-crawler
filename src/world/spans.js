@@ -33,11 +33,12 @@ const HIGH = 8;
 // the spans of depth d. cfg: its theme's `spans` (themes/index.js), or null. spine: the route's
 // cells ([x, z]), K: cell -> cube key, blocked(key):
 // cubes that may not be part of a span (guardians, the horde room), free(cell): an empty cell
-// an island branch may take, budget: how many rooms an island branch may add. Returns the
+// an island branch may take, budget: how many rooms an island branch may add, taken: spans the
+// depth has already (a hairpin's twins, world/areas.js, count as one). Returns the
 // spans, the cells they claim and `apart`: cubes no other room may border (a sky gorge, an
 // island and its gorge).
 // learn: world.html#bridges (see learn/README.md)
-export function planSpans(seed, d, cfg, spine, K, blocked, free, budget) {
+export function planSpans(seed, d, cfg, spine, K, blocked, free, budget, taken = 0) {
   const spans = [], cells = new Map(), lonely = new Set();
   if (!cfg || d === 0 || d >= MAX_DEPTH) return { spans, cells, apart: lonely };
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x5ba9e7)));
@@ -66,7 +67,9 @@ export function planSpans(seed, d, cfg, spine, K, blocked, free, budget) {
       [a, b] = R() < 0.5 ? [hi, lo] : [lo, hi];
     }
     span.levels = Array.from({ length: n + 1 }, (_, j) => Math.round(a + (b - a) * j / n));
+    // a river runs under the bridge only where the deck is high enough for its banks below it
     span.river = R() < 0.8 && !sky ? ri(0, n - 1) : -1;
+    if (span.river >= 0 && !riverFits(span, span.river)) span.river = [...Array(n).keys()].find(i => riverFits(span, i)) ?? -1;
     span.sky = sky;
     spans.push(span);
     if (sky || island) for (const c of line.slice(1, island ? undefined : -1)) lonely.add(K(c));
@@ -86,14 +89,14 @@ export function planSpans(seed, d, cfg, spine, K, blocked, free, budget) {
   }
   runs.sort((a, b) => b.score - a.score);
   for (const { line } of runs) {
-    if (spans.length >= cfg.max) break;
+    if (spans.length + taken >= cfg.max) break;
     const inner = line.slice(1, -1);
     if (!apart(line) || spans.some(s => s.keys.some(k => inner.some(c => K(c) === k)))) continue;
     if (R() < cfg.route) add(line, false);
   }
 
   // a lonely island: off the route, straight out from a route room, its only way in the bridge
-  if (spans.length < cfg.max && R() < cfg.island) {
+  if (spans.length + taken < cfg.max && R() < cfg.island) {
     const options = [];
     for (const c of spine.slice(2, -1)) {
       if (blocked(K(c)) || cells.has(K(c))) continue;
@@ -109,6 +112,10 @@ export function planSpans(seed, d, cfg, spine, K, blocked, free, budget) {
   }
   return { spans, cells, apart: lonely };
 }
+
+// may gorge cube i of a span carry the river? (its banks come up a level over the water, and the
+// deck keeps a head's height over them)
+export const riverFits = (span, i) => Math.min(span.levels[i], span.levels[i + 1]) >= 8;
 
 // the socket a span gives a face of one of its cubes, or null (the WFC pins span cubes)
 export function spanSocket(span, i, d) {
