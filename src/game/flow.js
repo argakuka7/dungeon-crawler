@@ -222,14 +222,20 @@ export function settleIn(neighbors = true) {
   // get the cubes behind our portals (and doors) ready in the background
   state.cubes.prefetch([...c.map.portals.filter(p => p.kind !== 'spawn').map(p => step(state.cubeKey, p.dir)),
     ...(c.map.doors || []).map(d => d.to)]);
+  // a great shaft shows the room under it through its hole: once that is made, show it
+  const below = c.map.shaft?.below, k = state.cubeKey, cubes = state.cubes;
+  if (below && neighbors && !cubes.cubes.has(below)) cubes.get(below).then(() => { if (state.cubeKey === k && state.cubes === cubes) updateNeighbors(); }, () => {});
 }
 
 // Discovered cubes within the render budget, on the active stratum only.
 export function visitedNeighbors(k) {
   if (!state.showNeighbors || isInterior(k)) return [];   // inside a house: nothing around
   // (landmarks show in the surroundings too: they are what you find your way by)
-  return discoveredCubes(state.cubes.cubes, k)
-    .map(c => ({ ...c, open: openedSides(state.openedFaces, c.key),
+  const list = discoveredCubes(state.cubes.cubes, k);
+  // down a great shaft (world/heights.js): the room under it, seen before it is visited
+  const below = state.cubes.cubes.get(k)?.map.shaft?.below, under = below && state.cubes.cubes.get(below);
+  if (under?.geo) list.push({ key: under.key, geo: under.geo, dx: 0, dz: 0, dy: -1 });
+  return list.map(c => ({ ...c, open: openedSides(state.openedFaces, c.key),
       landmarks: (state.cubes.cubes.get(c.key).map.rewardSites || []).map(s => s.landmark).filter(Boolean) }));
 }
 

@@ -7,6 +7,7 @@ import { propMetadata } from '../core/propcatalog.js';
 import { PRESTIGE } from '../world/sites.js';
 import { search, take } from './route.js';
 import { reachTo } from './reach.js';
+import { PINNACLE_TOP } from './heights.js';
 
 export const RECIPES = {
   mines: { storage: ['sacks', 'plank_stack', 'lantern'], gallery: ['sacks', 'pickaxe_in_rock', 'lantern'],
@@ -78,8 +79,11 @@ export function reserveSites(ctx) {
     const portalCells = new Set(ctx.portals.flatMap(p => p.cells));
     const shapes = intent.landmark && ['camp', 'monument'].includes(intent.role)
       ? [siteShape(intent, rank, 1), siteShape(intent, rank, -1)] : [siteShape(intent, rank)];
-    for (const shape of shapes) for (const layer of [...new Set([ctx.K - 1, 0])]) for (let turn = 0; turn < 4; turn++) {
+    // on a pinnacle (cubegen/heights.js) the site is its top: only there, facing any way
+    const pin = ctx.spec.pinnacle && !ctx.sites.length && !intent.landmark ? ctx.spec.pinnacle : null;
+    for (const shape of shapes) for (const layer of pin ? [0] : [...new Set([ctx.K - 1, 0])]) for (let turn = 0; turn < 4; turn++) {
       for (let cz = 2; cz < N - 2; cz++) for (let cx = 2; cx < N - 2; cx++) {
+        if (pin && (cx !== pin.x || cz !== pin.z)) continue;
         const site = { ...intent, ...shape, rank, cx, cz, turn, layer }, cells = [];
         const { u0, u1, v0, v1 } = shape;
         for (let v = v0; v <= v1; v++) for (let u = u0; u <= u1; u++) {
@@ -88,11 +92,14 @@ export function reserveSites(ctx) {
           cells.push({ c: idx(x, z), u, v });
         }
         if (cells.length !== (u1 - u0 + 1) * (v1 - v0 + 1)) continue;
-        if (cells.some(({ c }) => occupied.has(c) || portalCells.has(c) || ctx.sky.has(c)
+        if (cells.some(({ c }) => occupied.has(c) || portalCells.has(c) || (!pin && ctx.sky.has(c))
           || ctx.spouts.some(s => s.cells.includes(c)))) continue;
+        if (pin && cells.some(({ c }) => Math.hypot(c % N - pin.x, Math.floor(c / N) - pin.z) >= PINNACLE_TOP)) continue;
         if (!layer && cells.some(({ c }) => ctx.fluid0[c] || ctx.void0[c])) continue;
         // Top-layer platforms preserve fluids/void below; never crush existing ground.
-        site.level = layer ? ctx.B[layer] : Math.min(12, Math.max(4,
+        // (as high as the ground goes on a tableland's shelves and a pinnacle's top, where there
+        // are no slabs; elsewhere under the first layer)
+        site.level = layer ? ctx.B[layer] : pin ? ctx.pinnacleTop : Math.min(ctx.spec.height ? MAX_L - 2 : 12, Math.max(4,
           Math.round(cells.reduce((sum, { c }) => sum + ctx.lvl0[c], 0) / cells.length)));
         if (cells.some(({ c, u, v }) => {
           const h = heightAt(site, u, v);
@@ -100,7 +107,7 @@ export function reserveSites(ctx) {
             && Math.max(ctx.lvl0[c], ctx.surf0[c]) + HEAD > h - 2);
         })) continue;
         const distance = Math.min(...ctx.portals.map(p => Math.hypot(cx - p.c % N, cz - Math.floor(p.c / N))));
-        if (distance < 2 + rank * 0.6) continue;
+        if (distance < 2 + rank * 0.6 && !pin) continue;
         candidates.push({ site, cells, score: distance + R() * 3 + (layer ? rank * 2 : 0) });
       }
     }

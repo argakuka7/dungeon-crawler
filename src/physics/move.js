@@ -107,6 +107,11 @@ export function movePlayer(dt, dx, dz, run, jump) {
   return gr;
 }
 
+// how hard a landing was (the impact speed), for tumbling over and sitting down: a leaping
+// potion's higher jumps (jumpMod) land as softly as plain ones, and a plunge's soft landing
+// (cubegen/heights.js: snow, moss, sand, a web) catches any fall
+export const landingSpeed = (gr, jumpMod = 0) => gr.s?.soft ? 0 : gr.landed / Math.sqrt(1 + jumpMod);
+
 // which layer the character is on (for fading): the floor's layer, or the nearer end of a structure
 export function updateLayer(gr) {
   if (!player.grounded || !gr.s) return;

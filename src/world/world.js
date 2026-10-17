@@ -12,6 +12,7 @@ import { voidAllowed, fallMask } from './voids.js';
 import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './town.js';
 import { generateInterior } from '../cubegen/interior.js';
 import { spanSpec } from './spans.js';
+import { heightSpec, heightsOf, shaftAbove } from './heights.js';
 import { buildOf } from '../themes/builds.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
@@ -50,8 +51,8 @@ export class World {
 
   // learn: architecture.html#cube-journey (see learn/README.md)
   spec(k) {
-    const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = this.layout(-Y).theme;
-    const span = spanSpec(this.layout(-Y), k, buildOf(theme).bridges);
+    const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = this.layout(-Y).theme, L = this.layout(-Y);
+    const span = spanSpec(L, k, buildOf(theme).bridges), height = heightSpec(this, k);
     const faces = [0, 1, 2, 3].map(d => {
       const f = this.faces.get(faceKey(k, d));
       return { sock: t.sock[d], profile: Int16Array.from(f.profile), river: f.river, portal: f.portal, wall: f.wall, spout: f.spout,
@@ -63,6 +64,16 @@ export class World {
       const f = this.faces.get(faceKey(k, d));
       if (f?.portal) portals.push({ dir: d, ...f.portal });
     }
+    const outflow = this.faces.get(faceKey(k, 4))?.fall || null, inflow = this.faces.get(faceKey(k, 5))?.fall || null;
+    const special = isClearing(k, this.seed) || L.guardians.has(k) || span || height;
+    // a needle with a reward site on top (heights.js), where no river runs
+    const R = this.wfc.rng(k, 0x9e1d7), top = heightsOf(theme).top;
+    const pinnacle = L.pinnacle === k && !special && !t.sock.includes('W')
+      ? { x: 6 + Math.floor(R() * 4), z: 6 + Math.floor(R() * 4), top: top[0] + Math.floor(R() * (top[1] - top[0] + 1)) } : null;
+    // a short tunnel the way leads through (cubegen/tunnel.js): not where rivers run, falls come
+    // or go, spouts pour, a horde waits, or something else shapes the cube
+    const tunnel = -Y > 0 && !special && !pinnacle && !L.hordes.has(k) && !t.sock.includes('W') && !outflow && !inflow
+      && faces.every(f => !f.spout) && R() < heightsOf(theme).tunnel;
     return {
       key: k, X, Y, Z, kind: t.kind, exit: this.layout(-Y).exit.get(k) ?? null, K: t.K, B: LAYER_BASE.slice(0, t.K), faces, portals,
       spawn: k === this.start, town: isTown(k), merchantCamp: isMerchantCamp(k, this.seed), enemyFree: enemyFreeAt(k), noise: this.noise, depth: -Y, cave: theme.cave, walled: theme.cave || !!theme.walls,
@@ -72,11 +83,12 @@ export class World {
       gateKeys: [0, 1, 2, 3].map(d => this.layout(-Y).gateFaces.get(faceKey(k, d)) || null),
       roomRole: this.layout(-Y).roles.get(k), rewardSites: this.layout(-Y).sitePlans.get(k) || [],
       fluid: theme.river, fluidMix: theme.fluids, voidOK: voidAllowed(this, k), fallIn: fallMask(this, k),
-      outflow: this.faces.get(faceKey(k, 4))?.fall || null, inflow: this.faces.get(faceKey(k, 5))?.fall || null, relief: theme.relief,
+      outflow, inflow, relief: theme.relief, height, pinnacle, tunnel, shaftBottom: special ? null : shaftAbove(this, k),
       // islands without pillars: lakes, the sky islands near the top and the abyss
       floating: !isClearing(k, this.seed) && (t.kind === 'lake' || ((-Y <= 3 || -Y >= 19) && this.wfc.rng(k, 0xf10a7)() < 0.5)),
       seed: hash32(this.seed ^ hashKey(k)),
-      archetype: span ? span.role : -Y === 0 ? 'plain' : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
+      archetype: span ? span.role : height ? height.role : pinnacle ? 'pinnacle' : -Y === 0 ? 'plain'
+        : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
     };
   }
 

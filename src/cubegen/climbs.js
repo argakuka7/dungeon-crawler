@@ -36,8 +36,9 @@ export function jumpMoves(ctx, f, d, out) {
   for (let gap = 1; gap <= 2; gap++) {
     const gx = f.x + dx * gap, gz = f.z + dz * gap, ex = gx + dx, ez = gz + dz;
     if (!inb(ex, ez)) return;
-    // the gap cell has to be clearly lower, with nothing to bump into overhead
-    if (ctx.cols[idx(gx, gz)].some(h => h.top > f.top - 4 && h.bottom < f.top + 6)) return;
+    // the gap cell has to be clearly lower, with nothing to bump into overhead (and never a great
+    // shaft's hole: you wind down round it)
+    if (ctx.noCross?.has(idx(gx, gz)) || ctx.cols[idx(gx, gz)].some(h => h.top > f.top - 4 && h.bottom < f.top + 6)) return;
     for (const g of ctx.cols[idx(ex, ez)]) {
       const dh = g.top - f.top;
       if (g.fluid || g.siteBlocked || dh > (gap === 1 ? 1 : -2) || dh < -2 || !ctx.headOK(g, f.top + 2)) continue;   // soft landings only

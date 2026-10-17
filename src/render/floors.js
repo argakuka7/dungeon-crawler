@@ -1,7 +1,7 @@
 // Terrain geometry for every floor: smooth top, cliff walls, slab underside, fluid volume.
 import { N, LH, DIRS, OPP, DIRV, EDGE_CORNERS, edgePts } from '../core/constants.js';
 import { idx, inb, hash32 } from '../core/util.js';
-import { C, gradient, TOP_STOPS, UNDERSIDE, fluidBed, fluidBank } from './palette.js';
+import { C, gradient, TOP_STOPS, UNDERSIDE, SOFT, fluidBed, fluidBank } from './palette.js';
 import { cliffWall } from './walls.js';
 import { buildInteriorFloors } from './interior.js';
 
@@ -10,6 +10,7 @@ const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z 
 function topColor(m, f) {
   const cs = f.cs;
   if (f.fluid) return fluidBed(f.fluid);
+  if (f.soft) return SOFT.clone().multiplyScalar(shade(f.x, f.z));   // a plunge's landing
   const top = gradient(TOP_STOPS, (cs[0] + cs[1] + cs[2] + cs[3]) / 4 / LH).multiplyScalar(shade(f.x, f.z));
   // sandy / scorched banks next to fluids
   for (const g of f.link) if (g && g.fluid) top.lerp(fluidBank(g.fluid), 0.4);

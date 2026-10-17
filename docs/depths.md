@@ -51,6 +51,12 @@ one long bridge over a valley or the open sky, sometimes out to a lonely island;
 [world.md](world.md#gorge-spans-worldspansjs-cubegenspanjs). Their gorge cubes have half the
 usual population.
 
+Big heights (every depth but the town and the core, see
+[world.md](world.md#big-heights-tablelands-pinnacles-great-shafts-worldheightsjs-cubegenheightsjs)):
+a tableland on the route (an escarpment to climb, a plateau, and a way down: a leap onto
+something soft, a ramp round a great shaft into the depth below, or a climb), a pinnacle with a
+reward site on top, and short tunnels through ridges of rock, most of all under rock walls.
+
 ## Enemies per depth
 
 Every layer also has one coordinated [wild horde pack](hordes.md), replacing that cube's
@@ -82,7 +88,7 @@ A roster entry is `species chance count (packs) [kinds]`:
 | 6 | 3 | snakes 5–8 (packs ≤2) [50% Sand viper, 25% Grass snake, 25% Blood viper], spiders 80% 6–10 (packs ≤3) [67% Spider, 33% Redback], Stunders 60% 1–3 [67% Stone stunder, 33% Stunder], Wolks 40% 1–2, Wollas 35% 1–2 [50% Storm wolla, 50% Wolla], Octonauts 15% 1 |
 | 7 | 3 | spiders 7–12 (packs ≤3) [67% Spider, 22% Bog spider, 11% Redback], snakes 80% 4–7 (packs ≤2) [29% Grass snake, 57% Sand viper, 14% Blood viper], Stunders 60% 1–2 [67% Stunder, 33% Stone stunder], Wollas 35% 1–2, Octonauts 20% 1 |
 | 8 | 3 | spiders 8–13 (packs ≤3) [60% Spider, 20% Bog spider, 20% Redback], snakes 80% 4–8 (packs ≤2) [25% Grass snake, 50% Sand viper, 25% Blood viper], Stunders 60% 1–3 [67% Stunder, 33% Stone stunder], Wollas 45% 1–2, Octonauts 25% 1–2 |
-| 9 | 3 | Octonauts 2–4, Shraps 80% 1–3, spiders 80% 6–10 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], snakes 30% 3–5 (packs ≤2) [75% Frost adder, 25% Grass snake] |
+| 9 | 3 | Octonauts 3–4, Shraps 80% 1–3, spiders 80% 6–10 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], snakes 30% 3–5 (packs ≤2) [75% Frost adder, 25% Grass snake] |
 | 10 | 3 | Octonauts 3–5 (packs ≤2) [75% Octonaut, 25% Coral octonaut], Shraps 90% 2–3, spiders 80% 7–12 (packs ≤4) [75% Frost spider, 25% Spider], Stunders 60% 1–2 [67% Frost stunder, 33% Stone stunder], Triangles 15% 1 |
 | 11 | 3 | snakes 6–10 (packs ≤3) [40% Venom adder, 40% Grass snake, 20% Blood viper], Octonauts 80% 2–4 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 60% 1–2, Wollas 35% 1–2 [75% Bog wolla, 25% Wolla], spiders 60% 6–10 (packs ≤4) [75% Bog spider, 25% Spider], Stunders 25% 1–2 |
 | 12 | 3 | snakes 7–12 (packs ≤3) [50% Venom adder, 25% Grass snake, 25% Blood viper], Octonauts 80% 3–5 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 80% 1–3, Wollas 50% 1–2 [75% Bog wolla, 25% Wolla], spiders 60% 8–12 (packs ≤4) [75% Bog spider, 25% Spider], Fire-faces 10% 1 |
@@ -90,9 +96,9 @@ A roster entry is `species chance count (packs) [kinds]`:
 | 14 | 3 | spiders 18–26 (packs ≤6) [55% Spider, 18% Bog spider, 27% Redback], Stunders 50% 1–2 [50% Stunder, 50% Stone stunder], Octonauts 30% 1–2 [40% Octonaut, 40% Bog octonaut, 20% Coral octonaut], snakes 30% 4–6 (packs ≤3) [50% Venom adder, 50% Blood viper], Spicies 25% 1–2 |
 | 15 | 3 | spiders 20–28 (packs ≤7) [40% Spider, 20% Bog spider, 40% Redback], Stunders 60% 1–3 [50% Stunder, 50% Stone stunder], Octonauts 40% 1–2 [40% Octonaut, 40% Bog octonaut, 20% Coral octonaut], Triangles 15% 1 |
 | 16 | 3 | Triangles 2–3 [67% Emerald triangle, 33% Triangle], Stunders 70% 1–3 [Stone stunder], Octonauts 70% 2–5 (packs ≤2) [50% Octonaut, 50% Coral octonaut], Wollas 50% 1–3 [67% Storm wolla, 33% Bog wolla], spiders 50% 10–14 (packs ≤4) [50% Spider, 25% Frost spider, 25% Redback], Fire-cats 10% 1 |
-| 17 | 4 | Triangles 80% 1–3 [33% Triangle, 33% Emerald triangle, 33% Crimson triangle], Octonauts 80% 3–6 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], snakes 60% 10–14 (packs ≤4) [57% Blood viper, 43% Shadow mamba], Fire-cats 50% 2–3 (packs ≤2), spiders 40% 10–16 (packs ≤5) [50% Redback, 50% Spider] |
+| 17 | 3 | Triangles 80% 1–3 [33% Triangle, 33% Emerald triangle, 33% Crimson triangle], Octonauts 80% 3–6 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], snakes 60% 10–14 (packs ≤4) [57% Blood viper, 43% Shadow mamba], Fire-cats 50% 2–3 (packs ≤2), spiders 40% 10–16 (packs ≤5) [50% Redback, 50% Spider] |
 | 18 | 4 | Fire-faces 1–3, Fire-cats 3–5 (packs ≤2), Shraps 70% 1–3 [Fire shraps], Stunders 60% 1–3 [Magma stunder], snakes 40% 10–14 (packs ≤4) [67% Shadow mamba, 33% Blood viper], Wollas 40% 1–2 [Ember wolla], spiders 25% 14–20 (packs ≤6) [Redback] |
-| 19 | 3 | Fire-faces 2–3, Fire-cats 4–7 (packs ≤3), Shraps 40% 1–2 [Fire shraps], Triangles 60% 1–2 [67% Crimson triangle, 33% Triangle], Wollas 40% 1–2 [67% Ember wolla, 33% Storm wolla], Stunders 40% 1–2 [67% Magma stunder, 33% Stone stunder] |
+| 19 | 3 | Fire-faces 2–3, Fire-cats 5–8 (packs ≤3), Shraps 40% 1–2 [Fire shraps], Triangles 60% 1–2 [67% Crimson triangle, 33% Triangle], Wollas 40% 1–2 [67% Ember wolla, 33% Storm wolla], Stunders 40% 1–2 [67% Magma stunder, 33% Stone stunder] |
 | 20 | 4 | Fire-cats 5–9 (packs ≤3), Fire-faces 2–4, Triangles 80% 2–3 [67% Crimson triangle, 33% Triangle], Stunders 50% 2–3 [67% Magma stunder, 33% Stone stunder], spiders 30% 18–26 (packs ≤8) [67% Redback, 33% Spider] |
 
 The design rules behind the table:
@@ -166,20 +172,20 @@ enemies' own levels, before the player's level scales it.
 
 | Depth | Enemies | Max | XP | Depth | Enemies | Max | XP |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 0 | 2.8 | 7 | 163 | 11 | 26.9 | 56 | 2746 |
-| 1 | 5.0 | 12 | 253 | 12 | 27.6 | 54 | 3187 |
-| 2 | 8.0 | 18 | 425 | 13 | 14.1 | 34 | 2772 |
-| 3 | 14.7 | 28 | 770 | 14 | 12.8 | 32 | 3760 |
-| 4 | 12.4 | 26 | 880 | 15 | 15.1 | 32 | 4033 |
-| 5 | 15.0 | 28 | 1036 | 16 | 21.0 | 62 | 5559 |
-| 6 | 17.7 | 36 | 1435 | 17 | 14.3 | 36 | 5134 |
-| 7 | 12.9 | 26 | 1499 | 18 | 12.4 | 40 | 5386 |
-| 8 | 14.9 | 32 | 1917 | 19 | 11.5 | 24 | 5981 |
-| 9 | 17.3 | 40 | 2141 | 20 | 16.8 | 33 | 7302 |
-| 10 | 20.0 | 48 | 2932 |  |  |  |  |
+| 0 | 2.8 | 7 | 163 | 11 | 16.6 | 36 | 2511 |
+| 1 | 4.6 | 12 | 236 | 12 | 18.0 | 44 | 3056 |
+| 2 | 7.9 | 18 | 423 | 13 | 18.1 | 30 | 3809 |
+| 3 | 13.9 | 28 | 737 | 14 | 30.3 | 64 | 3795 |
+| 4 | 12.6 | 26 | 890 | 15 | 28.1 | 58 | 3840 |
+| 5 | 14.1 | 30 | 1155 | 16 | 12.4 | 32 | 3986 |
+| 6 | 15.3 | 36 | 1492 | 17 | 18.6 | 40 | 5629 |
+| 7 | 17.1 | 32 | 1478 | 18 | 16.1 | 50 | 6148 |
+| 8 | 18.8 | 42 | 1812 | 19 | 12.2 | 24 | 6358 |
+| 9 | 13.0 | 30 | 1812 | 20 | 16.8 | 33 | 7304 |
+| 10 | 14.6 | 32 | 2373 |  |  |  |  |
 
-The enemy count drops at a theme change that brings in stronger species (13, 17, 19). The
-XP per cube keeps rising.
+The enemy count drops at a theme change that brings in stronger species (9, 16, 19). The
+XP per cube keeps rising (or holds, at 7 and 9 and 14, where the theme changes).
 
 ## Enemy levels
 

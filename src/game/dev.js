@@ -15,6 +15,7 @@ import { startTravel } from './travel.js';
 import { enterCube, arrivalPoint, spawnAt } from './flow.js';
 import { clearMouseInput } from './orders.js';
 import { takeTownPortal } from './townportal.js';
+import { shaftOf } from '../world/heights.js';
 
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 const D = [[1, 0], [-1, 0], [0, 1], [0, -1]], NAMES = ['east', 'west', 'south', 'north'];
@@ -96,6 +97,46 @@ export async function goSpan(n) {
     if (state.cubes !== cubes) return;
     enterCube(c, span.dir ^ 1);
     setStatus(`Span ${i + 1}/${spans.length} · depth ${c.map.depth} · ${span.island ? 'to an island' : 'on the route'} · deck ${span.levels.join(' → ')}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Jump into the next of the big height pieces (world/heights.js) for playtesting: a tableland's
+// ascent, plateau or descent, a great shaft, a pinnacle, or a cube with a tunnel (cubegen/tunnel.js;
+// those are only known once made, so the cubes of this depth and the ones below are made in turn).
+export const FEATURES = ['ascent', 'plateau', 'descent', 'shaft', 'pinnacle', 'tunnel'];
+const lastFeature = {};
+export async function goFeature(kind) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, here = state.map?.depth ?? 0, found = [];
+  for (let d = 1; d < 20; d++) {
+    const L = cubes.layout(d);
+    for (const piece of L.heights) {
+      const at = ['ascent', 'plateau', 'descent'].indexOf(kind === 'shaft' ? 'descent' : kind);
+      if (at < 0 || (kind === 'shaft' && !shaftOf(cubes, piece))) continue;
+      // in at the foot of the ascent, from the plateau into the descent
+      found.push({ key: piece.keys[at], dir: at === 0 ? piece.ways[0] : piece.dirs[at - 1] ^ 1 });
+    }
+    if (kind === 'pinnacle' && L.pinnacle) found.push({ key: L.pinnacle });
+  }
+  clearMouseInput(); state.transitioning = true;
+  try {
+    let pick = null;
+    if (kind === 'tunnel') {
+      for (let d = Math.max(1, here); d < 20 && !pick; d++) for (const k of [...cubes.layout(d).exists].sort()) {
+        if (k === state.cubeKey || lastFeature.tunnel === k) continue;
+        const c = await whenReady(cubes.get(k));
+        if (c.map.tunnel) { pick = { key: k }; break; }
+      }
+    } else if (found.length) {
+      const i = (found.findIndex(f => f.key === lastFeature[kind]) + 1) % found.length;
+      pick = found[i];
+    }
+    if (!pick) { setStatus(`No ${kind} found`); return; }
+    lastFeature[kind] = pick.key;
+    const c = await whenReady(cubes.get(pick.key));
+    if (state.cubes !== cubes) return;
+    enterCube(c, pick.dir ?? c.map.portals.find(p => p.kind === 'side')?.dir ?? c.map.portals[0].dir);
+    setStatus(`${kind} · depth ${c.map.depth} · ${c.map.archetype}${c.map.tunnel ? ' + tunnel' : ''}`);
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 

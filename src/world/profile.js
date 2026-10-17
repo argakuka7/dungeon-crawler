@@ -8,6 +8,7 @@ import { key, parse } from './coords.js';
 import { voidAllowed, isVoid } from './voids.js';
 import { isClearing, TOWN_LEVEL } from './town.js';
 import { spanFace, spanVertex, spanU, valleyFloor } from './spans.js';
+import { heightProfile, heightVertex } from './heights.js';
 
 export const VOID = -1;
 
@@ -30,6 +31,8 @@ function vertexLevel(world, vx, Y, vz) {
   if (cubes.some(k => isClearing(k, world.seed))) return TOWN_LEVEL;
   const sv = spanVertex(world, vx, Y, vz);
   if (sv && !sv.natural) return valleyFloor(sv.span, world.noise, vx * N, vz * N, Y);
+  const hv = heightVertex(world, vx, Y, vz);
+  if (hv !== null) return hv;
   const theme = world.layout(-Y).theme;
   if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y, theme.void)) return VOID;
   const s = [sockAt(world, vx - 1, Y, vz - 1, 0), sockAt(world, vx - 1, Y, vz, 0), sockAt(world, vx - 1, Y, vz - 1, 2), sockAt(world, vx, Y, vz - 1, 2)];
@@ -49,6 +52,10 @@ export function profile(world, fk, sock) {
   out[0] = d === '0' ? vertexLevel(world, X + 1, Y, Z) : vertexLevel(world, X, Y, Z + 1);
   out[N - 1] = vertexLevel(world, X + 1, Y, Z + 1);
   spanProfile(world, fk, out);
+  heightProfile(world, fk, out, t => {
+    const wx = d === '0' ? (X + 1) * N : X * N + t + 0.5, wz = d === '0' ? Z * N + t + 0.5 : (Z + 1) * N;
+    return levelAt(world.noise, sock, wx, wz, Y, theme.relief);
+  });
   return out;
 }
 

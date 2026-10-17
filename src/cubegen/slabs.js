@@ -15,6 +15,10 @@ export function buildSlabs(ctx) {
       siteAnchor: c === reserved.site.anchorCell, siteAccess: c === reserved.site.accessCell,
       hordeReserved: !!reserved.horde, hordeSpawn: !!reserved.spawn });
     cols[c].push(f);
+    if (ctx.soft?.has(c)) f.soft = true;   // a plunge's landing (cubegen/heights.js)
+    // a tunnel's roof over its floor (cubegen/tunnel.js): a floor of its own, kept clear of slabs
+    const roof = ctx.roofs?.get(c);
+    if (roof) cols[c].push(Object.assign(mk(c, roof.top, roof.bottom, 0), { roof: true, merged: false }));
   }
 
   for (let k = 1; k < K; k++) {

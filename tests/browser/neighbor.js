@@ -2,6 +2,7 @@
 // await (await import('./tests/browser/neighbor.js')).runExpandedTravelChecks()
 // await (await import('./tests/browser/neighbor.js')).runPartParityChecks()
 // await (await import('./tests/browser/neighbor.js')).runProxyIntegrityChecks()
+// await (await import('./tests/browser/neighbor.js')).runShaftViewChecks()
 import * as THREE from 'three';
 import { N, WATER, LAVA, ACID, FLUIDS } from '../../src/core/constants.js';
 import { camera, scene, renderer } from '../../src/render/scene.js';
@@ -16,6 +17,31 @@ import { buildNeighbors, disposeNeighbors, detachNeighbors, adoptNeighbors, show
 import { paused } from './combat.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
+
+// Down a great shaft (world/heights.js) you see the room under it: once that is made it is drawn
+// as a proxy a stratum down, right under the shaft, before anyone has been there.
+export async function runShaftViewChecks() {
+  const { state } = await import('../../src/game/state.js');
+  const { goFeature } = await import('../../src/game/dev.js');
+  const { CUBE_H, BASE } = await import('../../src/core/constants.js');
+  const show = state.showNeighbors, out = [];
+  try {
+    state.showNeighbors = true;
+    for (let n = 0; n < 3; n++) {
+      await goFeature('shaft');
+      const m = state.map;
+      if (!m?.shaft) break;
+      check(!state.cubes.cubes.get(m.shaft.below)?.visits, `${m.key}: the room below was visited already`);
+      for (let i = 0; i < 100 && !liveNeighbors().some(g => g.key === m.shaft.below); i++) await new Promise(r => setTimeout(r, 50));
+      const g = liveNeighbors().find(p => p.key === m.shaft.below);
+      check(g, `${m.key}: the room under the shaft is not shown`);
+      check(g.base.x === 0 && g.base.z === 0 && g.base.y === -(CUBE_H + BASE), `${m.key}: the room below at ${g.base.toArray()}`);
+      out.push(m.key);
+    }
+    check(out.length, 'no great shaft in this world');
+    return out;
+  } finally { state.showNeighbors = show; }
+}
 
 // Real travel in a fully explored stratum, not just the immediate portal pair.
 export async function runExpandedTravelChecks() {
@@ -194,7 +220,9 @@ function integrity(state, label, sliding = false) {
   check(new Set(list.map(g => g.key)).size === list.length || sliding, `${label}: a cube shown twice`);
   const batches = new Map();
   for (const g of list) {
-    check(state.cubes.cubes.get(g.key)?.visits, `${label}: proxy of undiscovered ${g.key}`);
+    // (or the room under a great shaft, seen through its hole: world/heights.js)
+    const under = [...state.cubes.cubes.values()].some(c => c.map.shaft?.below === g.key);
+    check(state.cubes.cubes.get(g.key)?.visits || under, `${label}: proxy of undiscovered ${g.key}`);
     check(!g.disposed && g.instances.length >= g.geometry.parts.length, `${label}: ${g.key} lost instances`);
     const shown = g.cull.visible && g.group.visible;
     g.instances.forEach((inst, i) => {

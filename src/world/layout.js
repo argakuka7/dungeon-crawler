@@ -8,6 +8,7 @@ import { planSites } from './sites.js';
 import { planHordes } from './hordes.js';
 import { planArenas } from './arenas.js';
 import { planSpans, indexSpans } from './spans.js';
+import { planHeights, planPinnacle, indexHeights, near } from './heights.js';
 
 // learn: world.html#route (see learn/README.md)
 export const MIN_ROUTE_ROOMS = 7, MAX_ROUTE_ROOMS = 14;
@@ -96,6 +97,12 @@ function build(seed, d, above, theme) {
   const spanPlan = planSpans(seed, d, theme.spans, spine, K, k => guardians.has(k) || hordes.has(k),
     c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1), branchBudget);
   const nearSpan = c => [c, ...nb(c)].some(n => spanPlan.apart.has(K(n)));
+  // big height differences (heights.js): a tableland on the route, away from spans, guardians,
+  // the horde and the ends of the route
+  const spanned = [...spanPlan.cells.keys()].map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
+  const heightPlan = planHeights(seed, d, theme, spine, K, c => guardians.has(K(c)) || hordes.has(K(c)) || near(c, spanned)
+    || id(c) === id(spine[0]) || id(c) === id(spine.at(-1)));
+  const plateaus = [...heightPlan.cells].filter(([, h]) => h.role === 'plateau').map(([k]) => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
   for (const span of spanPlan.spans) if (span.island) {
     const line = span.keys.map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
     for (let j = 1; j < line.length; j++) {
@@ -106,8 +113,8 @@ function build(seed, d, above, theme) {
   }
   for (const c of spine.slice(2, -1)) {
     if (cells.length >= spine.length + branchBudget) break;
-    if (guardians.has(K(c)) || spanPlan.cells.has(K(c))) continue;
-    const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n));
+    if (guardians.has(K(c)) || spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c))) continue;
+    const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n) && !near(n, plateaus));
     if (!options.length || R() < .4) continue;
     const n = options[Math.floor(R() * options.length)];
     cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
@@ -117,8 +124,10 @@ function build(seed, d, above, theme) {
     exists: new Set(cells.map(K)), portals, exit, guardians, gateFaces, hordes,
     up: d ? K(start) : null, down: d < MAX_DEPTH ? K(end) : null, guardian: guardianDepth(seed, d) };
   indexSpans(layout, spanPlan.spans, spanPlan.cells);
+  indexHeights(layout, heightPlan);
   const sites = planSites(seed, layout, distance);
   layout.sitePlans = sites.plans; layout.roles = sites.roles;
+  layout.pinnacle = planPinnacle(layout, heightPlan);
   for (const [k, g] of guardians) layout.roles.set(k, `${g.role}-guardian`);
   layout.populationScale = new Map();
   for (const k of hordes.keys()) {

@@ -77,6 +77,8 @@ test('enemies walk stairs, bridges and landings: every structure joins its ends'
         const a = landing.get(r.from) ?? r.from, b = landing.get(r.to) ?? r.to;
         if (![a, b, ...r.pieces].every(n => walkable(n, SPIDER.height))) continue;
         const path = findPath(a, b, r.k + 1, SPIDER.height);
+        // (a short bridge over a dip the ground beside it also crosses: the ground is as short)
+        if (path?.length === r.k + 2 && path.every(n => !n.kind)) continue;
         assert.deepEqual(path, [a, ...r.pieces, b], `${key} ${r.kind}`);
         if (r.from.landing || r.to.landing) { landings++; continue; }
         runs++;

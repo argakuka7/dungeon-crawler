@@ -11,6 +11,7 @@ export function makeMoves(ctx) {
   const headOK = (g, h) => { const a = nextAbove(g); return !a || a.bottom >= Math.max(h, g.top) + 2; };
   // can a structure occupy column c between levels lo..hi? floors must be clearly below or above
   const colClear = (c, lo, hi, gapSolid) => {
+    if (ctx.noCross?.has(c)) return false;   // a great shaft's hole stays open (cubegen/heights.js)
     for (const g of cols[c]) {
       if (g.prot || ((g.siteBlocked || g.hordeReserved) && g.top + 3 > lo && g.bottom < hi + SHEAD)) return false;
       if (g.bottom >= hi + SHEAD) continue;
@@ -29,7 +30,7 @@ export function makeMoves(ctx) {
   };
   // a landing is a stone platform at level h: needs free space around it
   const landingOK = (c, h) => {
-    if (h > MAX_L) return false;
+    if (h > MAX_L || ctx.noCross?.has(c)) return false;
     for (const g of cols[c]) {
       if (g.prot || g.siteBlocked || g.hordeReserved || g.top === h) return false;
       if (g.bottom >= h + SHEAD) continue;
@@ -53,9 +54,11 @@ export function makeMoves(ctx) {
       if (Math.abs(dh) <= 2 && !g.fluid && headOK(g, h) && headOK(f, g.top)) {
         out.push({ kind: 'walk', from: f, to: g, d, cells: [], cost: 1 + 0.4 * Math.abs(dh) }); walked = true;
       }
-      if (g.top < h - 2 && g.top >= h - MAX_DROP) below = g;
+      // deeper only onto something soft: a plunge (cubegen/heights.js)
+      if (g.top < h - 2 && (g.top >= h - MAX_DROP || g.soft)) below = g;
     }
-    if (!walked && below && !below.fluid && headOK(below, h + 1)) out.push({ kind: 'drop', from: f, to: below, d, cells: [], cost: 2.2 });
+    if (!walked && below && !below.fluid && headOK(below, h + 1))
+      out.push({ kind: 'drop', from: f, to: below, d, cells: [], cost: below.soft ? 1.2 : 2.2, plunge: h - below.top > MAX_DROP });
   }
 
   // stairs: k flight cells, then a floor or a new landing; at most 2 levels per cell

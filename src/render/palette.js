@@ -22,9 +22,9 @@ export function gradient(stops, v) {
 }
 
 // terrain: tops by height (in levels), rock strata on the sides; set per depth (usePalette)
-export let TOP_STOPS, SIDE_STOPS, LIP, UNDERSIDE, BEDROCK;
+export let TOP_STOPS, SIDE_STOPS, LIP, UNDERSIDE, BEDROCK, SOFT;
 export function usePalette(theme) {
-  TOP_STOPS = theme.top; SIDE_STOPS = theme.side;
+  TOP_STOPS = theme.top; SIDE_STOPS = theme.side; SOFT = C(theme.soft);
   LIP = C(theme.lip); UNDERSIDE = C(theme.under); BEDROCK = theme.bed.map(C);
   useBuild(buildOf(theme));
 }

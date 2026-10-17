@@ -8,18 +8,31 @@
 //   archipelago islands in void (or in a sea)
 //   mesa        one big flat-topped block
 //   crater      a ring wall around a lake
+// and the big height pieces (cubegen/heights.js): ascent, plateau, descent, pinnacle; then the
+// basin under a great shaft and a tunnel (cubegen/tunnel.js) where the spec asks for them
 import { N, MAX_L } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
 import { shapeGorge, shapeIsland } from './span.js';
+import { shapeAscent, shapePlateau, shapeDescent, shapePinnacle, shapeShaftBottom } from './heights.js';
+import { carveTunnel } from './tunnel.js';
+
+const PIECES = { ascent: shapeAscent, plateau: shapePlateau, descent: shapeDescent, pinnacle: shapePinnacle };
 
 // 0 at the faces, 1 from three cells in
 const inner = (x, z) => clamp((Math.min(x, z, N - 1 - x, N - 1 - z) - 1) / 2, 0, 1);
 
 export function shapeCube(ctx) {
+  ctx.seaCells = []; ctx.keep = new Set(); ctx.soft = new Set(); ctx.roofs = new Map(); ctx.noCross = new Set(); ctx.pinnacle = new Set(); ctx.rails = new Set();
+  shapeArchetype(ctx);
+  if (ctx.spec.shaftBottom) shapeShaftBottom(ctx);
+  if (ctx.spec.tunnel) carveTunnel(ctx);
+}
+
+function shapeArchetype(ctx) {
   const { R, ri, lvl0, void0, spec, noise } = ctx, kind = spec.archetype || 'plain';
-  ctx.seaCells = [];
   if (kind === 'gorge') return shapeGorge(ctx);   // a span's valley (cubegen/span.js)
   if (kind === 'island') return shapeIsland(ctx);
+  if (PIECES[kind]) return PIECES[kind](ctx);
   // open: void if allowed, else a pit (sea: filled with fluid)
   const open = (i, sea) => { if (spec.voidOK) void0[i] = 1; else { lvl0[i] = 0; if (sea) ctx.seaCells.push(i); } };
   const raise = (i, w, h) => { lvl0[i] = clamp(Math.round(lvl0[i] + w * h), 2, MAX_L); };

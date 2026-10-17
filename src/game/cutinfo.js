@@ -11,7 +11,7 @@ export function mapInfo(m) {
       for (const f of m.floors) if (f.layer === i + 1) lo = Math.min(lo, f.merged ? Infinity : f.bottom, f.fluid ? f.top - 1 : Infinity);
       return lo * LH - 0.02;
     });
-    const slabs = m.floors.filter(f => f.layer > 0 && !f.merged && !f.ramp)
+    const slabs = m.floors.filter(f => (f.layer > 0 || f.roof) && !f.merged && !f.ramp)   // (and tunnel roofs)
       .map(f => ({ x: f.x + 0.5, z: f.z + 0.5, lo: f.bottom * LH - 0.02, hi: f.top * LH + 0.05 }));
     const terrainTop = Math.max(...m.floors.map(f => f.top)) * LH;
     const propTop = Math.max(terrainTop, ...(m.occluders || []).map(b => b.top));

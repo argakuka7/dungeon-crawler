@@ -31,7 +31,7 @@ function channels(ctx, k) {
       let g = null;
       for (const f of cols[bc]) if (f.top < e.top - 3) g = f;
       const above = g && nextAbove(g);
-      if (!g || g.prot || g.ramp || g.site || (above && above.bottom < e.top + 1)) continue;
+      if (!g || g.prot || g.ramp || g.site || ctx.keep?.has(bc) || (above && above.bottom < e.top + 1)) continue;
       cands.push({ chan, d, g, bc });
     }
   }

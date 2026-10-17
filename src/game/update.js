@@ -8,7 +8,7 @@ import { holdPointer, followOrder, clearOrder } from './orders.js';
 import { canMoveCancel, cancelSwing, LUNGE_REACH } from '../core/combat.js';
 import { checkPortals } from './portals.js';
 import { knockDown, stepRagdoll, tickGetUp } from './ragdoll.js';
-import { movePlayer, updateLayer } from '../physics/move.js';
+import { movePlayer, updateLayer, landingSpeed } from '../physics/move.js';
 import { applyHazards } from '../physics/hazards.js';
 import { climb } from '../physics/climb.js';
 import { unstick } from '../physics/unstuck.js';
@@ -65,9 +65,9 @@ export function updatePlayer(dt) {
   // a fall through cubes ends on the first landing, however soft
   if (state.fallFrom && player.grounded) { landFall(); return; }
 
-  // hard landings: tumble over as a ragdoll (and get hurt), or land on your bottom; a leaping
-  // potion's higher jumps land as softly as plain ones
-  const landed = gr.landed / Math.sqrt(1 + effectMod(player, 'jump'));
+  // hard landings: tumble over as a ragdoll (and get hurt), or land on your bottom (not on
+  // something soft, physics/move.js landingSpeed)
+  const landed = landingSpeed(gr, effectMod(player, 'jump'));
   if (landed > RAGDOLL_IMPACT) {
     knockDown({ damage: Math.min(FALL_DAMAGE, (landed - RAGDOLL_IMPACT) * 6), reason: 'Hard landing!' });
     return;

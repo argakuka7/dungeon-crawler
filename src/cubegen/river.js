@@ -49,9 +49,11 @@ export function carveRiver(ctx) {
     const cells = [];
     for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {
       const i = idx(x, z);
-      if (!prot0[i] && !wet(i) && !rim(x, z) && Math.hypot(x + 0.5 - cx, z + 0.5 - cz) < rad) cells.push(i);
+      if (!prot0[i] && !wet(i) && !rim(x, z) && !ctx.keep?.has(i) && Math.hypot(x + 0.5 - cx, z + 0.5 - cz) < rad) cells.push(i);
     }
     if (!cells.length) continue;
+    // on the big height pieces never over the edge of a cliff (it would cut a pit into it)
+    if ((spec.height || spec.pinnacle) && Math.max(...cells.map(i => lvl0[i])) - Math.min(...cells.map(i => lvl0[i])) > 2) continue;
     const set = new Set(cells);
     let S = Infinity;
     for (const i of cells) {

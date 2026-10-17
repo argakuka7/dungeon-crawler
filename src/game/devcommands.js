@@ -12,7 +12,7 @@ import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
-import { goTo, goHorde, goArena, goAdjacent, goSpan } from './dev.js';
+import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, FEATURES } from './dev.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
 import { forceMood } from './music.js';
@@ -69,6 +69,12 @@ dev({
 dev({
   name: 'span', help: 'the start of a gorge span\'s long bridge (the next one, or the n-th)', args: [{ name: 'n', type: 'int', optional: true }],
   async run({ n }) { await goSpan(n === undefined ? undefined : Number(n)); },
+});
+addType(commands, { name: 'feature', values: () => FEATURES.map(f => ({ value: f, label: f })) });
+dev({
+  name: 'height', help: 'the next of the big height pieces: a tableland\'s ascent, plateau or descent, a great shaft, a pinnacle, a tunnel',
+  args: [{ name: 'kind', type: 'feature' }],
+  async run({ kind }) { await goFeature(kind); },
 });
 addType(commands, { name: 'arena', values: () => Object.keys(ARENA_WEIGHTS.descent).map(t => ({ value: t, label: t })) });
 dev({

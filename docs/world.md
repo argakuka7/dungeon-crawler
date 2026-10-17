@@ -345,6 +345,77 @@ often on the sky islands, the peaks and the badlands, now and then in the caves.
   pushing sideways halfway across keeps it on the deck. Over 200 seeds all 4472 span cubes and
   their rooms generate, in 1.26 attempts on average (over 1000 seeds, all 22965).
 
+## Big heights: tablelands, pinnacles, great shafts (`world/heights.js`, `cubegen/heights.js`)
+
+Planned with the layout from the seed alone, on their own random stream (after the spans,
+before the branches), as often as the theme says (`heightsOf`: `heights` in the theme can
+override the defaults; the canyon has more).
+
+- **Tableland:** three rooms in a row on the route (never its ends, nothing guarded, no horde,
+  not beside a span), at most one per depth:
+  - **ascent:** you come in at the foot of an escarpment. A shelf at the shelf level `hi`
+    (17–20 under the sky, 13–15 under rock walls) runs along its far side to the plateau; the
+    cliff stands at `cu` along the way through, often with a terrace halfway up along part of
+    it. The route climbs it with stairs and ladders.
+  - **plateau:** high ground all round, a few knolls.
+  - **descent:** down from the plateau's edge, one of three:
+    - **plunge:** a soft landing (3 by 2 cells, the theme's `soft` colour: hay, sand, snow,
+      moss, web, ash) right under the edge, 11 or more levels down. The route leaps
+      (`drop` onto a `soft` floor, any depth; `plunge` on the move when deeper than an
+      ordinary drop). Landing on something soft never hurts or knocks you over
+      (`landingSpeed` in `physics/move.js`). A ladder usually stands beside it for the way
+      back.
+    - **great shaft:** a hole (radius 2.6–3.2) open to the depth below, a ramp winding down
+      round it from the plateau's side (the long way round, railed) to a cut leading out to
+      the exit, and a rim up high everywhere else. Nothing may cross the hole (`noCross`: no
+      stairs, bridges, landings or jumps over it). Only where the depth below has an ordinary
+      room right under it (`shaftOf`); otherwise the planned shaft becomes a plunge. That
+      room gets a dry, flat basin under the hole (`shaftBottom`), knows you may fall in there
+      (`fallMask`), and is drawn under the shaft as a proxy before it is visited, so you look
+      down into it (`visitedNeighbors`, `dy: -1`). Falling in is a fall into the cube below
+      like any other.
+    - **stairs:** a cliff with a terrace, climbed down like the ascent is climbed up.
+  - **faces:** the plateau's faces are all at `hi` (and its corners), so the pads between the
+    three rooms are up there. The ascent's and descent's side faces carry the escarpment's
+    cross-section, so the cliff runs on into the rock beside them; the faces the route comes
+    in and goes out by keep their own profile, and where they are side faces a cove opens at
+    the foot of the cliff round the pad. The WFC pins the three cubes with one layer (high
+    sockets towards the plateau). No void, no branches off them.
+  - **the route:** in a plunge's or a shaft's descent, every other way down off the shelf
+    costs 40 more, so the route leaps or winds down the ramp (`descentRoute`).
+- **Pinnacle:** in one of the depth's discovery rooms (a reward site not built round a
+  landmark; no river), a needle of rock: a top of radius 2.3 (19–21 levels under the sky,
+  14–16 under rock walls, and at least ten over its foot), a railed ramp once round it, a flat
+  ring at its foot. The reward site is its top. Stairs, ladders and bridges onto the needle
+  cost 40 more, so the way up winds round it (`pinnacleRoute`).
+- **Kept cells:** what these shapes depend on (`ctx.keep`) gets no slabs, sites, hordes, pools
+  or stream falls.
+- **Dev:** `/height <ascent|plateau|descent|shaft|pinnacle|tunnel>` jumps to the next one.
+- **Checks:** `tests/heights.test.js`: the plan (seeded, on the route, clear of guardians,
+  hordes and spans, no branches), the faces (the plateau high all round, the pads up there,
+  the same whichever cube decides them), every tableland of 8 worlds generating with the route
+  climbing, crossing and coming down (leaping onto something soft in a plunge), the shaft's
+  open hole, its ramp and the dry basin below, the pinnacle's site on top reached by the ramp,
+  and the character landing softly after a plunge.
+
+## Tunnels (`cubegen/tunnel.js`)
+
+A short tunnel the way leads through: a ridge of rock across the cube, between the two portals
+farthest apart (one on the ground), with a passage two cells wide and 3–6 long bored through
+it at ground level and a flat apron at each mouth. In caves and canyons the ridge runs from
+wall to wall, so the tunnel is the way; on the surface it falls away towards the faces, a hill
+with a tunnel. 25% of the cubes on the surface, 40% under rock walls (45% in the canyon) may
+get one: not in the town, guardian arenas, spans, height pieces, horde rooms, or where rivers
+run, falls come or go, or spouts pour; and only where the ridge fits clear of the pads.
+
+- **The roof** is a floor of its own (`roof`, layer 0) over the passage floor, solid from two
+  units over it (`ROOF`, 4 levels) up to the ridge's top. The character walks under it; the
+  cutaway takes it for a slab (`game/cutinfo.js`) and opens it around you.
+- **Nothing in the way:** no structure stands in the passage or on the aprons (`noCross`),
+  slabs and pools keep off the ridge.
+- Over 3 worlds, more than half the tunnels lie on a route (the others are passed by a route
+  on another layer).
+
 ## Cube archetypes (`cubegen/archetypes.js`)
 
 Every cube gets a big shape on top of the blended ground. The shaping fades out towards the
@@ -360,6 +431,7 @@ faces, so the outer ring still matches the neighbours.
 | mesa | one big flat-topped block |
 | crater | a ring wall around a lake of the depth's fluid |
 | gorge, island | only in gorge spans (above) |
+| ascent, plateau, descent, pinnacle | only for the big height pieces (above) |
 
 Chasms, sinkholes and archipelagos open to the void where the world allows it. Elsewhere
 they hold the depth's fluid instead: a river gorge, an acid canal or a lava sea.
@@ -756,7 +828,8 @@ exactly the pixels the other drops. Every cube, full or proxy, sits in its own g
 on opened side connections.
 
 The minimap and the low-detail surroundings only show cubes you have visited; prefetching
-never discovers a cube. Surroundings include diagonals and distant cubes on the active
+never discovers a cube. The one exception is the room under a great shaft, seen through its
+hole a stratum down (see "Big heights"; `runShaftViewChecks()` in `tests/browser/neighbor.js`). Surroundings include diagonals and distant cubes on the active
 stratum, within 48 world units (three cube widths) of the player's horizontal position.
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.

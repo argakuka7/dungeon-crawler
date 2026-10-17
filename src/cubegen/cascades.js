@@ -24,7 +24,7 @@ export function pool(ctx, cx, cz, rad, type) {
 }
 
 export function cascadeGround(ctx) {
-  const { spec, void0, prot0 } = ctx, list = ctx.cascades = [], sky = ctx.sky = new Set();   // sky: no slabs
+  const { spec, void0, prot0 } = ctx, list = ctx.cascades = [], sky = ctx.sky = new Set(ctx.keep);   // sky: no slabs (nor sites, hordes)
   const out = spec.outflow, inn = spec.inflow;
   // an open shaft around the falling water (3x3 around cell c)
   const shaft = c => { for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) sky.add(c + dx + dz * N); };

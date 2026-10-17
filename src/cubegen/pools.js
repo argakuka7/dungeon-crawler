@@ -72,7 +72,8 @@ export function poolAround(ctx, center, rad, type) {
   const cells = [];
   for (let z = center.z - 2; z <= center.z + 2; z++) for (let x = center.x - 2; x <= center.x + 2; x++) {
     if (!inb(x, z) || !x || !z || x === N - 1 || z === N - 1 || Math.hypot(x - center.x, z - center.z) > rad) continue;
-    const g = ctx.cols[idx(x, z)].find(f => f.layer === center.layer && !f.fluid && !f.prot && !f.ramp && !f.site && Math.abs(f.top - center.top) <= 2);
+    const g = ctx.cols[idx(x, z)].find(f => f.layer === center.layer && !f.fluid && !f.prot && !f.ramp && !f.site && !f.roof
+      && !(f.layer === 0 && ctx.keep?.has(f.c)) && Math.abs(f.top - center.top) <= 2);
     if (g) cells.push(g);
   }
   if (!cells.includes(center)) return 0;
