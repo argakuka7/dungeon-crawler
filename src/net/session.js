@@ -12,8 +12,8 @@
 // after any player there; the others are shown them and fight them, blows on them are sent
 // over as `hurt`. When players meet or part, the enemies change hands as they are
 // (`handover`, game/enemies.js adoptEnemies). In a cube together every kill gives each player
-// XP; apart, a kill only tells the others the enemy is gone (`defeated`). F fades you over to
-// a friend (goToFriend).
+// XP; apart, a kill only tells the others the enemy is gone (`defeated`). goToFriend fades you
+// over to a friend (not bound to a key for now; an item will do it).
 //
 // The floor loot and the chests are shared (game/loot.js): the killer's or opener's game rolls
 // a drop and shows it at once (`drop`), the host keeps the first drop of each source and tells
@@ -647,7 +647,7 @@ function beside(p) {
   return null;
 }
 
-// F: fade over to the cube a friend is in, and stand next to them (the next friend each time)
+// fade over to the cube a friend is in, and stand next to them (the next friend each time)
 export function goToFriend() {
   const list = [...peers.values()].filter(p => p.timeline.latest()).sort((a, b) => a.slot - b.slot);
   if (!list.length) return;

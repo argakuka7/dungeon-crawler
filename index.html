@@ -29,7 +29,7 @@
   <section id="help-panel" role="dialog" aria-labelledby="help-title">
     <header><h1 id="help-title">Controls</h1><span><kbd>?</kbd> / <kbd>Esc</kbd> to close</span></header>
     <dl class="keys">
-      <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>run (hold <kbd>Ctrl</kbd> to walk)</dd>
+      <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>run (hold left <kbd>Ctrl</kbd> to walk)</dd>
       <dt><kbd>Space</kbd></dt><dd>jump</dd>
       <dt>click floor</dt><dd>walk there (hold to keep following the cursor)</dd>
       <dt>click enemy</dt><dd>go and attack it (hold to keep attacking)</dd>
@@ -38,7 +38,7 @@
       <dt><kbd>K</kbd> <kbd>L</kbd> / wheel</dt><dd>zoom in / out (5 levels)</dd>
       <dt>click item / label</dt><dd>walk there and pick it up (weapons are only taken this way or from the inventory)</dd>
       <dt>click chest</dt><dd>walk up and open it</dd>
-      <dt><kbd>F</kbd> / <kbd>Enter</kbd></dt><dd>action: open the treasure chest next to you, else trade with the villager next to you, else collect coins and items within four cells</dd>
+      <dt><kbd>F</kbd> / right <kbd>Ctrl</kbd></dt><dd>action: open the treasure chest next to you, else trade with the villager next to you, else collect coins and items within four cells</dd>
       <dt>click villager</dt><dd>walk up and trade (the alchemist in the merchant camp sells potions)</dd>
       <dt><kbd>X</kbd></dt><dd>show the names of all items on the floor</dd>
       <dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd>inventory, with the items on the floor around you beside it: take them, or drop from the bag</dd>
@@ -50,8 +50,7 @@
       <dt><kbd>M</kbd></dt><dd>music on / off</dd>
       <dt><kbd>Esc</kbd></dt><dd>the menu: play together, the controls, the music, save and quit (alone, the game waits meanwhile)</dd>
       <dt><kbd>O</kbd></dt><dd>play together with up to three friends (the menu)</dd>
-      <dt><kbd>F</kbd></dt><dd>playing together: go to a friend (again: the next one), when there is nothing to do here</dd>
-      <dt><kbd>Enter</kbd></dt><dd>chat (playing together, your friends read it), when there is nothing to do here; the box keeps what happened</dd>
+      <dt><kbd>Enter</kbd></dt><dd>chat (playing together, your friends read it); the box keeps what happened</dd>
       <dt><kbd>`</kbd></dt><dd>type a command (<kbd>/help</kbd> lists them, <kbd>Tab</kbd> completes)</dd>
       <dt><kbd>?</kbd></dt><dd>this help</dd>
     </dl>
@@ -134,6 +133,7 @@
   <button id="touch-turn-left" class="touch-turn" tabindex="-1" aria-label="Turn the view left"><svg viewBox="0 0 24 24"><path d="M8.6 5.2 4 9.8l4.6 4.6V11a7 7 0 0 1 9.9 6.4h2.4A9.4 9.4 0 0 0 8.6 8.6z"/></svg></button>
   <button id="touch-turn-right" class="touch-turn" tabindex="-1" aria-label="Turn the view right"><svg viewBox="0 0 24 24"><path d="M15.4 5.2 20 9.8l-4.6 4.6V11a7 7 0 0 0-9.9 6.4H3.1a9.4 9.4 0 0 1 12.3-8.8z"/></svg></button>
   <button id="touch-jump" tabindex="-1" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 4l-7 8h4.5v7h5v-7H19z"/></svg></button>
+  <button id="touch-use" tabindex="-1" aria-label="Use" hidden><img alt="" hidden><svg viewBox="0 0 24 24" hidden><path d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v9a2.5 2.5 0 0 1-2.5 2.5h-7.2L6.5 21.6v-4.1H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5z"/><circle cx="7.5" cy="10.5" r="1.5"/><circle cx="12" cy="10.5" r="1.5"/><circle cx="16.5" cy="10.5" r="1.5"/></svg><span id="touch-use-count" hidden></span></button>
   <button id="touch-action" tabindex="-1" aria-label="Attack"><img alt="" hidden><span id="touch-action-knob"></span></button>
   <div id="touch-hold"></div>
 </div>

@@ -444,7 +444,7 @@ export async function runFireChecks() {
   });
 }
 
-// Real key events: always running after a short ramp, Ctrl walks (Ctrl+W too), Space jumps,
+// Real key events: always running after a short ramp, left Ctrl walks (Ctrl+W too), Space jumps,
 // held Shift auto-attacks only an enemy within reach, F does nothing.
 export async function runControlChecks() {
   check(character.ready && character.sword, 'Wait for character / weapon assets');
@@ -471,9 +471,12 @@ export async function runControlChecks() {
       check(near(speed(), RUN_SPEED), 'Releasing Ctrl runs again');
       key('keyup', 'KeyW'); tick(20);
       check(speed() === 0, 'Releasing the key stops');
-      hero(); key('keydown', 'ControlRight', { ctrlKey: true });
+      hero(); key('keydown', 'ControlLeft', { ctrlKey: true });
       const ctrlW = key('keydown', 'KeyW', { ctrlKey: true }); tick(30);
       check(ctrlW.defaultPrevented && near(speed(), WALK_SPEED), 'Ctrl first, then W walks');
+      key('keyup', 'KeyW'); key('keyup', 'ControlLeft');
+      hero(); key('keydown', 'ControlRight', { ctrlKey: true }); key('keydown', 'KeyW', { ctrlKey: true }); tick(30);
+      check(near(speed(), RUN_SPEED), 'Right Ctrl does not walk (it is the action key): ' + speed());
       key('keyup', 'KeyW'); key('keyup', 'ControlRight');
       check(!key('keydown', 'KeyL', { ctrlKey: true }).defaultPrevented, 'Other Ctrl shortcuts are left to the browser');
 

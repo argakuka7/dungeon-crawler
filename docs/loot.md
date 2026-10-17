@@ -11,16 +11,17 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
 
 ## Controls
 
-- **F** or **Enter** is the action key (`game/action.js`): it does the first that works of
+- **F** or **right Ctrl** is the action key (`game/action.js`): it does the first that works of
   opening the closed treasure chest beside you, trading with the villager beside you and
-  collecting every coin and stackable item within four cells (only when there is one; else F
-  goes to a friend and Enter opens the chat).
+  collecting every coin and stackable item within four cells (only when there is one; else it
+  does nothing). On touch screens the use button above the action button does the same.
+  Enter is the chat.
 - Weapons are **not** taken by walking over them, by the coin magnet or by collecting (the action key).
 - **Click** a weapon (or its label) to walk there and pick it up. The enemy under the cursor
   still wins over an item; an item wins over a chest, a chest over the floor. A full bag says so
   and leaves it.
 - **Click** a closed treasure chest (or its label, "Treasure chest", coloured by how grand the
-  site is) to walk up and open it. Standing next to one, **F** or **Enter** (the action key,
+  site is) to walk up and open it. Standing next to one, **F** or **right Ctrl** (the action key,
   `game/action.js`) opens it. X labels chests too.
 - Potions are taken by walking over them or by collecting, like coins, and go on the quick
   bar by themselves (one of each family, [potions.md](potions.md)).
@@ -192,5 +193,5 @@ browser console:
 const checks = await import('./tests/browser/inventory.js');
 await checks.runWeaponLootChecks();   // guardian drops, walk-over / collect, labels, click pickup, the floor column, drops, deaths
 await (await import('./tests/browser/chests.js')).runChestChecks();   // hover, click, open, spill, deaths, potions
-await (await import('./tests/browser/chests.js')).runActionKeyChecks();   // F / Enter: chest, collect, chat, trader
+await (await import('./tests/browser/chests.js')).runActionKeyChecks();   // F / right Ctrl: chest, collect, nothing, trader; Enter chats; the use button
 ```

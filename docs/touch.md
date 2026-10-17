@@ -19,6 +19,11 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   go calls the throw off. A tap without dragging throws at the best enemy in range and in sight,
   or straight ahead.
 - **Jump** is the smaller button beside it.
+- **Use**: above the action button, only while there is something to do: it is the action key
+  (F or right Ctrl, `src/game/action.js`). Its icon shows what it does: the treasure chest
+  beside you (open it), a speech bubble (talk to the trading villager beside you), or the best
+  item around (collect, with how many pickups in a badge). The order is the action key's:
+  chest, then villager, then collecting.
 - **Turn**: a button at the middle of each side of the screen turns the view a quarter, the
   left one like Q, the right one like E.
 - **The quick bar** moves to the top, with a bag button at its end that opens the inventory and
@@ -33,7 +38,7 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
 - **Tap**: what a click does, except walking: an enemy is attacked, an item picked up, a chest
   opened, a villager traded with; with a flask in hand it is thrown there. A tap on the floor
   does nothing.
-- **Long press** (about half a second, held still): collects coins and items around, like the action key (F or Enter).
+- **Long press** (about half a second, held still): collects coins and items around, like the action key (F or right Ctrl).
   A ring fills under the finger.
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
   closer).

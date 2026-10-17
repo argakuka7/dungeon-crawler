@@ -227,7 +227,7 @@ body.touch #inventory-panel #inventory-bar-keys button { height: 38px; }
 #effects .fx.ending { animation: fx-blink .5s steps(2) infinite; }
 @keyframes fx-blink { 50% { opacity: .45; } }
 
-/* touch controls (game/touch.js): the stick on the left, the action and jump buttons on the right,
+/* touch controls (game/touch.js): the stick on the left, the action and jump buttons on the right (the use button above them),
    a turn button at each side, the quick bar at the top with a bag button; pinch and long press on the game */
 /* no double-tap zoom anywhere (touch-action is per element, not inherited; the game's own pinch is below) */
 *, *::before, *::after { touch-action: manipulation; }
@@ -240,7 +240,7 @@ body.touch :is(input, textarea, select) { font-size: 16px !important; }
 #touch-ring { position: fixed; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; box-sizing: border-box;
   border: 2px solid #ffffff55; background: radial-gradient(circle, #0b0d1233 0%, #0b0d1266 100%); pointer-events: none; }
 #touch-knob { position: absolute; left: 36px; top: 36px; width: 48px; height: 48px; border-radius: 50%; background: #e6e9efaa; box-shadow: 0 2px 8px #0008; }
-#touch :is(#touch-action, #touch-jump, .touch-turn) { position: absolute; pointer-events: auto; padding: 0; border-radius: 50%; cursor: pointer;
+#touch :is(#touch-action, #touch-use, #touch-jump, .touch-turn) { position: absolute; pointer-events: auto; padding: 0; border-radius: 50%; cursor: pointer;
   border: 2px solid #ffffff44; background: radial-gradient(circle at 50% 40%, #2a3140dd, #0b0d12cc); box-shadow: 0 4px 16px #0008; }
 #touch-action { right: calc(28px + env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom)); width: 92px; height: 92px; }
 #touch-action img { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); object-fit: contain; border-radius: 12px; pointer-events: none; }
@@ -250,6 +250,18 @@ body.touch :is(input, textarea, select) { font-size: 16px !important; }
 #touch-action-knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%;
   background: #ffcf7acc; box-shadow: 0 0 12px #ffcf7a; opacity: 0; pointer-events: none; }
 #touch-action.flask.down #touch-action-knob { opacity: 1; }
+/* the use button: the action key (game/action.js), only while there is something to do; it shows what */
+#touch #touch-use { right: calc(42px + env(safe-area-inset-right)); bottom: calc(134px + env(safe-area-inset-bottom)); width: 64px; height: 64px;
+  display: grid; place-items: center; border-color: #ffcf7a99; animation: use-pop .18s ease-out; }
+#touch #touch-use[hidden] { display: none; }
+#touch-use img { width: 44px; height: 44px; object-fit: contain; border-radius: 10px; pointer-events: none; }
+#touch-use svg { width: 32px; height: 32px; fill: #e6e9ef; pointer-events: none; }
+#touch-use svg circle { fill: #1b2029; }
+#touch-use:active { border-color: #ffcf7a; background: radial-gradient(circle at 50% 40%, #4a4030ee, #0b0d12dd); }
+#touch-use-count { position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 11px; background: #ffcf7a; color: #1b2029; font: 700 12px/22px system-ui, sans-serif; text-align: center; pointer-events: none; }
+#touch-use-count[hidden] { display: none; }
+@keyframes use-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
 #touch-jump { right: calc(136px + env(safe-area-inset-right)); bottom: calc(22px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
 #touch-jump svg { width: 30px; height: 30px; fill: #e6e9ef; pointer-events: none; }
 #touch-jump:active { border-color: #ffcf7a; }

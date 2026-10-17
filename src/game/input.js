@@ -1,15 +1,16 @@
 // Keyboard, mouse and wheel. Modal input never enters the game queue.
-// The player always runs; holding Ctrl walks. Holding Shift auto-attacks enemies the weapon
+// The player always runs; holding left Ctrl walks. Holding Shift auto-attacks enemies the weapon
 // can reach (and does nothing without one, or with a flask in hand). Space jumps.
 // Mouse: click the floor to walk there, click an enemy to attack it (hold for more), click an
 // item on the floor to pick it up, click a treasure chest to open it, click a villager who
 // trades to go and trade. With a flask in hand (game/throws.js) a click throws it at the cursor
-// instead, whatever is there. F or Enter: the action key (game/action.js): open the chest beside
-// the player, else trade with the villager beside them, else collect what lies around (else F
-// goes to a friend, Enter opens the chat). I (or V): the inventory, with the floor in reach beside the bag
+// instead, whatever is there. F or right Ctrl: the action key (game/action.js): open the chest
+// beside the player, else trade with the villager beside them, else collect what lies around
+// (Enter is the chat, game/console.js). I (or V): the inventory, with the floor in reach beside the bag
 // when something lies there (game/inventory.js); X: item labels. 1-6: the quick bar (game/
 // quickbar.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
-// action button holds like Shift, and a tap on the game clicks there without walking.
+// action button holds like Shift, its use button is the action key, and a tap on the game
+// clicks there without walking.
 import { stepZoom } from '../core/zoom.js';
 import { player, state, view, setStatus } from './state.js';
 import { spawnEntry, nextCube } from './flow.js';
@@ -29,14 +30,13 @@ import { allEnemies } from './enemies.js';
 import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
 import { setMenuOpen, toggleMenu } from './escmenu.js';
-import { goToFriend } from '../net/session.js';
 import { useAction } from './action.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
 
 const { keys } = controls;
 const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
-const WALK = ['ControlLeft', 'ControlRight'], ATTACK = ['ShiftLeft', 'ShiftRight'];
+const WALK = ['ControlLeft'], ACTION = ['KeyF', 'ControlRight'], ATTACK = ['ShiftLeft', 'ShiftRight'];
 
 addEventListener('keydown', e => {
   if (e.metaKey || e.altKey) return;
@@ -53,7 +53,12 @@ addEventListener('keydown', e => {
     if (!['Tab', 'Enter', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab, Enter and Space)
     return;
   }
-  // Ctrl is the walk modifier: track it and the movement keys (and keep Ctrl+S / Ctrl+D /
+  // right Ctrl is the action key (as F)
+  if (e.code === 'ControlRight') {
+    if (!e.repeat && !state.inventoryOpen) useAction();
+    e.preventDefault(); return;
+  }
+  // left Ctrl is the walk modifier: track it and the movement keys (and keep Ctrl+S / Ctrl+D /
   // Ctrl+A from saving, bookmarking or selecting), leave every other Ctrl shortcut alone
   if (e.ctrlKey) {
     if (!state.inventoryOpen && (WALK.includes(e.code) || MOVE.includes(e.code))) { keys.add(e.code); e.preventDefault(); }
@@ -82,9 +87,8 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') { spawnEntry(); setStatus('Respawned where you came in'); }
   if (e.code === 'KeyN' && state.dev) nextCube();   // (new worlds come from the main menu)
   if (e.code === 'KeyX') toggleLabels();
-  // F: the action key (chest, villager, collect; Enter too, game/console.js), else playing
-  // together: over to the friend
-  if (e.code === 'KeyF' && !useAction()) goToFriend();
+  // F: the action key (chest, villager, collect), else nothing
+  if (ACTION.includes(e.code)) useAction();
   if (e.code === 'KeyK' || e.code === 'KeyL') { view.zoomTarget = stepZoom(view.zoomTarget, e.code === 'KeyK' ? -1 : 1); e.preventDefault(); }
   if (e.code === 'KeyB' && !player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: 'Whoops!' });
   if (e.code === 'KeyP') { state.showPath = !state.showPath; if (state.world) state.world.pathLine.visible = state.showPath; }
@@ -122,7 +126,7 @@ export function quickThrow() {
   queueAttack(softTarget(player, allEnemies(), yaw, bladeSees));
 }
 export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning && (controls.attackHeld || ATTACK.some(k => keys.has(k)));
-// Ctrl, or the touch stick pushed only a little
+// left Ctrl, or the touch stick pushed only a little
 export const wantsWalk = () => WALK.some(k => keys.has(k)) || (controls.stick.m > 0 && controls.stick.m < WALK_BELOW);
 addEventListener('pointerdown', e => {
   // touches are game/touch.js's (a tap comes back through tapGame)

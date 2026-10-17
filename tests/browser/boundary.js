@@ -41,30 +41,31 @@ function finishSlide() {
 }
 async function travel(portal) { startTravel(portal); await waitForSlide(); finishSlide(); }
 
-// Modifier state: Ctrl (walk) and Shift (auto-attack), left and right, blur and modal isolation.
+// Modifier state: left Ctrl (walk; right Ctrl is the action key) and Shift (auto-attack), left and
+// right, blur and modal isolation.
 export async function runModifierKeyChecks() {
   return paused(async () => {
     check(!state.inventoryOpen && !state.transitioning, 'Close inventory and finish travel first');
     clearInput();
     try {
-      for (const [ctrl, shift] of [['ControlLeft', 'ShiftLeft'], ['ControlRight', 'ShiftRight']]) {
+      for (const shift of ['ShiftLeft', 'ShiftRight']) {
         key('keydown', 'KeyW');
         check(!wantsWalk() && !autoAttackHeld(), 'Running without modifiers, no auto-attack');
-        key('keydown', ctrl, { ctrlKey: true }); check(wantsWalk(), ctrl + ' must walk');
-        key('keyup', ctrl); check(!wantsWalk(), 'Releasing Ctrl must run again');
+        key('keydown', 'ControlLeft', { ctrlKey: true }); check(wantsWalk(), 'Left Ctrl must walk');
+        key('keyup', 'ControlLeft'); check(!wantsWalk(), 'Releasing Ctrl must run again');
+        key('keydown', 'ControlRight', { ctrlKey: true }); check(!wantsWalk(), 'Right Ctrl must not walk');
+        key('keyup', 'ControlRight');
         key('keydown', shift, { shiftKey: true }); check(autoAttackHeld(), shift + ' must auto-attack');
         key('keyup', shift); check(!autoAttackHeld(), 'Releasing Shift must stop auto-attacking');
         key('keyup', 'KeyW'); clearInput();
       }
-      key('keydown', 'ControlLeft', { ctrlKey: true }); key('keydown', 'ControlRight', { ctrlKey: true }); key('keyup', 'ControlLeft');
-      check(wantsWalk(), 'Either held Ctrl must suffice');
-      key('keydown', 'ShiftLeft', { shiftKey: true });
+      key('keydown', 'ControlLeft', { ctrlKey: true }); key('keydown', 'ShiftLeft', { shiftKey: true });
       dispatchEvent(new Event('blur')); check(!wantsWalk() && !autoAttackHeld(), 'Blur must clear held modifiers');
       key('keydown', 'ControlLeft', { ctrlKey: true }); key('keydown', 'ShiftLeft', { shiftKey: true }); setInventoryOpen(true);
       check(!wantsWalk() && !autoAttackHeld(), 'Inventory must clear held modifiers');
-      key('keydown', 'ControlRight', { ctrlKey: true }); key('keydown', 'ShiftRight', { shiftKey: true }); setInventoryOpen(false);
+      key('keydown', 'ControlLeft', { ctrlKey: true }); key('keydown', 'ShiftRight', { shiftKey: true }); setInventoryOpen(false);
       check(!wantsWalk() && !autoAttackHeld(), 'Inventory input must not replay on close');
-      return ['left/right Ctrl walk / Shift auto-attack hold/release', 'blur and modal isolation'];
+      return ['left Ctrl walk (not right) / Shift auto-attack hold/release', 'blur and modal isolation'];
     } finally { setInventoryOpen(false); clearInput(); }
   });
 }

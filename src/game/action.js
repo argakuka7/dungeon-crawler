@@ -1,15 +1,19 @@
-// The action key, F or Enter (game/input.js, game/console.js): does the first thing that works
-// where the player stands:
+// The action key, F or right Ctrl (game/input.js), and the use button on touch screens
+// (game/touch.js): does the first thing that works where the player stands:
 //   1. open the closed treasure chest beside them (game/chests.js)
 //   2. talk to the villager beside them: one who trades opens their shop (game/inventory.js)
 //   3. collect the coins and items around them (game/loot.js; four cells across)
-// useAction says whether it did anything: when not, F goes to a friend and Enter opens the chat.
+// pendingAction says which (for the use button's icon), useAction does it and says whether it
+// did anything. With nothing to do the key does nothing.
 import { player, state } from './state.js';
 import { chestInReach, openChest } from './chests.js';
 import { canTrade } from './orders.js';
 import { openShop } from './inventory.js';
-import { canCollect, requestCollect } from './loot.js';
+import { collectable, requestCollect } from './loot.js';
 import { shopOf } from '../core/shops.js';
+import { ITEMS } from '../core/items.js';
+
+const CHEST_ICON = 'assets/items/treasure_chest.png';
 
 // the trading villager the player stands next to (the nearest one), if any
 function villagerInReach() {
@@ -22,13 +26,35 @@ function villagerInReach() {
   return best;
 }
 
-export function useAction() {
+// of the pickups a collect takes, the one to show: items before coins, the dearest, the nearest
+function showcase(list) {
+  const coin = p => ITEMS[p.itemId]?.category === 'currency', price = p => ITEMS[p.itemId]?.price ?? 0;
+  const d = p => Math.hypot(p.x - player.x, p.z - player.z);
+  return list.reduce((a, b) => (coin(a) !== coin(b) ? (coin(a) ? b : a)
+    : price(a) !== price(b) ? (price(a) > price(b) ? a : b) : d(a) <= d(b) ? a : b));
+}
+
+// what the action key would do here: null, or { kind: 'chest' | 'talk' | 'collect', target,
+// label, icon (an image, not for talk), count (collect: how many pickups) }
+export function pendingAction() {
   if (state.mode !== 'play' || !state.map || state.transitioning || state.inventoryOpen
-    || player.down || player.ragdoll || player.hp <= 0) return false;
+    || player.down || player.ragdoll || player.hp <= 0) return null;
   const chest = chestInReach();
-  if (chest) return openChest(chest);
+  if (chest) return { kind: 'chest', target: chest, label: 'Open the chest', icon: CHEST_ICON };
   const villager = villagerInReach();
-  if (villager) { openShop(villager); return true; }
-  if (canCollect()) { requestCollect(); return true; }
+  if (villager) return { kind: 'talk', target: villager, label: `Talk to the ${shopOf(villager).title}` };
+  const loot = collectable();
+  if (loot.length) {
+    const best = showcase(loot);
+    return { kind: 'collect', target: best, label: 'Collect', icon: ITEMS[best.itemId]?.icon, count: loot.length };
+  }
+  return null;
+}
+
+export function useAction() {
+  const a = pendingAction();
+  if (a?.kind === 'chest') return openChest(a.target);
+  if (a?.kind === 'talk') { openShop(a.target); return true; }
+  if (a?.kind === 'collect') { requestCollect(); return true; }
   return false;
 }

@@ -1,7 +1,8 @@
 // In devtools: await (await import('./tests/browser/chests.js')).runChestChecks()
 // Real worker cube with a reward site: hover and click its chest, the lid's Open clip, the spilled
-// loot, deaths and rebuilds; the action key (F / Enter: a chest, a trading villager, collecting,
-// else the chat); then drinking a health potion from the quick bar.
+// loot, deaths and rebuilds; the action key (F / right Ctrl: a chest, a trading villager,
+// collecting, else nothing; Enter is always the chat) and what the touch use button shows; then
+// drinking a health potion from the quick bar.
 import * as THREE from 'three';
 import { paused } from './combat.js';
 import { state, player } from '../../src/game/state.js';
@@ -15,6 +16,7 @@ import { enterCube, spawnAt, hurt } from '../../src/game/flow.js';
 import { lootHere, updateLoot } from '../../src/game/loot.js';
 import { chatOpen, closeChat } from '../../src/game/console.js';
 import { setInventoryOpen } from '../../src/game/inventory.js';
+import { pendingAction } from '../../src/game/action.js';
 import { shopOf } from '../../src/core/shops.js';
 import { merchantCampKey } from '../../src/world/town.js';
 import { updateLootLabels, hoveredChest } from '../../src/game/lootlabels.js';
@@ -65,38 +67,45 @@ async function atRewardSite(fn) {
 
 // In devtools: await (await import('./tests/browser/chests.js')).runActionKeyChecks()
 export const runActionKeyChecks = () => atRewardSite(async (c, entry, site, results) => {
-  // the action key: F far from the chest does nothing; Enter beside it opens it (no chat);
-  // then F collects the stackables it spilled
+  // the action key: F far from the chest does nothing; Enter beside it is the chat, right Ctrl
+  // opens it; then F collects the stackables it spilled
   check(closed(site.id), 'the chest stands closed');
   press('KeyF');
-  check(!state.run.chests.has(site.id), 'F away from the chest leaves it closed');
+  check(!state.run.chests.has(site.id) && !chatOpen(), 'F away from the chest leaves it closed (and no chat)');
   spawnAt(site.approach.x, site.approach.y, site.approach.z);
+  check(pendingAction()?.kind === 'chest', 'beside the chest the use button opens it');
   press('Enter');
-  check(state.run.chests.has(site.id) && !chatOpen(), 'Enter beside the chest opens it, not the chat');
+  check(!state.run.chests.has(site.id) && chatOpen(), 'Enter beside the chest opens the chat, not the chest');
+  closeChat();
+  press('ControlRight');
+  check(state.run.chests.has(site.id) && !chatOpen(), 'right Ctrl beside the chest opens it');
   for (let i = 0; i < 30; i++) tickChests(1 / 30);
   for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
   const loose = () => lootHere().filter(p => !p.gen && !p.claim);
   if (loose().length) {
+    check(pendingAction()?.kind === 'collect' && pendingAction().icon && pendingAction().count === loose().length,
+      'with the chest open the use button collects, showing an item');
     press('KeyF');
     for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
     check(!loose().length, 'F with the chest open collects what it spilled');
     results.push('F collects');
   } else results.push('(nothing spilled to collect)');
-  // nothing left to do: Enter is the chat again
-  press('Enter');
-  check(chatOpen(), 'with nothing to do Enter opens the chat');
-  closeChat();
+  // nothing left to do: no use button, F does nothing
+  check(!pendingAction(), 'with nothing to do there is no use button');
+  press('KeyF');
+  check(!chatOpen(), 'with nothing to do F does nothing');
   // the trading villager in the merchant camp (the alchemist): F beside them opens their shop
   const seed = state.cubes.seed;   // the camp lies seed % 4 from town: in from that side
   enterCube(await state.cubes.get(merchantCampKey(seed)), (seed % 4) ^ 1);
   const trader = state.map.villagers.find(shopOf);
   check(trader, 'a trader in town');
   spawnAt(trader.x + Math.sin(trader.yaw) * 0.85, trader.y, trader.z + Math.cos(trader.yaw) * 0.85);
+  check(pendingAction()?.kind === 'talk', 'beside a trader the use button talks');
   press('KeyF');
   check(state.inventoryOpen, 'F beside a trader opens the shop');
   setInventoryOpen(false);
   enterCube(c, entry.dir);
-  results.push('action key: chest (Enter) / collect (F) / chat / trader (F)');
+  results.push('action key: chest (right Ctrl, not Enter) / collect (F) / nothing / trader (F)');
 });
 
 export const runChestChecks = () => atRewardSite(async (c, entry, site, results) => {

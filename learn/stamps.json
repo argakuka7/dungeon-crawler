@@ -162,7 +162,7 @@
     "src/net/protocol.js#Q": "ab99b24f",
     "src/net/protocol.js#roomCode": "d74b6765",
     "src/net/protocol.js#SEND_EVERY": "a8800df0",
-    "src/net/session.js#header": "428aef69",
+    "src/net/session.js#header": "92eca2dd",
     "src/net/session.js#lootReceive": "525d5634",
     "src/net/session.js#lost": "7a012465",
     "src/net/session.js#retry": "9f598f19",

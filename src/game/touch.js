@@ -3,10 +3,11 @@
 // the thumb lands, it pushes the way to move (a little: walk, further: run). On the right the
 // action button attacks while held (as Shift); with a flask in hand it is a stick that aims
 // the throw (core/stick.js aimReach): let go to throw, back to the middle to call it off, and a
-// tap throws at the best enemy in range. The jump button sits beside it. A turn button at each
-// side of the screen turns the view a quarter (as Q and E). On the game itself a tap does what
-// a click does, except walking (an enemy, an item, a chest, a villager), a long press collects
-// what is around (as C), and two fingers pinch to zoom. The quick bar moves to the top with a
+// tap throws at the best enemy in range. The jump button sits beside it, the use button above
+// it while there is something to do (the action key, game/action.js; its icon shows what). A
+// turn button at each side of the screen turns the view a quarter (as Q and E). On the game
+// itself a tap does what a click does, except walking (an enemy, an item, a chest, a
+// villager), a long press collects what is around, and two fingers pinch to zoom. The quick bar moves to the top with a
 // bag button (game/quickbar.js, style.css).
 import { stickVector, pinchStep } from '../core/stick.js';
 import { stepZoom } from '../core/zoom.js';
@@ -20,6 +21,7 @@ import { tapGame, quickThrow, autoAttack } from './input.js';
 import { requestCollect } from './loot.js';
 import { throwTarget } from './throws.js';
 import { queueAttack } from './sword.js';
+import { pendingAction, useAction } from './action.js';
 
 const STICK_R = 56, AIM_R = 72;   // px the thumb goes out to for a full push
 const TAP_TIME = 300;             // ms: a touch let go sooner (without moving) is a tap
@@ -29,6 +31,7 @@ const SLOP = 12;                  // px a finger may wander and still tap or lon
 const $ = id => document.getElementById(id);
 const root = $('touch'), zone = $('touch-stick'), ring = $('touch-ring'), knob = $('touch-knob'),
   action = $('touch-action'), aimKnob = $('touch-action-knob'), icon = action.querySelector('img'),
+  use = $('touch-use'), useImg = use.querySelector('img'), useSpeak = use.querySelector('svg'), useCount = $('touch-use-count'),
   jump = $('touch-jump'), hold = $('touch-hold'), turnLeft = $('touch-turn-left'), turnRight = $('touch-turn-right'),
   canvas = renderer.domElement;
 const now = () => performance.now();
@@ -112,6 +115,12 @@ function endPress(e) {
 }
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) action.addEventListener(type, endPress);
 
+// the use button: the action key (chest, villager, collect)
+use.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (useAction()) navigator.vibrate?.(10);
+});
+
 jump.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (!state.inventoryOpen && !state.transitioning) controls.jumpPressed = true;
@@ -187,11 +196,13 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.
 
 // --- every frame -------------------------------------------------------------------------------
 
-let shown = '';
-// hidden while the inventory is open; the action button shows the weapon, or the flask in hand
+let shown = '', useShown = '';
+// hidden while the inventory is open; the action button shows the weapon, or the flask in hand;
+// the use button what the action key would do, or nothing
 export function updateTouch() {
   if (!on) return;
   root.hidden = state.inventoryOpen;
+  updateUse();
   const flask = readiedFlask(player), weapon = equippedItem(player.inventory), def = flask || (weapon && ITEMS[weapon.itemId]);
   const next = `${def?.icon}:${!!flask}`;
   if (next === shown) return;
@@ -201,4 +212,18 @@ export function updateTouch() {
   action.classList.toggle('flask', !!flask);
   action.classList.toggle('empty', !def);
   action.setAttribute('aria-label', flask ? `Aim and throw ${flask.name}` : 'Attack');
+}
+
+function updateUse() {
+  const a = pendingAction(), next = a ? `${a.kind}:${a.icon}:${a.count ?? 0}:${a.label}` : '';
+  if (next === useShown) return;
+  useShown = next;
+  use.hidden = !a;
+  if (!a) return;
+  useImg.hidden = !a.icon;
+  if (a.icon) useImg.src = a.icon;
+  useSpeak.toggleAttribute('hidden', a.kind !== 'talk');   // (an svg has no .hidden)
+  useCount.hidden = !(a.count > 1);
+  useCount.textContent = a.count > 1 ? `${a.count}` : '';
+  use.setAttribute('aria-label', a.label);
 }

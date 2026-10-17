@@ -10,7 +10,7 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   still moves and cancels any mouse order. The character only turns when you click
   (or move), never just from hovering. **Space:** movement-only jump.
 - **Movement speed:** the player always runs, by keyboard and by mouse order; holding
-  **Ctrl** walks. On the ground speed ramps up linearly, standing to a full run in
+  **left Ctrl** walks (right Ctrl is the action key, `game/action.js`). On the ground speed ramps up linearly, standing to a full run in
   `RUN_RAMP` (0.25 s, walking pace after about 0.17 s, so taps stay precise), and brakes
   at `BRAKE` (30 units/s², about 0.1 s from a run). The direction follows the input at
   once, so turning keeps the speed. Swimming and air control are unchanged. Ctrl+W/A/S/D
@@ -323,7 +323,7 @@ in the browser console:
 ```js
 const checks = await import('./tests/browser/combat.js');
 await checks.runCombatChecks(); // real input (click on an enemy, Shift), controller, damage, GLB poses, cleanup
-await checks.runControlChecks(); // run ramp / Ctrl walk / Ctrl+W, Space jump, Shift auto-attack only in reach, F unbound
+await checks.runControlChecks(); // run ramp / left Ctrl walk (not right) / Ctrl+W, Space jump, Shift auto-attack only in reach, F unbound
 await checks.runNewEnemyChecks(); // snake bite, Octonaut slap / spin kick, their clips and corpses
 await checks.runFireChecks(); // fireball + burning, Triangle punch / dodge / walls, Fire-cat chase and pounce
 await checks.runClimbChecks(); // ladder controller, reverse / hold / exits, dynamic weapon
