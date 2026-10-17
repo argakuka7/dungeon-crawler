@@ -372,16 +372,18 @@ everywhere.
 Structures: a stair never runs right beside a bridge at a similar height, and timber legs
 under plank bridges never stand where another structure passes underneath.
 
-## Caves (depth 5 and deeper)
+## Caves (depth 7 and deeper) and the canyon (5–6)
 
 - **Chamber walls:** cave cubes are enclosed by rock walls. A side face's `wall` (in
   `world/profile.js`) is shared by both cubes. Each cube raises its outer ring to the wall
   height (levels 17–23) and the ring inside it to a rough half-height foot.
 - **Openings:** walls open around portals and river crossings. Corners come from the shared
   vertex point, so the four faces meeting there agree.
+- **The canyon:** its theme has `walls`: the same rock walls along the faces (`walled` on the
+  spec and the map), under the open sky. The route winds through a sandstone gorge.
 - **Pillars:** one to three rock columns rise to the top level in every cave cube.
 - **Walls down:** the faces towards the camera are cut down to just over the character in the
-  cutaway shader (`frontWall` in `render/cutshader.js`). The cut rock shows as a flat
+  cutaway shader (`frontWall` in `render/cutshader.js`), in caves and canyons (`map.walled`). The cut rock shows as a flat
   cross-section, like a cutaway model.
 
 ## Themes per world (`themes/index.js`, `themes/caves.js`, `themes/depth.js`)
@@ -400,13 +402,15 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
 | 1–2 | Meadow islands, Cloud kingdom, Lagoon isles, Karst terraces |
 | 3 | Snowy peaks, Prayer highlands |
 | 4 | Badlands, Salt flats |
-| 5–6 | Root caves |
-| 7–8 | Frozen caves, Sunken grotto |
-| 9–10 | Fungal swamp, Honey hive |
-| 11–12 | Spider nests, Ossuary |
-| 13–14 | Crystal mines, Dwarven forge |
-| 15–16 | Buried ruins, Jungle cenote |
-| 17–18 | Volcanic depths |
+| 5–6 | Deep canyon (walled in like a cave, under the sky) |
+| 7–8 | Root caves |
+| 9–10 | Frozen caves, Sunken grotto |
+| 11–12 | Fungal swamp, Honey hive |
+| 13 | Jungle cenote |
+| 14–15 | Spider nests, Ossuary |
+| 16 | Crystal mines, Dwarven forge |
+| 17 | Buried ruins |
+| 18 | Volcanic depths |
 | 19–20 | Obsidian abyss |
 
 - **Where it is read:** the picks live on the layouts (`world.layout.themes`, each depth's
@@ -417,6 +421,9 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
   music, names). A map without a theme is a bug: `themeOf` throws. The light follows the
   world's picks (`lightAt(depth, themes)`, blended between the starts of the stretches); with no
   world yet (the menu before its first cube) it is the town's.
+- **Light in three bands:** light under the sky (0–6), medium in the sunlit caves (7–13), dark
+  in the deep (14–20). Each theme's `light` belongs to its band; its `lamp` (0, about a half, 1)
+  sets how bright the character's own light is (`render/look.js`).
 - **What the theme changes:** the themes of a depth agree on `cave`. The route, its guardians
   and hordes depend on the seed alone; the gorge spans (and with them where the branches go)
   are the theme's.
@@ -836,5 +843,3 @@ three.js recompile every lit shader on each cube change, which was the biggest s
 - **Vertical portals:** they only need to line up loosely; a pad that would overlap another
   portal moves to a free spot in that cube.
 - **Not persisted:** spiders respawn when you re-enter a cube. Nothing is saved to disk.
-- **Not visible yet:** depth has no look of its own (fog, darkness, palette); only the
-  river fluid changes.

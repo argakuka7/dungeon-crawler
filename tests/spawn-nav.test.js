@@ -144,10 +144,10 @@ test('the surface rosters: snakes, a rare Stunder and a lonely Wolk first, then 
   assert.deepEqual(DEPTH_SPAWNS[1].roster.map(e => e.type), ['snake', 'stunder', 'wolk']);
   assert.equal(share(1, 'snake'), 1);
   assert.ok(share(1, 'stunder') > 0.1 && share(1, 'stunder') < 0.35);
-  // the Wolk lives on the meadows and the snowy peaks only, alone or in twos
+  // the Wolk lives under the open sky only (the meadows, the snowy peaks, the canyons), alone or in twos
   assert.ok(share(1, 'wolk') > 0.1 && share(1, 'wolk') < 0.35);
   assert.ok(share(3, 'wolk') > share(1, 'wolk'));
-  assert.deepEqual(DEPTH_SPAWNS.flatMap((r, d) => r.roster.some(e => e.type === 'wolk') ? [d] : []), [1, 2, 3]);
+  assert.deepEqual(DEPTH_SPAWNS.flatMap((r, d) => r.roster.some(e => e.type === 'wolk') ? [d] : []), [1, 2, 3, 5, 6]);
   assert.ok(Math.max(...DEPTH_SPAWNS.map(r => r.roster.find(e => e.type === 'wolk')?.hi ?? 0)) <= 2);
   assert.ok(mean(2, 'spider') > 0.5 && mean(2, 'spider') < 3);
   assert.equal(share(3, 'spider'), 1);
@@ -160,10 +160,10 @@ test('melee swarms grow with depth and spawn in packs, ranged species stay few',
   const most = type => DEPTH_SPAWNS.map(r => r.roster.find(e => e.type === type)?.hi ?? 0);
   for (const type of ['fireface', 'triangle']) assert.ok(Math.max(...most(type)) <= 4, type);
   const spiders = most('spider');
-  assert.ok(spiders[12] > spiders[3] && spiders[3] > spiders[2] && spiders[20] > spiders[3]);
+  assert.ok(spiders[15] > spiders[3] && spiders[3] > spiders[2] && spiders[20] > spiders[3]);
   let packed = 0;
   for (let seed = 0; seed < 20; seed++) {
-    const map = at(seed, 12), spots = enemySpots(map, SPIDER);
+    const map = at(seed, 15), spots = enemySpots(map, SPIDER);
     assert.equal(spots.length, population(map).get('spider').count);
     for (const a of spots) for (const b of spots) if (a !== b) {
       const d = Math.hypot(a.x - b.x, a.z - b.z);

@@ -81,14 +81,14 @@ export function setCut(y, map, px, py, pz) {
   turnShape(performance.now() / 1000);
   U.uCutY.value = on ? y : 1e3;
   showGhosts(on);   // the cut-away part as glass: only drawn inside a cut (ghosts.js)
-  // cave walls (and the walls of a house, inside) on the camera's side come down to a little
+  // cave and canyon walls (and the walls of a house, inside) on the camera's side come down to a little
   // over the character
   // inside a house they go entirely, down to the floor, with what hangs on them (not the door)
   const inside = map?.interior, room = inside?.room, t = inside?.wall ?? 0;
   // (only the walls' own mesh there: not the floors, the stair or the railing beside them)
   if (room) { U.uWallBox.value.set(room.x0 - t, room.x1 + t, room.z0 - t, room.z1 + t); U.uWallBand.value = t + WALL_CUT; U.uFrontKinds.value.set(0, 1, 0, 0); U.uFrontCorners.value = 0; }
   else { U.uWallBox.value.set(0, N, 0, N); U.uWallBand.value = 2.2; U.uFrontKinds.value.set(1, 1, 1, 1); U.uFrontCorners.value = 1; }
-  const box = U.uWallBox.value, walled = !!map?.cave || !!room;
+  const box = U.uWallBox.value, walled = !!map?.walled || !!room;
   const cx = camera.position.x - (box.x + box.y) / 2, cz = camera.position.z - (box.z + box.w) / 2;
   U.uFront.value.set(walled && cx > 6 ? 1 : 0, walled && cx < -6 ? 1 : 0, walled && cz > 6 ? 1 : 0, walled && cz < -6 ? 1 : 0);
   // a room's walls whose inner face the camera is not beyond: no line of sight from the camera

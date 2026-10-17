@@ -46,7 +46,8 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
   about their business: the hero waits far away, so nothing notices it, and the
   enemies idle and wander about their homes. The camera goes round slowly, the whole cube in
   view (zoom 1: it does not lean towards the parked hero). With no hero there is no hero's light,
-  so from depth 5 on a lamp over the middle of the cube lights the caves instead. The next cube is
+  so below the ground a lamp over the middle of the cube lights the caves instead (as strong as
+  the depth's `lamp`). The next cube is
   made in the world worker while one shows (5 to 40 ms; building it about 2 ms) and the one
   before is dropped, so the menu can stay open for hours. Wide screens have the menu on the left
   and the picture moved right (`camera.setViewOffset`), a phone held upright has it at the bottom

@@ -12,9 +12,11 @@
 [data-theme=meadow]   { --sky1: #163640; --sky2: #081218; --accent: #76ad50; }
 [data-theme=peaks]    { --sky1: #1c2e46; --sky2: #0a0f18; --accent: #c3d3d8; }
 [data-theme=badlands] { --sky1: #40282e; --sky2: #110a0c; --accent: #d3a466; }
-[data-theme=roots]    { --sky1: #231c14; --sky2: #050506; --accent: #c9a46a; }
-[data-theme=frozen]   { --sky1: #12202c; --sky2: #020305; --accent: #aacbd7; }
-[data-theme=swamp]    { --sky1: #142010; --sky2: #020302; --accent: #7dff3a; }
+[data-theme=canyon]   { --sky1: #1e3e6e; --sky2: #0a1630; --accent: #d49466; }
+[data-theme=roots]    { --sky1: #3a3428; --sky2: #12100c; --accent: #c9a46a; }
+[data-theme=frozen]   { --sky1: #14202c; --sky2: #06090e; --accent: #aacbd7; }
+[data-theme=swamp]    { --sky1: #141a10; --sky2: #050704; --accent: #7dff3a; }
+[data-theme=cenote]   { --sky1: #14281a; --sky2: #040a06; --accent: #8ab070; }
 [data-theme=nests]    { --sky1: #1c1520; --sky2: #020203; --accent: #d0503a; }
 [data-theme=mines]    { --sky1: #121630; --sky2: #020203; --accent: #8fd8ff; }
 [data-theme=ruins]    { --sky1: #2a1e10; --sky2: #030201; --accent: #e0c080; }

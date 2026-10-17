@@ -9,7 +9,7 @@
 // without a hero: starting a game (game/flow.js newWorld) or a friend's world coming in
 // (net/session.js) simply takes its place. The next cube is made in the world worker while the
 // current one shows (about 5 to 40 ms; building it here about 2 ms), so a swap never waits.
-import { MAX_DEPTH } from '../themes/depth.js';
+import { MAX_DEPTH, lampAt } from '../themes/depth.js';
 import { createRun } from '../core/progression.js';
 import { gateLocked } from '../core/guardians.js';
 import { WorldClient } from '../world/client.js';
@@ -38,7 +38,7 @@ const ZOOM = 1;              // the whole cube in view, and the camera does not 
 const lamp = new THREE.PointLight(0xffe2b8, 0, 40, 1.2);
 lamp.position.set(N / 2, 9, N / 2);
 scene.add(lamp);
-const LAMP = 22;             // its strength deep down (from depth 5 on)
+const LAMP = 22;             // its strength deep down (the depth's lamp, themes/depth.js lampAt)
 
 // show: { key (what it shows: a focus's, or null: random cubes), focus, cubes (its world
 // client; null: not made yet), t (s the cube has shown), next (the next cube, coming), last,
@@ -130,7 +130,8 @@ export function updateShowcase(dt) {
   if (!show) return;
   if (show.cubes && state.cubes !== show.cubes) { show = null; return; }   // a game (or a friend's world) took over
   view.yawTarget += TURN * dt;
-  lamp.intensity = LAMP * Math.min(1, Math.max(0, state.lookDepth - 4));
+  const themes = state.cubes?.layout.themes;
+  lamp.intensity = themes ? LAMP * lampAt(state.lookDepth, themes) : 0;
   const w = innerWidth, h = innerHeight;
   if (w > WIDE) camera.setViewOffset(w, h, -w * SHIFT, 0, w, h);
   else if (h > w * TALL) camera.setViewOffset(w, h, 0, h * RISE, w, h);

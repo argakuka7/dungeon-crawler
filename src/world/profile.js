@@ -81,12 +81,13 @@ function spanProfile(world, fk, out) {
   for (let t = span.pos - 1; t <= span.pos + 1; t++) out[t] = level;
 }
 
-// cave depths: a rock wall along the face (both cubes build their half of it), open around the
+// cave depths and canyons: a rock wall along the face (both cubes build their half of it), open around the
 // portal and the river crossing. Heights come from world noise sampled at the face (corners at
 // the shared vertex), so the four faces meeting at a corner agree.
 export function caveWall(world, fk, f) {
   const [k, d] = fk.split('/'), [X, Y, Z] = parse(k);
-  if (!world.layout(-Y).theme.cave) return null;
+  const theme = world.layout(-Y).theme;
+  if (!theme.cave && !theme.walls) return null;
   const out = new Int16Array(N);
   for (let t = 0; t < N; t++) {
     if ((f.portal && Math.abs(t - f.portal.pos) <= 2) || (f.spout && Math.abs(t - f.spout.pos) <= 2)) continue;

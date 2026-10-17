@@ -65,7 +65,7 @@ export class World {
     }
     return {
       key: k, X, Y, Z, kind: t.kind, exit: this.layout(-Y).exit.get(k) ?? null, K: t.K, B: LAYER_BASE.slice(0, t.K), faces, portals,
-      spawn: k === this.start, town: isTown(k), merchantCamp: isMerchantCamp(k, this.seed), enemyFree: enemyFreeAt(k), noise: this.noise, depth: -Y, cave: theme.cave,
+      spawn: k === this.start, town: isTown(k), merchantCamp: isMerchantCamp(k, this.seed), enemyFree: enemyFreeAt(k), noise: this.noise, depth: -Y, cave: theme.cave, walled: theme.cave || !!theme.walls,
       biome: theme.props, guardian: this.layout(-Y).guardians.get(k) || null,
       horde: this.layout(-Y).hordes.get(k) || null, populationScale: this.layout(-Y).populationScale.get(k) ?? 1,
       routeIndex: this.layout(-Y).routeIndex.get(k), route: this.layout(-Y).route,

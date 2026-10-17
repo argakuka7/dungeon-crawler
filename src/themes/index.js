@@ -4,15 +4,20 @@
 // lagoons halfway down. Palettes, generator settings and the shape of the layout are per theme;
 // the lighting (`light`) is blended between the starts of the stretches of depths sharing a
 // theme, so every step down is a little darker.
-// A theme's id is its prop set (`props`). The themes that may appear at a depth agree on `cave`.
+// The light comes in three bands of depths: light on the surface and in the canyons (0-6),
+// medium in the sunlit caves (7-13: light falls in through cracks, glowing things), dark down
+// in the deep (14-20, only local lights). A theme's id is its prop set (`props`). The themes
+// that may appear at a depth agree on `cave`.
 //   depths: the first and last depth the theme may appear at (the town's depth, 0, is always TOWN's)
 //   top / side: colour stops by height in levels (grass tops, cliff strata)
 //   fluids: weights [water, lava, acid] for pools and falls; river: fluid of the rivers
 //   tiles: weight multipliers for the WFC kinds; cave: below the ground (no sun, no sky)
+//   walls: rock walls along the faces like a cave's, under the open sky (the canyons)
 //   void: how much of a cube may be open to the depth below; relief: how tall highlands get
 //   arche: weights of the cube archetypes (cubegen/archetypes.js); props: prop set (assets/props.glb,
 //   clutter.glb, themes.glb), propDensity: chance of a prop per floor (0.32)
-//   light: sky [top, bottom, haze?, tint?] (backdrop, see render/sky.js), stars 0..1, hemi [sky, ground, intensity], sun [colour, intensity], fog 0..1
+//   light: sky [top, bottom, haze?, tint?] (backdrop, see render/sky.js), stars 0..1, hemi [sky, ground, intensity], sun [colour, intensity], fog 0..1,
+//     lamp 0..1: how bright the character's own light is (0 under the sky, 1 in the dark deep)
 //   music: the song (music/<name>.scrim) that plays here; the town and the core have their own (SONGS)
 //   spans: gorge spans (world/spans.js), or null: the chance of any on a depth, at most `max`,
 //   the chance of one on the route where it fits, of a lonely island branch and of a span over
@@ -122,9 +127,23 @@ const SALTFLATS = T('Salt flats', {
   tiles: { lake: 2, meadow: 1.5, highland: 0.6, gorge: 0.5 },
   light: { sky: ['#40283a', '#120a12', '#7a5266', '#5a3a5a'], stars: 0.6, hemi: ['#ffe0e4', '#4a3a38', 0.8], sun: ['#ffc8a8', 1.6], fog: 0.25 },
 });
+// the deep canyon: the last of the sky, far down between sheer sandstone walls (red, salmon and
+// cream strata), a green river floor with cottonwoods, hanging gardens at the springs
+const CANYON = T('Deep canyon', {
+  music: 'badlands',
+  props: 'canyon', propDensity: 0.3,
+  depths: [5, 6], spans: { chance: 0.85, max: 2, route: 0.8, island: 0.5, sky: 0, deck: 15 },
+  void: 0.1, relief: 1.1, walls: true,
+  arche: { chasm: 3, mesa: 2, spire: 2, plain: 1 },
+  top: [[0, '#5e7a3a'], [4, '#7a8a46'], [7, '#c27a48'], [11, '#d49466'], [15, '#e2b48a'], [20, '#f0dcc0']],
+  side: [[0, '#6e2e1c'], [5, '#9a4426'], [9, '#b8603a'], [13, '#c8825a'], [17, '#d8a880'], [22, '#e8cfae']],
+  lip: '#6a8a3a', under: '#4a2418', bed: ['#2a2420', '#231e1a'], fluids: [0.9, 0.05, 0.05], river: WATER,
+  tiles: { gorge: 3, river: 2, highland: 1.3, slope: 1.5, lake: 0.5 },
+  light: { sky: ['#1e3e6e', '#0a1630', '#8aa0c0', '#c0805a'], stars: 0.4, hemi: ['#ffe6cc', '#5a3020', 1.0], sun: ['#ffdcb0', 2.1], fog: 0.1 },
+});
 
 // every theme, the town's first
-export const THEMES = [MEADOW, CLOUDS, LAGOON, KARST, PEAKS, HIGHLANDS, BADLANDS, SALTFLATS, ...CAVE_THEMES];
+export const THEMES = [MEADOW, CLOUDS, LAGOON, KARST, PEAKS, HIGHLANDS, BADLANDS, SALTFLATS, CANYON, ...CAVE_THEMES];
 // the town and its road (depth 0)
 export const TOWN = MEADOW;
 

@@ -24,7 +24,7 @@ export async function runGenerationChecks() {
       buildProps([{ name: glowingCover.name, x: 0, y: 0, z: 0, yaw: 0, s: 1, normal: [-0.2, 1, 0] }], g);
       check(!g.children.some(o => o.isPointLight), 'glowing cover must be emissive only');
       g.traverse(o => { if (o.material) o.material.dispose(); });
-      for (const depth of [13, 15, 19]) {
+      for (const depth of [16, 17, 19]) {
         const key = layouts(depth).sitePlans.keys().next().value;
         const c = await state.cubes.get(key), m = state.map = c.map;
         let world;

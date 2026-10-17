@@ -174,7 +174,7 @@ export function generateGuardian(spec) {
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
     safe: Uint8Array.from(floors, f => prev.has(f) ? 1 : 0),
     kind: spec.kind, archetype: 'arena', roomRole: `${role}-guardian`, biome: spec.biome,
-    key: spec.key, depth: spec.depth, cave: !!spec.cave, enemyFree: false,
+    key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: !!spec.walled, enemyFree: false,
     rewardSites: [], siteFailures: [], sitePlacements: [], siteReservations: [],
     arenaPlacements: dress.placements, staticBlockers, blockers: staticBlockers,
     routes: [path, [...path].reverse()].map(p => p.map(f => ({ x: f.x + .5, y: floorY(f, .5, .5) + .12, z: f.z + .5 }))),

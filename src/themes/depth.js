@@ -67,3 +67,10 @@ export function lightAt(depth, themes) {
   const t = b === a ? 0 : Math.min(1, Math.max(0, (depth - a.at) / (b.at - a.at)));
   return { a: a.theme.light, b: b.theme.light, t };
 }
+
+// how bright the character's own light is at a (fractional) depth: 0 under the sky, about a half
+// in the sunlit caves, 1 in the dark deep (the themes' `lamp`, blended like the rest of the light)
+export function lampAt(depth, themes) {
+  const { a, b, t } = lightAt(depth, themes);
+  return (a.lamp ?? 0) + ((b.lamp ?? 0) - (a.lamp ?? 0)) * t;
+}

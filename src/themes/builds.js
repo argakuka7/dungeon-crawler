@@ -20,6 +20,7 @@ export const BUILDS = {
   karst: { stone: '#b8b6aa', wood: '#9a4a2a', rope: '#c8b070', iron: '#5a5c64', bridges: { stone: 3, plank: 1, rope: 1 } },
   highlands: { stone: '#d8d0c0', wood: '#7a3a2a', rope: '#e0c870', iron: '#5a5c64', bridges: { rope: 3, stone: 1, plank: 1 } },
   saltflats: { stone: '#e4dcd0', wood: '#9a8068', rope: '#d0c0a0', iron: '#6a6460', bridges: { plank: 2, stone: 2 } },
+  canyon: { stone: '#d8a47a', wood: '#7a5638', rope: '#c8a878', iron: '#5a5c64', bridges: { rope: 2, plank: 2, stone: 1 } },
   grotto: { stone: '#8aaaa8', wood: '#6a7468', rope: '#a8c0b0', iron: '#4a5a60', bridges: { plank: 2, rope: 1, stone: 1 } },
   hive: { stone: '#d0a048', wood: '#7a5020', rope: '#e8c870', iron: '#5a4a30', bridges: { plank: 2, rope: 1, stone: 1 } },
   ossuary: { stone: '#c8bca4', wood: '#4a3a2e', rope: '#8a7a68', iron: '#3a3836', bridges: { stone: 3, plank: 1 } },

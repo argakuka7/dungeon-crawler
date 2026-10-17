@@ -12,7 +12,7 @@ const LANDMARKS = PROP_METADATA.filter(p => p.landmark);
 
 test('every theme has landmarks, each with a role and boxes derived from its mesh', () => {
   for (const t of THEMES) assert.ok(landmarksOf(t.props).length >= 2, t.props);
-  assert.equal(LANDMARKS.length, 44);
+  assert.equal(LANDMARKS.length, 47);
   for (const p of LANDMARKS) {
     assert.ok(['shrine', 'gate', 'camp', 'monument'].includes(p.role), p.name);
     assert.ok(p.colliders.length && p.occluders.length, p.name);
@@ -84,10 +84,15 @@ function checkLandmark(m, intent) {
 test('every landmark can be built: placed, collidable, facing its approach, the site still walkable', () => {
   for (const p of LANDMARKS) {
     const depth = Math.max(1, THEMES.find(t => t.props === p.set).depths[0]);
-    const w = new World(7, { themes: [p.set] }), key = [...w.layout(depth).sitePlans.keys()][0];
-    w.prepare(key);
-    const spec = w.spec(key), intent = siteIntent(7, key, p.set, 'rare', 0, p.name);
-    const m = generate({ ...spec, rewardSites: [intent] });
+    // the first of the depth's site rooms with room for it (a lava sea may leave none)
+    const w = new World(7, { themes: [p.set] });
+    let spec, intent, m;
+    for (const key of w.layout(depth).sitePlans.keys()) {
+      w.prepare(key);
+      spec = w.spec(key); intent = siteIntent(7, key, p.set, 'rare', 0, p.name);
+      m = generate({ ...spec, rewardSites: [intent] });
+      if (!m.siteFailures.length) break;
+    }
     checkLandmark(m, intent);
     assert.deepEqual(generate({ ...spec, rewardSites: [intent] }).rewardSites, m.rewardSites, `${p.name}: deterministic`);
   }

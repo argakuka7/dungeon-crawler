@@ -110,13 +110,15 @@ or a wall of shooters just to keep every depth's horde thematic.
 | 0–2 meadows | Grass snakes; spiders from depth 2 | At most one Stunder |
 | 3 snowy peaks | Frost spiders | One Frost stunder |
 | 4 badlands | Sand vipers / spiders | One Stone stunder |
-| 5–6 roots | Spiders / snakes | One Stunder |
-| 7–8 ice caves | Frost spiders / Frost adders | One or two Octonauts or a Shraps |
-| 9–10 swamp | Bog spiders / Venom adders | One Bog octonaut |
-| 11–12 nests | Dense spider nursery, some Redbacks | Occasional heavy |
-| 13–14 mines | Spiders among crystal workings | One Triangle or Stone stunder |
-| 15–16 ruins | Blood vipers / Shadow mambas | One Triangle or Octonaut |
-| 17–18 volcanic | Redbacks / Shadow mambas | One or two Fire-cats |
+| 5–6 canyon | Sand vipers / spiders | One Stone stunder or a Wolk |
+| 7–8 roots | Spiders | One Stunder |
+| 9–10 ice caves, grotto | Frost spiders / Frost adders | One or two Octonauts or a Shraps |
+| 11–12 swamp, hive | Bog spiders / Venom adders | One Bog octonaut |
+| 13 cenote | Venom adders / Blood vipers | One Coral octonaut |
+| 14–15 nests, ossuary | Dense spider nursery, some Redbacks | Occasional heavy |
+| 16 mines, forge | Spiders among crystal workings | One Triangle or Stone stunder |
+| 17 ruins | Blood vipers / Shadow mambas | One Triangle or Octonaut |
+| 18 volcanic | Redbacks / Shadow mambas | One or two Fire-cats |
 | 19–20 abyss/core | Redbacks / Shadow mambas | One Fire-face or Triangle |
 
 A horde mostly draws one kind, with small variation later. Cap ranged support at

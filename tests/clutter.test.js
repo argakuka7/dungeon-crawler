@@ -18,18 +18,18 @@ function terrain(seed) {
     siteReservations: [], sitePlacements: [] };
 }
 
-test('checked-in metadata matches all 652 exported models, including the 222 clutter roots, the 296 theme roots and the chest', () => {
+test('checked-in metadata matches all 681 exported models, including the 222 clutter roots, the 325 theme roots and the chest', () => {
   assert.deepEqual(PROP_METADATA, assetMetadata(assets));
-  assert.equal(new Set(PROP_METADATA.map(p => p.name)).size, 652);
+  assert.equal(new Set(PROP_METADATA.map(p => p.name)).size, 681);
   assert.ok(PROP_METADATA.some(p => p.name === 'treasure_chest' && p.blocking && p.clips === 'Open,Close'));
   const clutter = PROP_METADATA.filter(p => p.cube_crawler_clutter);
   assert.equal(clutter.length, 222);
   assert.equal(new Set(clutter.map(p => p.set)).size, 13);
   for (const mode of ['ground', 'wall', 'ceiling', 'lip', 'water']) assert.ok(clutter.some(p => p.attach === mode));
   const themes = PROP_METADATA.filter(p => p.cube_crawler_themes);
-  assert.equal(themes.length, 296);
-  // the ten new sets, and landmarks for the eleven classic ones
-  assert.equal(new Set(themes.map(p => p.set)).size, 21);
+  assert.equal(themes.length, 325);
+  // the eleven new sets, and landmarks for the eleven classic ones
+  assert.equal(new Set(themes.map(p => p.set)).size, 22);
   for (const mode of ['ground', 'wall', 'ceiling', 'lip', 'water', 'line']) assert.ok(themes.some(p => p.attach === mode));
   // landmarks and string segments are never scattered
   for (const p of themes.filter(p => p.landmark || p.attach === 'line')) assert.ok(p.attach === 'line' || signatureProp(p), p.name);

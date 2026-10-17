@@ -7,9 +7,9 @@ export function planHordes(seed, depth, route, guardians) {
   if (!candidates.length) throw new Error(`No horde room at depth ${depth}`);
   const key = candidates[Math.floor(R() * candidates.length)];
   const kinds = depth <= 1 ? ['snake'] : depth === 2 ? ['snake', 'spider'] : depth === 3 ? ['frostspider']
-    : depth === 4 ? ['sandviper', 'spider'] : depth <= 6 ? ['spider'] : depth <= 8 ? ['frostspider', 'frostadder']
-      : depth <= 10 ? ['bogspider', 'venomadder'] : depth <= 14 ? ['spider', 'redback']
-        : depth <= 16 ? ['bloodviper', 'shadowmamba'] : ['redback', 'shadowmamba'];
+    : depth <= 6 ? ['sandviper', 'spider'] : depth <= 8 ? ['spider'] : depth <= 10 ? ['frostspider', 'frostadder']
+      : depth <= 12 ? ['bogspider', 'venomadder'] : depth === 13 ? ['venomadder', 'bloodviper'] : depth <= 16 ? ['spider', 'redback']
+        : depth === 17 ? ['bloodviper', 'shadowmamba'] : ['redback', 'shadowmamba'];
   const [lo, hi] = depth === 0 ? [6, 8] : depth <= 4 ? [8, 12] : depth <= 12 ? [12, 18] : [16, 24];
   return new Map([[key, { id: `${seed}:${key}:horde:0`, kind: kinds[Math.floor(R() * kinds.length)],
     count: lo + Math.floor(R() * (hi - lo + 1)) }]]);

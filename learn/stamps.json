@@ -98,7 +98,7 @@
     "src/core/townportal.js#TOWN_PORTAL_CHARGE": "f331e600",
     "src/core/util.js#mulberry32": "940792b6",
     "src/cubegen/index.js#generate": "ad2742df",
-    "src/cubegen/index.js#tryGenerate": "7cd0d104",
+    "src/cubegen/index.js#tryGenerate": "88132b15",
     "src/cubegen/reach.js#reachTo": "f03a56c3",
     "src/cubegen/route.js#search": "cdae09bf",
     "src/cubegen/span.js#shapeGorge": "624e4e0a",
@@ -214,7 +214,7 @@
     "src/world/worker.js": "3f65dba0",
     "src/world/world.js#archetype": "7f631674",
     "src/world/world.js#prepare": "a88aec54",
-    "src/world/world.js#spec": "7d182eec"
+    "src/world/world.js#spec": "2d0a2799"
   },
   "outdated": {}
 }

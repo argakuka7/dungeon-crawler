@@ -48,7 +48,7 @@ test('every world picks one theme per depth from its seed, each about as often, 
 test('forced themes win every depth they may appear at; the light blends between stretches', () => {
   const picks = worldThemes(7, ['clouds', 'forge', 'ossuary']);
   assert.equal(themeAt(0, picks), TOWN);
-  for (const [d, id] of [[1, 'clouds'], [2, 'clouds'], [11, 'ossuary'], [12, 'ossuary'], [13, 'forge'], [14, 'forge']])
+  for (const [d, id] of [[1, 'clouds'], [2, 'clouds'], [14, 'ossuary'], [15, 'ossuary'], [16, 'forge']])
     assert.equal(themeAt(d, picks).props, id);
   // the meadows from the town down to the peaks are one stretch of light
   const meadow = themeById('meadow'), peaks = themeById('peaks'), flats = themeById('saltflats');
@@ -85,6 +85,20 @@ test('every theme is complete: depths of its kind, structures, footing props, ar
     for (const k of ['route', 'island', 'sky']) assert.ok(s[k] >= 0 && s[k] <= 1, `${t.props}: spans.${k}`);
     if (t.cave) assert.ok(s.deck <= 16, `${t.props}: decks under the cave walls`);
   }
+});
+
+// a third of the depths each: light (the sky down to the canyons), medium (the sunlit caves), dark
+const band = d => d <= 6 ? 'light' : d <= 13 ? 'medium' : 'dark';
+test('the light comes in three bands of depths: light, medium and dark', () => {
+  const look = t => {
+    const { sun, hemi, lamp = 0 } = t.light;
+    return lamp === 0 && sun[1] >= 1.6 ? 'light' : lamp > 0 && lamp < 1 && sun[1] >= 1 && sun[1] < 1.6 ? 'medium'
+      : lamp === 1 && sun[1] <= 0.6 && hemi[2] <= 0.6 ? 'dark' : '?';
+  };
+  for (const t of THEMES) for (let d = t.depths[0]; d <= t.depths[1]; d++) assert.equal(look(t), band(d), `${t.props} at ${d}`);
+  assert.deepEqual(['light', 'medium', 'dark'].map(b => DEPTHS.filter(d => band(d) === b).length), [7, 7, 7]);
+  // under the sky in the light band, below the ground in the others
+  for (const d of DEPTHS) assert.equal(themesAt(d)[0].cave, band(d) !== 'light', `depth ${d}`);
 });
 
 test('the route, its guardians and hordes never depend on the themes a world picked', () => {

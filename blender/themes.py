@@ -22,7 +22,7 @@ library adds:
                       e.g. the top of a flag pole or a chorten's spire.
     fluid "honey"     a new fluid for the honey hive.
 
-Builders live in themes_highlands.py, themes_surface.py and themes_caves.py; the classic
+Builders live in themes_highlands.py, themes_surface.py, themes_caves.py and themes_canyon.py; the classic
 themes' landmarks (the sets of props.py and clutter.py) in themes_classic.py.
 
 Landmarks also get a role (how a reward site is built around them) and two lists of boxes
@@ -37,8 +37,8 @@ themes/<set>-landmarks.png, themes/highlands-vignette.png).
 
 Inside Blender / MCP:
     import sys; sys.path.insert(0, "<repo>/blender")
-    import importlib, props, clutter_geo, clutter, themes_highlands, themes_surface, themes_caves, themes
-    for mod in (props, clutter_geo, clutter, themes_highlands, themes_surface, themes_caves, themes):
+    import importlib, props, clutter_geo, clutter, themes_highlands, themes_surface, themes_caves, themes_canyon, themes
+    for mod in (props, clutter_geo, clutter, themes_highlands, themes_surface, themes_caves, themes_canyon, themes):
         importlib.reload(mod)
     themes.main(render=False)
 """
@@ -59,6 +59,7 @@ import themes_highlands  # noqa: E402
 import themes_surface  # noqa: E402
 import themes_caves  # noqa: E402
 import themes_classic  # noqa: E402
+import themes_canyon  # noqa: E402
 
 SEED = 9137
 COLLECTION = "CubeCrawlerThemes"
@@ -71,7 +72,7 @@ LANDMARK_TRIANGLES = 4000
 LINE_TRIANGLES = 400
 EXTRA_KEYS = clutter.EXTRA_KEYS + ("drop", "landmark", "role", "footprint", "height", "anchors", "colliders",
                                    "occluders")
-BUILDERS = (themes_highlands, themes_surface, themes_caves, themes_classic)
+BUILDERS = (themes_highlands, themes_surface, themes_caves, themes_classic, themes_canyon)
 
 
 def spec(theme, prop, priority=1, variants=2, attach="ground", **hints):
@@ -150,6 +151,23 @@ SPECS = [
     spec("clouds", "raincloud", attach="ceiling", sway=0.15),
     landmark("clouds", "sky_gate", "monument"),
     landmark("clouds", "wind_harp", "monument"),
+    # --- Deep canyon: sandstone walls in strata, a green river floor, springs, old dwellings ---
+    cover("canyon", "desert_grass", sway=0.3),
+    cover("canyon", "red_gravel"),
+    spec("canyon", "cottonwood", blocking=True, sway=0.15),
+    spec("canyon", "yucca", sway=0.1),
+    spec("canyon", "sagebrush", sway=0.15),
+    spec("canyon", "hoodoo", blocking=True),
+    spec("canyon", "cairn"),
+    spec("canyon", "petroglyph_boulder", blocking=True),
+    spec("canyon", "clay_pots"),
+    spec("canyon", "luminaria", light="#ffb060", intensity=0.9),
+    spec("canyon", "hanging_garden", attach="lip", sway=0.3),
+    spec("canyon", "petroglyph_panel", attach="wall"),
+    spec("canyon", "river_reeds", attach="water", fluid="water", sway=0.3),
+    landmark("canyon", "cliff_dwelling", "camp"),
+    landmark("canyon", "canyon_arch", "gate"),
+    landmark("canyon", "balanced_rock", "monument"),
     # --- Salt flats: white crust, a thin mirror of water, pink crystals, flamingos ---
     cover("saltflats", "salt_crust"),
     cover("saltflats", "salt_crystals"),

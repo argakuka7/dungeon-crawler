@@ -129,7 +129,7 @@ test('every roster draws real kinds of its own species, and every ordinary kind 
 test('kinds are drawn from the roster, ids and levels do not depend on them', () => {
   let mixed = 0;
   for (let seed = 0; seed < 40; seed++) {
-    const map = atDepth(seed, 12), spots = enemySpots(map, ENEMY_KINDS.spider);
+    const map = atDepth(seed, 15), spots = enemySpots(map, ENEMY_KINDS.spider);
     assert.deepEqual(spots.map(s => s.kind.type), enemySpots(map, ENEMY_KINDS.spider).map(s => s.kind.type));
     const kinds = new Set(spots.map(s => s.kind.type));
     for (const k of kinds) assert.ok(['spider', 'bogspider', 'redback'].includes(k));

@@ -9,7 +9,7 @@ import { PARTS, packParts, partBuffers } from '../src/render/parts.js';
 // fungal swamp and the lava rivers of the volcanic depths
 function sample() {
   const out = [], w = new World(3, { themes: ['swamp'] });
-  for (const depth of [0, 1, 2, 3, 4, 9, 17]) for (const k of [...w.layout(depth).exists].slice(0, 3)) out.push(w.cube(k).map);
+  for (const depth of [0, 1, 2, 3, 4, 11, 18]) for (const k of [...w.layout(depth).exists].slice(0, 3)) out.push(w.cube(k).map);
   return out;
 }
 const maps = sample();

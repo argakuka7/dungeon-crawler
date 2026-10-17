@@ -1,11 +1,12 @@
 // How dark it is: sky, hemisphere light, sun, fog and the character's own light follow the
 // (fractional) depth, blended between the starts of the world's theme stretches. Below the
-// ground (depth > 4) the character's light grows, since local lights are all there is.
+// ground the character's light grows with the theme's `lamp` (about half in the sunlit caves,
+// full in the dark deep), since local lights are all there is.
 import * as THREE from 'three';
 import { scene, hemi, sun } from './scene.js';
 import { setSkyLook } from './sky.js';
 import { character } from './character.js';
-import { lightAt } from '../themes/depth.js';
+import { lightAt, lampAt } from '../themes/depth.js';
 import { TOWN } from '../themes/index.js';
 
 const ca = new THREE.Color(), cb = new THREE.Color();
@@ -35,8 +36,8 @@ export function applyLook(depth, camDist, themes = NO_WORLD) {
   scene.fog.near = f > 0.01 ? camDist - 6 : 1e4;
   scene.fog.far = f > 0.01 ? camDist + 6 + 70 * (1 - f) : 2e4;
   if (character.ready) {
-    const cave = Math.min(1, Math.max(0, depth - 4));
-    character.light.intensity = lerp(1.2, 3, cave);
-    character.light.distance = lerp(3.5, 8, cave);
+    const lamp = lampAt(depth, themes);
+    character.light.intensity = lerp(1.2, 3, lamp);
+    character.light.distance = lerp(3.5, 8, lamp);
   }
 }

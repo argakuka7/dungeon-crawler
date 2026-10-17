@@ -4,8 +4,8 @@
 
 ![Prayer highlands vignette](../../blender/previews/themes/highlands-vignette.png)
 
-Artwork for ten alternative themes, and landmarks for the eleven classic ones: **159 prop
-types, 296 meshes, 82,017 triangles**. These were built and checked through Blender MCP. The
+Artwork for eleven alternative themes, and landmarks for the eleven classic ones: **175 prop
+types, 325 meshes, 88,625 triangles**. These were built and checked through Blender MCP. The
 style and contract are the same as `blender/clutter.py` (low-poly, flat-shaded,
 vertex-coloured, one mesh per prop). **Hooked up to the game** as themes a world may pick for
 their depths alongside the classic ones, and every depth builds its major reward site around one of its
@@ -17,8 +17,8 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
   previews, highlands vignette).
 - `blender/themes_geo.py`: shared helpers (cloth sheets, ribbons, lettering, lofts,
   wobble/streaks for rock) and the palette (`LUNGTA`, `WHITEWASH`, `MAROON`, `GOLD`, ...).
-- `blender/themes_highlands.py`, `blender/themes_surface.py`, `blender/themes_caves.py`:
-  the builders; `blender/themes_classic.py`: the classic themes' landmarks.
+- `blender/themes_highlands.py`, `blender/themes_surface.py`, `blender/themes_caves.py`,
+  `blender/themes_canyon.py`: the builders; `blender/themes_classic.py`: the classic themes' landmarks.
 - `assets/themes.glb`: the combined library, with every prop a named root at the origin.
 - `assets/themes/manifest.json`: per-prop set, attach, flags, triangles, sizes, bounds,
   footprint/height/anchors, and the landmarks' role, colliders and occluders.
@@ -40,11 +40,12 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
 | clouds | Cloud kingdom (1–2: Meadow islands) | Cloud kingdom: puffs, wind chimes, storm jars, sky gates |
 | saltflats | Salt flats (4: Badlands) | White salt crust, pink halite, flamingos, brine pools |
 | lagoon | Lagoon isles (1–2: Meadow islands) | Palms, sand, rowboats, a shipwreck, stilt huts |
-| hive | Honey hive (9–10: Fungal swamp) | Honey hive: wax, comb, honey fluid (slows rather than hurts) |
-| cenote | Jungle cenote (15–16: Buried ruins) | Sunlit jungle temple: jade, glyphs, vines, a step shrine |
-| grotto | Sunken grotto (7–8: Frozen caves) | Sunken grotto: kelp, clams, glowing jellies, a sunken bell |
-| forge | Dwarven forge (13–14: Crystal mines) | Dwarven forge: pipes, gears, anvils, slag, steam vents |
-| ossuary | Ossuary (11–12: Spider nests) | Candlelit catacombs: bone walls, urns, candelabra (spooky but friendly) |
+| canyon | Deep canyon (5–6: alone) | Sandstone strata, cottonwoods by the river, hoodoos, petroglyphs, cliff dwellings |
+| hive | Honey hive (11–12: Fungal swamp) | Honey hive: wax, comb, honey fluid (slows rather than hurts) |
+| cenote | Jungle cenote (13: alone) | Sunlit jungle temple: jade, glyphs, vines, a step shrine |
+| grotto | Sunken grotto (9–10: Frozen caves) | Sunken grotto: kelp, clams, glowing jellies, a sunken bell |
+| forge | Dwarven forge (16: Crystal mines) | Dwarven forge: pipes, gears, anvils, slag, steam vents |
+| ossuary | Ossuary (14–15: Spider nests) | Candlelit catacombs: bone walls, urns, candelabra (spooky but friendly) |
 
 ## Props
 
@@ -60,6 +61,8 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
 | saltflats landmarks | `salt_harvest`, `salt_arch` |
 | lagoon | `shell_scatter` (ground; cover), `sand_ripples` (ground; cover), `palm_tree` (ground; blocking; sway 0.3), `beach_grass` (ground; sway 0.4), `driftwood` (ground), `tiki_torch` (ground; light #ffa040), `rowboat` (ground; blocking), `buried_chest` (ground), `crab` (ground), `coral_head` (water), `seaweed_drape` (lip; sway 0.3), `barnacles` (wall) |
 | lagoon landmarks | `shipwreck`, `stilt_hut` |
+| canyon | `desert_grass` (ground; cover; sway 0.3), `red_gravel` (ground; cover), `cottonwood` (ground; blocking; sway 0.15), `yucca` (ground; sway 0.1), `sagebrush` (ground; sway 0.15), `hoodoo` (ground; blocking), `cairn` (ground), `petroglyph_boulder` (ground; blocking), `clay_pots` (ground), `luminaria` (ground; light #ffb060), `hanging_garden` (lip; sway 0.3), `petroglyph_panel` (wall), `river_reeds` (water; sway 0.3) |
+| canyon landmarks | `cliff_dwelling`, `canyon_arch`, `balanced_rock` |
 | hive | `wax_flakes` (ground; cover), `pollen_dust` (ground; cover), `comb_mound` (ground; blocking; light #ffb030), `wax_candles` (ground; light #ffd080), `larva_cells` (ground), `honey_pot` (ground), `giant_flower` (ground; sway 0.2), `bee_husk` (ground), `honey_bubbles` (water; honey), `comb_raft` (water; honey), `wall_comb` (wall; light #ffb030), `honey_drips` (ceiling; sway 0.1), `honey_overflow` (lip) |
 | hive landmarks | `comb_tower` (light #ffb030), `royal_cell` (light #ffe090) |
 | cenote | `jungle_litter` (ground; cover), `jade_shards` (ground; cover), `monstera` (ground; sway 0.25), `orchid_rock` (ground), `jade_idol` (ground; blocking), `serpent_head` (ground; blocking), `copal_bowl` (ground; light #ffb050), `macaw_perch` (ground; sway 0.1), `hanging_vines` (ceiling; sway 0.4), `jungle_drape` (lip; sway 0.35), `glyph_panel` (wall), `cenote_lilies` (water) |
@@ -79,9 +82,9 @@ around them (`cubegen/sites.js`):
 | Role | Site | Landmarks |
 |---|---|---|
 | shrine | the chest stands in front of it | `chorten_great`, `royal_cell`, `step_shrine`, `giant_shell`, `furnace`, `crypt_shrine`, `wishing_well`, `hollow_stump`, `ice_throne`, `giant_geode`, `fire_shrine`, `void_throne` |
-| gate | you walk through it to the chest behind it | `salt_arch`, `bone_arch`, `ice_arch`, `root_gate`, `web_gate`, `headframe`, `temple_gate` |
-| camp | the chest stands beside it, with small things of the theme around | `nomad_tent`, `hermitage`, `pavilion`, `salt_harvest`, `shipwreck`, `stilt_hut`, `expedition_camp`, `covered_wagon`, `witch_hut` |
-| monument | it stands beside the chest, reaching back | `mani_wall`, `karst_tower`, `sky_gate`, `wind_harp`, `comb_tower`, `ceiba_roots`, `sunken_bell`, `great_gear`, `windmill`, `windpump`, `frozen_falls`, `giant_toadstool`, `brood_cluster`, `colossus_head`, `fumarole`, `chained_obelisk` |
+| gate | you walk through it to the chest behind it | `salt_arch`, `canyon_arch`, `bone_arch`, `ice_arch`, `root_gate`, `web_gate`, `headframe`, `temple_gate` |
+| camp | the chest stands beside it, with small things of the theme around | `nomad_tent`, `hermitage`, `pavilion`, `cliff_dwelling`, `salt_harvest`, `shipwreck`, `stilt_hut`, `expedition_camp`, `covered_wagon`, `witch_hut` |
+| monument | it stands beside the chest, reaching back | `mani_wall`, `karst_tower`, `balanced_rock`, `sky_gate`, `wind_harp`, `comb_tower`, `ceiba_roots`, `sunken_bell`, `great_gear`, `windmill`, `windpump`, `frozen_falls`, `giant_toadstool`, `brood_cluster`, `colossus_head`, `fumarole`, `chained_obelisk` |
 
 The classic themes' landmarks (`themes_classic.py`): meadow `windmill`, `wishing_well`; peaks
 `expedition_camp`, `ice_arch`; badlands `covered_wagon`, `windpump`; roots `root_gate`,
