@@ -14,7 +14,7 @@ export const BUILDS = {
   ruins: { stone: '#c8b48a', wood: '#7a6040', rope: '#b8a070', iron: '#5a5048', bridges: { stone: 3, plank: 1 } },
   volcanic: { stone: '#4a4040', wood: '#3a2c24', rope: '#7a6a5a', iron: '#3c3a3e', bridges: { iron: 3, stone: 1 } },
   abyss: { stone: '#3a3644', wood: '#2a2430', rope: '#5a5060', iron: '#2e2c34', bridges: { iron: 2, stone: 2 } },
-  // the themes a world may pick instead (themes/index.js SLOTS)
+  // the alternative themes (docs/assets/themes.md)
   clouds: { stone: '#dfe2ec', wood: '#c4ac8c', rope: '#f0e8d8', iron: '#8a90a8', bridges: { rope: 3, plank: 1, stone: 1 } },
   lagoon: { stone: '#d4c49c', wood: '#94704a', rope: '#d8c090', iron: '#5a5c64', bridges: { plank: 2, rope: 2 } },
   karst: { stone: '#b8b6aa', wood: '#9a4a2a', rope: '#c8b070', iron: '#5a5c64', bridges: { stone: 3, plank: 1, rope: 1 } },

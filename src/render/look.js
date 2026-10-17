@@ -1,11 +1,12 @@
 // How dark it is: sky, hemisphere light, sun, fog and the character's own light follow the
-// (fractional) depth, blended between theme starts. Below the ground (depth > 4) the
-// character's light grows, since local lights are all there is.
+// (fractional) depth, blended between the starts of the world's theme stretches. Below the
+// ground (depth > 4) the character's light grows, since local lights are all there is.
 import * as THREE from 'three';
 import { scene, hemi, sun } from './scene.js';
 import { setSkyLook } from './sky.js';
 import { character } from './character.js';
 import { lightAt } from '../themes/depth.js';
+import { TOWN } from '../themes/index.js';
 
 const ca = new THREE.Color(), cb = new THREE.Color();
 const mix = (a, b, t) => ca.set(a).lerp(cb.set(b), t);
@@ -14,9 +15,12 @@ const sky = [new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.
 // sky: [top, bottom, haze, tint]; haze and tint default to top and bottom
 const skyStop = (s, i) => s[i] ?? s[i - 2];
 
+// no world yet (the menu before its first cube): the town's light
+const NO_WORLD = [{ at: 0, theme: TOWN }];
+
 // camDist: distance from the camera to what it looks at (fog is placed around that); themes: the
 // world's theme picks (themes/depth.js worldThemes)
-export function applyLook(depth, camDist, themes) {
+export function applyLook(depth, camDist, themes = NO_WORLD) {
   const { a, b, t } = lightAt(depth, themes);
   hemi.color.copy(mix(a.hemi[0], b.hemi[0], t));
   hemi.groundColor.copy(mix(a.hemi[1], b.hemi[1], t));

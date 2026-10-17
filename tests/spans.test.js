@@ -4,6 +4,7 @@ import { World } from '../src/world/world.js';
 import { makeLayouts } from '../src/world/layout.js';
 import { step, faceKey, parse } from '../src/world/coords.js';
 import { N, LH, CHAR_R } from '../src/core/constants.js';
+import { MAX_DEPTH } from '../src/themes/depth.js';
 import { runY, floorY } from '../src/core/surfaces.js';
 import { state } from './fixtures.js';
 import { player } from '../src/game/state.js';
@@ -14,6 +15,8 @@ const SEEDS = Array.from({ length: 12 }, (_, i) => i);
 const edge = (d, t, j) => d === 0 ? t * N + N - 1 - j : d === 1 ? t * N + j : d === 2 ? (N - 1 - j) * N + t : j * N + t;
 const ground = (m, c) => m.cols[c].find(f => f.layer === 0);
 const DT = 1 / 60;
+// every depth with spans: all but the town and the core
+const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
 
 function place(m, x, y, z) {
   state.map = m;
@@ -22,16 +25,22 @@ function place(m, x, y, z) {
   movePlayer(DT, 0, 0, false, false);
 }
 
-test('spans are planned from the seed on the sky-island depths, straight and in budget', () => {
-  let route = 0, island = 0, long = 0;
+test('spans are planned from the seed and the theme on every depth, straight and in budget', () => {
+  let route = 0, island = 0, long = 0, cave = 0, sky = 0;
+  const at = new Set();
   for (let seed = 0; seed < 200; seed++) {
     const a = makeLayouts(seed), b = makeLayouts(seed);
     for (let d = 0; d <= 20; d++) {
       const L = a(d);
       assert.deepEqual(L.spans.map(s => s.keys), b(d).spans.map(s => s.keys));
-      if (d === 0 || d > 2) { assert.equal(L.spans.length, 0); continue; }
+      if (d === 0 || d === MAX_DEPTH) { assert.equal(L.spans.length, 0); continue; }
+      const cfg = L.theme.spans;
+      assert.ok(L.spans.length <= cfg.max);
       for (const s of L.spans) {
         s.island ? island++ : route++;
+        at.add(d); if (L.theme.cave) cave++;
+        if (s.sky) { sky++; assert.ok(cfg.sky > 0, `${seed}/${d}: no sky spans in ${L.theme.props}`); }
+        assert.ok(Math.max(...s.levels) <= (cfg.deck ?? 22), `${seed}/${d}: deck too high`);
         if (s.n === 2) long++;
         // a straight line, every face of it a portal, nothing guarded or crowded on it
         s.keys.forEach((k, j) => {
@@ -52,14 +61,15 @@ test('spans are planned from the seed on the sky-island depths, straight and in 
       }
     }
   }
-  assert.ok(route > 150 && island > 80 && long > 100, JSON.stringify({ route, island, long }));
+  assert.ok(route > 500 && island > 250 && long > 300 && cave > 300 && sky > 100, JSON.stringify({ route, island, long, cave, sky }));
+  assert.deepEqual([...at].sort((a, b) => a - b), DEPTHS);
 });
 
 test('a span\'s cubes meet at every face and carry one long bridge from pad to pad', () => {
   let bridges = 0;
   for (const seed of SEEDS) {
     const w = new World(seed);
-    for (const d of [1, 2]) for (const s of w.layout(d).spans) {
+    for (const d of DEPTHS) for (const s of w.layout(d).spans) {
       const maps = s.keys.map(k => w.cube(k).map);
       // the crossings: pads at the deck's level on both sides, at the same place
       for (let j = 0; j <= s.n; j++) {
@@ -108,7 +118,7 @@ test('a span\'s cubes meet at every face and carry one long bridge from pad to p
 test('span cubes are the same whichever way the depth is explored', () => {
   const sig = m => JSON.stringify({ floors: m.floors.map(f => [f.c, f.bottom, f.top]), runs: m.runs.map(r => [r.kind, r.style, r.cells]) });
   for (const seed of [2, 7]) {
-    const keys = [1, 2].flatMap(d => new World(seed).layout(d).spans.flatMap(s => s.keys));
+    const keys = DEPTHS.flatMap(d => new World(seed).layout(d).spans.flatMap(s => s.keys));
     const a = new World(seed), b = new World(seed);
     const fwd = keys.map(k => sig(a.cube(k).map)), back = [...keys].reverse().map(k => sig(b.cube(k).map)).reverse();
     assert.deepEqual(back, fwd);
@@ -120,7 +130,7 @@ test('the character walks every span bridge both ways without falling off', () =
   let walks = 0;
   for (const seed of SEEDS.slice(0, 8)) {
     const w = new World(seed);
-    for (const d of [1, 2]) for (const s of w.layout(d).spans) s.keys.slice(1, s.n + 1).forEach(k => {
+    for (const d of DEPTHS) for (const s of w.layout(d).spans) s.keys.slice(1, s.n + 1).forEach(k => {
       const m = w.cube(k).map, r = m.runs.find(q => q.span);
       const ends = [r.from, r.to].map(f => ({ x: f.x + 0.5, z: f.z + 0.5, y: floorY(f, 0.5, 0.5) }));
       for (const [a, b] of [ends, [...ends].reverse()]) {

@@ -1,12 +1,12 @@
-// Themes below the ground (depth 5 and deeper): caves without sun or sky, and their slots. See
-// index.js.
+// Themes below the ground (depth 5 and deeper): caves without sun or sky. See index.js.
 import { WATER, LAVA, ACID } from '../core/constants.js';
 
-const T = (name, o) => ({ name, tiles: {}, cave: true, ...o });
+const T = (name, o) => ({ name, tiles: {}, cave: true, spans: null, ...o });
 
 const ROOTS = T('Root caves', {
   music: 'roots',
   props: 'roots',
+  depths: [5, 6], spans: { chance: 0.35, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.5,
   arche: { plain: 2, sinkhole: 2, chasm: 1, crater: 1 },
   top: [[0, '#4a3e2e'], [6, '#5e4c35'], [12, '#705c40'], [20, '#82704e']],
@@ -18,6 +18,7 @@ const ROOTS = T('Root caves', {
 const FROZEN = T('Frozen caves', {
   music: 'frozen',
   props: 'frozen',
+  depths: [7, 8], spans: { chance: 0.35, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.6,
   arche: { crater: 2, sinkhole: 2, plain: 2 },
   top: [[0, '#5d7f93'], [6, '#82a6b8'], [12, '#aacbd7'], [20, '#d8ecf2']],
@@ -29,6 +30,7 @@ const FROZEN = T('Frozen caves', {
 const SWAMP = T('Fungal swamp', {
   music: 'swamp',
   props: 'swamp',
+  depths: [9, 10], spans: { chance: 0.3, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.06, relief: 0.4,
   arche: { archipelago: 2, plain: 2, crater: 1 },
   top: [[0, '#3a4826'], [6, '#4b5a2e'], [12, '#5c6a36'], [20, '#6d7a3e']],
@@ -40,6 +42,7 @@ const SWAMP = T('Fungal swamp', {
 const NESTS = T('Spider nests', {
   music: 'nests',
   props: 'nests',
+  depths: [11, 12], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.1, relief: 0.7,
   arche: { chasm: 2, sinkhole: 2, spire: 1, plain: 1 },
   top: [[0, '#4a444a'], [6, '#565058'], [12, '#625c66'], [20, '#6e6874']],
@@ -51,6 +54,7 @@ const NESTS = T('Spider nests', {
 const MINES = T('Crystal mines', {
   music: 'mines',
   props: 'mines',
+  depths: [13, 14], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.8,
   arche: { chasm: 2, mesa: 2, spire: 2, plain: 1 },
   top: [[0, '#4a4a52'], [6, '#5a5a64'], [12, '#6a6a76'], [20, '#7a7a88']],
@@ -62,6 +66,7 @@ const MINES = T('Crystal mines', {
 const RUINS = T('Buried ruins', {
   music: 'ruins',
   props: 'ruins',
+  depths: [15, 16], spans: { chance: 0.35, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.1, relief: 0.6,
   arche: { mesa: 3, sinkhole: 1, plain: 2 },
   top: [[0, '#7a6648'], [6, '#8c7650'], [12, '#9e8658'], [20, '#b09660']],
@@ -73,6 +78,7 @@ const RUINS = T('Buried ruins', {
 const VOLCANIC = T('Volcanic depths', {
   music: 'volcanic',
   props: 'volcanic',
+  depths: [17, 18], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.12, relief: 0.8,
   arche: { crater: 3, chasm: 2, spire: 1 },
   top: [[0, '#2a2626'], [6, '#363030'], [12, '#423a38'], [20, '#4e4440']],
@@ -84,6 +90,7 @@ const VOLCANIC = T('Volcanic depths', {
 const ABYSS = T('Obsidian abyss', {
   music: 'abyss',
   props: 'abyss',
+  depths: [19, 20], spans: { chance: 0.5, max: 1, route: 0.8, island: 0.4, sky: 0.4, deck: 15 },
   void: 0.6, relief: 0.6,
   arche: { archipelago: 4, spire: 2, chasm: 1 },
   top: [[0, '#1a1820'], [6, '#22202a'], [12, '#2a2834'], [20, '#32303e']],
@@ -97,6 +104,7 @@ const ABYSS = T('Obsidian abyss', {
 const GROTTO = T('Sunken grotto', {
   music: 'frozen',
   props: 'grotto',
+  depths: [7, 8], spans: { chance: 0.35, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.5,
   arche: { archipelago: 2, crater: 2, plain: 2, sinkhole: 1 },
   top: [[0, '#3e6260'], [6, '#58807a'], [12, '#8aa49a'], [20, '#c8c0a4']],
@@ -110,6 +118,7 @@ const GROTTO = T('Sunken grotto', {
 const HIVE = T('Honey hive', {
   music: 'swamp',
   props: 'hive',
+  depths: [9, 10], spans: { chance: 0.3, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.06, relief: 0.5,
   arche: { crater: 2, sinkhole: 2, plain: 2, mesa: 1 },
   top: [[0, '#8a5a1a'], [6, '#a87024'], [12, '#c48a2e'], [20, '#dca848']],
@@ -122,6 +131,7 @@ const HIVE = T('Honey hive', {
 const OSSUARY = T('Ossuary', {
   music: 'nests',
   props: 'ossuary',
+  depths: [11, 12], spans: { chance: 0.3, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.6,
   arche: { mesa: 2, chasm: 2, plain: 2, sinkhole: 1 },
   top: [[0, '#5a544a'], [6, '#6e665a'], [12, '#82786a'], [20, '#968a7a']],
@@ -134,6 +144,7 @@ const OSSUARY = T('Ossuary', {
 const FORGE = T('Dwarven forge', {
   music: 'mines',
   props: 'forge',
+  depths: [13, 14], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.8,
   arche: { mesa: 3, chasm: 2, crater: 1, plain: 1 },
   top: [[0, '#3e3a38'], [6, '#4c4642'], [12, '#5a524c'], [20, '#6a6058']],
@@ -146,6 +157,7 @@ const FORGE = T('Dwarven forge', {
 const CENOTE = T('Jungle cenote', {
   music: 'ruins',
   props: 'cenote',
+  depths: [15, 16], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0, deck: 15 },
   void: 0.08, relief: 0.6,
   arche: { sinkhole: 3, mesa: 2, crater: 1, plain: 1 },
   top: [[0, '#3a5a2a'], [6, '#4a6e32'], [12, '#5e823c'], [20, '#7a9648']],
@@ -155,14 +167,4 @@ const CENOTE = T('Jungle cenote', {
   light: { sky: ['#06100a', '#020403'], hemi: ['#8ab070', '#0e140a', 0.54], sun: ['#d8ff9a', 0.55], fog: 0.5 },
 });
 
-// one theme per slot is picked per world (index.js); the first is the classic one
-export const CAVE_SLOTS = [
-  { at: 5, themes: [ROOTS] },
-  { at: 7, themes: [FROZEN, GROTTO] },
-  { at: 9, themes: [SWAMP, HIVE] },
-  { at: 11, themes: [NESTS, OSSUARY] },
-  { at: 13, themes: [MINES, FORGE] },
-  { at: 15, themes: [RUINS, CENOTE] },
-  { at: 17, themes: [VOLCANIC] },
-  { at: 19, themes: [ABYSS] },
-];
+export const CAVE_THEMES = [ROOTS, FROZEN, GROTTO, SWAMP, HIVE, NESTS, OSSUARY, MINES, FORGE, RUINS, CENOTE, VOLCANIC, ABYSS];

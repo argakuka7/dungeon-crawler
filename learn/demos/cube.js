@@ -3,7 +3,7 @@
 // the game's diagonal view: floors as blocks, fluids, stairs and bridges, portals, and the
 // generator's route (the pink line, like P in the game).
 import { World } from '../../src/world/world.js';
-import { themeAt, MAX_DEPTH } from '../../src/themes/depth.js';
+import { themeAt, themeOf, MAX_DEPTH } from '../../src/themes/depth.js';
 import { runY } from '../../src/core/surfaces.js';
 import { N, LH, BASE } from '../../src/core/constants.js';
 import { canvas, html, t as tr, themeLabel } from '../deck.js';
@@ -24,7 +24,7 @@ export default function mount(el) {
   const W = 640, H = 540, { g } = canvas(el, W, H);
   const row = html(el, `<div class="row">
     <label>Seed <input type="number" class="seed" value="${1 + Math.floor(Math.random() * 999)}"></label>
-    <label>${tr('depth', 'Tiefe')} <select class="depth">${Array.from({ length: MAX_DEPTH + 1 }, (_, d) => `<option value="${d}" ${d === 1 ? 'selected' : ''}>${d} \u00B7 ${themeLabel(themeAt(d))}</option>`).join('')}</select></label>
+    <label>${tr('depth', 'Tiefe')} <select class="depth">${Array.from({ length: MAX_DEPTH + 1 }, (_, d) => `<option value="${d}" ${d === 1 ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
     <label>${tr('room', 'Raum')} <input type="range" class="room" min="0" max="6" value="2"> <b class="rn"></b></label></div>
     <div class="row"><button class="build">${tr('Build it!', 'Bauen!')}</button><button class="dice">${tr('New seed', 'Neuer Seed')}</button><button class="turn">${tr('Turn view', 'Ansicht drehen')}</button>
     <label><input type="checkbox" class="route" checked> ${tr('show route', 'Route zeigen')}</label></div>`);
@@ -34,7 +34,11 @@ export default function mount(el) {
 
   function build() {
     const seed = +$('.seed').value >>> 0, d = +$('.depth').value;
-    if (!world || worldSeed !== seed) { world = new World(seed); worldSeed = seed; }
+    if (!world || worldSeed !== seed) {
+      world = new World(seed); worldSeed = seed;
+      // every world picks its own theme per depth
+      for (const o of $('.depth').options) o.textContent = `${o.value} \u00B7 ${themeLabel(themeAt(+o.value, world.themes))}`;
+    }
     const L = world.layout(d), route = L.route;
     $('.room').max = route.length - 1;
     const i = Math.min(+$('.room').value, route.length - 1), k = route[i];
@@ -46,7 +50,7 @@ export default function mount(el) {
   }
 
   function draw() {
-    const { map: m, d } = last, theme = themeAt(d);
+    const { map: m, d } = last, theme = themeOf(m);
     g.clearRect(0, 0, W, H);
     const TW = 34, TH = 17, HS = 17, ox = W / 2, oy = 130;
     // turn a point in cube coordinates (x, z in 0..16) by the view rotation

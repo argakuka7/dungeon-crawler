@@ -2,7 +2,7 @@
 // side rooms, guardians, the horde and reward sites. Seen from above, centred on the world's axis.
 import { makeLayouts } from '../../src/world/layout.js';
 import { parse } from '../../src/world/coords.js';
-import { themeAt, MAX_DEPTH } from '../../src/themes/depth.js';
+import { MAX_DEPTH } from '../../src/themes/depth.js';
 import { canvas, html, t as tr, themeLabel } from '../deck.js';
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -20,7 +20,7 @@ export default function mount(el) {
     const s = +seedIn.value >>> 0, d = +depthIn.value;
     if (s !== seed) { seed = s; layouts = makeLayouts(seed); }
     const L = layouts(d);
-    row.querySelector('.dn').textContent = `${d} \u00B7 ${themeLabel(themeAt(d))}`;
+    row.querySelector('.dn').textContent = `${d} \u00B7 ${themeLabel(L.theme)}`;
     const S = 50, ox = 30, oy = 10, R = 4;
     const cx = x => ox + (x + R) * S, cz = z => oy + (z + R) * S;
     g.clearRect(0, 0, W, H);

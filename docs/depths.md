@@ -1,10 +1,10 @@
 # Depths
 
 Quick reference for every depth (`Y = 0` to `Y = -20`, `depth = -Y`). Themes come from
-`src/themes/index.js` and `src/themes/caves.js`. A slot of themes starts at its depth and lasts
-until the next one; each world picks one theme per slot (the classic one first, then the others it
-may pick instead; see [world.md](world.md#themes-per-world-themesindexjs-themescavesjs-themesdepthjs)).
-The fluids column is the classic theme's. The layout comes from `src/world/layout.js`, the enemy roster per depth from
+`src/themes/index.js` and `src/themes/caves.js`. Every theme names the depths it may appear at;
+each world picks one theme per depth, often keeping the one above (see
+[world.md](world.md#themes-per-world-themesindexjs-themescavesjs-themesdepthjs)). The fluids
+column is the first theme's. The layout comes from `src/world/layout.js`, the enemy roster per depth from
 `DEPTH_SPAWNS` in `src/core/spawns.js`, and enemy levels from `enemyRoll` in
 `src/core/enemies.js`. Enemy kinds (recoloured, stronger versions of a species) are described
 in `docs/enemy-kinds.md`.
@@ -14,8 +14,8 @@ in `docs/enemy-kinds.md`.
 | Depth | Theme | Kind | Layout (ring radius) | Fluids / river | Enemy level (base, range) |
 |---:|---|---|---|---|---|
 | 0 | Meadow islands | surface | town + road to the first well | water | 1 (always 1) |
-| 1 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3, gorge spans | water | 1 (always 1) |
-| 2 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3, gorge spans | water | 2 (1–3) |
+| 1 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3 | water | 1 (always 1) |
+| 2 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3 | water | 2 (1–3) |
 | 3 | Snowy peaks / Prayer highlands | surface, sky islands | arc, r=3 | water | 3 (2–4) |
 | 4 | Badlands / Salt flats | surface | arc, r=3 | water (some lava / acid) | 4 (3–5) |
 | 5 | Root caves | cave | arc, r=3 | water | 5 (4–6) |
@@ -35,9 +35,11 @@ in `docs/enemy-kinds.md`.
 | 19 | Obsidian abyss | cave, large voids | arc, r=1 | lava only | 19 (18–20) |
 | 20 | Obsidian abyss | cave, the core | 3×3 core around the axis | lava only | 20 (19–21) |
 
-Gorge spans (depths 1 and 2): some rooms are joined by one long bridge over a valley or the
-open sky, sometimes out to a lonely island; see [world.md](world.md#gorge-spans-worldspansjs-cubegenspanjs).
-Their gorge cubes have half the usual population.
+Gorge spans (every depth but the town and the core, as often as the theme says: most on the
+sky islands, the peaks and the badlands, now and then in the caves): some rooms are joined by
+one long bridge over a valley or the open sky, sometimes out to a lonely island; see
+[world.md](world.md#gorge-spans-worldspansjs-cubegenspanjs). Their gorge cubes have half the
+usual population.
 
 ## Enemies per depth
 

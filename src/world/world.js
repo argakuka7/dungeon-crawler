@@ -26,13 +26,13 @@ function archetype(theme, kind, R) {
 }
 
 export class World {
-  // opts.arche: force one archetype everywhere (dev); opts.themes: theme ids that win their slot
-  // (dev, tests; themes/depth.js worldThemes)
+  // opts.arche: force one archetype everywhere (dev); opts.themes: theme ids that win every depth
+  // they may appear at (dev, tests; themes/depth.js worldThemes)
   constructor(seed, opts = {}) {
     this.seed = seed;
     this.opts = opts;
     this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // depth -> which cubes exist and how they connect
-    this.themes = this.layout.themes;   // the theme of every slot
+    this.themes = this.layout.themes;   // the world's themes, by stretches of depths
     this.wfc = new WFC(seed, this.layout);
     this.noise = worldNoise(seed);
     this.faces = new Map();

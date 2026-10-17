@@ -1,9 +1,11 @@
-// What each depth looks like. The depths are cut into slots (SLOTS): a slot starts at depth `at`
-// and lasts until the next one, and offers one or more themes. Each world picks one theme per
-// slot from its seed (themes/depth.js worldThemes), so two worlds can have cloud islands or
-// meadows under the town. Palettes and generator settings are per theme; the lighting (`light`)
-// is blended between slot starts, so every step down is a little darker.
-// A theme's id is its prop set (`props`).
+// What each depth looks like. Every theme names the depths it may appear at (`depths`: [first,
+// last]); each world picks one theme per depth from its seed (themes/depth.js worldThemes), so two
+// worlds can have cloud islands or meadows under the town, and one may go from the meadows to the
+// lagoons halfway down. Palettes, generator settings and the shape of the layout are per theme;
+// the lighting (`light`) is blended between the starts of the stretches of depths sharing a
+// theme, so every step down is a little darker.
+// A theme's id is its prop set (`props`). The themes that may appear at a depth agree on `cave`.
+//   depths: the first and last depth the theme may appear at (the town's depth, 0, is always TOWN's)
 //   top / side: colour stops by height in levels (grass tops, cliff strata)
 //   fluids: weights [water, lava, acid] for pools and falls; river: fluid of the rivers
 //   tiles: weight multipliers for the WFC kinds; cave: below the ground (no sun, no sky)
@@ -12,18 +14,18 @@
 //   clutter.glb, themes.glb), propDensity: chance of a prop per floor (0.32)
 //   light: sky [top, bottom, haze?, tint?] (backdrop, see render/sky.js), stars 0..1, hemi [sky, ground, intensity], sun [colour, intensity], fog 0..1
 //   music: the song (music/<name>.scrim) that plays here; the town and the core have their own (SONGS)
-// A slot's themes must agree on `cave`. Slot settings that shape the layout live on the slot, not
-// the theme, so the rooms of a world never depend on which theme it picked (saves keep their rooms):
-//   spans: gorge spans (world/spans.js): chance per depth, at most `max`, the chance of one on
-//   the route where it fits, of a lonely island branch and of a span over the sky (no valley)
+//   spans: gorge spans (world/spans.js), or null: the chance of any on a depth, at most `max`,
+//   the chance of one on the route where it fits, of a lonely island branch and of a span over
+//   the sky (no valley); deck: the highest deck level (22; lower under a cave's rock walls)
 import { WATER } from '../core/constants.js';
-import { CAVE_SLOTS } from './caves.js';
+import { CAVE_THEMES } from './caves.js';
 
-const T = (name, o) => ({ name, tiles: {}, cave: false, ...o });
+const T = (name, o) => ({ name, tiles: {}, cave: false, spans: null, ...o });
 
 const MEADOW = T('Meadow islands', {
   music: 'overworld',
   props: 'meadow', propDensity: 0.15,
+  depths: [0, 2], spans: { chance: 0.9, max: 2, route: 0.8, island: 0.6, sky: 0.5 },
   void: 0.5, relief: 0.5,
   arche: { plain: 3, archipelago: 3, spire: 1, mesa: 1, chasm: 1 },
   top: [[0, '#3b6532'], [4, '#4c8a3c'], [8, '#76ad50'], [12, '#a3b26a'], [16, '#b7a888'], [20, '#d9d3c5']],
@@ -35,6 +37,7 @@ const MEADOW = T('Meadow islands', {
 const CLOUDS = T('Cloud kingdom', {
   music: 'overworld',
   props: 'clouds', propDensity: 0.18,
+  depths: [1, 2], spans: { chance: 0.9, max: 2, route: 0.8, island: 0.6, sky: 0.7 },
   void: 0.62, relief: 0.6,
   arche: { archipelago: 4, plain: 2, spire: 1, mesa: 1 },
   top: [[0, '#b9bfd4'], [4, '#cfd4e4'], [8, '#e0e3ee'], [12, '#ebe6ef'], [16, '#f1edf3'], [20, '#f6f6fa']],
@@ -47,6 +50,7 @@ const CLOUDS = T('Cloud kingdom', {
 const LAGOON = T('Lagoon isles', {
   music: 'overworld',
   props: 'lagoon', propDensity: 0.16,
+  depths: [1, 2], spans: { chance: 0.9, max: 2, route: 0.8, island: 0.7, sky: 0.3 },
   void: 0.3, relief: 0.35,
   arche: { archipelago: 4, crater: 2, plain: 2, mesa: 1 },
   top: [[0, '#d2bd86'], [3, '#e0cf9c'], [6, '#82a852'], [10, '#5e9440'], [16, '#8a9a6a'], [20, '#c8c0a8']],
@@ -59,6 +63,7 @@ const LAGOON = T('Lagoon isles', {
 const KARST = T('Karst terraces', {
   music: 'overworld',
   props: 'karst', propDensity: 0.18,
+  depths: [1, 2], spans: { chance: 0.9, max: 2, route: 0.8, island: 0.6, sky: 0.5 },
   void: 0.4, relief: 0.9,
   arche: { spire: 4, mesa: 2, plain: 2, archipelago: 1 },
   top: [[0, '#5a8a3a'], [4, '#6ea444'], [8, '#86b858'], [12, '#7a9a5a'], [16, '#a8b09a'], [20, '#d0d2c8']],
@@ -70,6 +75,7 @@ const KARST = T('Karst terraces', {
 const PEAKS = T('Snowy peaks', {
   music: 'peaks',
   props: 'peaks',
+  depths: [3, 3], spans: { chance: 0.8, max: 2, route: 0.8, island: 0.5, sky: 0.5 },
   void: 0.42, relief: 1.0,
   arche: { spire: 3, chasm: 2, mesa: 2, plain: 1 },
   top: [[0, '#8fa4ab'], [6, '#c3d3d8'], [12, '#e6eef1'], [20, '#ffffff']],
@@ -82,6 +88,7 @@ const PEAKS = T('Snowy peaks', {
 const HIGHLANDS = T('Prayer highlands', {
   music: 'peaks',
   props: 'highlands',
+  depths: [3, 3], spans: { chance: 0.7, max: 2, route: 0.8, island: 0.5, sky: 0.4 },
   void: 0.35, relief: 0.85,
   arche: { mesa: 3, plain: 2, spire: 1, chasm: 1 },
   top: [[0, '#7a8a4a'], [5, '#9a9a58'], [9, '#b4a868'], [13, '#a89a80'], [17, '#d8dce0'], [20, '#ffffff']],
@@ -93,6 +100,7 @@ const HIGHLANDS = T('Prayer highlands', {
 const BADLANDS = T('Badlands', {
   music: 'badlands',
   props: 'badlands',
+  depths: [4, 4], spans: { chance: 0.7, max: 2, route: 0.8, island: 0.4, sky: 0 },
   void: 0.12, relief: 0.8,
   arche: { chasm: 3, mesa: 3, spire: 1, plain: 1 },
   top: [[0, '#9a6a3c'], [6, '#b9864f'], [12, '#d3a466'], [20, '#e8cf9a']],
@@ -105,6 +113,7 @@ const BADLANDS = T('Badlands', {
 const SALTFLATS = T('Salt flats', {
   music: 'badlands',
   props: 'saltflats',
+  depths: [4, 4], spans: { chance: 0.4, max: 1, route: 0.8, island: 0.4, sky: 0 },
   void: 0.08, relief: 0.4,
   arche: { plain: 3, crater: 2, mesa: 2, archipelago: 1 },
   top: [[0, '#cfc6bd'], [4, '#ddd6cd'], [8, '#e6dfd8'], [12, '#e2d0cb'], [20, '#ece4e0']],
@@ -114,16 +123,10 @@ const SALTFLATS = T('Salt flats', {
   light: { sky: ['#40283a', '#120a12', '#7a5266', '#5a3a5a'], stars: 0.6, hemi: ['#ffe0e4', '#4a3a38', 0.8], sun: ['#ffc8a8', 1.6], fog: 0.25 },
 });
 
-export const SLOTS = [
-  { at: 0, themes: [MEADOW] },   // the town and its road
-  { at: 1, themes: [MEADOW, CLOUDS, LAGOON, KARST], spans: { chance: 0.9, max: 2, route: 0.8, island: 0.6, sky: 0.5 } },
-  { at: 3, themes: [PEAKS, HIGHLANDS] },
-  { at: 4, themes: [BADLANDS, SALTFLATS] },
-  ...CAVE_SLOTS,
-];
-
-// every theme once, the classic one of each slot first
-export const THEMES = [...new Set(SLOTS.flatMap(s => s.themes))];
+// every theme, the town's first
+export const THEMES = [MEADOW, CLOUDS, LAGOON, KARST, PEAKS, HIGHLANDS, BADLANDS, SALTFLATS, ...CAVE_THEMES];
+// the town and its road (depth 0)
+export const TOWN = MEADOW;
 
 // every song the game plays: the town (and the merchant camp), one per theme, and the core (depth 20)
 export const SONGS = ['town', ...new Set(THEMES.map(t => t.music)), 'core'];

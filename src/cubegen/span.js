@@ -69,6 +69,16 @@ export function spanBridge(ctx) {
   const cells = [];
   for (let j = 2; j <= N - 3; j++) cells.push(edgeCell(back, s.pos, j));
   const [dx, dz] = DIRS[s.dir];
+  // the ground right under the deck is kept low, but a river's bank may come up to hold the
+  // water: under a low deck that leaves no head room, so no way leads onto or off it (the way
+  // goes round it; placeStructures' test, cell by cell along the deck)
+  const k = cells.length, under = new Map(cells.map((c, j) => {
+    const y0 = a.top + (b.top - a.top) * j / k, y1 = a.top + (b.top - a.top) * (j + 1) / k;
+    return [c, [Math.min(y0, y1) - 1, Math.max(y0, y1)]];
+  }));
+  const cramped = g => { const u = under.get(g.c); return !!u && g.top > u[0] - SHEAD && g.top <= u[1] + 1; };
+  const movesFrom = ctx.movesFrom;
+  ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => m.span || !cramped(m.from) && !cramped(m.to));
   ctx.extraMoves = new Map([
     [a.id, [{ kind: 'bridge', from: a, to: b, d: s.dir, dx, dz, cells, cost: 1, span: true }]],
     [b.id, [{ kind: 'bridge', from: b, to: a, d: back, dx: -dx, dz: -dz, cells: [...cells].reverse(), cost: 1, span: true }]],

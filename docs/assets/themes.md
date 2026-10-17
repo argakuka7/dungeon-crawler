@@ -7,8 +7,8 @@
 Artwork for ten alternative themes, and landmarks for the eleven classic ones: **159 prop
 types, 296 meshes, 82,017 triangles**. These were built and checked through Blender MCP. The
 style and contract are the same as `blender/clutter.py` (low-poly, flat-shaded,
-vertex-coloured, one mesh per prop). **Hooked up to the game** as themes a world may pick
-instead of the classic ones, and every depth builds its major reward site around one of its
+vertex-coloured, one mesh per prop). **Hooked up to the game** as themes a world may pick for
+their depths alongside the classic ones, and every depth builds its major reward site around one of its
 theme's landmarks (see "Integration"); flag lines and the honey fluid are not built yet.
 
 ## Files
@@ -33,7 +33,7 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
 
 ## Sets
 
-| Set | Theme (slot: instead of) | Mood |
+| Set | Theme (depths: alongside) | Mood |
 |---|---|---|
 | highlands | Prayer highlands (3: Snowy peaks) | Tibetan prayer-flag hills: whitewash, maroon, gold, the five flag colours, turquoise lakes |
 | karst | Karst terraces (1–2: Meadow islands) | Guilin limestone needles, rice terraces, bamboo, red pavilions |

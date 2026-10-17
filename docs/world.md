@@ -287,8 +287,9 @@ that gives L0 54%, L1 28%, L2 15%, L3 4%.
 
 ## Gorge spans (`world/spans.js`, `cubegen/span.js`)
 
-On the sky-island depths (themes with `spans`, now depths 1 and 2) some rooms are joined by
-one long bridge over a valley.
+On every depth but the town and the core, some rooms may be joined by one long bridge over a
+valley. How often, and how, is up to the depth's theme (`spans` in `themes/index.js`): most
+often on the sky islands, the peaks and the badlands, now and then in the caves.
 
 - **The look:** a straight line of cubes. A room at one end, one or two gorge cubes, and at
   the other end the next room on the route or a lonely island. The valley runs across the
@@ -304,15 +305,19 @@ one long bridge over a valley.
   then an island plateau (levels 5–12) in the valley. Nothing else touches the gorge or the
   island, so the bridge is the only way in. The island usually gets the depth's rare reward
   site (sites prefer branch rooms far from the route).
-- **Over the sky:** half the spans with no other room beside their gorge (and no room may be
-  placed beside it later) cross bottomless sky instead (`sky`): the valley is void, the rock
-  pinnacle rises out of nothing and the island floats. The pads stand right at the edge (no
+- **Over the sky:** some of the spans with no other room beside their gorge (and no room may be
+  placed beside it later) cross bottomless sky instead (`sky`: half of them on the meadows, more
+  over the clouds, fewer in the lagoons, none on the ground of the badlands or in the caves but
+  the abyss): the valley is void, the rock pinnacle rises out of nothing and the island floats. The pads stand right at the edge (no
   ground is made solid around them, `portals.js`); falling off is falling out of the world.
 - **Planning:** `planSpans` runs on its own random stream after the horde, before branches.
   On the route it looks for straight runs of the spine with one or two inner cubes, none of
-  them a guardian or the horde room, gorge cells two cubes apart. A depth gets at most two
-  spans (`spans` in the theme: chance, max, route, island). Gorge cubes get role `span`, no
-  reward sites and half the population.
+  them a guardian or the horde room, gorge cells two cubes apart. A depth gets at most `max`
+  spans (`spans` in the theme: chance, max, route, island, sky, deck; two on the surface, one in
+  a cave). Gorge cubes get role `span`, no reward sites and half the population.
+- **In the caves:** the faces carry the caves' rock walls (17–24 levels high), so the decks stay
+  lower there (`deck`: at most level 15 instead of 22); the headlands and the top tier scale
+  down with it.
 - **World:** the WFC pins span cubes before collapsing the depth: one layer, sockets from the
   deck levels (`H` from level 8), `W` on the sides of the gorge cube with the river. They
   never have void and nothing falls into them from above. `spanProfile` (`profile.js`) gives
@@ -323,21 +328,22 @@ one long bridge over a valley.
   bridge runs straight.
 - **Generator:** gorge cubes and islands have their own archetypes (`shapeGorge`,
   `shapeIsland`). The valley floor ramps up to low room ends, so falling off never leaves you
-  in a pit, and is kept a head's height under the deck. The bridge is not searched for:
-  `spanBridge` hands the route search a ready move from pad to pad (both ways), 12 cells
-  long and as steep as the levels say. It is placed like any bridge, in one style for the
-  whole span (from the theme's weights), with a deeper sag for rope and tall trestles under
-  plank and iron. Invisible side rails keep you on it like on every bridge.
+  in a pit, and is kept a head's height under the deck. Where a river's bank has to come up
+  under a low deck anyway, no way of the route search leads onto or off it. The bridge is not
+  searched for: `spanBridge` hands the route search a ready move from pad to pad (both ways),
+  12 cells long and as steep as the levels say. It is placed like any bridge, in one style for
+  the whole span (from the theme's weights), with a deeper sag for rope and tall trestles
+  under plank and iron. Invisible side rails keep you on it like on every bridge.
 - **Discovery as usual:** a span's cubes show only once visited, like every other cube. Each
   crossing is a portal, so the gorge, the far bank and the island come into view one cube at
   a time as you cross.
 - **Dev:** `/span [n]` jumps to the start of the world's next (or n-th) span.
-- **Checks:** `tests/spans.test.js` covers the plan (straight, in budget, unguarded, islands
-  apart), the pads on both sides of every crossing, matching ground on every face of every
+- **Checks:** `tests/spans.test.js` covers the plan (on every depth but the town and the core,
+  straight, in budget, unguarded, islands apart, sky and deck as the theme says), the pads on both sides of every crossing, matching ground on every face of every
   span cube, one bridge per gorge cube clear of the ground, every portal leading on, and the
   same cubes whatever the exploration order; the character walks every bridge both ways and
-  pushing sideways halfway across keeps it on the deck. Over 200 seeds all 1274 span cubes and
-  their rooms generate, in 1.28 attempts on average.
+  pushing sideways halfway across keeps it on the deck. Over 200 seeds all 4472 span cubes and
+  their rooms generate, in 1.26 attempts on average (over 1000 seeds, all 22965).
 
 ## Cube archetypes (`cubegen/archetypes.js`)
 
@@ -380,13 +386,17 @@ under plank bridges never stand where another structure passes underneath.
 
 ## Themes per world (`themes/index.js`, `themes/caves.js`, `themes/depth.js`)
 
-The depths are cut into **slots**. A slot starts at a depth and lasts until the next one, and
-offers one or more themes. Every world picks one theme per slot from its seed
-(`worldThemes(seed)`, its own random stream per slot, each theme equally likely):
+Every theme names the depths it may appear at (`depths`: first and last). Every world picks
+one theme per depth from its seed (`worldThemes(seed)`, its own random stream per depth): with
+`STICK` (0.55) a depth keeps the theme of the depth above if that one may appear there too,
+otherwise it picks again, each of the depth's themes equally likely. So themes come in
+stretches of a few depths, and a world may go from the meadows to the lagoons halfway down.
+The town's meadows (depth 0) do not carry over. The picks are kept as stretches
+(`[{ at, theme }]`, each lasting until the next).
 
-| Depths | Themes (the first is the classic one) |
+| Depths | Themes |
 |---|---|
-| 0 | Meadow islands (the town and its road, always) |
+| 0 | Meadow islands (the town and its road, always: `TOWN`) |
 | 1–2 | Meadow islands, Cloud kingdom, Lagoon isles, Karst terraces |
 | 3 | Snowy peaks, Prayer highlands |
 | 4 | Badlands, Salt flats |
@@ -400,21 +410,25 @@ offers one or more themes. Every world picks one theme per slot from its seed
 | 19–20 | Obsidian abyss |
 
 - **Where it is read:** the picks live on the layouts (`world.layout.themes`, each depth's
-  `layout.theme`). The worker reads a depth's theme from there (WFC weights, void, relief,
-  cave walls, fluids of falls and spouts, reward sites); a spec and its map carry the theme's
-  id as `biome` (its prop set), and everything that draws or sounds a map reads it back with
-  `themeOf(map)` (palette, props, footsteps, ambience, music, names). The light follows the
-  world's picks (`lightAt(depth, themes)`).
-- **The rooms stay the same:** the slots' themes agree on `cave`, and what shapes the layout
-  (the gorge spans) belongs to the slot, not the theme. So which rooms a world has does not
-  depend on its picks, and a world saved before keeps its rooms (it may look different).
-- **Same per depth:** the enemy rosters (`DEPTH_SPAWNS`) go by depth, and each alternative
-  plays the song of its slot's classic theme for now.
-- **Dev:** `?theme=clouds,forge` (with `?dev=1`) picks those themes for their depths.
-  `new World(seed, { themes: ['mines'] })` does the same in tests.
-- **Checks:** `tests/themes.test.js`: the picks (stable, even, the town always in the meadows),
-  every theme complete (structures, arenas, site recipes, its own props), the same rooms
-  whatever the picks, and every alternative generating its depths dressed from its own set.
+  `layout.theme`). The layout reads a depth's gorge spans from it; the worker reads the rest
+  from there (WFC weights, void, relief, cave walls, fluids of falls and spouts, reward sites);
+  a spec and its map carry the theme's id as `biome` (its prop set), and everything that draws
+  or sounds a map reads it back with `themeOf(map)` (palette, props, footsteps, ambience,
+  music, names). A map without a theme is a bug: `themeOf` throws. The light follows the
+  world's picks (`lightAt(depth, themes)`, blended between the starts of the stretches); with no
+  world yet (the menu before its first cube) it is the town's.
+- **What the theme changes:** the themes of a depth agree on `cave`. The route, its guardians
+  and hordes depend on the seed alone; the gorge spans (and with them where the branches go)
+  are the theme's.
+- **Same per depth:** the enemy rosters (`DEPTH_SPAWNS`) go by depth, and the themes added later
+  play the song of the first theme of their depths for now.
+- **Dev:** `?theme=clouds,forge` (with `?dev=1`) makes those themes win every depth they may
+  appear at. `new World(seed, { themes: ['mines'] })` does the same in tests.
+- **Checks:** `tests/themes.test.js`: the picks (stable, even per depth, in stretches as often as
+  `STICK` says, every theme coming up, the town always in the meadows), every depth's themes
+  agreeing on `cave`, every theme complete (depths, structures, arenas, site recipes, spans,
+  its own props), the same route whatever the picks, and every theme generating its depths
+  dressed from its own set.
 
 ## Themed structures (`themes/builds.js`, `render/bridges.js`)
 

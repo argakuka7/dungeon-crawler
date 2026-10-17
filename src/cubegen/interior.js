@@ -119,7 +119,7 @@ export function generateInterior(spec, facing = [0, 1]) {
     seed: spec.seed, attempts: 1, K: 2, B: [0, U], cols, floors, pieces, runs: [run], falls: [], ladders: [],
     fences, fenceList, stats: ctx.stats, moves: [], portals: [], exit: null, gateKeys: [null, null, null, null],
     safe: new Uint8Array(floors.length).fill(1),
-    kind: 'interior', archetype: 'plain', key: spec.key, depth: 0, cave: false, enemyFree: true,
+    kind: 'interior', archetype: 'plain', key: spec.key, depth: 0, cave: false, enemyFree: true, biome: 'meadow',
     staticBlockers, blockers: staticBlockers, occluders: walls, authoredProps: [], doors: [door],
     // front / right: the house's +Z / +X in the map; sides index DIRS (the wall on that side)
     interior: { building: b.name, outside: TOWN_KEY, room: L.room, wall: T, wallTop, W, D, front: F, right: R,

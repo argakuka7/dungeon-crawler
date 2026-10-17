@@ -66,6 +66,7 @@ let key = '', capKey = '';
 // cap colours for the theme of `map`: rock is the cliff strata band at height y (as on the
 // cliff walls, see walls.js), stone and wood are the theme's structure materials
 function capColors(map, y) {
+  if (!map) return;
   const theme = themeOf(map), band = Math.max(0, Math.floor(y)), k = theme.props + ':' + band;
   if (k === capKey) return;
   capKey = k;

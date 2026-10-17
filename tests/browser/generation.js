@@ -9,7 +9,7 @@ import { buildWorld, disposeWorld } from '../../src/render/world.js';
 import { renderer, scene, camera } from '../../src/render/scene.js';
 import { blockedAt } from '../../src/physics/collide.js';
 import { makeLayouts } from '../../src/world/layout.js';
-import { themeAt } from '../../src/themes/depth.js';
+import { themeOf } from '../../src/themes/depth.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 export async function runGenerationChecks() {
@@ -30,7 +30,7 @@ export async function runGenerationChecks() {
         let world;
         try {
           world = buildWorld(m, false, {}, c.geo);
-          const placed = placeProps(m, themeAt(depth));
+          const placed = placeProps(m, themeOf(m));
           check(m.rewardSites.length || m.siteFailures.length, 'worker preserves site records or explicit failure');
           for (const site of m.rewardSites) {
             check(m.safe[site.accessFloor], 'site approach leads onward');

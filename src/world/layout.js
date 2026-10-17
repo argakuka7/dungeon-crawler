@@ -93,7 +93,7 @@ function build(seed, d, above, theme) {
   const used = new Set(cells.map(id)), allowed = new Set(candidates.map(id));
   const branchBudget = Math.min(4, MAX_ROUTE_ROOMS - cells.length);
   // gorge spans (spans.js): on the route, and maybe a lonely island branch over a bridge
-  const spanPlan = planSpans(seed, d, spine, K, k => guardians.has(k) || hordes.has(k),
+  const spanPlan = planSpans(seed, d, theme.spans, spine, K, k => guardians.has(k) || hordes.has(k),
     c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1), branchBudget);
   const nearSpan = c => [c, ...nb(c)].some(n => spanPlan.apart.has(K(n)));
   for (const span of spanPlan.spans) if (span.island) {
@@ -130,8 +130,9 @@ function build(seed, d, above, theme) {
   return layout;
 }
 
-// themes: the world's theme picks (themes/depth.js worldThemes). They only decide what the reward
-// sites are like (layout.theme); which rooms exist and how they connect depends on the seed alone.
+// themes: the world's theme picks (themes/depth.js worldThemes). A depth's theme (layout.theme)
+// decides its gorge spans (and with them where the branches may go) and what its reward sites are
+// like; the route, its guardians and hordes depend on the seed alone.
 export function makeLayouts(seed, themes = worldThemes(seed)) {
   const cache = [];
   const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null, themeAt(d, themes))));

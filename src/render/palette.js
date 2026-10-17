@@ -2,7 +2,7 @@
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 import { WATER, LAVA } from '../core/constants.js';
 import { buildOf } from '../themes/builds.js';
-import { THEMES } from '../themes/index.js';
+import { TOWN } from '../themes/index.js';
 
 export const C = s => new THREE.Color(s);
 
@@ -40,4 +40,4 @@ function useBuild(b) {
   ROPE = C(b.rope); IRON = C(b.iron); IRON2 = C(b.iron).multiplyScalar(0.7);
 }
 
-usePalette(THEMES[0]);   // until a cube says otherwise
+usePalette(TOWN);   // until a cube says otherwise

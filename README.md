@@ -24,7 +24,7 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/cubegen/`: builds one cube's map from the spec `world/` hands it. Files named like
     a `world/` file (`cascades`, `spouts`, `sites`, `town`) carve that shared decision into the cube.
   - `src/themes/`: per-depth data: palettes, lighting, generator settings, structure materials;
-    each world picks one theme per slot of depths from its seed (`themes/depth.js`).
+    each world picks one theme per depth from its seed (`themes/depth.js`).
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.

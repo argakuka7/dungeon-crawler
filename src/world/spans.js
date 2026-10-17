@@ -7,9 +7,10 @@
 // faces carry the valley's cross-section, so the valley runs on into the rock beside it, and
 // between two gorge cubes the bridge rests on a rock pinnacle. cubegen/span.js builds the cubes.
 //
-// Over the sky islands a span may cross bottomless sky instead (`sky`): the valley is void, the
-// pinnacle rises out of nothing and the island floats. Only where no other room borders the
-// gorge, which would get a slit of void along its edge.
+// A span may cross bottomless sky instead (`sky`, over the sky islands, the abyss): the valley is
+// void, the pinnacle rises out of nothing and the island floats. Only where no other room borders
+// the gorge, which would get a slit of void along its edge. Under a cave's rock walls the decks
+// stay lower (`deck`, the highest deck level).
 //
 //   span: { id, keys: [end0, ...gorge, end1], dir (end0 -> end1), n (gorge cubes), pos (along
 //           every crossing face), levels (deck level at crossing face j, between keys[j] and
@@ -18,7 +19,7 @@
 import { mulberry32, hash32 } from '../core/util.js';
 import { N } from '../core/constants.js';
 import { key, parse, step, faceKey } from './coords.js';
-import { spansAt, MAX_DEPTH } from '../themes/depth.js';
+import { MAX_DEPTH } from '../themes/depth.js';
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const id = c => c.join(',');
@@ -28,18 +29,18 @@ const direction = (a, b) => AXES.findIndex(([x, z]) => a[0] + x === b[0] && a[1]
 // below this a crossing is on low ground (socket L), from here on a highland (H)
 const HIGH = 8;
 
-// the spans of depth d. spine: the route's cells ([x, z]), K: cell -> cube key, blocked(key):
+// the spans of depth d. cfg: its theme's `spans` (themes/index.js), or null. spine: the route's
+// cells ([x, z]), K: cell -> cube key, blocked(key):
 // cubes that may not be part of a span (guardians, the horde room), free(cell): an empty cell
 // an island branch may take, budget: how many rooms an island branch may add. Returns the
 // spans, the cells they claim and `apart`: cubes no other room may border (a sky gorge, an
 // island and its gorge).
 // learn: world.html#bridges (see learn/README.md)
-export function planSpans(seed, d, spine, K, blocked, free, budget) {
-  const cfg = spansAt(d);
+export function planSpans(seed, d, cfg, spine, K, blocked, free, budget) {
   const spans = [], cells = new Map(), lonely = new Set();
   if (!cfg || d === 0 || d >= MAX_DEPTH) return { spans, cells, apart: lonely };
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x5ba9e7)));
-  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
+  const ri = (a, b) => a + Math.floor(R() * (b - a + 1)), top = cfg.deck ?? 22;
   if (R() >= cfg.chance) return { spans, cells, apart: lonely };
   const gorges = [];   // gorge cells of earlier spans: the next keeps two cubes away
   const apart = list => list.every(c => gorges.every(g => cheb(c, g) >= 2));
@@ -56,11 +57,11 @@ export function planSpans(seed, d, spine, K, blocked, free, budget) {
       const r = R();
       if (r < 0.35) { b = ri(9, 12); a = b; }                 // level: high over the valley
       else if (r < 0.75) { b = ri(9, 12); a = ri(4, 6); }     // up from the valley's edge to the island
-      else { a = ri(15, 19); b = ri(5, 7); }                  // down from a headland to an islet
+      else { a = ri(top - 7, top - 3); b = ri(5, 7); }        // down from a headland to an islet
     } else if (R() < 0.4) {
-      a = b = ri(10, 15);                                     // level, from headland to headland
+      a = b = ri(10, Math.min(15, top));                      // level, from headland to headland
     } else {
-      const hi = n > 1 ? ri(18, 22) : ri(14, 20), lo = ri(4, 6);   // from the top tier down to the ground
+      const hi = n > 1 ? ri(top - 4, top) : ri(top - 8, top - 2), lo = ri(4, 6);   // from the top tier down to the ground
       [a, b] = R() < 0.5 ? [hi, lo] : [lo, hi];
     }
     span.levels = Array.from({ length: n + 1 }, (_, j) => Math.round(a + (b - a) * j / n));

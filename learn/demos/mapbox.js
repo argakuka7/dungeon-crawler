@@ -3,7 +3,7 @@
 // it on the cube (from above), and which parts of the game use it: the parts are found by
 // reading the game's code (../crawl.js) for ".floors", ".portals" ...
 import { World } from '../../src/world/world.js';
-import { themeAt, MAX_DEPTH } from '../../src/themes/depth.js';
+import { themeAt, themeOf, MAX_DEPTH } from '../../src/themes/depth.js';
 import { N } from '../../src/core/constants.js';
 import { crawl } from '../crawl.js';
 import { canvas, html, t as tr, themeLabel } from '../deck.js';
@@ -42,7 +42,7 @@ export default function mount(el) {
   box.style.maxWidth = '330px';
   const row = html(el, `<div class="row">
     <label>Seed <input type="number" class="seed" value="${1 + Math.floor(Math.random() * 999)}"></label>
-    <label>${tr('depth', 'Tiefe')} <select class="depth">${Array.from({ length: MAX_DEPTH }, (_, d) => d + 1).map(d => `<option value="${d}" ${d === 1 ? 'selected' : ''}>${d} \u00B7 ${themeLabel(themeAt(d))}</option>`).join('')}</select></label>
+    <label>${tr('depth', 'Tiefe')} <select class="depth">${Array.from({ length: MAX_DEPTH }, (_, d) => d + 1).map(d => `<option value="${d}" ${d === 1 ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
     <button class="dice">${tr('Another cube', 'Anderer Würfel')}</button></div>`);
   const list = html(el, '<div class="row things"></div>');
   const out = html(el, '<div class="out"></div>');
@@ -61,6 +61,8 @@ export default function mount(el) {
 
   function build() {
     const seed = +$('.seed').value >>> 0, d = +$('.depth').value, world = new World(seed);
+    // every world picks its own theme per depth
+    for (const o of $('.depth').options) o.textContent = `${o.value} \u00B7 ${themeLabel(themeAt(+o.value, world.themes))}`;
     // a room with something to see: floors stacked over each other, and fences or ladders
     const route = world.layout(d).route, mid = Math.floor(route.length / 2);
     const order = route.map((k, i) => [k, Math.abs(i - mid)]).sort((a, b) => a[1] - b[1]).map(([k]) => k);
@@ -70,7 +72,7 @@ export default function mount(el) {
       map ??= m;
       if (m.floors.length > N * N && (m.fenceList?.length || m.ladders?.length)) { map = m; break; }
     }
-    theme = themeAt(d);
+    theme = themeOf(map);
     list.innerHTML = THINGS.filter(t => map[t.key] != null).map(t => `<button data-k="${t.key}">${t.key}${Array.isArray(map[t.key]) ? ` <span class="muted">\u00D7${map[t.key].length}</span>` : ''}</button>`).join('');
     list.querySelectorAll('button').forEach(b => b.onclick = () => { picked = b.dataset.k; show(); });
     show();

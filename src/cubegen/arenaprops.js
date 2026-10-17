@@ -73,7 +73,7 @@ export const PALETTES = {
     tree: L('abyss', 'bone_spire obsidian_spike'), debris: L('abyss', 'hovering_rock broken_altar weapon_graveyard'),
     stone: L('abyss', 'obsidian_spike bone_spire'), wall: L('abyss', 'wall_runes wall_shackles'), lip: L('abyss', 'dangling_chains'),
     bones: [], ritual: 'abyss_ritual_circle' },
-  // the themes a world may pick instead (themes/index.js SLOTS); no landmarks, they are too big
+  // the alternative themes (docs/assets/themes.md); no landmarks, they are too big
   clouds: { cover: L('clouds', 'cloud_tufts wind_feathers'),
     small: L('clouds', 'cloud_bush storm_jar sky_nest rainbow_crystal wind_chimes'),
     tree: L('clouds', 'weather_vane'), debris: ['clouds_weather_vane', 'any_boulder'],

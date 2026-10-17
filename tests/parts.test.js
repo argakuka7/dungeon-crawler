@@ -5,10 +5,11 @@ import { FLUIDS, LAVA, ACID } from '../src/core/constants.js';
 import { buildCubeGeometry, buildCubeParts } from '../src/render/cubegeo.js';
 import { PARTS, packParts, partBuffers } from '../src/render/parts.js';
 
-// a few cubes with every fluid and some falls among them
+// a few cubes with every fluid and some falls among them: the surface, the acid rivers of the
+// fungal swamp and the lava rivers of the volcanic depths
 function sample() {
-  const out = [], w = new World(3);
-  for (let depth = 0; depth <= 12 && out.length < 24; depth++) for (const k of [...w.layout(depth).exists].slice(0, 3)) out.push(w.cube(k).map);
+  const out = [], w = new World(3, { themes: ['swamp'] });
+  for (const depth of [0, 1, 2, 3, 4, 9, 17]) for (const k of [...w.layout(depth).exists].slice(0, 3)) out.push(w.cube(k).map);
   return out;
 }
 const maps = sample();

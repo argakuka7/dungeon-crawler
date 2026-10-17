@@ -8,7 +8,7 @@ import { ITEMS, WEARABLES } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 import { RARITIES } from '../core/gear/rarities.js';
 import { MOODS } from '../audio/score.js';
-import { MAX_DEPTH, themeAt } from '../themes/depth.js';
+import { MAX_DEPTH, themeAt, themesAt } from '../themes/depth.js';
 import { online } from '../net/online.js';
 import { state } from './state.js';
 import { note, clearChronicle } from './log.js';
@@ -28,7 +28,7 @@ addType(commands, { name: 'wearable', values: once(() => [...WEARABLES.filter(w 
 addType(commands, { name: 'enemy', values: once(() => Object.values(ENEMY_KINDS).sort((a, b) => !!a.guardian - !!b.guardian)
   .map(k => ({ value: k.type, label: k.label, hint: k.guardian ? `guardian (${k.guardianRole})` : k.species }))) });
 addType(commands, { name: 'rarity', values: () => RARITIES.map(r => ({ value: r.id, label: r.name, color: r.css })) });
-addType(commands, { name: 'depth', values: () => Array.from({ length: MAX_DEPTH + 1 }, (_, d) => ({ value: String(d), label: String(d), hint: themeAt(d, state.cubes?.layout.themes).name })) });
+addType(commands, { name: 'depth', values: () => Array.from({ length: MAX_DEPTH + 1 }, (_, d) => ({ value: String(d), label: String(d), hint: state.cubes ? themeAt(d, state.cubes.layout.themes).name : themesAt(d).map(t => t.name).join(' / ') })) });
 addType(commands, { name: 'mood', values: () => [...MOODS.map(m => ({ value: m, label: m })), { value: 'auto', label: 'auto', hint: 'the game picks again' }] });
 const choice = (name, list) => addType(commands, { name, values: () => list.map(([value, hint]) => ({ value, label: value, hint })) });
 choice('toggle', [['on'], ['off']]);

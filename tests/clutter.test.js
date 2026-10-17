@@ -5,7 +5,7 @@ import { assetMetadata } from '../tools/prop-metadata.mjs';
 import { PROP_METADATA } from '../src/core/propmetadata.js';
 import { props, catalogProp, signatureProp } from '../src/core/propcatalog.js';
 import { placeProps } from '../src/render/propplace.js';
-import { themeAt } from '../src/themes/depth.js';
+import { themeById } from '../src/themes/depth.js';
 import { N, LH, WATER, LAVA, ACID, FLUID_NAME, DIRS } from '../src/core/constants.js';
 
 for (const p of PROP_METADATA) catalogProp(p);
@@ -44,13 +44,13 @@ test('catalog registration is idempotent, not an additional scatter weight on a 
 
 test('water and shoreline clutter respects fluid type, surface height and neighbouring banks', () => {
   const seen = new Set();
-  for (let seed = 0; seed < 25; seed++) for (const [depth, fluid] of [[1, WATER], [7, WATER], [9, ACID], [17, LAVA]]) {
+  for (let seed = 0; seed < 25; seed++) for (const [theme, fluid] of [['meadow', WATER], ['frozen', WATER], ['swamp', ACID], ['volcanic', LAVA]]) {
     const m = terrain(seed);
     for (const f of m.floors) if (f.x >= 5 && f.x <= 10 && f.z >= 5 && f.z <= 10) {
       f.fluid = fluid; f.surf = 7; f.top = 5; f.cs = [2.5, 2.5, 2.5, 2.5];
     }
-    const placed = placeProps(m, themeAt(depth));
-    assert.deepEqual(placed, placeProps(m, themeAt(depth)));
+    const placed = placeProps(m, themeById(theme));
+    assert.deepEqual(placed, placeProps(m, themeById(theme)));
     for (const q of placed.out) {
       const p = props.byName.get(q.name), c = Math.floor(q.z) * N + Math.floor(q.x), f = m.floors[c];
       assert.ok(!signatureProp(p), 'signature assets are recipe-only');
@@ -74,7 +74,7 @@ test('cover dresses routes/slopes without blockers; focal sites remain free of a
     m.siteReservations = [{ c: reserved.c, layer: 0 }];
     m.sitePlacements = [{ name: 'treasure_chest', x: 8.5, y: 4, z: 8.5, yaw: 0, s: 0.8, site: 'test' }];
     for (const f of m.floors) f.cs = [4, 4.4, 4, 4.4];
-    const { out, blockers } = placeProps(m, themeAt(5));
+    const { out, blockers } = placeProps(m, themeById('roots'));
     assert.equal(out.filter(p => Math.floor(p.x) === 8 && Math.floor(p.z) === 8).length, 1);
     assert.ok(blockers.every(list => !list.length));
     for (const q of out) if (props.byName.get(q.name)?.cover) {
@@ -95,7 +95,7 @@ test('cliff-lip props have vertical clearance and nothing hangs from slab unders
       const f = { ...ground, id: m.floors.length, layer: 1, bottom: 18, top: 20, cs: [10, 10, 10, 10], merged: false };
       m.cols[c].push(f); m.floors.push(f);
     }
-    for (const q of placeProps(m, themeAt(5)).out) {
+    for (const q of placeProps(m, themeById('roots')).out) {
       const p = props.byName.get(q.name);
       if (p.attach === 'lip') {
         lips++; assert.ok(q.x === 8 || q.x === 10); assert.equal(q.y, 10);

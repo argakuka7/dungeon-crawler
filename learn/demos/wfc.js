@@ -4,7 +4,7 @@
 import { WFC } from '../../src/world/wfc.js';
 import { KIND_COLOR, layersOf } from '../../src/world/tiles.js';
 import { hashKey, step as stepKey } from '../../src/world/coords.js';
-import { themeAt } from '../../src/themes/depth.js';
+import { themeAt, worldThemes } from '../../src/themes/depth.js';
 import { canvas, loop, html, t as tr, themeLabel } from '../deck.js';
 
 const PLAY = () => tr('Play', 'Abspielen');
@@ -13,7 +13,7 @@ const COLS = 9, ROWS = 6, SOCK = { L: '#6fae4f', H: '#a08052', W: '#3f8fd8' };
 export default function mount(el) {
   const W = 640, H = 430, { g, c, at } = canvas(el, W, H);
   const row = html(el, `<div class="row"><button class="step">${tr('One step', 'Ein Schritt')}</button><button class="play">${PLAY()}</button><button class="fill">${tr('Fill all', 'Alles füllen')}</button>
-    <button class="reset">${tr('Start over', 'Neu anfangen')}</button><label>${tr('depth', 'Tiefe')} <select class="depth">${[1, 3, 4, 7, 9, 13].map(d => `<option value="${d}">${d} \u00B7 ${themeLabel(themeAt(d))}</option>`).join('')}</select></label></div>
+    <button class="reset">${tr('Start over', 'Neu anfangen')}</button><label>${tr('depth', 'Tiefe')} <select class="depth">${[1, 3, 4, 7, 9, 13].map(d => `<option value="${d}">${d}</option>`).join('')}</select></label></div>
     <div class="legend">${Object.entries(KIND_COLOR).map(([k, col]) => `<span><i style="background:${col}"></i>${k}</span>`).join('')}
     <span>${tr('edges', 'Kanten')}: <i style="background:${SOCK.L}"></i>L ${tr('lowland', 'Tiefland')} <i style="background:${SOCK.H}"></i>H ${tr('highland', 'Hochland')} <i style="background:${SOCK.W}"></i>W ${tr('river', 'Fluss')}</span></div>`);
   const out = html(el, '<div class="out"></div>');
@@ -22,6 +22,8 @@ export default function mount(el) {
 
   function reset() {
     seed = Math.floor(Math.random() * 1e6);
+    // every world picks its own theme per depth
+    for (const o of $('.depth').options) o.textContent = `${o.value} \u00B7 ${themeLabel(themeAt(+o.value, worldThemes(seed)))}`;
     Y = -$('.depth').value;
     wfc = new WFC(seed);
     keys = [];
@@ -29,7 +31,7 @@ export default function mount(el) {
     lastPick = null; playing = false; $('.play').textContent = PLAY();
     draw();
   }
-  const weight = () => { const m = themeAt(-Y).tiles; return t => t.weight * (m[t.kind] ?? 1); };
+  const weight = () => { const m = themeAt(-Y, worldThemes(seed)).tiles; return t => t.weight * (m[t.kind] ?? 1); };
   // the next cube WFC.collapse would pick: the lowest entropy (plus its tiny tie-break)
   function next() {
     let best = null, bestE = Infinity, bestDom = null;

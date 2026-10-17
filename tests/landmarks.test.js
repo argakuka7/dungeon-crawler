@@ -2,14 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CHAR_R, CHAR_H } from '../src/core/constants.js';
 import { PROP_METADATA } from '../src/core/propmetadata.js';
-import { THEMES, SLOTS } from '../src/themes/index.js';
+import { THEMES } from '../src/themes/index.js';
 import { World } from '../src/world/world.js';
 import { siteIntent, landmarksOf } from '../src/world/sites.js';
 import { generate } from '../src/cubegen/index.js';
 import { containsXZ } from '../src/core/blockers.js';
 
 const LANDMARKS = PROP_METADATA.filter(p => p.landmark);
-const slotOf = biome => SLOTS.findIndex(s => s.themes.some(t => t.props === biome));
 
 test('every theme has landmarks, each with a role and boxes derived from its mesh', () => {
   for (const t of THEMES) assert.ok(landmarksOf(t.props).length >= 2, t.props);
@@ -40,9 +39,9 @@ test("each depth's major site is built around one of its theme's landmarks, taki
       assert.equal(PROP_METADATA.find(p => p.name === intent.landmark).set, L.theme.props);
       assert.equal(intent.role, PROP_METADATA.find(p => p.name === intent.landmark).role);
       // the next depth of the same theme shows the theme's next landmark
-      if (previous && previous.theme === L.theme && slotOf(L.theme.props) === previous.slot)
+      if (previous && previous.theme === L.theme)
         assert.notEqual(intent.landmark, previous.landmark, `seed ${seed} depth ${d}`);
-      previous = { theme: L.theme, slot: slotOf(L.theme.props), landmark: intent.landmark };
+      previous = { theme: L.theme, landmark: intent.landmark };
     }
   }
 });
@@ -84,7 +83,7 @@ function checkLandmark(m, intent) {
 
 test('every landmark can be built: placed, collidable, facing its approach, the site still walkable', () => {
   for (const p of LANDMARKS) {
-    const slot = slotOf(p.set), depth = Math.max(1, SLOTS[slot].at);
+    const depth = Math.max(1, THEMES.find(t => t.props === p.set).depths[0]);
     const w = new World(7, { themes: [p.set] }), key = [...w.layout(depth).sitePlans.keys()][0];
     w.prepare(key);
     const spec = w.spec(key), intent = siteIntent(7, key, p.set, 'rare', 0, p.name);
