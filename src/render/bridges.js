@@ -209,13 +209,13 @@ export function buildIceBridge(r, L) {
 }
 
 // natural rock arch: the ground's own rock (its strata, its grass on top) in one rough arch from
-// bank to bank, its feet down on the ground where that is close, drips of rock under it
+// bank to bank, its feet down on the ground (a river's bed) where that is close, drips of rock under it
 export function buildRockArch(r, L) {
   const T = L.terrain, F = runFrame(r), k = r.k, R = rngOf(r), steps = Math.max(8, Math.round(k * 5));
-  const groundAt = s => {   // between the pieces' grounds
+  const bed = p => p.bed ?? p.ground, groundAt = s => {   // between the pieces' grounds (beds under fluids)
     const t = clamp(s - 0.5, 0, k - 1), j = Math.min(k - 2, Math.floor(t));
-    if (k === 1) return r.pieces[0].ground;
-    return r.pieces[j].ground + (r.pieces[j + 1].ground - r.pieces[j].ground) * (t - j);
+    if (k === 1) return bed(r.pieces[0]);
+    return bed(r.pieces[j]) + (bed(r.pieces[j + 1]) - bed(r.pieces[j])) * (t - j);
   };
   let deckMin = Infinity;
   for (let i = 0; i <= steps; i++) deckMin = Math.min(deckMin, F.Y(i * k / steps));

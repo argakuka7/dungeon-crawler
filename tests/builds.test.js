@@ -95,7 +95,7 @@ test('the new bridge styles go only where they fit, and are drawn', () => {
         assert.equal(r.k, N - 4);
       } else {
         assert.ok(r.k >= S.k[0] && r.k <= S.k[1], `${at}: ${r.k} cells`);
-        if (S.ground) assert.ok(r.pieces.every(p => Math.min(r.y0, r.y1) - 0.25 - p.ground < 4), `${at}: ground far below`);
+        if (S.ground) assert.ok(r.pieces.every(p => Math.min(r.y0, r.y1) - 0.25 - p.ground < 8), `${at}: ground far below`);
       }
       // towers and poles: nothing over them (a span's cubes have one layer)
       if (S.towers) assert.ok(roomOver(m.cols, m.pieces, r) >= S.towers + 0.25, `${at}: no room for the towers`);

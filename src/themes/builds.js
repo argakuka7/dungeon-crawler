@@ -20,9 +20,9 @@ export const BUILDS = {
   nests: { stone: '#8a8490', wood: '#4e4448', rope: '#e8e4ea', iron: '#4a4650',
     bridges: { rope: 3, plank: 1 }, ladders: { rope: 3, footholds: 1 } },
   mines: { stone: '#7a7a86', wood: '#8a6a44', rope: '#b0a080', iron: '#5a5c64',
-    bridges: { plank: 2, iron: 2, chain: 1, stone: 1 }, ladders: { wood: 2, iron: 2 } },
+    bridges: { plank: 2, iron: 2, chain: 2, stone: 1 }, ladders: { wood: 2, iron: 2 } },
   ruins: { stone: '#c8b48a', wood: '#7a6040', rope: '#b8a070', iron: '#5a5048',
-    bridges: { stone: 3, plank: 1 }, ladders: { footholds: 3, wood: 1, rope: 1 } },
+    bridges: { stone: 4, plank: 1 }, ladders: { footholds: 3, wood: 1, rope: 1 } },
   volcanic: { stone: '#4a4040', wood: '#3a2c24', rope: '#7a6a5a', iron: '#3c3a3e',
     bridges: { iron: 2, rockarch: 2, chain: 1, stone: 1 }, ladders: { iron: 2, footholds: 2 } },
   abyss: { stone: '#3a3644', wood: '#2a2430', rope: '#5a5060', iron: '#2e2c34',
@@ -37,7 +37,7 @@ export const BUILDS = {
   highlands: { stone: '#d8d0c0', wood: '#7a3a2a', rope: '#e0c870', iron: '#5a5c64',
     bridges: { flags: 3, rope: 1, stone: 1, log: 1 }, ladders: { wood: 2, rope: 1, footholds: 1 } },
   saltflats: { stone: '#e4dcd0', wood: '#9a8068', rope: '#d0c0a0', iron: '#6a6460',
-    bridges: { plank: 2, stone: 1, rockarch: 1 }, ladders: { wood: 2, footholds: 1 } },
+    bridges: { plank: 2, stone: 1, rockarch: 1, rope: 1 }, ladders: { wood: 2, footholds: 1 } },
   canyon: { stone: '#d8a47a', wood: '#7a5638', rope: '#c8a878', iron: '#5a5c64',
     bridges: { rope: 2, plank: 1, rockarch: 2 }, ladders: { rope: 2, footholds: 2, wood: 1 } },
   grotto: { stone: '#8aaaa8', wood: '#6a7468', rope: '#a8c0b0', iron: '#4a5a60', vine: '#3a7a5a',
@@ -45,7 +45,7 @@ export const BUILDS = {
   hive: { stone: '#d0a048', wood: '#7a5020', rope: '#e8c870', iron: '#5a4a30',
     bridges: { plank: 2, rope: 1, stone: 1 }, ladders: { wood: 2, rope: 1, footholds: 1 } },
   ossuary: { stone: '#c8bca4', wood: '#4a3a2e', rope: '#8a7a68', iron: '#3a3836',
-    bridges: { stone: 3, plank: 1 }, ladders: { footholds: 2, wood: 1 } },
+    bridges: { stone: 4, plank: 1 }, ladders: { footholds: 2, wood: 1 } },
   forge: { stone: '#5a5450', wood: '#5a4030', rope: '#8a7a60', iron: '#4a4a52',
     bridges: { iron: 2, chain: 2, stone: 1 }, ladders: { iron: 3, wood: 1 } },
   cenote: { stone: '#b8a888', wood: '#6a5030', rope: '#8a9a50', iron: '#4a4a40', vine: '#3e7a30',
@@ -62,7 +62,8 @@ export const ICE = '#b4dcee', VINE = '#4e7a34';
 //   supports  what holds it up (cubegen/shape.js): 'piers' between arches, 'legs' (timber legs
 //             under long ordinary bridges, tall trestles under a span) or 'none' (it hangs, or
 //             is held up by what it is: a log, a slab of ice, a rock arch)
-//   ground    only over dry ground close below, with nothing else passing underneath
+//   ground    only over ground (or a river, a lake of lava: piers stand in it) up to 8 units
+//             below, with nothing else passing underneath; never over a void
 //   sky       may cross the open sky (a sky span: nothing to stand on below)
 //   span      may carry a gorge span's long bridge (12 cells); level: only a level one
 //   k         [shortest, longest] ordinary bridge (cells; they are 1-7)
@@ -80,7 +81,7 @@ export const BRIDGE_STYLES = {
   // a few logs side by side: short ones only, never a span
   log: { ...ANY, surface: 'wood', sag: flat, span: false, k: [1, 4] },
   // a plank deck hung from chains between iron towers
-  chain: { ...ANY, surface: 'wood', sag: sagBy(0.07, 0.3, 0.04, 0.5), k: [3, 7], towers: 1.45 },
+  chain: { ...ANY, surface: 'wood', sag: sagBy(0.07, 0.3, 0.04, 0.5), k: [2, 7], towers: 1.45 },
   // a slab of ice with icicles under it
   ice: { ...ANY, surface: 'ice', sag: flat },
   // a natural rock arch, like the stone arches only over ground; on a span only a level one
@@ -89,7 +90,7 @@ export const BRIDGE_STYLES = {
   flags: { ...ANY, surface: 'rope', sag: sagBy(0.09, 0.4, 0.07, 0.9), towers: 1.3 },
 };
 
-// may `style` carry this bridge? where: { solid (dry ground close below, nothing underneath), k
+// may `style` carry this bridge? where: { solid (ground or fluid close below, nothing underneath), k
 // (cells), room (units free over both ends), or for a gorge span's bridge: span, sky, level }
 export function bridgeFits(style, where) {
   const s = BRIDGE_STYLES[style];

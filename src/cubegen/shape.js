@@ -27,6 +27,7 @@ export function shapeStructures(ctx) {
   const edgeY = (n, d) => { if (n.landing) return n.top * LH; const [a, b] = EDGE_CORNERS[d]; return (n.cs[a] + n.cs[b]) / 2; };
   const floorBelow = (c, y) => { let g = null; for (const f of cols[c]) if (f.top * LH <= y + 0.01) g = f; return g; };
   const groundY = g => g ? (g.fluid ? g.surf * LH : Math.min(...g.cs)) : 0;
+  const bedY = g => g ? Math.min(...g.cs) : 0;   // under a fluid: its bed
   const pathCols = new Set(pathFloors.map(f => f.c));
   const pillar = (run, c, cx, cz, hx, hz, bottom, top) => {
     if (top - bottom < 0.05) return;
@@ -55,10 +56,10 @@ export function shapeStructures(ctx) {
     }
     const k = r.k;
     if (r.kind === 'bridge') {
-      // arches only over solid ground nearby (BRIDGE_STYLES `ground`)
+      // arches only over ground (or a river, a lake of lava) close below (BRIDGE_STYLES `ground`)
       const deckLo = Math.min(r.y0, r.y1) - 0.25;
       const below = r.pieces.map(p => floorBelow(p.c, deckLo));
-      const solid = below.every(g => g && !g.fluid && deckLo - groundY(g) < 4)
+      const solid = below.every(g => g && deckLo - groundY(g) < 8)
         && r.pieces.every(p => !pathCols.has(p.c) && !pieces[p.c].some(q => q.run !== r && q.kind !== 'pillar' && Math.min(q.y0, q.y1) < deckLo));
       r.style = pickBridge(weights, { solid, k, room: roomOver(cols, pieces, r) }, R());
       if (r.span) r.style = ctx.spec.span.style;   // a span's long bridge (span.js)
@@ -67,7 +68,7 @@ export function shapeStructures(ctx) {
     }
     r.pieces.forEach(p => {
       const lo = Math.min(p.y0, p.y1), sup = floorBelow(p.c, lo);
-      p.ground = groundY(sup);
+      p.ground = groundY(sup); p.bed = bedY(sup);
       p.supported = r.kind === 'stair' && !!sup && lo - sup.top * LH < SHEAD * LH;
       p.base = p.supported ? p.ground : lo - 0.4;
     });
@@ -81,7 +82,7 @@ export function shapeStructures(ctx) {
       for (let i = 1; i < nArch; i++) r.splits.push(Math.round(i * k / nArch) - 0.5);
       for (const s of r.splits) {
         const p = r.pieces[Math.floor(s)];
-        pillar(r, p.c, 0.5, 0.5, r.dx ? 0.2 : 0.42, r.dx ? 0.42 : 0.2, p.ground, runY(p, 0.5, 0.5) - 0.3);
+        pillar(r, p.c, 0.5, 0.5, r.dx ? 0.2 : 0.42, r.dx ? 0.42 : 0.2, p.bed, runY(p, 0.5, 0.5) - 0.3);   // down to a river's bed
       }
     } else if (supports === 'legs' && r.span) {   // tall trestles under a span's long bridge
       if (ctx.spec.span.sky) continue;
