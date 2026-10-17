@@ -260,9 +260,11 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   clearNeighbors(); clearNeighborCache();
   state.cubes?.dispose();
   const params = new URLSearchParams(location.search);
-  // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths
+  // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths,
+  // ?bridge=chain / ?ladder=vine one bridge / ladder style wherever it fits
   state.cubes = new WorldClient(seed, { arche: state.dev && params.get('arche'),
-    themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [] });
+    themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [],
+    bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder') });
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
   state.transitioning = true;
   cancelSword(true);

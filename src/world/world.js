@@ -13,7 +13,7 @@ import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './t
 import { generateInterior } from '../cubegen/interior.js';
 import { spanSpec } from './spans.js';
 import { heightSpec, heightsOf, shaftAbove } from './heights.js';
-import { buildOf } from '../themes/builds.js';
+import { bridgesOf } from '../themes/builds.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
 const LEAN = { highland: { mesa: 2, spire: 2, archipelago: 0.3 }, lake: { archipelago: 3, crater: 2 }, gorge: { chasm: 3 },
@@ -28,7 +28,8 @@ function archetype(theme, kind, R) {
 
 export class World {
   // opts.arche: force one archetype everywhere (dev); opts.themes: theme ids that win every depth
-  // they may appear at (dev, tests; themes/depth.js worldThemes)
+  // they may appear at (dev, tests; themes/depth.js worldThemes); opts.bridge / opts.ladder: one
+  // bridge / ladder style wherever it fits (dev, tests; themes/builds.js)
   constructor(seed, opts = {}) {
     this.seed = seed;
     this.opts = opts;
@@ -52,7 +53,7 @@ export class World {
   // learn: architecture.html#cube-journey (see learn/README.md)
   spec(k) {
     const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = this.layout(-Y).theme, L = this.layout(-Y);
-    const span = spanSpec(L, k, buildOf(theme).bridges), height = heightSpec(this, k);
+    const span = spanSpec(L, k, bridgesOf(theme, this.opts.bridge)), height = heightSpec(this, k);
     const faces = [0, 1, 2, 3].map(d => {
       const f = this.faces.get(faceKey(k, d));
       return { sock: t.sock[d], profile: Int16Array.from(f.profile), river: f.river, portal: f.portal, wall: f.wall, spout: f.spout,
@@ -89,6 +90,7 @@ export class World {
       seed: hash32(this.seed ^ hashKey(k)),
       archetype: span ? span.role : height ? height.role : pinnacle ? 'pinnacle' : -Y === 0 ? 'plain'
         : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
+      forceBridge: this.opts.bridge || null, forceLadder: this.opts.ladder || null,
     };
   }
 

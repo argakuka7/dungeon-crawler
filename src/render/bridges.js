@@ -99,3 +99,6 @@ export function buildIronBridge(r, L) {
   }
   for (const q of r.pillars || []) pillarBox(W, q, IRON2);
 }
+
+// the builder of each style (themes/builds.js BRIDGE_STYLES)
+export const BRIDGES = { stone: buildStoneBridge, plank: buildPlankBridge, rope: buildRopeBridge, iron: buildIronBridge };

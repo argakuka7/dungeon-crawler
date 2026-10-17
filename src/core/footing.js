@@ -3,6 +3,7 @@
 // its colours do, render/palette.js), fluid banks are mud (scorched gravel by lava) and the
 // paths through the town and the merchant camp are dirt.
 import { LAVA } from './constants.js';
+import { BRIDGE_STYLES } from '../themes/builds.js';
 
 // learn: sound.html#recipe (see learn/README.md)
 export const SURFACES = ['grass', 'dirt', 'gravel', 'snow', 'ice', 'mud', 'stone', 'wood', 'rope', 'iron'];
@@ -17,7 +18,6 @@ const GROUND = {
   highlands: [[0, 'grass'], [13, 'gravel'], [17, 'snow']], saltflats: 'snow',   // salt crust crunches
   grotto: 'dirt', hive: 'mud', ossuary: 'stone', forge: 'gravel', cenote: 'dirt',
 };
-const BRIDGES = { stone: 'stone', plank: 'wood', rope: 'rope', iron: 'iron' };
 
 function terrain(props, level) {
   const g = GROUND[props] ?? GROUND.meadow;
@@ -44,7 +44,7 @@ export function surfaceAt(support, map, props, x, z) {
   if (!support) return null;
   if (support.run) {
     const r = support.run;
-    return r.kind === 'bridge' ? BRIDGES[r.style] ?? 'wood' : r.wood ? 'wood' : 'stone';   // stairs and landings
+    return r.kind === 'bridge' ? BRIDGE_STYLES[r.style]?.surface ?? 'wood' : r.wood ? 'wood' : 'stone';   // stairs and landings
   }
   if (map?.interior) return 'wood';   // plank floors inside houses
   const paths = (map?.town ?? map?.merchantCamp)?.paths;

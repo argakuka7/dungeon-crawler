@@ -10,9 +10,8 @@ import { idx, clamp } from '../core/util.js';
 import { valleyFloor } from '../world/spans.js';
 import { VOID } from '../world/profile.js';
 import { edgeCell } from './portals.js';
+import { BRIDGE_STYLES } from '../themes/builds.js';
 
-// how far a span's deck sags in the middle (units), by style; the generator keeps the ground clear of it
-export const spanSag = (style, k) => style === 'rope' ? Math.min(0.9, 0.07 * k) : style === 'plank' ? Math.min(0.3, 0.03 * k) : 0;
 
 // cell (x, z) in span terms: u along the span (0 at the face towards end0), w across it
 const along = (dir, x, z) => [[x, z], [N - 1 - x, z], [z, x], [N - 1 - z, x]][dir];
@@ -21,7 +20,7 @@ const along = (dir, x, z) => [[x, z], [N - 1 - x, z], [z, x], [N - 1 - z, x]][di
 export function shapeGorge(ctx) {
   const { spec } = ctx, s = spec.span, back = s.dir ^ 1;
   const P0 = spec.faces[back].profile, P1 = spec.faces[s.dir].profile;
-  const k = N - 4, sag = spanSag(s.style, k) / LH;
+  const k = N - 4, sag = BRIDGE_STYLES[s.style].sag(k, true) / LH;   // the generator keeps the ground clear of the sag
   // the deck's level over cell u (its run covers u = 2 .. N - 3)
   const deck = u => { const T = (u - 1.5) / k; return s.hi + (s.lo - s.hi) * T - sag * Math.sin(Math.PI * clamp(T, 0, 1)); };
   for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {

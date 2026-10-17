@@ -522,6 +522,15 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
   - iron bridges: a flat girder deck with railings and bracing.
 - **Style mix:** each theme weights the styles. Rope bridges are common in the sky islands
   and spider nests, iron in the mines, volcanic depths and abyss, stone in the ruins.
+- **Where a style may go:** `BRIDGE_STYLES` (`themes/builds.js`) says for each style what it
+  sounds like underfoot, how far it sags, what holds it up (piers, timber legs or nothing) and
+  where it fits: only over dry ground close below (arches), across the open sky or not. A
+  bridge picks among the theme's styles that fit, by weight; the generator, the span planner
+  and the footsteps all read the same table.
+- **Dev:** `?bridge=<style>` (with `?dev=1`; `new World(seed, { bridge })` in tests) builds
+  every bridge in that style wherever it fits.
+- **Checks:** `tests/builds.test.js`: every style has a builder and a surface, every theme
+  has a style that fits wherever a bridge goes, picks keep to the styles that fit.
 
 ## Ladders and jumps (`cubegen/climbs.js`, `physics/climb.js`)
 

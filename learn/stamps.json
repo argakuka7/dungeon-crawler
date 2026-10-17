@@ -103,7 +103,7 @@
     "src/cubegen/index.js#tryGenerate": "041922a0",
     "src/cubegen/reach.js#reachTo": "f03a56c3",
     "src/cubegen/route.js#search": "cdae09bf",
-    "src/cubegen/span.js#shapeGorge": "624e4e0a",
+    "src/cubegen/span.js#shapeGorge": "0a70ed9e",
     "src/cubegen/span.js#spanBridge": "234e293a",
     "src/cubegen/tunnel.js#carveTunnel": "42497904",
     "src/game/camera.js#pitch": "bbab3d86",
@@ -218,7 +218,7 @@
     "src/world/worker.js": "3f65dba0",
     "src/world/world.js#archetype": "7f631674",
     "src/world/world.js#prepare": "a88aec54",
-    "src/world/world.js#spec": "25759817"
+    "src/world/world.js#spec": "8d5743a2"
   },
   "outdated": {}
 }

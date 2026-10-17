@@ -20,6 +20,7 @@ import { mulberry32, hash32 } from '../core/util.js';
 import { N } from '../core/constants.js';
 import { key, parse, step, faceKey } from './coords.js';
 import { MAX_DEPTH } from '../themes/depth.js';
+import { pickBridge } from '../themes/builds.js';
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const id = c => c.join(',');
@@ -183,14 +184,9 @@ export function indexSpans(layout, spans, cells) {
   return layout;
 }
 
-// how a span's bridge is built: one of the theme's bridge styles, the same in all its cubes
-// (no stone arches over the sky: their piers would stand on nothing)
-export function spanStyle(span, weights) {
-  const w = Object.entries(weights).filter(([s]) => !span.sky || s !== 'stone');
-  let r = mulberry32(span.seed)() * w.reduce((s, [, v]) => s + v, 0);
-  for (const [s, v] of w) if ((r -= v) < 0) return s;
-  return 'plank';
-}
+// how a span's bridge is built: one of the theme's bridge styles that fits (themes/builds.js:
+// no stone arches over the sky, their piers would stand on nothing), the same in all its cubes
+export const spanStyle = (span, weights) => pickBridge(weights, { span: true, sky: span.sky }, mulberry32(span.seed)());
 
 // what the generator needs to know about cube k's part in a span (cubegen/span.js), or null
 //   gorge:  { role, i, n, dir, pos, hi, lo, sky, room0, room1, style } (hi / lo: the deck's level
