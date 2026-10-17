@@ -4,8 +4,8 @@ import { Heap } from '../core/heap.js';
 
 export const moveKey = m => m.kind + ':' + Math.min(m.from.id, m.to.id) + ':' + Math.max(m.from.id, m.to.id);
 
-// learn: paths.html#astar #astar-code (see learn/README.md)
 // `goal`: a floor, or a test for any of several (then plain Dijkstra); `ok`: which moves count
+// learn: paths.html#astar #astar-code (see learn/README.md)
 export function search(ctx, from, goal, jitter, have, ok = null) {
   const { SZ, movesFrom } = ctx;
   const gs = new Float64Array(SZ).fill(Infinity), prev = new Array(SZ).fill(null), closed = new Uint8Array(SZ);

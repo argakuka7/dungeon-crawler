@@ -170,6 +170,8 @@
       <p lang="de"><code>open</code> ist ein <a class="w" href="words.html#heap">Heap</a>: eine Aufgabenliste, die dir immer zuerst das Ding mit der kleinsten Zahl gibt. Der Heap des Spiels steht in <code>src/core/heap.js</code> und ist nur 30 Zeilen lang. Das A* in der Demo benutzt ihn auch.</p>
       <p lang="en">See the trick from the last slide? A move already in <code>have</code> costs only <code>0.2</code>. Otherwise it costs its normal <code>cost</code> plus a little random <code>jitter</code>.</p>
       <p lang="de">Siehst du den Trick von der letzten Folie? Eine Bewegung, die schon in <code>have</code> ist, kostet nur <code>0.2</code>. Sonst kostet sie ihre normalen <code>cost</code> plus ein bisschen zufälliges <code>jitter</code>.</p>
+      <p lang="en">Sometimes any of several floors will do, like "any safe floor" when the builder makes sure you can get back from a pit. Then <code>goal</code> is a test instead of one floor. There is no single goal to guess the distance to, so the hunch is always <code>0</code>, and A* spreads out like the flood (but still cheapest first). <code>ok</code> can skip moves, for example ones you could only take one way.</p>
+      <p lang="de">Manchmal ist jeder von mehreren Böden recht, zum Beispiel "irgendein sicherer Boden", wenn der Baumeister prüft, dass du aus einer Grube wieder herauskommst. Dann ist <code>goal</code> ein Test statt eines Bodens. Es gibt kein einzelnes Ziel, zu dem man die Strecke schätzen könnte, also ist die Ahnung immer <code>0</code>, und A* breitet sich aus wie die Flut (aber immer noch das Billigste zuerst). <code>ok</code> kann Bewegungen überspringen, zum Beispiel solche, die nur in eine Richtung gehen.</p>
     </div>
   </div>
 </section>
