@@ -72,3 +72,19 @@ test('all depths have 7–14-room routes; discovery joins neighbours only over e
     }
   }
 });
+
+// docs/world.md, "Only where you have been": the next cube is behind a portal until you have been
+// there, whatever stands on the way (a gorge span, a large area, a tableland)
+test('every step of every route crosses a portal, through spans and large areas too', () => {
+  for (let seed = 0; seed < 200; seed++) {
+    const get = makeLayouts(seed);
+    for (let d = 0; d <= 20; d++) {
+      const L = get(d);
+      for (let i = 1; i < L.route.length; i++) {
+        const a = L.route[i - 1], b = L.route[i], dir = [0, 1, 2, 3].find(x => step(a, x) === b);
+        if (dir === undefined) continue;   // (a way down or up between depths)
+        assert.ok(L.portals.has(faceKey(a, dir)), `seed ${seed}, depth ${d}: no portal from ${a} to ${b}`);
+      }
+    }
+  }
+});

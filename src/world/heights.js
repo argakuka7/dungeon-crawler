@@ -207,7 +207,7 @@ export function heightSpec(world, k) {
   return { role, dir: role === 'descent' ? piece.dirs[1] : piece.dirs[0], hi: piece.hi,
     way: role === 'ascent' ? piece.ways[0] : role === 'descent' ? piece.ways[1] : null,
     cu: role === 'ascent' ? piece.cu[0] : shelfEnd(world, piece), descent, seed: piece.seed,
-    hole: role === 'descent' && shaft ? shaftHole(piece) : null, below: role === 'descent' ? shaft : null };
+    hole: role === 'descent' && shaft ? shaftHole(piece) : null };
 }
 
 // the shaft over room k (in the depth above), as its hole, or null

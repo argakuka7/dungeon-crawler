@@ -1,6 +1,7 @@
 // Decorative extras off the route: a few stairs and bridges that lead nowhere in particular.
 // Never onto a spiral's ramp or a lone peak (their ways up are the ramp and the ladder), nor in a
-// large area onto the rim (its faces are open: that would be a way into the next cube).
+// large area onto the rim (once both sides are visited its inner faces open, and that would be a
+// way into the next cube).
 
 export function addDecor(ctx, canPlace, place) {
   const { ri, floors, movesFrom } = ctx;

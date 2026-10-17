@@ -79,41 +79,46 @@ test('large areas come from the seed alone, built into the route in their shape,
   assert.ok(all > depths * 0.5 && count.spiral > depths * 0.2 && count.hairpin > depths * 0.05 && count.tableland > depths * 0.1, JSON.stringify(count));
 });
 
-test('the faces inside an area are open; a side guardian still cuts every way to the descent', () => {
+// docs/world.md, "Only where you have been": an area is no exception
+test('an area is discovered a cube at a time: a portal on every step, its faces open only once walked', () => {
+  let areasSeen = 0;
   for (let seed = 0; seed < 60; seed++) {
     const get = makeLayouts(seed);
     for (const d of DEPTHS) {
-      const L = get(d);
+      const L = get(d), run = createRun();
+      for (const k of L.guardians.keys()) run.unlockedGates.add(k);
+      const cubes = new Map([...L.exists].map(k => [k, { key: k, visits: 0, map: {
+        key: k, exit: L.exit.get(k), routeIndex: L.routeIndex.get(k), route: L.route,
+        gateKeys: [0, 1, 2, 3].map(d4 => L.gateFaces.get(faceKey(k, d4))),
+        portals: [0, 1, 2, 3].filter(d4 => L.portals.has(faceKey(k, d4))).map(dir => ({ dir, kind: 'side' })) } }]));
       for (const p of L.areas) {
+        areasSeen++;
         const faces = innerFaces(p);
         // exactly the faces between two of its cubes
         for (const k of p.keys) for (let d4 = 0; d4 < 4; d4++)
           assert.equal(faces.includes(faceKey(k, d4)), p.keys.includes(step(k, d4)));
         assert.equal(faces.length, p.kind === 'spiral' ? 4 : 7);
-      }
-      // all rooms discovered, the area's faces open as well: no way past a living side guardian
-      const open = new Set(L.areas.flatMap(innerFaces)), run = createRun();
-      const cubes = new Map([...L.exists].map(k => [k, { key: k, visits: 1, map: {
-        key: k, exit: L.exit.get(k), routeIndex: L.routeIndex.get(k), route: L.route,
-        gateKeys: [0, 1, 2, 3].map(d4 => L.gateFaces.get(faceKey(k, d4))),
-        portals: [0, 1, 2, 3].filter(d4 => L.portals.has(faceKey(k, d4))).map(dir => ({ dir, kind: 'side' })) } }]));
-      for (const [g, guard] of L.guardians) if (guard.role === 'side') {
-        for (const k of L.guardians.keys()) if (k !== g) run.unlockedGates.add(k);
-        const seen = new Set([L.up]), queue = [L.up];
-        for (let i = 0; i < queue.length; i++) {
-          const c = cubes.get(queue[i]), through = new Set(discoveredFaces(cubes, c, run));
-          for (let d4 = 0; d4 < 4; d4++) {
-            const n = step(c.key, d4), fk = faceKey(c.key, d4);
-            if (!cubes.has(n) || seen.has(n) || portalLocked(c.map, run, { dir: d4 })) continue;
-            if (!L.portals.has(fk) && !through.has(fk) && !open.has(fk)) continue;
-            seen.add(n); queue.push(n);
+        // from one of its cubes to the next: through a portal, like anywhere else
+        p.keys.slice(1).forEach((k, j) => {
+          const d4 = [0, 1, 2, 3].find(x => step(p.keys[j], x) === k);
+          assert.ok(L.portals.has(faceKey(p.keys[j], d4)), `${seed}/${d}: no portal from ${p.keys[j]} to ${k}`);
+        });
+        // walked in route order: no face of a visited cube opens towards one not yet visited,
+        // and once all of it is walked, all of its inner faces are open
+        for (const k of L.route.slice(0, L.route.indexOf(p.keys[0]))) cubes.get(k).visits = 1;
+        for (const k of p.keys) {
+          cubes.get(k).visits = 1;
+          for (const c of cubes.values()) if (c.visits) for (const fk of discoveredFaces(cubes, c, run)) {
+            const [a, d4] = fk.split('/');
+            assert.ok(cubes.get(a).visits && cubes.get(step(a, +d4)).visits, `${seed}/${d}: ${fk} open towards an unvisited cube`);
           }
         }
-        assert.ok(!seen.has(L.down), `${seed}/${d}: past ${g}`);
-        run.unlockedGates.clear();
+        const open = new Set(p.keys.flatMap(k => discoveredFaces(cubes, cubes.get(k), run)));
+        for (const fk of faces) assert.ok(open.has(fk), `${seed}/${d}: ${fk} still shut once walked`);
       }
     }
   }
+  assert.ok(areasSeen > 300, `${areasSeen} areas`);
 });
 
 test("an area's cubes meet at every face, whichever cube decided it", () => {
@@ -121,7 +126,7 @@ test("an area's cubes meet at every face, whichever cube decided it", () => {
     const L = w.layout(d);
     const maps = piece.keys.map(k => w.cube(k).map);
     for (const m of maps) {
-      assert.deepEqual(m.area.faces, innerFaces(piece));
+      assert.deepEqual(m.area.keys, piece.keys);
       assert.equal(m.K, 1, `${seed}/${d}: ${m.key} one layer`);
       for (const p of m.portals) assert.equal(m.safe[p.floor.id], 1, `${seed}/${d}: ${m.key} portal ${p.dir}`);
     }

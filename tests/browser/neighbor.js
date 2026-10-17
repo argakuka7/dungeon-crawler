@@ -18,13 +18,13 @@ import { paused } from './combat.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 
-// Down a great shaft (world/heights.js) you see the room under it: once that is made it is drawn
-// as a proxy a stratum down, right under the shaft, before anyone has been there.
+// A great shaft (world/heights.js) is a hole like any other: the room under it stays hidden until
+// you have been there (docs/world.md, "Only where you have been"), even once it is made.
 export async function runShaftViewChecks() {
   const { state } = await import('../../src/game/state.js');
   const { goFeature } = await import('../../src/game/dev.js');
   const { newWorld } = await import('../../src/game/flow.js');
-  const { CUBE_H, BASE } = await import('../../src/core/constants.js');
+  const { step } = await import('../../src/world/coords.js');
   const show = state.showNeighbors, out = [];
   try {
     state.showNeighbors = true;
@@ -34,11 +34,12 @@ export async function runShaftViewChecks() {
       if (!state.map?.shaft && !out.length && seed < 12) { await newWorld(++seed); n--; continue; }
       const m = state.map;
       if (!m?.shaft) break;
-      check(!state.cubes.cubes.get(m.shaft.below)?.visits, `${m.key}: the room below was visited already`);
-      for (let i = 0; i < 100 && !liveNeighbors().some(g => g.key === m.shaft.below); i++) await new Promise(r => setTimeout(r, 50));
-      const g = liveNeighbors().find(p => p.key === m.shaft.below);
-      check(g, `${m.key}: the room under the shaft is not shown`);
-      check(g.base.x === 0 && g.base.z === 0 && g.base.y === -(CUBE_H + BASE), `${m.key}: the room below at ${g.base.toArray()}`);
+      const below = step(m.key, 4);
+      check(!state.cubes.cubes.get(below)?.visits, `${m.key}: the room below was visited already`);
+      await state.cubes.get(below);   // made (it may well be, prefetched): still not shown
+      await new Promise(r => setTimeout(r, 300));
+      check(!liveNeighbors().some(g => g.key === below), `${m.key}: the room under the shaft is shown before it was visited`);
+      check(liveNeighbors().every(g => state.cubes.cubes.get(g.key)?.visits), `${m.key}: an unvisited cube is shown`);
       out.push(m.key);
     }
     check(out.length, 'no great shaft in this world');
@@ -223,9 +224,7 @@ function integrity(state, label, sliding = false) {
   check(new Set(list.map(g => g.key)).size === list.length || sliding, `${label}: a cube shown twice`);
   const batches = new Map();
   for (const g of list) {
-    // (or the room under a great shaft, seen through its hole: world/heights.js)
-    const under = [...state.cubes.cubes.values()].some(c => c.map.shaft?.below === g.key);
-    check(state.cubes.cubes.get(g.key)?.visits || under, `${label}: proxy of undiscovered ${g.key}`);
+    check(state.cubes.cubes.get(g.key)?.visits, `${label}: proxy of undiscovered ${g.key}`);
     check(!g.disposed && g.instances.length >= g.geometry.parts.length, `${label}: ${g.key} lost instances`);
     const shown = g.cull.visible && g.group.visible;
     g.instances.forEach((inst, i) => {

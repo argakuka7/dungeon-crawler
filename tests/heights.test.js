@@ -121,7 +121,6 @@ test('a great shaft opens into the room below: a hole nothing crosses, a ramp ro
     shafts++;
     const m = w.cube(piece.keys[2]).map, hole = shaftHole(piece);
     assert.deepEqual({ cx: m.shaft.cx, cz: m.shaft.cz, r: m.shaft.r }, hole);
-    assert.equal(m.shaft.below, below);
     assert.equal(below, key(...[parse(piece.keys[2])].map(([x, y, z]) => [x, y - 1, z])[0]));
     for (let c = 0; c < N * N; c++) {
       const x = c % N + 0.5, z = (c / N | 0) + 0.5, r = Math.hypot(x - hole.cx, z - hole.cz);

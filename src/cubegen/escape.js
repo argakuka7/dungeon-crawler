@@ -75,7 +75,8 @@ export function addEscapes(ctx) {
       if (!from || f.top < from.top) from = f;
     }
     if (!from) break;
-    // (in a large area never up onto the rim: its faces are open, the rim is the next cube's edge too)
+    // (in a large area never up onto the rim: once visited its inner faces open, the rim is the next
+    // cube's edge too)
     const seg = search(ctx, from, f => safe.has(f.id) && !(ctx.spec.area && !f.landing && ctx.border(f) && !f.prot), jitter, have);
     if (!take(ctx, seg)) { failed.add(from.id); continue; }
     ctx.stats.escapes = (ctx.stats.escapes || 0) + 1;

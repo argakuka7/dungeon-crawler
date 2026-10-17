@@ -98,7 +98,7 @@ export function caveWall(world, fk, f) {
   const theme = world.layout(-Y).theme;
   if (!theme.cave && !theme.walls) return null;
   const out = new Int16Array(N);
-  // (none at a corner where a large area's open inner face ends, areas.js)
+  // (none at a corner where a large area's unwalled inner face ends, areas.js)
   const open = [innerCorner(world, d === '0' ? X + 1 : X, Y, d === '0' ? Z : Z + 1), innerCorner(world, X + 1, Y, Z + 1)];
   for (let t = 0; t < N; t++) {
     if ((f.portal && Math.abs(t - f.portal.pos) <= 2) || (f.spout && Math.abs(t - f.spout.pos) <= 2)) continue;

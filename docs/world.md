@@ -14,6 +14,32 @@ near them, and stay around after that.
 | Game | `src/game/flow.js`, `portals.js`, `minimap.js` | entering cubes, portal travel, the overview |
 | Render | `src/render/markers.js`, `neighbors.js` | portal looks, low-detail neighbors |
 
+## Only where you have been
+
+The one rule every feature has to keep, however big it is or however many cubes it spans:
+
+- **A cube shows only once you have been in it.** Drawn (the low-detail surroundings), on the
+  minimap, anywhere: never before a visit. Not the far side of a gorge span, not the other cubes
+  of a spiral or a hairpin, not the room under a great shaft or any other hole, not a cube that
+  is merely generated or prefetched. `discoveredCubes` (`core/viewdistance.js`) is the only
+  thing that picks what is drawn around you, and it goes by `visits` alone; nothing adds cubes
+  beside it.
+- **The way into an unvisited cube is a portal.** Every step of the route from one cube to the
+  next crosses a portal on their shared face, inside spans and large areas too. A face opens
+  (no glass, no gates, walk across) only once both its cubes have been visited
+  (`discoveredFaces`, "Opened side connections" below), never because of what a cube is part of.
+- **Down is a fall.** A hole of any kind (void, a great shaft) drops you into the cube below
+  (`game/fall.js`); that is the only way you see it before you have been there, by being there.
+
+So a place that spans several cubes is discovered one cube at a time, like everything else, and
+reads as one place once you have walked it (its faces opened, all of it drawn). A feature that
+wants to be seen from afar has to be seen from inside the cube you are in. Checks: the gorge span
+and discovery cases in `tests/viewdistance.test.js`, a portal on every route step
+(`tests/layout.test.js`), an area walked a cube at a time (`tests/areas.test.js`), and in the
+browser `runProxyIntegrityChecks()` and `runShaftViewChecks()` (`tests/browser/neighbor.js`).
+The span's far side was shown early once (and taken out again); so were the area's other cubes
+and the room under a shaft. Do not bring it back.
+
 ## Starting town (`world/town.js`, `cubegen/town.js`)
 
 The spawn cube `(0,0,0)` is an authored clearing, rotated to match its **single
@@ -339,9 +365,9 @@ often on the sky islands, the peaks and the badlands, now and then in the caves.
   12 cells long and as steep as the levels say. It is placed like any bridge, in one style for
   the whole span (from the theme's weights), with a deeper sag for rope and tall trestles
   under plank and iron. Invisible side rails keep you on it like on every bridge.
-- **Discovery as usual:** a span's cubes show only once visited, like every other cube. Each
-  crossing is a portal, so the gorge, the far bank and the island come into view one cube at
-  a time as you cross.
+- **Discovery as usual** ("Only where you have been"): a span's cubes show only once visited,
+  like every other cube. Each crossing is a portal, so the gorge, the far bank and the island
+  come into view one cube at a time as you cross.
 - **Dev:** `/span [n]` jumps to the start of the world's next (or n-th) span.
 - **Checks:** `tests/spans.test.js` covers the plan (on every depth but the town and the core,
   straight, in budget, unguarded, islands apart, sky and deck as the theme says), the pads on both sides of every crossing, matching ground on every face of every
@@ -380,10 +406,10 @@ spiral 32%, a tableland 18%, a hairpin 10%) and about 62% a set piece.
       the exit, and a rim up high everywhere else. Nothing may cross the hole (`noCross`: no
       stairs, bridges, landings or jumps over it). Only where the depth below has an ordinary
       room right under it (`shaftOf`); otherwise the planned shaft becomes a plunge. That
-      room gets a dry, flat basin under the hole (`shaftBottom`), knows you may fall in there
-      (`fallMask`), and is drawn under the shaft as a proxy before it is visited, so you look
-      down into it (`visitedNeighbors`, `dy: -1`). Falling in is a fall into the cube below
-      like any other.
+      room gets a dry, flat basin under the hole (`shaftBottom`) and knows you may fall in there
+      (`fallMask`). The hole is a hole like any other: the room under it is not drawn before
+      you have been there ("Only where you have been"), and falling in is a fall into the cube
+      below like any other.
     - **stairs:** a cliff with a terrace, climbed down like the ascent is climbed up.
   - **faces:** the plateau's faces are all at `hi` (and its corners), so the pads between the
     three rooms are up there. The ascent's and descent's side faces carry the escarpment's
@@ -416,11 +442,12 @@ other on the route in a fixed order: never the first room, the room after it nev
 guardian in it nor in the room after it, no horde, no branch beside it, no span next to it.
 Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or spout.
 
-- **Open from the start:** the faces between an area's cubes are open as soon as you come into
-  any of them (`map.area.faces`, `game/flow.js revealArea`): no gates, no glass, no cave walls
-  (`isInnerFace`), and at corners where such a face ends no face is walled, so the corner cells
-  of all four cubes agree (`innerCorner`). The other cubes are then shown (`seen`: drawn as proxies
-  and on the minimap, but not discovered; discovery and the faces it opens still take a visit).
+- **Discovered a cube at a time** ("Only where you have been"): every step of the route from one
+  of its cubes to the next crosses a portal, and its other cubes show only once visited. The faces
+  between its cubes carry no cave walls (`isInnerFace`), and at corners where such a face ends no
+  face is walled, so the corner cells of all four cubes agree (`innerCorner`). Once both sides of
+  an inner face are visited it opens like any other (`discoveredFaces`), so a walked area reads
+  as one place.
 - **Spiral (2x2):** a mountain on the corner the four cubes share, a ramp winding once round it
   (radius 4.6 to 8 cells) from the foot, where the route comes in (level 5), up to the top (19–21
   under the sky, 14–16 under rock walls), then a ridge out to the exit's headland on the last
@@ -433,7 +460,7 @@ Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or s
     and before the rails exist the reach graph allows no drop off them (`reach.js`). So the foot
     of the later cubes is out of reach in the cube, gets no escapes and no ways up (`ctx.foot`),
     decor keeps off the ramp and an area's rims, and escapes never climb onto a rim. Walking the
-    foot through the open faces leads nowhere: the way up is the ramp.
+    foot through the faces once they are open leads nowhere: the way up is the ramp.
   - **The route walks it** (`areaRoute`): every move but a walk that starts or ends on the ramp
     costs 40 more, and no drop or jump leaves it over the side.
   - **The mountain** stands three levels over the top of the ramp: never walked onto.
@@ -449,8 +476,9 @@ Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or s
   or the hairpin's summit, as high as the ground goes there).
 - **Dev:** `/height spiral` or `/height hairpin` goes in at the foot.
 - **Checks:** `tests/areas.test.js`: the plan (seeded, in its shape and order on the route,
-  never guarded, about one large area per depth), the open faces (exactly the inner ones, and a
-  side guardian still cuts every way to the descent with them open), matching ground on every
+  never guarded, about one large area per depth), discovery (a portal on every step through it,
+  walked in order no face opens towards a cube not yet visited, and once walked all of its inner
+  faces are open), matching ground on every
   face of every area cube whichever cube decided it, one layer, the spiral's route walked from
   the foot to the top, pushing off the ramp where it is high keeps you on it, no structure from
   the foot onto the ramp, the hairpin's two bridges, summit and foot, and the same cubes whatever
@@ -987,8 +1015,7 @@ exactly the pixels the other drops. Every cube, full or proxy, sits in its own g
 on opened side connections.
 
 The minimap and the low-detail surroundings only show cubes you have visited; prefetching
-never discovers a cube. The one exception is the room under a great shaft, seen through its
-hole a stratum down (see "Big heights"; `runShaftViewChecks()` in `tests/browser/neighbor.js`). Surroundings include diagonals and distant cubes on the active
+never discovers a cube. There are no exceptions ("Only where you have been"). Surroundings include diagonals and distant cubes on the active
 stratum, within 48 world units (three cube widths) of the player's horizontal position.
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.

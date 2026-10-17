@@ -1,8 +1,10 @@
 // Large areas: a stretch of the route laid out as one place over several cubes, planned with the
 // layout from the seed alone (like the tableland, world/heights.js). The layout builds the area's
 // shape into the route (layout.js, route templates), so its rooms follow each other on the route
-// in a fixed order. The faces between its cubes are open from the start and entering any of them
-// shows all of them (game/flow.js). A depth has at most one large area (or tableland).
+// in a fixed order. It is still discovered one cube at a time like everything else: every step of
+// the route between its cubes crosses a portal, and a cube shows only once visited. The faces between
+// its cubes are never walled, so once both sides are visited and the face opens, the area reads as
+// one place. A depth has at most one large area (or tableland).
 //
 //   spiral   2x2: a mountain on the corner the four cubes share, a railed ramp winding once round
 //            it from the foot, where the route comes in, up to a ridge running out to the exit
@@ -135,7 +137,7 @@ export function indexAreas(layout, pieces) {
 const layoutOf = (world, k) => { const d = -parse(k)[1]; return d >= 0 && d <= MAX_DEPTH ? world.layout(d) : null; };
 export const areaOf = (world, k) => layoutOf(world, k)?.areaCells?.get(k) || null;
 
-// the faces between an area's own cubes (open from the start)
+// the faces between an area's own cubes (never walled)
 export const innerFaces = piece => piece.keys.flatMap(k => [0, 2].filter(d => piece.keys.includes(step(k, d))).map(d => faceKey(k, d)));
 export const isInnerFace = (world, fk) => !!layoutOf(world, fk.split('/')[0])?.areaFaces?.get(fk);
 // does an inner face end at corner vertex (vx, vz) (in cubes) of depth -Y? (no face is walled there:
@@ -239,10 +241,10 @@ export function areaVertex(world, vx, Y, vz) {
 const ROLES = { spiral: ['spiral', 'spiral', 'spiral', 'spiral'], hairpin: ['foot', 'gorge', 'turn', 'turn', 'gorge', 'summit'] };
 
 // what the generator needs to know about cube k's part in an area, or null:
-//   { id, kind, role, i, keys, faces (the faces open from the start), piece }
+//   { id, kind, role, i, keys, piece }
 export function areaSpec(world, k) {
   const a = areaOf(world, k);
   if (!a) return null;
   const { piece, i } = a;
-  return { id: piece.id, kind: piece.kind, role: ROLES[piece.kind][i], i, keys: piece.keys, faces: innerFaces(piece), piece };
+  return { id: piece.id, kind: piece.kind, role: ROLES[piece.kind][i], i, keys: piece.keys, piece };
 }

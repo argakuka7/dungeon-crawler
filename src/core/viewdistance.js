@@ -1,6 +1,6 @@
-// Render-only discovery and distance budget. Only visited cubes show: the far side of a gorge
-// span too stays hidden until you get there. A large area's cubes show once you are in one of
-// them (`seen`, game/flow.js). Cubes are selected conservatively for any
+// Render-only discovery and distance budget. Only visited cubes show, with no exceptions: not the
+// far side of a gorge span, not the rest of a large area, not the room under a hole
+// (docs/world.md, "Only where you have been"). Cubes are selected conservatively for any
 // player position inside the active cube; the renderer tests their actual bounds each frame.
 import { N } from './constants.js';
 import { key, parse } from '../world/coords.js';
@@ -16,7 +16,7 @@ export function discoveredCubes(cubes, active, distance = VIEW_DISTANCE) {
     const gapX = Math.max(0, Math.abs(dx) - 1) * N, gapZ = Math.max(0, Math.abs(dz) - 1) * N;
     if (Math.hypot(gapX, gapZ) >= distance) continue;
     const c = cubes.get(key(x + dx, y, z + dz));
-    if (c?.visits || c?.seen) list.push({ key: c.key, geo: c.geo, dx, dz });
+    if (c?.visits) list.push({ key: c.key, geo: c.geo, dx, dz });
   }
   return list;
 }

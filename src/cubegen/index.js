@@ -119,10 +119,10 @@ function tryGenerate(seed, spec) {
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
     safe: Uint8Array.from(floors, f => !safe || safe.has(f.id) ? 1 : 0),   // floors that lead to the exit
     kind: spec.kind, archetype: spec.archetype, key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: !!spec.walled, enemyFree: !!spec.enemyFree,
-    // the big height pieces (cubegen/heights.js, tunnel.js): a great shaft's hole and the room under it
-    tunnel: ctx.tunnel || null, shaft: spec.height?.hole ? { ...spec.height.hole, below: spec.height.below } : null,
-    // a large area (world/areas.js): its cubes and the faces between them, open from the start
-    area: spec.area ? { id: spec.area.id, kind: spec.area.kind, role: spec.area.role, keys: spec.area.keys, faces: spec.area.faces } : null,
+    // the big height pieces (cubegen/heights.js, tunnel.js): a great shaft's hole
+    tunnel: ctx.tunnel || null, shaft: spec.height?.hole ? { ...spec.height.hole } : null,
+    // a large area (world/areas.js): its cubes
+    area: spec.area ? { id: spec.area.id, kind: spec.area.kind, role: spec.area.role, keys: spec.area.keys } : null,
     sparse: !!spec.sparse,   // a mostly empty set piece (cubegen/setpieces.js): few props
     routes: ctx.segments.map(s => pathPoints(ctx, s)),   // each portal -> the exit, then the way back
   };

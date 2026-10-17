@@ -240,14 +240,13 @@ function proxy(geo, open, landmarks = []) {
 
 // Reuse common cubes across refreshes and travel. Consume them from `reuse` so callers
 // dispose/fade only the departing proxies. The full source/destination keep their own fades.
-// dy: -1 for the room right under a great shaft (seen through its hole, world/heights.js)
 export function buildNeighbors(list, reuse = []) {
-  return list.map(({ key, geo, dx, dz, dy = 0, open, landmarks }) => {
+  return list.map(({ key, geo, dx, dz, open, landmarks }) => {
     const index = reuse.findIndex(g => g.key === key && g.source === geo);
     const g = index < 0 ? { key, source: geo, ...proxy(geo, open, landmarks), base: new THREE.Vector3() }
       : reuse.splice(index, 1)[0];
     g.continuing = index >= 0;
-    g.base.set(dx * N, dy * (CUBE_H + BASE), dz * N);
+    g.base.set(dx * N, 0, dz * N);
     g.group.position.copy(g.base);
     setGlassFaces(g.glass, open);
     live.add(g);

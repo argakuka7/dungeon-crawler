@@ -31,7 +31,8 @@ function sideFace(world, k, d, withPortal) {
     // ground under the crossing and a bank on either side of it (never water next to the void)
     for (let t = f.river.pos - 1; t <= f.river.pos + f.river.w; t++) if (f.profile[t] === VOID) f.profile[t] = 3;
   }
-  // the faces inside a large area (areas.js) are open, never walled
+  // the faces inside a large area (areas.js) are never walled: once both sides are visited and the
+  // face opens, the area reads as one place (until then it is a face like any other, a portal on it)
   const wall = () => isInnerFace(world, fk) ? null : caveWall(world, fk, f);
   if (!withPortal) { f.spout = guardian ? null : spout(world, fk, f, LAYER_BASE); f.wall = wall(); return f; }
   const townDir = isTown(k) ? d : isTown(step(k, d)) ? d ^ 1 : null;
