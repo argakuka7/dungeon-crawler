@@ -57,7 +57,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   explains carries a `// learn: ...` marker. After changing such code, run
   `npm run learn` (`npm test` runs it too): it names the slides to review; then
   `npm run learn -- --stamp`, or `-- --defer` to note them as outdated. See `learn/README.md`.
-- `vendor/three/`: three.js and the addons in use; `vendor/scrimshaw/`: the music score parser and synth;
+- `vendor/three/`: three.js (r186: `three.core.js`, which the world worker imports by path, and
+  `three.module.js` with the renderer) and the addons in use; `vendor/scrimshaw/`: the music score parser and synth;
   `vendor/peerjs/`: PeerJS for playing together, loaded only when someone hosts or joins;
   `vendor/pi-durable/`: Pi's durable agent harness and model access for the tutor, one bundle built
   by `node tools/vendor-pi-durable.mjs <pi checkout>`.

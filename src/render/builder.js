@@ -1,5 +1,5 @@
 // Accumulates triangles with vertex colours into one BufferGeometry.
-import * as THREE from '../../vendor/three/three.module.js';   // plain path: also loads in the world worker
+import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 
 export class GeoBuilder {
   constructor() { this.pos = []; this.nor = []; this.col = []; this.smoothKeys = []; }

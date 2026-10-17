@@ -20,7 +20,7 @@ export function fitView() {
 renderer.domElement.id = 'view';
 renderer.setSize(viewSize().w, viewSize().h, false);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;   // soft since r182 (PCFSoftShadowMap is gone)
 document.body.prepend(renderer.domElement);
 
 export const scene = new THREE.Scene();

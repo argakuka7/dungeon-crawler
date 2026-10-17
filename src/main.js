@@ -76,7 +76,8 @@ import { N } from './core/constants.js';
 import { character } from './render/character.js';
 import { drawPortrait, portraitShown } from './render/portrait.js';
 
-const clock = new THREE.Clock();
+// seconds since the last frame (THREE.Clock is deprecated; Timer measures the same)
+const timer = new THREE.Timer(), clock = { getDelta: () => timer.update().getDelta() };
 
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
 function frame() {
