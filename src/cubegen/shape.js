@@ -5,6 +5,21 @@ import { runY } from '../core/surfaces.js';
 import { bridgesOf, pickBridge, BRIDGE_STYLES } from '../themes/builds.js';
 import { themeOf } from '../themes/depth.js';
 
+// how much room (units) there is over both ends of bridge r, for the towers and poles of some
+// styles (themes/builds.js `towers`): up to the next floor, structure or landmark overhang over
+// its end floors and its first and last cells
+export function roomOver(cols, pieces, r) {
+  return Math.min(...[[r.from, r.cells[0], r.y0], [r.to, r.cells.at(-1), r.y1]].flatMap(([e, cell, y]) => [e.c, cell].map(c => {
+    let top = Infinity;
+    for (const f of cols[c]) {
+      if (f !== e && f.bottom * LH > y - 0.01) top = Math.min(top, f.bottom * LH);
+      if (f.siteClaimTop && f.top * LH <= y + 0.01) top = Math.min(top, f.siteClaimTop * LH);
+    }
+    for (const q of pieces[c]) if (q.run !== r && q.kind !== 'pillar' && Math.min(q.y0, q.y1) > y) top = Math.min(top, Math.min(q.y0, q.y1) - 0.4);
+    return top - y;
+  })));
+}
+
 export function shapeStructures(ctx) {
   const { R, cols, pieces, runs, pathFloors } = ctx;
   // the depth's bridge styles by weight, where they fit (themes/builds.js)
@@ -45,7 +60,7 @@ export function shapeStructures(ctx) {
       const below = r.pieces.map(p => floorBelow(p.c, deckLo));
       const solid = below.every(g => g && !g.fluid && deckLo - groundY(g) < 4)
         && r.pieces.every(p => !pathCols.has(p.c) && !pieces[p.c].some(q => q.run !== r && q.kind !== 'pillar' && Math.min(q.y0, q.y1) < deckLo));
-      r.style = pickBridge(weights, { solid }, R());
+      r.style = pickBridge(weights, { solid, k, room: roomOver(cols, pieces, r) }, R());
       if (r.span) r.style = ctx.spec.span.style;   // a span's long bridge (span.js)
       r.sag = BRIDGE_STYLES[r.style].sag(k, r.span);
       if (r.sag) r.pieces.forEach(pieceEnds);

@@ -185,8 +185,10 @@ export function indexSpans(layout, spans, cells) {
 }
 
 // how a span's bridge is built: one of the theme's bridge styles that fits (themes/builds.js:
-// no stone arches over the sky, their piers would stand on nothing), the same in all its cubes
-export const spanStyle = (span, weights) => pickBridge(weights, { span: true, sky: span.sky }, mulberry32(span.seed)());
+// no stone arches over the sky, their piers would stand on nothing; natural arches only where
+// the deck is level), the same in all its cubes
+export const spanStyle = (span, weights) => pickBridge(weights,
+  { span: true, sky: span.sky, level: span.levels.every(v => v === span.levels[0]) }, mulberry32(span.seed)());
 
 // what the generator needs to know about cube k's part in a span (cubegen/span.js), or null
 //   gorge:  { role, i, n, dir, pos, hi, lo, sky, room0, room1, style } (hi / lo: the deck's level

@@ -1,7 +1,7 @@
 // Colours used by the world meshes.
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 import { WATER, LAVA } from '../core/constants.js';
-import { buildOf } from '../themes/builds.js';
+import { buildOf, ICE as ICE_DEFAULT } from '../themes/builds.js';
 import { TOWN } from '../themes/index.js';
 
 export const C = s => new THREE.Color(s);
@@ -31,13 +31,19 @@ export function usePalette(theme) {
 export const fluidBed = t => C(t === WATER ? '#7d6f52' : t === LAVA ? '#2b1d1a' : '#3e4a2a');
 export const fluidBank = t => C(t === WATER ? '#c9b98a' : t === LAVA ? '#3a2a22' : '#a4a64a');
 
-// structures: shades of the theme's stone, wood, rope and iron (themes/builds.js)
+// structures: shades of the theme's stone, wood, rope, iron and ice (themes/builds.js); bark is
+// the wood's darker outside
 export let STONE, STONE2, CHEEK, CAP, SOFFIT, PIER, WOOD, WOOD2, BEAM, ROPE, POST, RAIL, IRON, IRON2;
+export let BARK, BARK2, ICE, ICE2, ICE3;
 function useBuild(b) {
-  const s = k => C(b.stone).multiplyScalar(k), w = k => C(b.wood).multiplyScalar(k);
+  const s = k => C(b.stone).multiplyScalar(k), w = k => C(b.wood).multiplyScalar(k), ice = k => C(b.ice || ICE_DEFAULT).multiplyScalar(k);
   [STONE, STONE2, CHEEK, CAP, SOFFIT, PIER] = [1, 0.92, 0.69, 0.8, 0.54, 0.73].map(s);
   [WOOD, WOOD2, BEAM, POST, RAIL] = [1, 0.88, 0.58, 0.69, 0.87].map(w);
+  [BARK, BARK2] = [0.52, 0.44].map(w);
   ROPE = C(b.rope); IRON = C(b.iron); IRON2 = C(b.iron).multiplyScalar(0.7);
+  ICE = ice(1); ICE2 = ice(0.86).lerp(C('#6a9cc4'), 0.3); ICE3 = ice(0.72).lerp(C('#4a7ca8'), 0.45);   // deeper is bluer
 }
+// prayer flags: blue, white, red, green and yellow, a little faded
+export const FLAGS = ['#4a72b0', '#ece8dc', '#c4523e', '#4a8a56', '#e0bc48'].map(C);
 
 usePalette(TOWN);   // until a cube says otherwise

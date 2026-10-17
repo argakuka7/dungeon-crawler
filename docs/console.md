@@ -85,6 +85,7 @@ Developer (`?dev=1`):
 | `/go <east\|west\|south\|north>` | into the next cube (Alt + WASD) |
 | `/horde [depth]` | a depth's wild horde (H) |
 | `/span [n]` | the start of a gorge span's long bridge: the next one, or the n-th (docs/world.md) |
+| `/bridge [style] [depth]` | the next bridge (of that style) from this depth (or that one) on down (docs/world.md) |
 | `/height <kind>` | the next tableland ascent, plateau or descent, great shaft, pinnacle or tunnel (docs/world.md) |
 | `/newworld [seed]` | a new world (N), not saved; a saved hero comes along as it is |
 | `/menu` | save and quit to the main menu |

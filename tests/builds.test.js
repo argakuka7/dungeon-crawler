@@ -4,14 +4,20 @@ import { BUILDS, BRIDGE_STYLES, bridgeFits, pickBridge, bridgesOf } from '../src
 import { SURFACES } from '../src/core/footing.js';
 import { BRIDGES } from '../src/render/bridges.js';
 import { THEMES } from '../src/themes/index.js';
+import { World } from '../src/world/world.js';
+import { roomOver } from '../src/cubegen/shape.js';
+import { buildCubeGeometry } from '../src/render/cubegeo.js';
+import { N, LH } from '../src/core/constants.js';
 
 // every situation a bridge is picked in (cubegen/shape.js, world/spans.js)
 const WHERE = {
-  'short, over a drop': { solid: false, k: 1 },
-  'long, over a drop': { solid: false, k: 7 },
-  'over ground': { solid: true, k: 3 },
-  span: { span: true, sky: false, k: 12 },
-  'sky span': { span: true, sky: true, k: 12 },
+  'short, over a drop': { solid: false, k: 1, room: Infinity },
+  'long, over a drop': { solid: false, k: 7, room: Infinity },
+  'over ground': { solid: true, k: 3, room: Infinity },
+  'under something': { solid: false, k: 4, room: 1 },
+  span: { span: true, sky: false, level: false },
+  'level span': { span: true, sky: false, level: true },
+  'sky span': { span: true, sky: true, level: true },
 };
 
 test('every bridge style has a builder, a surface and sane sag', () => {
@@ -47,7 +53,75 @@ test('bridge picks keep to the styles that fit and to their weights', () => {
   assert.deepEqual(count({ stone: 1, rope: 3 }, WHERE['over ground']), { stone: 250, rope: 750 });
   assert.deepEqual(count({ stone: 1, rope: 3 }, WHERE['sky span']), { rope: 1000 });
   assert.deepEqual(count({ stone: 1 }, WHERE['sky span']), { plank: 1000 });   // nothing fits
+  // logs only short, never a span; chains not short and only with room for their towers
+  assert.ok(bridgeFits('log', WHERE['under something']) && !bridgeFits('log', WHERE['long, over a drop']) && !bridgeFits('log', WHERE.span));
+  assert.ok(!bridgeFits('chain', WHERE['short, over a drop']) && bridgeFits('chain', WHERE['long, over a drop']));
+  assert.ok(!bridgeFits('chain', WHERE['under something']) && !bridgeFits('flags', WHERE['under something']));
+  assert.ok(bridgeFits('chain', WHERE['sky span']) && bridgeFits('flags', WHERE['sky span']) && bridgeFits('ice', WHERE['sky span']));
+  // natural arches like stone ones, and on a span only a level one
+  assert.ok(bridgeFits('rockarch', WHERE['over ground']) && !bridgeFits('rockarch', WHERE['long, over a drop']));
+  assert.ok(!bridgeFits('rockarch', WHERE.span) && bridgeFits('rockarch', WHERE['level span']) && !bridgeFits('rockarch', WHERE['sky span']));
   // a forced style wherever it fits
   assert.deepEqual(bridgesOf(THEMES[0], 'iron'), { iron: 1 });
   assert.equal(bridgesOf(THEMES[0]), BUILDS[THEMES[0].props].bridges);
+});
+
+// every bridge of `style` in a few worlds (made with that style forced), with its map
+function bridgesIn(style, themes, seeds = [1]) {
+  const out = [];
+  for (const seed of seeds) {
+    const w = new World(seed, { bridge: style, themes });
+    for (let d = 0; d <= 20; d++) for (const k of w.layout(d).exists) {
+      const m = w.cube(k).map;
+      for (const r of m.runs) if (r.kind === 'bridge' && r.style === style) out.push({ m, r, span: w.layout(d).spans.find(s => s.keys.includes(k)) });
+    }
+  }
+  return out;
+}
+
+test('the new bridge styles go only where they fit, and are drawn', () => {
+  const seen = {};
+  for (const style of ['log', 'chain', 'ice', 'rockarch', 'flags']) {
+    const list = bridgesIn(style, style === 'rockarch' ? ['canyon', 'karst'] : []), S = BRIDGE_STYLES[style];
+    seen[style] = list.length;
+    for (const { m, r, span } of list) {
+      const at = `${m.key} ${style}`;
+      if (r.span) {
+        assert.ok(S.span, `${at}: on a span`);
+        if (S.level) assert.ok(span.levels.every(v => v === span.levels[0]), `${at}: on a sloping span`);
+        if (span.sky) assert.ok(S.sky && !S.ground, `${at}: over the sky`);
+        assert.equal(r.k, N - 4);
+      } else {
+        assert.ok(r.k >= S.k[0] && r.k <= S.k[1], `${at}: ${r.k} cells`);
+        if (S.ground) assert.ok(r.pieces.every(p => Math.min(r.y0, r.y1) - 0.25 - p.ground < 4), `${at}: ground far below`);
+      }
+      // towers and poles: nothing over them (a span's cubes have one layer)
+      if (S.towers) assert.ok(roomOver(m.cols, m.pieces, r) >= S.towers + 0.25, `${at}: no room for the towers`);
+      assert.ok(!r.pillars?.length, `${at}: no legs or piers`);
+      assert.equal(r.sag, S.sag(r.k, r.span));
+    }
+    // and drawn without trouble
+    for (const m of new Set(list.slice(0, 30).map(b => b.m))) {
+      const parts = buildCubeGeometry(m);
+      for (const L of parts) for (const part of ['terrain', 'stone', 'wood']) if (L[part]) assert.ok(L[part].pos.every(Number.isFinite), `${m.key}: ${part}`);
+    }
+  }
+  assert.ok(Object.values(seen).every(n => n > 10), JSON.stringify(seen));
+});
+
+test('themes build their own bridges: logs in the roots, ice in the frozen caves, flags in the highlands', () => {
+  const styles = theme => {
+    const n = {};
+    for (const seed of [1, 2, 3]) {
+      const w = new World(seed, { themes: [theme] });
+      for (let d = 0; d <= 20; d++) if (w.layout(d).theme.props === theme) for (const k of w.layout(d).exists)
+        for (const r of w.cube(k).map.runs) if (r.kind === 'bridge') n[r.style] = (n[r.style] || 0) + 1;
+    }
+    return n;
+  };
+  for (const [theme, style] of [['roots', 'log'], ['frozen', 'ice'], ['highlands', 'flags']]) {
+    const n = styles(theme), all = Object.values(n).reduce((a, b) => a + b, 0);
+    for (const s of Object.keys(n)) assert.ok(s in BUILDS[theme].bridges || s === 'plank', `${theme}: ${s}`);
+    assert.ok(n[style] > all * 0.25, `${theme}: ${JSON.stringify(n)}`);
+  }
 });

@@ -13,6 +13,7 @@ import { state, player, view, setStatus } from './state.js';
 import { whenReady } from './hud.js';
 import { startTravel } from './travel.js';
 import { enterCube, arrivalPoint, spawnAt } from './flow.js';
+import { LH, DIRS } from '../core/constants.js';
 import { clearMouseInput } from './orders.js';
 import { takeTownPortal } from './townportal.js';
 import { shaftOf } from '../world/heights.js';
@@ -97,6 +98,43 @@ export async function goSpan(n) {
     if (state.cubes !== cubes) return;
     enterCube(c, span.dir ^ 1);
     setStatus(`Span ${i + 1}/${spans.length} · depth ${c.map.depth} · ${span.island ? 'to an island' : 'on the route'} · deck ${span.levels.join(' → ')}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Stand at the foot of the next bridge or ladder (kind) of a style (or any), from this depth (or
+// `from`) on down, for looking at them: the cubes are made in turn until one turns up.
+const lastStructure = {};
+export async function goStructure(kind, style, from) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, here = from ?? state.map?.depth ?? 0, last = lastStructure[kind + ':' + style];
+  const list = m => kind === 'bridge' ? m.runs.filter(r => r.kind === 'bridge') : m.ladders;
+  const fits = o => !style || (o.style ?? (kind === 'ladder' ? 'wood' : null)) === style;
+  clearMouseInput(); state.transitioning = true;
+  try {
+    let pick = null, passed = !last;
+    for (let d = here; d < 20 && !pick; d++) for (const k of [...cubes.layout(d).exists].sort()) {
+      const c = await whenReady(cubes.get(k));
+      if (state.cubes !== cubes) return;
+      list(c.map).forEach((o, i) => {
+        if (pick || !fits(o)) return;
+        if (!passed) { if (last.key === k && last.i === i) passed = true; return; }
+        pick = { c, o, i };
+      });
+      if (pick) break;
+    }
+    if (!pick) { lastStructure[kind + ':' + style] = null; setStatus(`No ${style ?? ''} ${kind} found from here down`); return; }
+    lastStructure[kind + ':' + style] = { key: pick.c.key, i: pick.i };
+    const { c, o } = pick;
+    if (c.key !== state.cubeKey) enterCube(c, c.map.portals.find(p => p.kind === 'side')?.dir ?? c.map.portals[0].dir);
+    if (kind === 'bridge') {
+      const [dx, dz] = DIRS[o.d];
+      spawnAt(o.from.x + 0.5 - dx * 0.2, o.from.top * LH, o.from.z + 0.5 - dz * 0.2);
+      setStatus(`${o.style} bridge · ${o.k} cells${o.span ? ' · span' : ''} · depth ${c.map.depth} · ${c.map.biome}`);
+    } else {
+      const [dx, dz] = DIRS[o.d];
+      spawnAt(o.x + 0.5 - dx * 0.2, o.y0, o.z + 0.5 - dz * 0.2);
+      setStatus(`${o.style ?? 'wood'} ladder${o.hang ? ' · hanging' : ''} · ${((o.y1 - o.y0) / LH) | 0} levels · depth ${c.map.depth} · ${c.map.biome}`);
+    }
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 

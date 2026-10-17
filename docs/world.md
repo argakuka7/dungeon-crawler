@@ -511,26 +511,58 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
 
 ## Themed structures (`themes/builds.js`, `render/bridges.js`)
 
-- **Materials per theme:** each theme (by its prop set) names the stone, wood, rope and iron
-  its structures are made of. Stairs, landings, bridges, fences and ladders use shades of
-  those. Examples: grey stone and dark wood in the peaks, sandstone in the badlands and
+- **Materials per theme:** each theme (by its prop set) names the stone, wood, rope, iron and
+  (where it builds ice bridges) ice its structures are made of. Stairs, landings, bridges,
+  fences and ladders use shades of those; natural rock arches take the ground's own rock and
+  grass. Examples: grey stone and dark wood in the peaks, sandstone in the badlands and
   ruins, mossy wood in the swamp, basalt and iron in the volcanic depths.
-- **Bridge styles:**
-  - stone arches (only over ground close below);
-  - plank bridges;
-  - rope bridges: spaced slats, a post at each end, rope hand lines, deeper sag, no legs;
-  - iron bridges: a flat girder deck with railings and bracing.
-- **Style mix:** each theme weights the styles. Rope bridges are common in the sky islands
-  and spider nests, iron in the mines, volcanic depths and abyss, stone in the ruins.
+- **Bridge styles** (`BRIDGE_STYLES`):
+
+  | Style | Look | Where |
+  |---|---|---|
+  | `stone` | arched deck with parapets, piers between the arches | dry ground close below; never over the sky |
+  | `plank` | sagging planks, posts with rope rails, timber legs | anywhere |
+  | `rope` | spaced slats, a post at each end, rope hand lines, deep sag, no legs | anywhere |
+  | `iron` | flat girder deck, railings, bracing | anywhere |
+  | `log` | three logs side by side reaching onto the banks, lashed, a rope hand line | ordinary bridges of 1–4 cells, never a span |
+  | `chain` | plank deck hung by rods from two chains between iron towers | 3 cells or more, room for the towers over both ends |
+  | `ice` | a slab of ice, shards along its edges, icicles under it | anywhere |
+  | `rockarch` | one rough natural arch of the ground's rock, grass on top, its feet on the ground | like `stone`; on a span only a level one |
+  | `flags` | a rope bridge with tall poles and strings of prayer flags along and across it | room for the poles over both ends |
+
+- **Style mix:** each theme weights the styles (`BUILDS[theme].bridges`):
+
+  | Theme | Bridges | Theme | Bridges |
+  |---|---|---|---|
+  | meadow | stone 1, plank 1, rope 1, log 2 | roots | log 3, plank 1, rope 1, stone 1 |
+  | clouds | rope 3, chain 1, stone 1 | frozen | ice 3, stone 1, plank 1 |
+  | lagoon | plank 2, rope 2, log 1 | grotto | plank 1, rope 1, rockarch 2, log 1 |
+  | karst | stone 2, rockarch 2, plank 1, rope 1 | swamp | log 2, plank 2, rope 1 |
+  | peaks | stone 2, rope 1, flags 1, chain 1, ice 1 | hive | plank 2, rope 1, stone 1 |
+  | highlands | flags 3, rope 1, stone 1, log 1 | cenote | rope 2, stone 1, log 1, rockarch 1 |
+  | badlands | plank 2, rockarch 2, stone 1, rope 1 | nests | rope 3, plank 1 |
+  | saltflats | plank 2, stone 1, rockarch 1 | ossuary | stone 3, plank 1 |
+  | canyon | rope 2, plank 1, rockarch 2 | mines | plank 2, iron 2, chain 1, stone 1 |
+  | ruins | stone 3, plank 1 | forge | iron 2, chain 2, stone 1 |
+  | volcanic | iron 2, rockarch 2, chain 1, stone 1 | abyss | iron 1, chain 2, stone 2 |
+
 - **Where a style may go:** `BRIDGE_STYLES` (`themes/builds.js`) says for each style what it
   sounds like underfoot, how far it sags, what holds it up (piers, timber legs or nothing) and
-  where it fits: only over dry ground close below (arches), across the open sky or not. A
-  bridge picks among the theme's styles that fit, by weight; the generator, the span planner
-  and the footsteps all read the same table.
+  where it fits: only over dry ground close below (arches), across the open sky or not, on a
+  span or not (and only a level one), how long an ordinary bridge it makes, and how high its
+  towers or poles stand. Those only go where nothing is over both ends (`roomOver` in
+  `cubegen/shape.js`: no floor, structure or landmark overhang); a span's cubes have one
+  layer, so nothing is over a span's ends. A bridge picks among the theme's styles that fit,
+  by weight (plank if none does); the generator, the span planner and the footsteps all read
+  the same table. Bridges of any style may cross lava.
 - **Dev:** `?bridge=<style>` (with `?dev=1`; `new World(seed, { bridge })` in tests) builds
-  every bridge in that style wherever it fits.
+  every bridge in that style wherever it fits. `/bridge [style] [depth]` stands you at the
+  next bridge (of that style) from this depth (or that one) on down.
 - **Checks:** `tests/builds.test.js`: every style has a builder and a surface, every theme
-  has a style that fits wherever a bridge goes, picks keep to the styles that fit.
+  has a style that fits wherever a bridge goes, picks keep to the styles that fit, the new
+  styles only where they fit in generated worlds (lengths, spans, room for towers, no legs)
+  and drawn, and themes building their own (logs in the roots, ice in the frozen caves,
+  flags in the highlands).
 
 ## Ladders and jumps (`cubegen/climbs.js`, `physics/climb.js`)
 
