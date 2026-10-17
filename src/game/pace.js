@@ -1,5 +1,5 @@
 // How fast game time runs: paused, slower, faster, or one frame at a time. For teaching (the
-// Guide, through game/teach.js) and tests. The frame loop (main.js) asks gameTime how much game
+// Teacher, through game/teach.js) and tests. The frame loop (main.js) asks gameTime how much game
 // time a frame of real time is worth; while paused everything stands still but is still drawn,
 // and the camera can still turn and zoom.
 import { together } from '../net/online.js';

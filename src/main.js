@@ -110,11 +110,11 @@ function frame() {
   updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
   updateInventory();
   updateQuickbar(); updateEffects(); updateTouch();
-  updateCamera(pace.paused ? elapsed : dt);   // paused by the Guide (game/pace.js): the view still turns
+  updateCamera(pace.paused ? elapsed : dt);   // paused by the Teacher (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items
   updateAim(allEnemies());   // the arc a flask in hand would fly (game/throws.js)
-  tickTeach();   // what the Guide draws over the world (game/teach.js)
+  tickTeach();   // what the Teacher draws over the world (game/teach.js)
   // the look follows the depth smoothly (also while sliding down / up)
   if (state.cubeKey) state.lookDepth += (depthOf(state.cubeKey) - state.lookDepth) * Math.min(1, dt * 2.5);
   applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes);

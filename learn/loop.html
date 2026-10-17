@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title data-de="Der Herzschlag · Kinderführer zu Cube Crawler">The Heartbeat · Kids' Guide to Cube Crawler</title>
+<title data-de="Der Herzschlag · Rundgang durch Cube Crawler">The Heartbeat · Kids' Guide to Cube Crawler</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="kids.css">
 <script src="lang.js"></script>
@@ -128,7 +128,7 @@
   <p lang="en">Because everything moves by <code>speed × dt</code>, a few tricks become very easy:</p>
   <p lang="de">Weil sich alles mit <code>Tempo × dt</code> bewegt, werden ein paar Tricks ganz einfach:</p>
   <div class="cols3">
-    <div class="card"><h3>Pause</h3><p lang="en">When you open the inventory or the menu (<kbd>Esc</kbd>), the game sets <code>dt = 0</code>. Everything moves by "speed × 0", which is nothing. The whole world freezes, but it still gets drawn. The Guide can pause the game the same way, or run it in slow motion. (Playing together with a friend, the inventory and the menu do not freeze the world: your friend plays on.)</p> <p lang="de">Wenn du das Inventar oder das Menü (<kbd>Esc</kbd>) öffnest, setzt das Spiel <code>dt = 0</code>. Alles bewegt sich um "Tempo × 0", also gar nicht. Die ganze Welt friert ein, wird aber weiter gemalt. Der Führer kann das Spiel genauso anhalten oder in Zeitlupe laufen lassen. (Spielst du mit einem Freund zusammen, frieren das Inventar und das Menü die Welt nicht ein: Dein Freund spielt weiter.)</p></div>
+    <div class="card"><h3>Pause</h3><p lang="en">When you open the inventory or the menu (<kbd>Esc</kbd>), the game sets <code>dt = 0</code>. Everything moves by "speed × 0", which is nothing. The whole world freezes, but it still gets drawn. The Teacher can pause the game the same way, or run it in slow motion. (Playing together with a friend, the inventory and the menu do not freeze the world: your friend plays on.)</p> <p lang="de">Wenn du das Inventar oder das Menü (<kbd>Esc</kbd>) öffnest, setzt das Spiel <code>dt = 0</code>. Alles bewegt sich um "Tempo × 0", also gar nicht. Die ganze Welt friert ein, wird aber weiter gemalt. Der Lehrer kann das Spiel genauso anhalten oder in Zeitlupe laufen lassen. (Spielst du mit einem Freund zusammen, frieren das Inventar und das Menü die Welt nicht ein: Dein Freund spielt weiter.)</p></div>
     <div class="card"><h3 lang="en">Hit pause</h3> <h3 lang="de">Trefferpause</h3><p lang="en">When your sword hits, time runs at only <b>3%</b> speed for about <b>0.05 seconds</b>. You barely notice it, but it makes hits feel heavy and strong.
       <a class="portal" href="combat.html#juice">Juice</a></p> <p lang="de">Wenn dein Schwert trifft, läuft die Zeit für etwa <b>0,05 Sekunden</b> nur mit <b>3%</b> Tempo. Du merkst es kaum, aber Treffer fühlen sich dadurch schwer und stark an.
       <a class="portal" href="combat.html#juice">Juice</a></p></div>
@@ -150,8 +150,8 @@
       <p lang="de"><code>worldPaused() ? 0 : ...</code> heißt: "Wenn die Welt angehalten ist, nimm 0, sonst ...". Das ist die Pause. Die Welt ist angehalten, solange das Inventar oder das Menü offen ist, außer du spielst mit einem Freund zusammen.</p>
       <p lang="en"><code>timeScale</code> comes from <code>src/game/juice.js</code>: it is 1 normally and 0.03 during a hit pause.</p>
       <p lang="de"><code>timeScale</code> kommt aus <code>src/game/juice.js</code>: normalerweise 1, während einer Trefferpause 0,03.</p>
-      <p lang="en"><code>gameTime</code> comes from <code>src/game/pace.js</code>: normally it gives back <code>elapsed</code>. When the Guide pauses the game it gives 0, in slow motion a part of it. That's how the Guide can stop time to show you something.</p>
-      <p lang="de"><code>gameTime</code> kommt aus <code>src/game/pace.js</code>: Normalerweise gibt es <code>elapsed</code> zurück. Wenn der Führer das Spiel anhält, gibt es 0, in Zeitlupe einen Teil davon. So kann der Führer die Zeit anhalten, um dir etwas zu zeigen.</p>
+      <p lang="en"><code>gameTime</code> comes from <code>src/game/pace.js</code>: normally it gives back <code>elapsed</code>. When the Teacher pauses the game it gives 0, in slow motion a part of it. That's how the Teacher can stop time to show you something.</p>
+      <p lang="de"><code>gameTime</code> kommt aus <code>src/game/pace.js</code>: Normalerweise gibt es <code>elapsed</code> zurück. Wenn der Lehrer das Spiel anhält, gibt es 0, in Zeitlupe einen Teil davon. So kann der Lehrer die Zeit anhalten, um dir etwas zu zeigen.</p>
       <p lang="en">Notice that the music gets <code>elapsed</code>, not <code>dt</code>. Why? So the music keeps playing while the game is paused!</p>
       <p lang="de">Fällt dir auf, dass die Musik <code>elapsed</code> bekommt und nicht <code>dt</code>? Damit die Musik weiterspielt, während das Spiel pausiert!</p>
       <p lang="en"><code>start</code> notes when the frame began. After drawing, <code>tickResolution(start)</code> looks at how long the frames take: when the graphics card can't keep up, the game draws fewer pixels, and more again once it can (<code>src/render/resolution.js</code>).</p>

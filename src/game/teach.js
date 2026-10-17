@@ -1,4 +1,4 @@
-// Teaching and debugging helpers, on window.__game.teach: for the Guide (learn/tutor/) to show
+// Teaching and debugging helpers, on window.__game.teach: for the Teacher (learn/tutor/) to show
 // the reader what is going on in the game, and for tests. Draw over the world, switch on lenses
 // that show the game's own rules (game/lenses.js), pause or slow down time (game/pace.js) and
 // change the game's numbers with a way back (game/tune.js). None of it changes how the game plays
@@ -151,7 +151,7 @@ export function toScreen(at) {
     onScreen: Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 };
 }
 
-// what is on, in a few words (for the Guide's view of the game)
+// what is on, in a few words (for the Teacher's view of the game)
 export function status() {
   const parts = [];
   if (pace.paused) parts.push('paused');

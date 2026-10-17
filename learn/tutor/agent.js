@@ -7,7 +7,7 @@
 // with the reader's words and the snapshot of the page that went with them (state.js). The
 // "tutor.notebook" outlives starting over: what the tutor noted about the reader.
 import { AgentDoc, Harness, JsonlStorage, createRegistry, defineDoc, defineExtension, section } from '../../vendor/pi-durable/pi-durable.js';
-import { GUIDE, notebookSection } from './prompt.js';
+import { TEACHER, notebookSection } from './prompt.js';
 import { createTools } from './tools.js';
 import * as page from './page.js';
 import { DECKS, local } from '../decks.js';
@@ -26,7 +26,7 @@ export function guideExtension({ lang = page.pageLang() } = {}) {
   return defineExtension({
     name: 'guide',
     sections: [
-      section('guide', () => GUIDE, { tag: false }),
+      section('guide', () => TEACHER, { tag: false }),
       section('rooms', () => 'The rooms of the guide, in order (link as file#slide-id):\n' + DECKS.map((d, i) => `${i + 1}. ${d.file}: ${local(d, lang).title} (${local(d, lang).teaser})`).join('\n') + '\nAlso index.html (the map) and words.html (the glossary).'),
       section('notebook', async (input, context) => notebookSection((await input.read.snapshot(NotebookDoc, context))?.notes ?? [])),
     ],

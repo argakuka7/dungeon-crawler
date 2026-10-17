@@ -6,7 +6,7 @@
 export const DECKS = [
   { file: 'start.html', theme: 'meadow', depth: 0, icon: '../assets/items/item_town_portal.png',
     title: 'Welcome to Town', teaser: 'What Cube Crawler is, what it is made of, and how this guide works.',
-    de: { title: 'Willkommen in der Stadt', teaser: 'Was Cube Crawler ist, woraus es besteht und wie dieser Führer funktioniert.' } },
+    de: { title: 'Willkommen in der Stadt', teaser: 'Was Cube Crawler ist, woraus es besteht und wie dieser Rundgang funktioniert.' } },
   { file: 'architecture.html', theme: 'meadow', depth: 1, icon: '../assets/items/weapon_staff_arcane.png',
     title: 'How It Fits Together', teaser: 'The parts of the game, what each one does, and how they work together.',
     de: { title: 'Wie alles zusammenpasst', teaser: 'Die Teile des Spiels, was jeder macht und wie sie zusammenarbeiten.' } },

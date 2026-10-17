@@ -1,6 +1,6 @@
 // The guide as one long-lived page: a link to another page of the guide swaps the page's <main>
 // (and its title and theme) instead of loading a new page, so whatever lives outside <main> keeps
-// running across rooms: the Guide (tutor/) and the game window. Every page is still a whole HTML
+// running across rooms: the Teacher (tutor/) and the game window. Every page is still a whole HTML
 // file, so a reload, a deep link or a browser without scripts work as before.
 //
 // deck.js starts the router and registers what to do when a page is left and entered. Scripts in

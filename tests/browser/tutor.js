@@ -58,12 +58,12 @@ export async function runTutorChecks() {
     check(text(result('run_js')) === `returned: ${slides.length}`, 'run_js runs in the page');
     check(/^returned: \d+$/.test(text(result('run_js', 1))) && +text(result('run_js', 1)).split(' ')[1] >= 1, 'run_js runs in the game');
     check(result('look_at_game').content.some(c => c.type === 'image') && /seed 7/.test(text(result('look_at_game'))), 'look_at_game sees the game');
-    check(/lenses: awareness/.test(text(result('look_at_game'))), 'run_js has the game\'s teach helpers, and the Guide sees what they show');
+    check(/lenses: awareness/.test(text(result('look_at_game'))), 'run_js has the game\'s teach helpers, and the Teacher sees what they show');
     check(location.pathname.endsWith('/' + next), 'navigate opened the next room');
     check(window.__tutorCheck, 'Moving to the next room did not reload the page');
     check(document.querySelector('#game-dock iframe')?.contentWindow.__game?.enemies.length >= 1, 'The game window stays open, with what happened in it');
     const log = document.querySelector('#tutor .log');
-    check([...log.querySelectorAll('.ran pre')].at(-1)?.textContent.includes('section.slide'), 'Code the Guide shows is in the conversation');
+    check([...log.querySelectorAll('.ran pre')].at(-1)?.textContent.includes('section.slide'), 'Code the Teacher shows is in the conversation');
     const card = [...log.querySelectorAll('.shown')].at(-1);
     check(card?.querySelectorAll('.ln').length === 6 && card.querySelector('.ln.on i')?.textContent === '2' && card.querySelector('.cap')?.textContent === 'the dice', 'show_code puts the game\'s code in the panel');
     const answer = [...log.querySelectorAll('.msg.guide')].at(-1);

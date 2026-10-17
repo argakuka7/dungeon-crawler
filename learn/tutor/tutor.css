@@ -1,8 +1,8 @@
-/* The Guide (tutor.js): the "Ask" button and the side panel. Colours from kids.css. */
+/* The Teacher (tutor.js): the "Ask" button and the side panel. Colours from kids.css. */
 #tutor-btn { position: fixed; right: 14px; bottom: 14px; z-index: 12; display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px;
   border: 1px solid var(--portal); border-radius: 22px; background: #2a2416ee; color: var(--portal); font: 13px var(--mono); letter-spacing: 1px;
   box-shadow: 0 0 14px #ffc94a33; }
-/* the Guide's crystal ball */
+/* the Teacher's crystal ball */
 .orb { display: inline-block; flex: none; width: 26px; height: 26px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff 0 8%, #b9e6ff 14%, #5fa8ff 45%, #2a3f9a 80%, #182260 100%);
   box-shadow: 0 0 10px #5fd3ff88, inset 0 -3px 6px #0006; }
@@ -36,7 +36,7 @@ body.tutor-open #tutor-btn { display: none; }
 #tutor .act::before { content: "\25B8"; position: absolute; left: 4px; color: var(--accent); }
 #tutor .act.running::before { animation: tutor-pulse 1s infinite; }
 #tutor .act.err { color: #ff9a8a; }
-/* code the Guide shows the reader before it runs it */
+/* code the Teacher shows the reader before it runs it */
 #tutor .ran { align-self: stretch; border: 1px solid #3a4352; border-radius: 8px; background: #0f1218; padding: 6px 8px; }
 #tutor .ran .lbl { font: 11px var(--mono); color: var(--accent); margin-bottom: 4px; }
 #tutor .ran pre { margin: 0; font-size: 12px; max-height: 260px; }

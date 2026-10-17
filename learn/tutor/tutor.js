@@ -1,4 +1,4 @@
-// The Guide: a tutor beside every page of the guide that answers questions about the game by
+// The Teacher: a tutor beside every page of the guide that answers questions about the game by
 // asking questions back (prompt.js). deck.js calls mount() once: the guide is one long-lived page
 // (nav.js), so the panel and the game window (game.js) stay while the reader moves between rooms.
 // The agent itself (agent.js, pi-durable, about 1 MB) loads only when the panel opens, or when a
@@ -33,7 +33,7 @@ export function mount() {
   document.head.append(link);
   const b = document.createElement('button');
   b.id = 'tutor-btn';
-  b.title = t('Ask the Guide', 'Frag den Führer');
+  b.title = t('Ask the Teacher', 'Frag den Lehrer');
   b.innerHTML = `<i class="orb"></i><span>${t('Ask', 'Fragen')}</span>`;
   b.onclick = () => ui && !ui.panel.hidden ? close() : open(true);
   document.body.append(b);
@@ -68,13 +68,13 @@ function lock(steal, onLost) {
 function boot(steal = false) {
   return tutor ??= (async () => {
     const [pi, files, agent, models] = await Promise.all([import(VENDOR), import('./files.js'), import('./agent.js'), import('./models.js')]);
-    await lock(steal, () => failed(t('The Guide moved to another tab.', 'Der Führer ist in einen anderen Tab umgezogen.'), true));
+    await lock(steal, () => failed(t('The Teacher moved to another tab.', 'Der Lehrer ist in einen anderen Tab umgezogen.'), true));
     const volume = await files.idbVolume(DB);
     const fs = await files.openFiles(volume);
     const faux = dev ? pi.fauxProvider() : null;
     const ms = models.tutorModels(faux ? [faux.provider] : []);
     const opened = await agent.openTutor({ files: fs, models: ms, context: pi.BACKGROUND_CONTEXT });
-    opened.harness.closed.then(end => { if (end.reason === 'failed') failed(t('The Guide stopped: ', 'Der Führer hat angehalten: ') + (end.error?.message ?? end.error), true); });
+    opened.harness.closed.then(end => { if (end.reason === 'failed') failed(t('The Teacher stopped: ', 'Der Lehrer hat angehalten: ') + (end.error?.message ?? end.error), true); });
     const T = { ...opened, pi, ctx: pi.BACKGROUND_CONTEXT, models: ms, modelsMod: models, volume, faux };
     if (dev) window.learnTutor = T;
     idleLater(T);
@@ -96,8 +96,8 @@ function build() {
   panel.id = 'tutor';
   panel.hidden = true;
   panel.dataset.keys = '1';
-  panel.innerHTML = `<header><i class="orb"></i><div><b>${t('The Guide', 'Der Führer')}</b><small class="where"></small></div>
-      <button class="play" title="${t('Play the game next to the guide', 'Das Spiel neben dem Führer spielen')}">\u25B6 ${t('Game', 'Spiel')}</button>
+  panel.innerHTML = `<header><i class="orb"></i><div><b>${t('The Teacher', 'Der Lehrer')}</b><small class="where"></small></div>
+      <button class="play" title="${t('Play the game next to the guide', 'Das Spiel neben dem Rundgang spielen')}">\u25B6 ${t('Game', 'Spiel')}</button>
       <button class="gear" title="${t('Settings', 'Einstellungen')}">\u2699</button><button class="x" title="${t('Close', 'Schließen')}">\u2715</button></header>
     <div class="log" aria-live="polite"></div>
     <div class="sheet" hidden></div>
@@ -138,13 +138,13 @@ async function open(focus = true) {
   flag.set('open', '1');
   if (focus) ui.input.focus();
   if (chat) return;
-  status(t('Waking up the Guide\u2026', 'Der Führer wacht auf\u2026'));
+  status(t('Waking up the Teacher\u2026', 'Der Lehrer wacht auf\u2026'));
   let T;
   try { T = await boot(); }
   catch (e) {
     if (e.busy) return elsewhere();
     console.error(e);
-    return failed(t('The Guide could not start: ', 'Der Führer konnte nicht starten: ') + e.message);
+    return failed(t('The Teacher could not start: ', 'Der Lehrer konnte nicht starten: ') + e.message);
   }
   const { conversation, view } = T;
   chat = { conversation, view };
@@ -181,11 +181,11 @@ function failed(message, reload = false) {
   ui.notice.querySelector('.reload')?.addEventListener('click', () => location.reload());
 }
 function elsewhere() {
-  status(`${t('The Guide is busy in another tab of this guide. It can only talk in one tab at a time.', 'Der Führer ist gerade in einem anderen Tab dieses Führers. Er kann nur in einem Tab gleichzeitig sprechen.')}
+  status(`${t('The Teacher is busy in another tab of this guide. It can only talk in one tab at a time.', 'Der Lehrer ist gerade in einem anderen Tab dieses Rundgangs. Er kann nur in einem Tab gleichzeitig sprechen.')}
     <br><button class="take">${t('Use it here', 'Hier benutzen')}</button>`, 'bad');
   ui.notice.querySelector('.take').onclick = async () => {
     tutor = null;
-    status(t('Waking up the Guide\u2026', 'Der Führer wacht auf\u2026'));
+    status(t('Waking up the Teacher\u2026', 'Der Lehrer wacht auf\u2026'));
     try { await boot(true); chat = null; open(false); } catch (e) { failed(e.message); }
   };
 }
@@ -221,7 +221,7 @@ const TOOL_LABELS = {
   look_at_demo: () => t('looks at the demo', 'schaut sich die Demo an'),
   read_code: a => t('reads the code: ', 'liest den Code: ') + a.ref,
   search_code: a => t(`searches the code for "${a.query}"`, `sucht im Code nach \u201E${a.query}\u201C`),
-  search_guide: a => t(`searches the guide for "${a.query}"`, `sucht im Führer nach \u201E${a.query}\u201C`),
+  search_guide: a => t(`searches the guide for "${a.query}"`, `sucht im Rundgang nach \u201E${a.query}\u201C`),
   look_up_word: a => t(`looks up "${a.word}"`, `schlägt \u201E${a.word}\u201C nach`),
   navigate: a => [a.room && t(`takes you to ${roomName(a.room)}`, `bringt dich zu ${roomName(a.room)}`), a.slide && t(`turns to slide #${a.slide}`, `blättert zu Folie #${a.slide}`),
     a.level && t(`sets the detail to Lv ${a.level}`, `stellt die Detailstufe auf Lv ${a.level}`), a.layout && t('changes the layout', 'ändert die Ansicht')].filter(Boolean).join(', ') || t('moves you', 'bewegt dich'),
@@ -297,11 +297,11 @@ function bubble(cls, html) {
   for (const pre of d.querySelectorAll('pre')) highlight(pre);
   return d;
 }
-// code the Guide chose to show the reader (run_js with show), and what it gave
+// code the Teacher chose to show the reader (run_js with show), and what it gave
 function codeCard({ code = '', where }) {
   const d = document.createElement('div');
   d.className = 'ran';
-  d.innerHTML = `<div class="lbl">${where === 'game' ? t('The Guide runs this code in the game:', 'Der Führer lässt diesen Code im Spiel laufen:') : t('The Guide runs this code:', 'Der Führer lässt diesen Code laufen:')}</div><pre><code></code></pre><div class="res"></div>`;
+  d.innerHTML = `<div class="lbl">${where === 'game' ? t('The Teacher runs this code in the game:', 'Der Lehrer lässt diesen Code im Spiel laufen:') : t('The Teacher runs this code:', 'Der Lehrer lässt diesen Code laufen:')}</div><pre><code></code></pre><div class="res"></div>`;
   d.querySelector('code').textContent = code;
   highlight(d.querySelector('pre'));
   return d;
@@ -314,7 +314,7 @@ function ranCode(el, result, running) {
   const out = result.content.filter(c => c.type === 'text').map(c => c.text).join('\n').replace(/^returned: undefined\n?/, '').trim();
   res.textContent = out.split('\n').slice(0, 8).join('\n') || t('done', 'fertig');
 }
-// real code from the game the Guide put in front of the reader (show_code): drawn from the
+// real code from the game the Teacher put in front of the reader (show_code): drawn from the
 // result, so it shows again after a reload exactly as it was shown
 function shownCode() {
   const d = document.createElement('div');
@@ -353,9 +353,9 @@ function notice(text, kind = '') {
 // a failed answer: what it means for the reader, and the details for a grown-up
 function trouble(error) {
   const d = notice('', 'bad');
-  const what = /\b401\b|authentication|api.key/i.test(error) ? t('The Guide\'s key was not accepted. A grown-up can fix it in the settings (\u2699).', 'Der Schlüssel des Führers wurde nicht angenommen. Ein Erwachsener kann das in den Einstellungen (\u2699) beheben.')
-    : /\b429\b|rate|overloaded|\b529\b/i.test(error) ? t('The Guide is very busy right now. Wait a minute and ask again.', 'Der Führer ist gerade sehr beschäftigt. Warte eine Minute und frag noch einmal.')
-    : /fetch|network|\b50\d\b/i.test(error) ? t('The Guide could not be reached. Is the internet (or the dev server) on?', 'Der Führer war nicht erreichbar. Ist das Internet (oder der Dev-Server) an?')
+  const what = /\b401\b|authentication|api.key/i.test(error) ? t('The Teacher\'s key was not accepted. A grown-up can fix it in the settings (\u2699).', 'Der Schlüssel des Lehrers wurde nicht angenommen. Ein Erwachsener kann das in den Einstellungen (\u2699) beheben.')
+    : /\b429\b|rate|overloaded|\b529\b/i.test(error) ? t('The Teacher is very busy right now. Wait a minute and ask again.', 'Der Lehrer ist gerade sehr beschäftigt. Warte eine Minute und frag noch einmal.')
+    : /fetch|network|\b50\d\b/i.test(error) ? t('The Teacher could not be reached. Is the internet (or the dev server) on?', 'Der Lehrer war nicht erreichbar. Ist das Internet (oder der Dev-Server) an?')
     : t('Something went wrong with that answer. Try asking again.', 'Bei dieser Antwort ist etwas schiefgegangen. Frag noch einmal.');
   d.innerHTML = `${esc(what)}<details><summary>${t('details', 'Details')}</summary>${esc(error)}</details>`;
   return d;
@@ -364,7 +364,7 @@ function divider(text) { const d = notice(text); d.classList.add('divider'); ret
 function hello() {
   const d = document.createElement('div');
   d.className = 'hello';
-  d.innerHTML = `<p>${t('Hi! I am the Guide. Ask me anything about this room, or about how the game works. I can also open the real game next to the guide, and we can poke around inside it.', 'Hallo! Ich bin der Führer. Frag mich alles über diesen Raum oder darüber, wie das Spiel funktioniert. Ich kann auch das echte Spiel neben dem Führer öffnen, und wir können darin herumstöbern.')}</p>
+  d.innerHTML = `<p>${t('Hi! I am the Teacher. Ask me anything about this room, or about how the game works. I can also open the real game next to the guide, and we can poke around inside it.', 'Hallo! Ich bin der Lehrer. Frag mich alles über diesen Raum oder darüber, wie das Spiel funktioniert. Ich kann auch das echte Spiel neben dem Rundgang öffnen, und wir können darin herumstöbern.')}</p>
     <p>${t('I will not just tell you the answers: we will find them out together. Ready?', 'Ich verrate dir nicht einfach die Antworten: Wir finden sie zusammen heraus. Bereit?')}</p>
     <div class="starts">${[t('What is this slide about?', 'Worum geht es auf dieser Folie?'), t('Quiz me on this slide!', 'Stell mir eine Quizfrage zu dieser Folie!'),
       t('I don\'t get this part.', 'Diesen Teil verstehe ich nicht.'), t('How does the real game do this?', 'Wie macht das echte Spiel das?'), t('Show me in the real game!', 'Zeig es mir im echten Spiel!')]
@@ -378,7 +378,7 @@ function setup(T) {
   status('');
   const d = ui.notice;
   d.className = 'notice setup';
-  d.innerHTML = `<p><b>${t('The Guide needs a grown-up first.', 'Der Führer braucht zuerst einen Erwachsenen.')}</b></p>
+  d.innerHTML = `<p><b>${t('The Teacher needs a grown-up first.', 'Der Lehrer braucht zuerst einen Erwachsenen.')}</b></p>
     <p class="small">${t('It talks to an AI model through Radius, Anthropic or OpenAI, and that needs an API key. Either start the dev server with RADIUS_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY set (the key then stays on the server), or paste a key here. A pasted key is kept only in this browser.',
       'Er spricht mit einem KI-Modell über Radius, Anthropic oder OpenAI, und dafür braucht es einen API-Schlüssel. Entweder startest du den Dev-Server mit RADIUS_API_KEY, ANTHROPIC_API_KEY oder OPENAI_API_KEY (dann bleibt der Schlüssel auf dem Server), oder du fügst hier einen Schlüssel ein. Ein eingefügter Schlüssel bleibt nur in diesem Browser.')}</p>`;
   d.append(keyForm(T, () => status(null)));
@@ -414,7 +414,7 @@ async function settings() {
     <p class="small">${Object.entries(M.PROVIDERS).map(([id, p]) => `${p.name}: ${M.storedKey(id) ? t('key in this browser', 'Schlüssel in diesem Browser') + ` <button type="button" class="forget-key" data-id="${id}">${t('remove', 'entfernen')}</button>` : server.includes(id) ? t('key on the dev server', 'Schlüssel auf dem Dev-Server') : t('no key', 'kein Schlüssel')}`).join('<br>')}</p>
     <div class="keyslot"></div>
     <p class="small">${t('Spent so far', 'Bisher ausgegeben')}: $${cost.toFixed(2)}</p>
-    <details><summary>${t('What the Guide noted about you', 'Was sich der Führer über dich gemerkt hat')} (${notes.length})</summary><ul>${notes.map(n => `<li>${esc(n.text)} <small>(${esc(n.room)})</small></li>`).join('')}</ul></details>
+    <details><summary>${t('What the Teacher noted about you', 'Was sich der Lehrer über dich gemerkt hat')} (${notes.length})</summary><ul>${notes.map(n => `<li>${esc(n.text)} <small>(${esc(n.room)})</small></li>`).join('')}</ul></details>
     <p><button type="button" class="restart">${t('Start over', 'Neu anfangen')}</button>
     <button type="button" class="wipe">${t('Forget everything', 'Alles vergessen')}</button>
     <button type="button" class="done">${t('Done', 'Fertig')}</button></p>`;
@@ -423,7 +423,7 @@ async function settings() {
   for (const b of s.querySelectorAll('.forget-key')) b.onclick = () => { M.setStoredKey(b.dataset.id, ''); settings(); };
   s.querySelector('.done').onclick = () => { s.hidden = true; };
   s.querySelector('.restart').onclick = async () => {
-    if (!chat || !confirm(t('Start a new conversation? The Guide keeps its notes about you.', 'Ein neues Gespräch beginnen? Der Führer behält seine Notizen über dich.'))) return;
+    if (!chat || !confirm(t('Start a new conversation? The Teacher keeps its notes about you.', 'Ein neues Gespräch beginnen? Der Lehrer behält seine Notizen über dich.'))) return;
     await chat.conversation.reset(undefined, T.ctx);
     s.hidden = true;
   };

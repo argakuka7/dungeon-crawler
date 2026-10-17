@@ -62,7 +62,7 @@ Plain HTML, CSS and ES modules, no build step, like the game.
 | `words.html` | the glossary; `<a class="w" href="words.html#seed">` anywhere shows its entry on hover |
 | `demos/*.js` | interactive demos, loaded when they scroll into view |
 | `img/` | screenshots of the game |
-| `tutor/` | the Guide: an AI tutor in a side panel (see below) |
+| `tutor/` | the Teacher: an AI tutor in a side panel (see below) |
 | `../tools/learn.mjs` | the check / `--stamp` / `--defer` tool |
 
 ## Two languages in one file
@@ -139,14 +139,14 @@ or it is 2D), say where it comes from in its first comment.
 Every page of the guide is a whole HTML file, but in the browser the guide is one page that never
 reloads: `nav.js` catches links between the guide's pages, fetches the page, and swaps in its
 `<main>`, title and theme (back and forward work too). So what lives outside `<main>` runs on
-across rooms: the Guide and the game window. Scripts in the fetched page do not run; `deck.js`
+across rooms: the Teacher and the game window. Scripts in the fetched page do not run; `deck.js`
 knows every kind of page (rooms, the map, the word book) and sets it up in `enter()`, and
 `leave()` takes it down: bars, listeners, demos. A reload or a deep link still loads the page
 the ordinary way.
 
-## The Guide (the tutor)
+## The Teacher (the tutor)
 
-Every page has an "Ask" button that opens the Guide: an AI tutor that answers questions about the
+Every page has an "Ask" button that opens the Teacher: an AI tutor that answers questions about the
 game by asking questions back (the Socratic way), one small step at a time. It runs in the browser
 on [pi-durable](../vendor/pi-durable/VERSION), Pi's durable agent harness, in one conversation for
 the whole guide.
@@ -177,7 +177,7 @@ all; the game window's line in the `<page>` block says what is on.
 |---|---|
 | `tutor/tutor.js` | the button and the panel; loads the agent (about 1 MB) only when the panel opens |
 | `tutor/agent.js` | the harness, the `guide` extension, the conversation, the notebook |
-| `tutor/prompt.js` | how the Guide teaches and what it can do: its instructions |
+| `tutor/prompt.js` | how the Teacher teaches and what it can do: its instructions |
 | `tutor/tools.js` | its tools: `read_slide`, `look_at_demo`, `look_at_game`, `read_code`, `show_code`, `search_code`, `search_guide`, `look_up_word`, `navigate`, `highlight`, `run_js`, `game`, `note` |
 | `tutor/state.js` | what it is told about the page with every message |
 | `tutor/game.js` | the game window |
@@ -189,7 +189,7 @@ all; the game window's line in the `<page>` block says what is on.
 Everything is kept in the browser: the conversation in IndexedDB, settings in `localStorage`
 (`kids.tutor.*`). Every question, answer and tool call is stored before it shows, so a reload in
 the middle of an answer loses nothing: the page finishes it when it is back. Only one tab runs the
-Guide at a time (a Web Lock); another tab offers to take it over.
+Teacher at a time (a Web Lock); another tab offers to take it over.
 
 It needs a Radius, Anthropic or OpenAI API key, one of:
 
@@ -198,10 +198,10 @@ RADIUS_API_KEY=... npm run serve      # or ANTHROPIC_API_KEY / OPENAI_API_KEY: t
                                       # adds the key; the browser never sees it
 ```
 
-or a key pasted into the Guide's settings, kept in that browser only and sent straight to the
+or a key pasted into the Teacher's settings, kept in that browser only and sent straight to the
 provider. The settings also pick the model, show what it has spent, start over, or forget everything.
 
-When a slide changes, the Guide needs no update: it reads the pages and the code live. When you
+When a slide changes, the Teacher needs no update: it reads the pages and the code live. When you
 add a room, nothing to do either. Change `tutor/prompt.js` for how it teaches.
 
 `vendor/pi-durable/pi-durable.js` is built from a Pi checkout (`node tools/vendor-pi-durable.mjs
@@ -212,6 +212,6 @@ add a room, nothing to do either. Change `tutor/prompt.js` for how it teaches.
 `tests/learn.test.js` checks the rooms, that every text has both languages, links, anchors,
 images and demo modules, that every name a demo imports from the game is still exported, and
 `tools/learn.mjs`'s check: references resolve, fingerprints, markers and written values
-are current. `tests/tutor.test.js` runs the Guide on a scripted model (its storage, tools, and
+are current. `tests/tutor.test.js` runs the Teacher on a scripted model (its storage, tools, and
 finishing an answer after the page closed); `tests/browser/tutor.js` does the same in a real
 room opened with `?dev=1`, with every tool, the game window and moving on to the next room.

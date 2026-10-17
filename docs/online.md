@@ -155,7 +155,7 @@ being helped up and getting back in. Up to four players, co-op.
 - Playing together a death never resets the cube (`game/flow.js die`) while a friend is still
   fighting in it, and a viewer's enemies are the runner's anyway. Only the runner dying with
   nobody on their feet beside them resets it, for everyone there.
-- Time runs alike for everyone: the Guide cannot pause or slow it while together
+- Time runs alike for everyone: the Teacher cannot pause or slow it while together
   (`game/pace.js`).
 
 ## Talking

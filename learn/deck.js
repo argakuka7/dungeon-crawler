@@ -12,7 +12,7 @@
 //   - <b data-val="src/x.js#NAME.field"> shows that value, read live from the game's code
 //     (demos can show live code too: set data-code on a <pre> and call liveCode)
 //   - slides that stamps.json lists as outdated get a note (tools/learn.mjs, README.md)
-//   - the Guide, a tutor to ask about the room, in a side panel (tutor/tutor.js)
+//   - the Teacher, a tutor to ask about the room, in a side panel (tutor/tutor.js)
 // The guide is one long-lived page (nav.js): links between its pages swap <main>, so this module
 // runs once; enter() sets up each page as it comes, leave() takes it down again.
 import { DECKS, LEVELS, THEME_NAMES, THEME_NAMES_DE, local, iconUrl } from './decks.js';
@@ -237,7 +237,7 @@ export function canvas(el, w, h) {
 export function html(el, s) { el.insertAdjacentHTML('beforeend', s); return el.lastElementChild; }
 
 // ---- the room page ---------------------------------------------------------------------------------
-// what the page's deck offers to others (the Guide): null on pages without slides
+// what the page's deck offers to others (the Teacher): null on pages without slides
 export let controls = null;
 function deck(main, page) {
   const { signal } = page.abort, here = nav.here();
@@ -256,7 +256,7 @@ function deck(main, page) {
     <p class="done">\u2713 ${t('You finished', 'Geschafft')}: <b>${esc(info?.title ?? '')}</b></p>
     <div class="ways">${next ? `<a class="way next" href="${next.file}"><img src="${iconUrl(next)}" alt="">
       <span><small>${t('Next room', 'Nächster Raum')} \u00B7 ${deckIdx + 2}/${DECKS.length}</small><b>${esc(next.title)}</b><i>${esc(next.teaser)}</i></span><em>\u25B8</em></a>`
-      : `<p class="last">${t('That was the last room. You have seen the whole guide!', 'Das war der letzte Raum. Du hast den ganzen Führer gesehen!')}</p>`}
+      : `<p class="last">${t('That was the last room. You have seen the whole guide!', 'Das war der letzte Raum. Du hast den ganzen Rundgang gesehen!')}</p>`}
     <a class="way map" href="index.html"><em>\u25C2</em><span><small>${t('All rooms', 'Alle Räume')}</small><b>${t('Back to the map', 'Zurück zur Karte')}</b></span></a></div></nav>`);
 
   // top bar

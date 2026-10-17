@@ -1,6 +1,6 @@
 // The real game, running next to the guide: a window (an iframe of ../index.html) that stays
 // open while the reader walks through the rooms, because it lives outside <main> (nav.js). It is
-// the same site, so the Guide reaches right into it: its window and document, the debug hooks the
+// the same site, so the Teacher reaches right into it: its window and document, the debug hooks the
 // game puts in window.__game (src/main.js), and its own modules (game.load), which are the
 // running game's, not copies.
 //
@@ -41,7 +41,7 @@ const save = () => {
 
 // open the window (or bring it back after a reload); resolves once the game runs. A seed other
 // than the one running loads that world into the same window.
-// focus: give the game the keyboard once it runs (when the reader opened it, not the Guide)
+// focus: give the game the keyboard once it runs (when the reader opened it, not the Teacher)
 export function open({ seed: wanted, big, focus = false } = {}) {
   if (!dock) build();
   if (big != null) setBig(big);
@@ -203,7 +203,7 @@ export async function press(code, { hold = 60, alt = false, shift = false, ctrl 
   w.dispatchEvent(new w.KeyboardEvent('keyup', init));
 }
 
-// what is going on in the game, in a few words for the Guide
+// what is going on in the game, in a few words for the Teacher
 export function summary() {
   const g = api();
   if (!g) return dock ? 'the game window is starting' : null;

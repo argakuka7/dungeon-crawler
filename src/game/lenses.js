@@ -1,5 +1,5 @@
 // Lenses: the game's own rules drawn over the world (render/overlay.js), switched on to show why
-// something happens (game/teach.js, the Guide). Every frame they draw from the real state with
+// something happens (game/teach.js, the Teacher). Every frame they draw from the real state with
 // the real functions (inSwordArc, notices, the planned paths), so what a lens shows is what the
 // game does.
 //   sword      the reach and angle of the weapon in hand: dim while ready, yellow in the wind-up,

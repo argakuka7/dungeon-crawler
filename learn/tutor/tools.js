@@ -1,4 +1,4 @@
-// The Guide's tools. It can look (slides, demos, the game window, the game's code and design
+// The Teacher's tools. It can look (slides, demos, the game window, the game's code and design
 // notes, the glossary), show the reader real code in its panel (show_code), move the reader
 // (navigate) and point at things (highlight), run its own
 // JavaScript in the guide or in the game (run_js), open and steer the game window (game), and

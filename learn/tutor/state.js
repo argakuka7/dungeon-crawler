@@ -1,4 +1,4 @@
-// What the Guide is told about the page with every message from the reader, without being asked:
+// What the Teacher is told about the page with every message from the reader, without being asked:
 // where they are, what they did since their last message (slides, rooms, demo buttons and
 // sliders), text they selected, the demos on their slide and the game window. The slide's text
 // and the room's slides are only sent again when they changed: the last message's snapshot is
