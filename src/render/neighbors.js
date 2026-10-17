@@ -16,6 +16,8 @@ import { partMaterial, fluidGlow, PROXY } from './materials.js';
 import { makeFadable, setFade, dither } from './fade.js';
 import { glassState, glassBatch, setGlassFaces } from './glass.js';
 import { inject } from './cutshader.js';
+import { capLight } from './section.js';
+import { LAYER as GHOSTS, glassLook, glassRim } from './ghosts.js';
 import { props, whenPropsReady, propMatrix, propBatchGeometry } from './props.js';
 
 let current = [];   // [{ key, source, group, cull, glass, geometry, base, instances, landmarks }]
@@ -28,26 +30,42 @@ const reveal = { value: 1 }, revealFloor = { value: -1e3 };
 const place = new THREE.Matrix4();
 
 // Foreground proxies reveal the player even when no active-cube terrain needs cutting.
-// Unlike cave walls, this uses only screen region/view depth, never cube-local wall tests.
-// Like real terrain they are only cut above a height: the active cut, or just over the
+// Unlike cave walls, this uses only screen region/view depth, never cube-local wall tests
+// (but see besideWall). Like real terrain they are only cut above a height: the active cut, or just over the
 // player's feet when there is none (nothing lower can hide the player).
-const REVEAL = 'if (uProxyReveal > 0.5 && vCutW.y > (uCutY < 999.0 ? uCutY : uProxyFloor) && cutRegion(false) > 0.5) discard;\n';
+const CUT = 'uProxyReveal > 0.5 && (vCutW.y > (uCutY < 999.0 ? uCutY : uProxyFloor) && cutRegion(false) > 0.5 || besideWall())';
+const REVEAL = `if (${CUT}) discard;\n`;
+// ... and what they cut away is drawn again as glass, as in the active cube (ghosts.js)
+const GLASS = `if (!(${CUT})) discard;\n`;
+// A cave's or canyon's walls on the camera's sides come down (cutshader.js frontWall); so does
+// the neighbour's own wall right outside them, along the same side, to the same height.
+const BESIDE_WALL = `
+  bool besideWall() {
+    vec4 d = vec4(uWallBox.y - vCutW.x, vCutW.x - uWallBox.x, uWallBox.w - vCutW.z, vCutW.z - uWallBox.z);
+    bvec4 outside = lessThan(d, vec4(0.0));
+    if (int(outside.x) + int(outside.y) + int(outside.z) + int(outside.w) != 1 || min(min(d.x, d.y), min(d.z, d.w)) <= -uWallBand) return false;
+    bvec4 near = lessThan(abs(d), vec4(uWallBand)), front = greaterThan(uFront, vec4(0.5));
+    bool lowered = any(bvec4(near.x && front.x, near.y && front.y, near.z && front.z, near.w && front.w));
+    bool kept = any(bvec4(near.x && !front.x, near.y && !front.y, near.z && !front.z, near.w && !front.w));
+    return lowered && !(kept && uFrontCorners > 0.5) && vCutW.y > wallFloor(vCutW);
+  }
+`;
 
 // a batch's material: the reveal, and each instance's fade from the batch's data texture.
 // Neighbouring cubes share their boundary faces (each has its own cliff wall on the shared side):
 // pushed back a little in depth, the proxy's always loses there, so the active cube's section
 // caps show through a cut instead of fighting the proxy's wall behind them.
-function batchMaterial(mat, data, key, edit = sh => sh) {
+function batchMaterial(mat, data, key, edit = sh => sh, cut = REVEAL) {
   Object.assign(mat, { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2 });
   inject(mat, fs => fs.replace('#include <clipping_planes_fragment>',
-    REVEAL + '#include <clipping_planes_fragment>' + dither('vProxy.x', 'vProxy.y', 'vProxy.z')), key);
+    cut + '#include <clipping_planes_fragment>' + dither('vProxy.x', 'vProxy.y', 'vProxy.z')), key);
   const compile = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     compile.call(mat, sh, r);
     Object.assign(sh.uniforms, { uProxyReveal: reveal, uProxyFloor: revealFloor, uProxyData: data });
     sh.vertexShader = 'uniform highp sampler2D uProxyData;\nflat varying vec4 vProxy;\n' + sh.vertexShader.replace('#include <batching_vertex>',
       '#include <batching_vertex>\n#ifdef USE_BATCHING\n  vProxy = texelFetch(uProxyData, ivec2(int(getIndirectIndex(gl_DrawID)), 0), 0);\n#else\n  vProxy = vec4(1.0, 0.0, 1.0, 0.0);\n#endif');
-    sh.fragmentShader = 'uniform float uProxyReveal, uProxyFloor;\nflat varying vec4 vProxy;\n' + sh.fragmentShader;
+    sh.fragmentShader = 'uniform float uProxyReveal, uProxyFloor;\nflat varying vec4 vProxy;\n' + sh.fragmentShader.replace('void main()', BESIDE_WALL + 'void main()');
     edit(sh);
   };
   return mat;
@@ -62,7 +80,8 @@ const glowing = sh => {
 // One BatchedMesh with room that grows: geometry space is compacted first and doubled when
 // that is not enough, instance slots double too (with the fade texture).
 class Batch {
-  constructor(material, order, key, edit) {
+  // glass: draw what the cut takes away again as glass (solids)
+  constructor(material, order, key, edit, glass = false) {
     this.capacity = 64; this.vertices = 1 << 14; this.indices = 1 << 15;
     this.data = { value: this.fadeTexture(this.capacity) };
     this.mesh = new THREE.BatchedMesh(this.capacity, this.vertices, this.indices, batchMaterial(material, this.data, key, edit));
@@ -70,6 +89,20 @@ class Batch {
     Object.assign(this.mesh, { frustumCulled: false, perObjectFrustumCulled: false, sortObjects: material.transparent, renderOrder: order, visible: false });
     this.count = 0; this.dirty = false;
     scene.add(this.mesh);
+    if (glass) scene.add(this.glassDraw(key));
+  }
+  // The batch drawn a second time with the glass material, among the transparent things and
+  // only while the ghosts' layer is on: a stand-in with nothing of its own to draw does it, just
+  // before it would draw (a BatchedMesh has one material).
+  glassDraw(key) {
+    const glass = batchMaterial(glassLook(), this.data, key + '-glass', sh => { sh.fragmentShader = glassRim(sh.fragmentShader); }, GLASS);
+    const standIn = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, colorWrite: false }));
+    Object.assign(standIn, { frustumCulled: false, renderOrder: 60 });
+    standIn.layers.set(GHOSTS);
+    standIn.onBeforeRender = (renderer, scene, camera) => {
+      if (this.mesh.visible) renderer.renderBufferDirect(camera, scene, this.mesh.geometry, glass, this.mesh, null);
+    };
+    return standIn;
   }
   fadeTexture(width, old) {
     const tex = new THREE.DataTexture(new Float32Array(width * 4), width, 1, THREE.RGBAFormat, THREE.FloatType);
@@ -121,10 +154,19 @@ class Batch {
 
 const batches = new Map();   // part name (or 'landmark') -> Batch
 const PROXY_ORDER = { solid: 0, fluid: 1, fall: 1 };   // under the active cube's fluids (partmeshes.js)
+// Solids show their insides where they are cut (the reveal, besideWall) as the active cube's
+// section caps do (section.js), in the proxies' darker tint (the material's colour).
+const proxyCaps = caps => sh => {
+  sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `if (!gl_FrontFacing) ${capLight(caps, 'diffuse')}
+    #include <opaque_fragment>`);
+};
 function batchFor(part) {
   let b = batches.get(part.name);
   if (!b) {
-    batches.set(part.name, b = new Batch(partMaterial(part, 'proxy'), PROXY_ORDER[part.kind], 'proxy-' + part.kind));
+    const material = partMaterial(part, 'proxy');
+    if (part.cap) material.side = THREE.DoubleSide;
+    batches.set(part.name, b = new Batch(material, PROXY_ORDER[part.kind], 'proxy-' + part.kind + (part.cap ? '-' + part.cap : ''),
+      part.cap ? proxyCaps(part.cap) : undefined, !!part.cap));
     b.part = part;
   }
   return b;

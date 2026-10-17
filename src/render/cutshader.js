@@ -17,6 +17,8 @@ export const U = {
   // ... but never below the land behind them: per side (+x, -x, +z, -z) 16 heights along it
   // (section.js wallFloors)
   uWallFloor: { value: new Float32Array(64) },
+  // 1: what the walls lose is drawn again as glass, like the cutaway's (ghosts.js; not in houses)
+  uWallGlass: { value: 0 },
   // which kinds of material come down with them: rock, stone, wood, the rest (see inject)
   uFrontKinds: { value: new THREE.Vector4(1, 1, 1, 1) },
   // 1: where a wall that comes down meets one that does not (the far corners of a cave), it
@@ -117,7 +119,7 @@ export function inject(mat, fragCode, key, kind = 3) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = 'varying vec3 vCutW;\n' + sh.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\n#if defined(USE_BATCHING)\n  vCutW = (modelMatrix * batchingMatrix * vec4(transformed, 1.0)).xyz;\n#elif defined(USE_INSTANCING)\n  vCutW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\n#else\n  vCutW = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#endif');
-    sh.fragmentShader = `varying vec3 vCutW;\nuniform float uCutY, uRadius, uAspect, uWallY, uWallBand, uFrontCorners;\nuniform vec2 uCenter, uRes;\nuniform vec3 uSide;\nuniform vec4 uFront, uWallBox, uFrontKinds, uBack;\nuniform float uWallFloor[64];\n#define CUT_KIND ${kind}\nuniform vec3 uCapRock, uCapStone, uCapWood;\nuniform vec2 uPoly[${CORNERS}];\n`
+    sh.fragmentShader = `varying vec3 vCutW;\nuniform float uCutY, uRadius, uAspect, uWallY, uWallBand, uFrontCorners, uWallGlass;\nuniform vec2 uCenter, uRes;\nuniform vec3 uSide;\nuniform vec4 uFront, uWallBox, uFrontKinds, uBack;\nuniform float uWallFloor[64];\n#define CUT_KIND ${kind}\nuniform vec3 uCapRock, uCapStone, uCapWood;\nuniform vec2 uPoly[${CORNERS}];\n`
       + REGION + '\n' + fragCode(sh.fragmentShader);
   };
   mat.customProgramCacheKey = () => key;

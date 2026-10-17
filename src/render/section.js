@@ -26,8 +26,8 @@ const CAP_SHADE = 0.68;
 const CAP_UNIFORM = { rock: 'uCapRock', stone: 'uCapStone', wood: 'uCapWood' };
 
 // a cap's colour: the kind's flat colour, lit like an upward-facing floor (sky + sun, no
-// shadows), a little darker
-const capLight = caps => `{
+// shadows), a little darker; tint: GLSL the colour is multiplied with (the proxies' darkening)
+export const capLight = (caps, tint = 'vec3(1.0)') => `{
         vec3 capUp = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz), capIrr = vec3(0.0);
         #if NUM_HEMI_LIGHTS > 0
           for (int i = 0; i < NUM_HEMI_LIGHTS; i++) capIrr += getHemisphereLightIrradiance(hemisphereLights[i], capUp);
@@ -35,7 +35,7 @@ const capLight = caps => `{
         #if NUM_DIR_LIGHTS > 0
           for (int i = 0; i < NUM_DIR_LIGHTS; i++) capIrr += directionalLights[i].color * max(dot(capUp, directionalLights[i].direction), 0.0);
         #endif
-        outgoingLight = BRDF_Lambert(${CAP_UNIFORM[caps]}) * capIrr * ${CAP_SHADE.toFixed(3)};
+        outgoingLight = BRDF_Lambert(${CAP_UNIFORM[caps]} * ${tint}) * capIrr * ${CAP_SHADE.toFixed(3)};
       }`;
 const CUT_DISCARD = 'if (cutRegion(true) > 0.5 || frontWall()) discard;\n#include <clipping_planes_fragment>';
 
@@ -135,7 +135,6 @@ export function setCut(y, map, px, py, pz) {
   const on = y < CUBE_H;
   turnShape(performance.now() / 1000);
   U.uCutY.value = on ? y : 1e3;
-  showGhosts(on);   // the cut-away part as glass: only drawn inside a cut (ghosts.js)
   // cave and canyon walls (and the walls of a house, inside) on the camera's side come down to a little
   // over the character
   // inside a house they go entirely, down to the floor, with what hangs on them (not the door)
@@ -147,6 +146,10 @@ export function setCut(y, map, px, py, pz) {
   const cx = camera.position.x - (box.x + box.y) / 2, cz = camera.position.z - (box.z + box.w) / 2;
   wallFloors(map);
   U.uFront.value.set(walled && cx > 6 ? 1 : 0, walled && cx < -6 ? 1 : 0, walled && cz > 6 ? 1 : 0, walled && cz < -6 ? 1 : 0);
+  // the cut-away part as glass (ghosts.js): inside a cut, and where cave and canyon walls come down
+  const f = U.uFront.value;
+  U.uWallGlass.value = !room && f.x + f.y + f.z + f.w > 0 ? 1 : 0;
+  showGhosts(on || U.uWallGlass.value > 0);
   // a room's walls whose inner face the camera is not beyond: no line of sight from the camera
   // into the room crosses them, so the cutaway must not open holes in them
   const cp = camera.position;
