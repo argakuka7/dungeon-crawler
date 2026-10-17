@@ -117,12 +117,13 @@ export const bridgesOf = (theme, force) => force ? { [force]: 1 } : buildOf(them
 //   hang   may hang from the edge of a floating platform (no wall behind its lower part); iron
 //          rungs and footholds need the wall all the way. A rigid wooden ladder hanging free
 //          is rarer (HANG_WOOD of its weight).
+//   sound  what a hand or foot on it sounds like (audio/footsteps.js)
 export const LADDER_STYLES = {
-  wood: { hang: true },        // two rails and rungs
-  rope: { hang: true },        // rope sides, wooden rungs, staked down at the top
-  vine: { hang: true },        // twisting vines, loops for rungs, leaves
-  iron: { hang: false },       // iron rungs bolted into the rock, grab handles at the top
-  footholds: { hang: false },  // holds cut into the rock, a chain to hold on to
+  wood: { hang: true, sound: 'ladder' },               // two rails and rungs
+  rope: { hang: true, sound: 'ladder-rope' },          // rope sides, wooden rungs, staked down at the top
+  vine: { hang: true, sound: 'ladder-vine' },          // twisting vines, loops for rungs, leaves
+  iron: { hang: false, sound: 'ladder-iron' },         // iron rungs bolted into the rock, grab handles at the top
+  footholds: { hang: false, sound: 'ladder-stone' },   // holds cut into the rock, a chain to hold on to
 };
 export const HANG_WOOD = 0.25;
 

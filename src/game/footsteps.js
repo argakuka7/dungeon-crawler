@@ -1,13 +1,14 @@
 // The player's footsteps: a step whenever the walk / run cycle passes a foot's touchdown
 // (measured from the clips, render/character.js), on the surface underfoot (core/footing.js),
-// and a heavier one on landing. On a ladder each hand and foot knocks on its rung as the climb
-// cycle (up or down) passes its grip. The sounds are audio/footsteps.js.
+// and a heavier one on landing. On a ladder each hand and foot knocks on its rung (or scuffs in
+// its hold, rustles its vines ...) as the climb cycle (up or down) passes its grip. The sounds are audio/footsteps.js.
 import { player, state } from './state.js';
 import { character } from '../render/character.js';
 import { blend, W } from '../render/blendtree.js';
 import { footstep } from '../audio/footsteps.js';
 import { surfaceAt } from '../core/footing.js';
 import { themeOf } from '../themes/depth.js';
+import { LADDER_STYLES } from '../themes/builds.js';
 
 let prev = null, prevClimb = null, landCount = 0, surface = null;
 
@@ -25,14 +26,15 @@ function climbing() {
   const last = prevClimb, now = blend.climb;
   prevClimb = player.climb && blend.mode === 'climb' ? now : null;
   if (prevClimb === null) return;
-  if (last === null) { footstep('ladder', 'walk', { volume: 0.8 }); return; }   // the grab
+  const sound = LADDER_STYLES[player.climb.l.style]?.sound ?? 'ladder';   // wood, rope, vine, iron or rock
+  if (last === null) { footstep(sound, 'walk', { volume: 0.8 }); return; }   // the grab
   const fwd = ahead(last, now), back = ahead(now, last), up = fwd <= back;
   const span = up ? fwd : back, from = up ? last : now;
   if (span <= 0 || span > 0.5) return;
   // the clip moves a hand and the other foot together: one knock, heavier with a foot in it
   const { hand, foot } = character.footfalls.climb, passed = list => list.some(c => { const at = ahead(from, c); return at > 0 && at <= span; });
-  if (passed(foot)) footstep('ladder', 'run', { volume: 0.9 });
-  else if (passed(hand)) footstep('ladder', 'walk', { volume: 0.7 });
+  if (passed(foot)) footstep(sound, 'run', { volume: 0.9 });
+  else if (passed(hand)) footstep(sound, 'walk', { volume: 0.7 });
 }
 
 export function updateFootsteps() {

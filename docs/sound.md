@@ -11,7 +11,7 @@ click.
 | `src/audio/footsteps.js` | footsteps per surface and gait, pre-rendered into variants when audio starts |
 | `src/audio/loops.js` | continuous sounds: the charge and cast drones, the ambient beds, drips and lava pops |
 | `src/core/footing.js` | the surface under the player (theme, height, structures, banks, town paths) |
-| `src/game/footsteps.js` | steps on the walk / run cycle and the ladder rungs, landings |
+| `src/game/footsteps.js` | steps on the walk / run cycle and the ladder rungs (each ladder style its own sound: `LADDER_STYLES[style].sound`, `themes/builds.js`), landings |
 | `src/game/sounds.js` | sounds from watching state: jumps, long falls, ragdoll thuds, getting up, enemy voices |
 | `src/game/ambience.js` | ambient levels from the surroundings, the charge and cast drones |
 
@@ -48,6 +48,11 @@ click.
   and random drips below ground (drip rates per theme). Levels glide over about 0.4 s.
 
 ## Levels
+
+Ladders sound like what they are made of: a dry knock on wooden rungs (`ladder`), a softer
+knock and creaking ropes (`ladder-rope`), a rustle of leaves (`ladder-vine`), a short damped
+clank (`ladder-iron`) and a scuff of grit with now and then the chain jingling (`ladder-stone`,
+the footholds). Hands sound the walk variants, feet the run ones.
 
 Effects go through a gain of 0.45 and a gentle compressor, footsteps through 0.3, the
 continuous sounds through 0.5. Per-surface footstep trims are in `footsteps.js` (`TRIM`), bed

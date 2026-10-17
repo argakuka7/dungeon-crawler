@@ -6,11 +6,12 @@
 // When the player steps and on what: game/footsteps.js, core/footing.js.
 import { mulberry32 } from '../core/util.js';
 import { SURFACES } from '../core/footing.js';
+import { LADDER_STYLES } from '../themes/builds.js';
 import { onAudioStart } from './context.js';
 
 export const GAITS = { walk: 0.6, run: 1, land: 1.6 };   // how hard the foot comes down
 const PEAK = { walk: 0.45, run: 0.6, land: 0.85 };       // loudest variant of each gait
-const TRIM = { grass: 0.85, snow: 0.85, ice: 0.8, iron: 0.75, rope: 0.9, ladder: 0.8 };   // per-surface level
+const TRIM = { grass: 0.85, snow: 0.85, ice: 0.8, iron: 0.75, rope: 0.9, ladder: 0.8, 'ladder-rope': 0.75, 'ladder-vine': 0.7, 'ladder-iron': 0.7, 'ladder-stone': 0.75 };   // per-surface level
 const VARIANTS = 6, SLOT = 0.8;   // variants per surface and gait; seconds rendered for each
 
 // building blocks on context c (an OfflineAudioContext while rendering)
@@ -127,12 +128,48 @@ const RECIPES = {
     const at = t + 0.03, c = 140 + 20 * R();
     k.tone('sawtooth', c, c * 0.88, at, 0.12, k.filter('bandpass', 900, 5, k.amp(at, 0.02, 0.08 * w, 0.1, out)));
   },
+  'ladder-rope'(k, t, out, w, R) {   // a softer, lower knock on a swinging rung, and the ropes creaking
+    k.thump(t, 100, 60, 0.05, 0.25 * w, out);
+    const f = 260 * (0.94 + 0.12 * R());
+    k.tone('triangle', f, f * 0.96, t, 0.05, k.amp(t, 0.002, 0.2 * w, 0.05, out));
+    k.noise(t, 0.03, k.filter('lowpass', 1200, 0.8, k.amp(t, 0.002, 0.25 * w, 0.025, out)));
+    if (R() < 0.4) return;
+    const at = t + 0.02 + 0.03 * R(), c = 120 + 40 * R();
+    k.tone('sawtooth', c, c * 0.8, at, 0.18, k.filter('bandpass', 1000, 5, k.amp(at, 0.04, 0.1 * w, 0.15, out)));
+  },
+  'ladder-vine'(k, t, out, w, R) {   // a rustle of leaves and a soft creak of the stems
+    k.thump(t, 90, 55, 0.05, 0.2 * w, out);
+    const f = k.filter('bandpass', 2200, 0.8, k.amp(t, 0.01, 0.35 * w, 0.1 + 0.03 * w, out));
+    f.frequency.setValueAtTime(2200, t); f.frequency.exponentialRampToValueAtTime(900, t + 0.12);
+    k.noise(t, 0.14, f);
+    k.grains(t + 0.01, 4, 0.06, 1800, 4000, 3, 0.15 * w, out);
+    if (R() < 0.6) return;
+    const at = t + 0.03, c = 180 + 40 * R();
+    k.tone('sawtooth', c, c * 0.9, at, 0.08, k.filter('bandpass', 1300, 6, k.amp(at, 0.02, 0.05 * w, 0.07, out)));
+  },
+  'ladder-iron'(k, t, out, w, R) {   // a short clank of a rung: the iron step's partials, damped by the hand
+    k.thump(t, 150, 80, 0.035, 0.25 * w, out);
+    k.noise(t, 0.012, k.filter('highpass', 3000, 0.7, k.amp(t, 0.001, 0.25 * w, 0.008, out)));
+    const f = 560 * (0.95 + 0.1 * R());
+    [[1, 0.18, 0.16], [2.69, 0.12, 0.1], [4.67, 0.08, 0.06]].forEach(([m, decay, level]) =>
+      k.tone('sine', f * m, f * m * 0.998, t, decay, k.amp(t, 0.001, level * w, decay, out)));
+  },
+  'ladder-stone'(k, t, out, w, R) {   // a scuff of grit in a hold of rock, now and then the chain jingling
+    k.thump(t, 160, 80, 0.04, 0.3 * w, out);
+    k.grains(t, Math.round(4 + 3 * w), 0.05, 900, 3500, 2.5, 0.35 * w, out);
+    k.noise(t, 0.05, k.filter('bandpass', 1600, 1, k.amp(t, 0.003, 0.2 * w, 0.04, out)));
+    if (R() < 0.6) return;
+    for (let i = 0; i < 3; i++) {
+      const at = t + 0.03 + i * (0.02 + 0.02 * R()), f = 2600 + 1800 * R();
+      k.tone('sine', f, f, at, 0.05, k.amp(at, 0.001, 0.04 * w, 0.05, out));
+    }
+  },
 };
-// what is rendered: the ground's surfaces and the ladder rungs (hands: walk, feet: run)
-const SOUNDS = [...SURFACES, 'ladder'];
+// what is rendered: the ground's surfaces and the ladders' rungs and holds (hands: walk, feet: run)
+const SOUNDS = [...SURFACES, ...new Set(Object.values(LADDER_STYLES).map(s => s.sound))];
 
-// Render all variants of one surface and gait (sample rate sr): [Float32Array] at the gait's level
-async function renderSteps(surface, gait, sr = 44100, seed = 1) {
+// Render all variants of one surface and gait (sample rate sr): [Float32Array] at the gait's level; exported for checks
+export async function renderSteps(surface, gait, sr = 44100, seed = 1) {
   const c = new OfflineAudioContext(1, Math.ceil(VARIANTS * SLOT * sr), sr);
   const R = mulberry32(seed * 7919 + SOUNDS.indexOf(surface) * 131 + Object.keys(GAITS).indexOf(gait));
   const k = kit(c, R), w = GAITS[gait];
@@ -175,7 +212,7 @@ onAudioStart((ac, output) => {
   });
 });
 
-// One footfall on `surface` (SURFACES or 'ladder') at `gait` (walk, run, land). pan: -1..1
+// One footfall on `surface` (SURFACES or a ladder's sound, LADDER_STYLES) at `gait` (walk, run, land). pan: -1..1
 export function footstep(surface, gait = 'walk', { volume = 1, pan = 0 } = {}) {
   const bank = banks[`${surface}/${gait}`];
   if (!ctx || ctx.state !== 'running' || !bank) return;
