@@ -1,5 +1,6 @@
-// Render-only discovered cubes: merged terrain/wood and fluids, no simulation, props,
-// lights or shadows. Geometry is cached; materials remain cube-local for travel fades.
+// Render-only discovered cubes: merged terrain/wood and fluids and the cube's landmarks (the only
+// props shown), no simulation, lights or shadows. Geometry is cached; materials remain cube-local
+// for travel fades.
 import * as THREE from 'three';
 import { N, CUBE_H, BASE, FLUIDS } from '../core/constants.js';
 import { VIEW_DISTANCE, distanceFade } from '../core/viewdistance.js';
@@ -9,6 +10,7 @@ import { toGeometry } from './builder.js';
 import { makeFadable, setFade, setRangeFade } from './fade.js';
 import { makeGlass, setGlassFaces } from './glass.js';
 import { inject } from './cutshader.js';
+import { props } from '../core/propcatalog.js';
 
 let current = [];   // [{ key, group, cull, base, glass, geometry }]
 const live = new Set(), cache = new Map();   // cache keyed by worker geometry identity
@@ -68,10 +70,16 @@ function proxyMaterial(mat) {
   return mat;
 }
 
-function proxy(geo, open) {
+// landmarks: [{ name, x, y, z, yaw }] (map.rewardSites[].landmark); their geometry is the catalog's
+function proxy(geo, open, landmarks = []) {
   const geometry = geometryFor(geo), group = new THREE.Group(), cull = new THREE.Group();
   if (geometry.solid) group.add(new THREE.Mesh(geometry.solid, proxyMaterial(
     new THREE.MeshLambertMaterial({ vertexColors: true, color: 0x5f6672 }))));
+  for (const L of landmarks) for (const part of props.byName.get(L.name)?.parts || []) {
+    const mesh = new THREE.Mesh(part.geometry, proxyMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, color: 0x5f6672 })));
+    mesh.position.set(L.x, L.y, L.z); mesh.rotation.y = L.yaw;
+    group.add(mesh);
+  }
   if (geometry.fluid) group.add(new THREE.Mesh(geometry.fluid, proxyMaterial(
     new THREE.MeshLambertMaterial({ color: 0x2e6aa8, transparent: true, opacity: 0.6, depthWrite: false }))));
   const glass = makeGlass(0.6, open);
@@ -85,9 +93,9 @@ function proxy(geo, open) {
 // Reuse common cubes across refreshes and travel. Consume them from `reuse` so callers
 // dispose/fade only the departing proxies. The full source/destination keep their own fades.
 export function buildNeighbors(list, reuse = []) {
-  return list.map(({ key, geo, dx, dz, open }) => {
+  return list.map(({ key, geo, dx, dz, open, landmarks }) => {
     const index = reuse.findIndex(g => g.key === key && g.source === geo);
-    const g = index < 0 ? { key, source: geo, ...proxy(geo, open), base: new THREE.Vector3() }
+    const g = index < 0 ? { key, source: geo, ...proxy(geo, open, landmarks), base: new THREE.Vector3() }
       : reuse.splice(index, 1)[0];
     g.continuing = index >= 0;
     g.base.set(dx * N, 0, dz * N);

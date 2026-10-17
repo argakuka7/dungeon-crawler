@@ -470,8 +470,8 @@ are built, seeded by the cube.
 - **Shore:** only beside fluids; **water props:** only on matching fluid surfaces.
 - **Lip props:** drape over cliff tops with sufficient hanging clearance.
 - **Signature assets:** reserved for deliberate destination recipes, not uniform scatter.
-  So are the theme library's landmarks (bigger than a cell) and string segments (`line`),
-  which nothing places yet.
+  So are the theme library's landmarks (bigger than a cell; reward sites place them, see
+  below) and string segments (`line`, which nothing places yet).
 
 They are drawn as one instanced mesh per prop (and per material part), with per-cube
 material clones so they fade and get cut with their cube. Props with `sway` bend in the
@@ -483,6 +483,19 @@ Each stratum budgets four optional destinations, preferring branch cubes: two ba
 one uncommon, and one rare (occasionally exceptional). Prestige and site identity are
 fixed before terrain retries and are independent of asset loading. Larger prestige
 reserves more space; difficulty/encounter selection is a separate concern.
+
+The rare (or exceptional) one is built around one of the theme's **landmarks**
+(`assets/themes.glb`, see [the theme library](assets/themes.md#landmarks)), chosen with the plan:
+the next depth of the same theme gets the theme's next landmark. The site is laid out by the
+landmark's role: a shrine with the chest in front of it, a gate with the chest behind it (the
+way in leads through), a camp or monument beside the chest. Landmarks face the approach and
+stand on quarter turns. Their colliders (boxes derived from the mesh) block the site's cells
+the character could not stand on, and of two free neighbours with a wall between them the one
+nearer the wall, so the route search only uses ground the character can walk; under a
+landmark's overhangs no structure is built. The map gets the colliders, occluders for the
+cutaway and `rewardSites[].landmark` (its place, turn and flag anchors). Landmarks also show
+in the low-detail surroundings. Over 3 worlds, 56 of 57 landmark sites come about
+(`tests/landmarks.test.js`).
 
 Mines have storage rooms, galleries and excavation pits; ruins have burial alcoves,
 halls and courtyards. The generator reserves their interior footprints before slabs,

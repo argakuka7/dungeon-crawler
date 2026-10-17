@@ -11,7 +11,9 @@ export function placeStructures(ctx) {
   const cellLists = () => Array.from({ length: N * N }, () => []);
   const pieces = cellLists(), claims = cellLists(), walkedIn = cellLists(), sweeps = cellLists(), runCells = cellLists();
   for (const f of falls) claims[f.c].push({ c: f.c, lo: f.bot, hi: f.top });
-  for (const f of ctx.floors) if (f.siteBlocked) claims[f.c].push({ c: f.c, lo: f.top, hi: f.siteBlockTop });
+  // site dressing, and the space a landmark's overhangs (lintels, roofs) take over the floor under them
+  for (const f of ctx.floors) if (f.siteBlocked || f.siteClaimTop)
+    claims[f.c].push({ c: f.c, lo: f.top, hi: f.siteBlocked ? f.siteBlockTop : f.siteClaimTop });
   for (const f of pathFloors) walkedIn[f.c].push(f);
   // vertical space the ball sweeps through when it walks or drops into a column
   for (const m of moves) if (!m.cells.length && !m.to.landing) sweeps[m.to.c].push([Math.min(m.from.top, m.to.top), Math.max(m.from.top, m.to.top) + 2]);

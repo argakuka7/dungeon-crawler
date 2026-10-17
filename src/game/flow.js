@@ -227,8 +227,10 @@ export function settleIn(neighbors = true) {
 // Discovered cubes within the render budget, on the active stratum only.
 export function visitedNeighbors(k) {
   if (!state.showNeighbors || isInterior(k)) return [];   // inside a house: nothing around
+  // (landmarks show in the surroundings too: they are what you find your way by)
   return discoveredCubes(state.cubes.cubes, k)
-    .map(c => ({ ...c, open: openedSides(state.openedFaces, c.key) }));
+    .map(c => ({ ...c, open: openedSides(state.openedFaces, c.key),
+      landmarks: (state.cubes.cubes.get(c.key).map.rewardSites || []).map(s => s.landmark).filter(Boolean) }));
 }
 
 export function updateNeighbors() {

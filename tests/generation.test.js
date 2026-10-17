@@ -117,7 +117,7 @@ test('site collider bounds come from worker-safe metadata, not runtime asset rea
   for (const p of m.sitePlacements) {
     const metadata = propMetadata.get(p.name);
     assert.ok(metadata);
-    if (!metadata.blocking) continue;
+    if (!metadata.blocking || metadata.landmark) continue;   // landmarks: boxes (tests/landmarks.test.js)
     const list = m.staticBlockers[Math.floor(p.z) * N + Math.floor(p.x)];
     const b = list.find(b => b.x === p.x && b.z === p.z);
     assert.equal(b.r, metadata.radius * p.s);

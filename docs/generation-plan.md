@@ -176,8 +176,8 @@ so ancient ruins and lava chambers do not default to wooden cliff fences.
 - Correct fluid/shore/lip placement and no floating cover or insufficient headroom.
 - Track actual versus requested sites, retry counts and generation time by biome.
 - Browser checks for framing, cutaway, approach readability, lighting and travel.
-  Terrain landmarks should survive low-detail neighbor rendering, which currently
-  omits props; add simplified landmark geometry where necessary.
+  Terrain landmarks should survive low-detail neighbor rendering, which omits props
+  except the reward sites' landmarks (`render/neighbors.js`).
 
 ## Implemented first slice
 

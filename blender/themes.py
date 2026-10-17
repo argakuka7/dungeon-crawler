@@ -22,7 +22,11 @@ library adds:
                       e.g. the top of a flag pole or a chorten's spire.
     fluid "honey"     a new fluid for the honey hive.
 
-Builders live in themes_highlands.py, themes_surface.py and themes_caves.py.
+Builders live in themes_highlands.py, themes_surface.py and themes_caves.py; the classic
+themes' landmarks (the sets of props.py and clutter.py) in themes_classic.py.
+
+Landmarks also get a role (how a reward site is built around them) and two lists of boxes
+derived from their mesh (volumes()): colliders and occluders for the cutaway.
 
 Headless (build, validate, export, save the showroom, render previews):
     Blender -b --python blender/themes.py -- [output-directory] [--no-render]
@@ -54,6 +58,7 @@ import clutter  # noqa: E402
 import themes_highlands  # noqa: E402
 import themes_surface  # noqa: E402
 import themes_caves  # noqa: E402
+import themes_classic  # noqa: E402
 
 SEED = 9137
 COLLECTION = "CubeCrawlerThemes"
@@ -61,10 +66,12 @@ PREVIEW = "ThemesPreview_NOT_EXPORTED"
 VIGNETTE = "ThemesVignette_NOT_EXPORTED"
 FLUIDS = clutter.FLUIDS + ("honey",)
 LANDMARK_RADIUS = 1.75
+ROLES = ("shrine", "gate", "camp", "monument")
 LANDMARK_TRIANGLES = 4000
 LINE_TRIANGLES = 400
-EXTRA_KEYS = clutter.EXTRA_KEYS + ("drop", "landmark", "footprint", "height", "anchors")
-BUILDERS = (themes_highlands, themes_surface, themes_caves)
+EXTRA_KEYS = clutter.EXTRA_KEYS + ("drop", "landmark", "role", "footprint", "height", "anchors", "colliders",
+                                   "occluders")
+BUILDERS = (themes_highlands, themes_surface, themes_caves, themes_classic)
 
 
 def spec(theme, prop, priority=1, variants=2, attach="ground", **hints):
@@ -75,8 +82,15 @@ def cover(theme, prop, priority=1, **hints):
     return spec(theme, prop, priority, cover=True, max_radius=clutter.COVER_RADIUS, **hints)
 
 
-def landmark(theme, prop, priority=1, variants=1, **hints):
-    return spec(theme, prop, priority, variants, landmark=True, blocking=True, max_radius=None, **hints)
+def landmark(theme, prop, role, priority=1, variants=1, **hints):
+    """A landmark and how a reward site is built around it (the game: cubegen/sites.js):
+    shrine   the chest stands in front of it
+    gate     you walk through it (its colliders leave a passage along glTF Z at x = 0) to the
+             chest behind it
+    camp     the chest stands beside it, with a few small things around
+    monument it stands beside the chest and frames it"""
+    assert role in ROLES, role
+    return spec(theme, prop, priority, variants, landmark=True, role=role, blocking=True, max_radius=None, **hints)
 
 
 def line(theme, prop, priority=1, variants=2, **hints):
@@ -104,10 +118,10 @@ SPECS = [
     spec("highlands", "tsatsa_niche", attach="wall"),
     spec("highlands", "glacier_floe", attach="water", fluid="water"),
     line("highlands", "flag_run", sway=0.6),
-    landmark("highlands", "chorten_great", light="#ffd080", intensity=0.8),
-    landmark("highlands", "nomad_tent"),
-    landmark("highlands", "mani_wall"),
-    landmark("highlands", "hermitage"),
+    landmark("highlands", "chorten_great", "shrine", light="#ffd080", intensity=0.8),
+    landmark("highlands", "nomad_tent", "camp"),
+    landmark("highlands", "mani_wall", "monument"),
+    landmark("highlands", "hermitage", "camp"),
     # --- Karst and rice terraces: limestone needles, flooded steps, bamboo, mist ---
     cover("karst", "rice_shoots", sway=0.4),
     cover("karst", "moss_stones"),
@@ -121,8 +135,8 @@ SPECS = [
     spec("karst", "bamboo_raft", attach="water", fluid="water"),
     spec("karst", "fern_curtain", attach="lip", sway=0.35),
     spec("karst", "wall_shrine", attach="wall", light="#ffb060", intensity=0.8),
-    landmark("karst", "pavilion"),
-    landmark("karst", "karst_tower"),
+    landmark("karst", "pavilion", "camp"),
+    landmark("karst", "karst_tower", "monument"),
     # --- Cloud kingdom: islands on cloud banks, wind, the Wolks' home ---
     cover("clouds", "cloud_tufts"),
     cover("clouds", "wind_feathers"),
@@ -134,8 +148,8 @@ SPECS = [
     spec("clouds", "weather_vane", blocking=True),
     spec("clouds", "cloud_spill", attach="lip", sway=0.2),
     spec("clouds", "raincloud", attach="ceiling", sway=0.15),
-    landmark("clouds", "sky_gate"),
-    landmark("clouds", "wind_harp"),
+    landmark("clouds", "sky_gate", "monument"),
+    landmark("clouds", "wind_harp", "monument"),
     # --- Salt flats: white crust, a thin mirror of water, pink crystals, flamingos ---
     cover("saltflats", "salt_crust"),
     cover("saltflats", "salt_crystals"),
@@ -148,8 +162,8 @@ SPECS = [
     spec("saltflats", "brine_crystals", attach="water", fluid="water"),
     spec("saltflats", "wading_flamingo", attach="water", fluid="water"),
     spec("saltflats", "salt_crust_lip", attach="lip"),
-    landmark("saltflats", "salt_harvest"),
-    landmark("saltflats", "salt_arch"),
+    landmark("saltflats", "salt_harvest", "camp"),
+    landmark("saltflats", "salt_arch", "gate"),
     # --- Tropical lagoon: archipelago over turquoise water, sand, palms, wrecks ---
     cover("lagoon", "shell_scatter"),
     cover("lagoon", "sand_ripples"),
@@ -163,8 +177,8 @@ SPECS = [
     spec("lagoon", "coral_head", attach="water", fluid="water"),
     spec("lagoon", "seaweed_drape", attach="lip", sway=0.3),
     spec("lagoon", "barnacles", attach="wall"),
-    landmark("lagoon", "shipwreck"),
-    landmark("lagoon", "stilt_hut"),
+    landmark("lagoon", "shipwreck", "camp"),
+    landmark("lagoon", "stilt_hut", "camp"),
     # --- Honey hive (cave): wax cells, honey as a slow fluid, candles ---
     cover("hive", "wax_flakes"),
     cover("hive", "pollen_dust"),
@@ -179,8 +193,8 @@ SPECS = [
     spec("hive", "wall_comb", attach="wall", light="#ffb030", intensity=0.5),
     spec("hive", "honey_drips", attach="ceiling", sway=0.1),
     spec("hive", "honey_overflow", attach="lip"),
-    landmark("hive", "comb_tower", light="#ffb030", intensity=1),
-    landmark("hive", "royal_cell", light="#ffe090", intensity=1.5),
+    landmark("hive", "comb_tower", "monument", light="#ffb030", intensity=1),
+    landmark("hive", "royal_cell", "shrine", light="#ffe090", intensity=1.5),
     # --- Sunlit cenote (cave): a jungle under a hole in the sky, jade, vines ---
     cover("cenote", "jungle_litter"),
     cover("cenote", "jade_shards"),
@@ -194,8 +208,8 @@ SPECS = [
     spec("cenote", "jungle_drape", attach="lip", sway=0.35),
     spec("cenote", "glyph_panel", attach="wall"),
     spec("cenote", "cenote_lilies", attach="water", fluid="water"),
-    landmark("cenote", "step_shrine"),
-    landmark("cenote", "ceiba_roots"),
+    landmark("cenote", "step_shrine", "shrine"),
+    landmark("cenote", "ceiba_roots", "monument"),
     # --- Sunken grotto (cave): flooded, bioluminescent, kelp and jellies ---
     cover("grotto", "sea_glass", light="#7fe0ff", intensity=0.4),
     cover("grotto", "pearl_sand"),
@@ -209,8 +223,8 @@ SPECS = [
     spec("grotto", "glow_strands", attach="ceiling", light="#7fe8ff", intensity=0.6, sway=0.2),
     spec("grotto", "coral_wall", attach="wall", light="#ff9ad0", intensity=0.4),
     spec("grotto", "kelp_drape", attach="lip", sway=0.4),
-    landmark("grotto", "sunken_bell"),
-    landmark("grotto", "giant_shell", light="#9ae0ff", intensity=1),
+    landmark("grotto", "sunken_bell", "monument"),
+    landmark("grotto", "giant_shell", "shrine", light="#9ae0ff", intensity=1),
     # --- Dwarven forge (cave): gears, pipes, steam vents, furnaces ---
     cover("forge", "metal_shavings"),
     cover("forge", "slag_bits", light="#ff7030", intensity=0.4),
@@ -226,8 +240,8 @@ SPECS = [
     spec("forge", "chain_hoist", attach="ceiling", sway=0.15),
     spec("forge", "slag_raft", attach="water", fluid="lava", light="#ff6020", intensity=0.8),
     spec("forge", "pipe_bend", attach="lip"),
-    landmark("forge", "great_gear"),
-    landmark("forge", "furnace", light="#ff7a30", intensity=2),
+    landmark("forge", "great_gear", "monument"),
+    landmark("forge", "furnace", "shrine", light="#ff7a30", intensity=2),
     # --- Ossuary catacombs (cave): bones in neat rows, candles, quiet ---
     cover("ossuary", "bone_dust"),
     cover("ossuary", "candle_stubs", light="#ffb060", intensity=0.5),
@@ -240,8 +254,31 @@ SPECS = [
     spec("ossuary", "candle_niche", attach="wall", light="#ffb060", intensity=0.8),
     spec("ossuary", "bone_chandelier", attach="ceiling", light="#ffc070", intensity=1.2, sway=0.15),
     spec("ossuary", "skull_ledge", attach="lip"),
-    landmark("ossuary", "bone_arch"),
-    landmark("ossuary", "crypt_shrine", light="#ffb060", intensity=1),
+    landmark("ossuary", "bone_arch", "gate"),
+    landmark("ossuary", "crypt_shrine", "shrine", light="#ffb060", intensity=1),
+    # --- the classic themes' landmarks (themes_classic.py) ---
+    landmark("meadow", "windmill", "monument"),
+    landmark("meadow", "wishing_well", "shrine"),
+    landmark("peaks", "expedition_camp", "camp"),
+    landmark("peaks", "ice_arch", "gate"),
+    landmark("badlands", "covered_wagon", "camp"),
+    landmark("badlands", "windpump", "monument"),
+    landmark("roots", "root_gate", "gate"),
+    landmark("roots", "hollow_stump", "shrine"),
+    landmark("frozen", "ice_throne", "shrine", light="#9fd8ff", intensity=1),
+    landmark("frozen", "frozen_falls", "monument"),
+    landmark("swamp", "giant_toadstool", "monument", light="#8fff7a", intensity=1.2),
+    landmark("swamp", "witch_hut", "camp", light="#8fff7a", intensity=1),
+    landmark("nests", "web_gate", "gate"),
+    landmark("nests", "brood_cluster", "monument"),
+    landmark("mines", "headframe", "gate", light="#ffcf8a", intensity=1.5),
+    landmark("mines", "giant_geode", "shrine", light="#c08fff", intensity=1.5),
+    landmark("ruins", "temple_gate", "gate"),
+    landmark("ruins", "colossus_head", "monument"),
+    landmark("volcanic", "fire_shrine", "shrine", light="#ff6a20", intensity=2),
+    landmark("volcanic", "fumarole", "monument", light="#ff7a30", intensity=1.5),
+    landmark("abyss", "chained_obelisk", "monument", light="#ff3030", intensity=1.2),
+    landmark("abyss", "void_throne", "shrine", light="#a050ff", intensity=1.5),
 ]
 SETS = list(dict.fromkeys(s[0] for s in SPECS))
 FLUID_COLORS = {"water": "#3f6f88", "lava": "#d0501a", "acid": "#7ab030", "honey": "#d89020"}
@@ -279,7 +316,7 @@ def build(scene=None, priority=None):
             obj = props.finish(m, name, attach, info, collection)
             obj["priority"] = p
             obj["cube_crawler_themes"] = True
-            for key in ("cover", "shore", "fluid", "landmark"):
+            for key in ("cover", "shore", "fluid", "landmark", "role"):
                 if key in info:
                     obj[key] = info[key]
             if attach == "lip":
@@ -288,6 +325,7 @@ def build(scene=None, priority=None):
                 lo, hi = bounds(obj)
                 obj["footprint"] = [round(hi[0] - lo[0], 3), round(hi[1] - lo[1], 3)]
                 obj["height"] = round(hi[2], 3)
+                obj["colliders"], obj["occluders"] = volumes(obj)
             if m.anchors:
                 # Blender (x, y, z) -> glTF (x, z, -y)
                 obj["anchors"] = [[round(x, 4), round(z, 4), round(-y, 4)] for x, y, z in m.anchors]
@@ -300,6 +338,139 @@ def bounds(obj):
     return ([min(v.co[k] for v in vs) for k in range(3)], [max(v.co[k] for v in vs) for k in range(3)])
 
 
+# --- landmark volumes: what the game collides with and cuts away --------------
+GRID = 0.125      # cells the mesh is sampled on
+STEP_UP = 0.3     # the game's STEP: anything lower is walked over
+HEAD_UP = 1.3     # over the character's head (1.1): higher parts (arches, roofs) leave room under them
+CHAR_R = 0.22     # the game's CHAR_R
+
+
+def _clip(poly, axis, value, above):
+    """Sutherland-Hodgman: the part of a convex polygon on one side of an axis plane."""
+    out = []
+    for a, b in zip(poly, poly[1:] + poly[:1]):
+        ia, ib = (a[axis] >= value) == above, (b[axis] >= value) == above
+        if ia:
+            out.append(a)
+        if ia != ib:
+            t = (value - a[axis]) / (b[axis] - a[axis])
+            out.append(tuple(a[k] + (b[k] - a[k]) * t for k in range(3)))
+    return out
+
+
+def _columns(obj):
+    """Sample the mesh on a GRID x GRID raster of vertical columns (Blender XY): per column the
+    lowest and highest geometry (ignoring what lies under STEP_UP), whether any of it is in the
+    walking band [STEP_UP, HEAD_UP], and the lowest geometry above that band."""
+    mesh = obj.data
+    mesh.calc_loop_triangles()
+    vs = [tuple(v.co) for v in mesh.vertices]
+    cols = {}
+    for tri in mesh.loop_triangles:
+        pts = [vs[i] for i in tri.vertices]
+        if max(p[2] for p in pts) < STEP_UP:
+            continue
+        for i in range(math.floor(min(p[0] for p in pts) / GRID), math.floor(max(p[0] for p in pts) / GRID) + 1):
+            strip = _clip(_clip(pts, 0, i * GRID, True), 0, (i + 1) * GRID, False)
+            if len(strip) < 3:
+                continue
+            for j in range(math.floor(min(p[1] for p in strip) / GRID),
+                           math.floor(max(p[1] for p in strip) / GRID) + 1):
+                part = _clip(_clip(strip, 1, j * GRID, True), 1, (j + 1) * GRID, False)
+                if len(part) < 3:
+                    continue
+                lo, hi = min(p[2] for p in part), max(p[2] for p in part)
+                if hi < STEP_UP:
+                    continue
+                c = cols.setdefault((i, j), [math.inf, -math.inf, False, math.inf])
+                c[0], c[1] = min(c[0], lo), max(c[1], hi)
+                c[2] = c[2] or lo < HEAD_UP
+                if hi >= HEAD_UP:
+                    c[3] = min(c[3], max(lo, HEAD_UP))
+    # inside closed solids (a tower's hollow, the middle of a stump) nothing is sampled in the
+    # band, but nobody gets in there either: what the band's walls enclose is solid
+    walls = {c for c, v in cols.items() if v[2]}
+    if walls:
+        x0, x1 = min(c[0] for c in walls) - 1, max(c[0] for c in walls) + 1
+        y0, y1 = min(c[1] for c in walls) - 1, max(c[1] for c in walls) + 1
+        seen, stack = {(x0, y0)}, [(x0, y0)]
+        while stack:
+            x, y = stack.pop()
+            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if x0 <= n[0] <= x1 and y0 <= n[1] <= y1 and n not in seen and n not in walls:
+                    seen.add(n)
+                    stack.append(n)
+        top = max(v[1] for v in cols.values())
+        for c in ((x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)):
+            if c not in seen and c not in walls:
+                cols[c] = [0.0, max(top if c not in cols else cols[c][1], STEP_UP), True, math.inf]
+    return cols
+
+
+def _merge(keys):
+    """Greedy rectangles of equal keys: [(i0, j0, i1, j1, key)] over raster cells."""
+    done, out = set(), []
+    for i, j in sorted(keys, key=lambda c: (c[1], c[0])):
+        if (i, j) in done:
+            continue
+        k = keys[(i, j)]
+        i1 = i
+        while keys.get((i1 + 1, j)) == k and (i1 + 1, j) not in done:
+            i1 += 1
+        j1 = j
+        while all(keys.get((x, j1 + 1)) == k and (x, j1 + 1) not in done for x in range(i, i1 + 1)):
+            j1 += 1
+        done.update((x, y) for x in range(i, i1 + 1) for y in range(j, j1 + 1))
+        out.append((i, j, i1 + 1, j1 + 1, k))
+    return out
+
+
+def _box(i0, j0, i1, j1, bottom, top):
+    """Raster rectangle (Blender XY) -> [x0, z0, x1, z1, bottom, top] in glTF space (z = -y)."""
+    return [round(i0 * GRID, 3), round(-j1 * GRID, 3), round(i1 * GRID, 3), round(-j0 * GRID, 3),
+            round(bottom, 3), round(top, 3)]
+
+
+def volumes(obj):
+    """A landmark's boxes for the game, derived from its mesh: `colliders` stand wherever there
+    is geometry in the walking band, from the ground to its top (walls, legs, trunks), or hang
+    over the band (lintels, roofs: ceilings you cannot jump through); `occluders` cover all of
+    it for the cutaway. Both as [x0, z0, x1, z1, bottom, top] in glTF space."""
+    cols = _columns(obj)
+    q = 0.5   # heights in half units, whole ones over 2 (nobody stands that high next to it): fewer boxes
+    down = lambda z: math.floor(z / q + 1e-6) * q  # noqa: E731
+    up = lambda z: math.ceil(z / q - 1e-6) * q if z <= 2 else float(math.ceil(z - 1e-6))  # noqa: E731
+    # colliders on a raster twice as coarse (a quarter cell; the character is 0.22 wide)
+    blocks = {}
+    for (i, j), (lo, hi, walk, over) in cols.items():
+        b = blocks.setdefault((i // 2, j // 2), [-math.inf, False, math.inf])
+        b[0], b[1], b[2] = max(b[0], hi), b[1] or walk, min(b[2], over)
+    solid = {}
+    for c, (hi, walk, over) in blocks.items():
+        if walk:
+            solid[c] = (0.0, up(hi))
+        elif over < math.inf:
+            bottom = max(HEAD_UP - 0.05, down(over))
+            solid[c] = (bottom, max(up(hi), bottom + q))
+    colliders = [_box(i0 * 2, j0 * 2, i1 * 2, j1 * 2, *k) for i0, j0, i1, j1, k in _merge(solid)]
+    # the cutaway only needs the rough shape: two raster cells a side, half-unit heights
+    coarse = {}
+    for (i, j), (lo, hi, walk, _) in cols.items():
+        c = (i // 2, j // 2)
+        lo = 0.0 if walk else lo
+        a, b = coarse.get(c, (math.inf, -math.inf))
+        coarse[c] = (min(a, lo), max(b, hi))
+    half = {c: (math.floor(lo * 2) / 2, math.ceil(hi * 2) / 2) for c, (lo, hi) in coarse.items()}
+    occluders = [_box(i0 * 2, j0 * 2, i1 * 2, j1 * 2, *k) for i0, j0, i1, j1, k in _merge(half)]
+    return colliders, occluders
+
+
+def passage(colliders, half=CHAR_R + 0.05):
+    """Is there a way straight through along glTF Z at x = 0 under head height (gates)? As wide
+    as the game needs to keep the cells there walkable (cubegen/sites.js landmarkCells)."""
+    return not any(b[0] < half and b[2] > -half and b[4] < HEAD_UP - 0.2 for b in colliders)
+
+
 def validate(objects):
     """Fail on attachment, budget, transform, colour or naming regressions."""
     names = {o.name for o in objects}
@@ -307,7 +478,9 @@ def validate(objects):
     taken = {f"{t}_{p}_{chr(97 + v)}" for t, p, _, _, n, _, _ in props.SPECS for v in range(n)}
     taken |= {f"{t}_{p}_{chr(97 + v)}" for t, p, _, n, _, _ in clutter.SPECS for v in range(n)}
     assert not names & taken, sorted(names & taken)
-    assert not set(SETS) & set(clutter.SETS), "theme sets must be new"
+    # the classic sets (props.py, clutter.py) only get landmarks here
+    for s in SPECS:
+        assert s[0] not in clutter.SETS or s[5].get("landmark"), f"{s[0]}_{s[1]}: classic sets only get landmarks"
     report, failures = [], []
     for obj in objects:
         try:
@@ -326,11 +499,17 @@ def check(obj):
         entry = check_big(obj)
     for key in EXTRA_KEYS:
         if key in obj and key not in entry:
-            value = obj[key]
-            entry[key] = value.to_list() if hasattr(value, "to_list") else value
-    if "anchors" in entry:
-        entry["anchors"] = [list(a) for a in entry["anchors"]]
+            entry[key] = plain(obj[key])
     return entry
+
+
+def plain(value):
+    """ID property values (arrays, nested lists) as plain JSON values."""
+    if hasattr(value, "to_list"):
+        value = value.to_list()
+    if isinstance(value, (list, tuple)) or hasattr(value, "__len__") and not isinstance(value, str):
+        return [plain(v) for v in value]
+    return value
 
 
 def check_big(obj):
@@ -356,6 +535,11 @@ def check_big(obj):
     else:
         assert attach == "ground" and abs(lo[2]) < 1e-6 and hi[2] > 0, obj.name
         assert obj["radius"] <= LANDMARK_RADIUS + 1e-4, (obj.name, obj["radius"])
+        colliders = [list(b) for b in obj["colliders"]]
+        assert colliders and obj["occluders"], obj.name
+        assert len(colliders) <= 80, (obj.name, len(colliders))
+        assert all(b[0] < b[2] and b[1] < b[3] and 0 <= b[4] < b[5] for b in colliders), obj.name
+        assert obj["role"] != "gate" or passage(colliders), (obj.name, "no passage at x = 0")
     glowing = any(p.material_index == 1 for p in mesh.polygons)
     assert glowing == ("light" in obj), obj.name
     if glowing:
@@ -490,9 +674,10 @@ def setup_preview(scene, objects):
                     slab(f"Post_{obj.name}_{px:.2f}", (px - 0.03, y - 0.03, 0), (px + 0.03, y + 0.03, 1.65), wood)
             label(f"{s[1]} (line)", (x + 0.5, oy - 0.8, 0.02))
             x += 1.6
-        title = label(theme.upper(), (-0.7, oy - 1.45, 0.02), size=0.32, name="Title_" + theme)
-        title.data.align_x = "LEFT"
-        blocks[theme] = (-1.0, max(x, 6), oy, top, members + [o for o in preview.objects if o not in start])
+        if members:   # (the classic sets only have landmarks here)
+            title = label(theme.upper(), (-0.7, oy - 1.45, 0.02), size=0.32, name="Title_" + theme)
+            title.data.align_x = "LEFT"
+            blocks[theme] = (-1.0, max(x, 6), oy, top, members + [o for o in preview.objects if o not in start])
         # landmarks: their own row behind the props
         lx, ly, ltop = 0.0, oy + 5.5, 2.0
         start = set(preview.objects)

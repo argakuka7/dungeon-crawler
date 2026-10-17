@@ -4,11 +4,12 @@
 
 ![Prayer highlands vignette](../../blender/previews/themes/highlands-vignette.png)
 
-Artwork for ten alternative themes: **137 prop types, 274 meshes, 71,636 triangles**. These
-were built and checked through Blender MCP. The style and contract are the same as
-`blender/clutter.py` (low-poly, flat-shaded, vertex-coloured, one mesh per prop).
-**Hooked up to the game** as themes a world may pick instead of the classic ones (see
-"Integration"); landmarks, flag lines and the honey fluid are not placed or built yet.
+Artwork for ten alternative themes, and landmarks for the eleven classic ones: **159 prop
+types, 296 meshes, 82,017 triangles**. These were built and checked through Blender MCP. The
+style and contract are the same as `blender/clutter.py` (low-poly, flat-shaded,
+vertex-coloured, one mesh per prop). **Hooked up to the game** as themes a world may pick
+instead of the classic ones, and every depth builds its major reward site around one of its
+theme's landmarks (see "Integration"); flag lines and the honey fluid are not built yet.
 
 ## Files
 
@@ -17,10 +18,10 @@ were built and checked through Blender MCP. The style and contract are the same 
 - `blender/themes_geo.py`: shared helpers (cloth sheets, ribbons, lettering, lofts,
   wobble/streaks for rock) and the palette (`LUNGTA`, `WHITEWASH`, `MAROON`, `GOLD`, ...).
 - `blender/themes_highlands.py`, `blender/themes_surface.py`, `blender/themes_caves.py`:
-  the builders.
+  the builders; `blender/themes_classic.py`: the classic themes' landmarks.
 - `assets/themes.glb`: the combined library, with every prop a named root at the origin.
 - `assets/themes/manifest.json`: per-prop set, attach, flags, triangles, sizes, bounds,
-  footprint/height/anchors.
+  footprint/height/anchors, and the landmarks' role, colliders and occluders.
 - `blender/themes.blend`: the editable showroom. Each set gets a block (ground props in columns, a
   cliff with wall/lip props, a pool for water props and a slab for ceiling props), plus a
   landmark row and the highlands vignette scene.
@@ -70,6 +71,37 @@ were built and checked through Blender MCP. The style and contract are the same 
 | ossuary | `bone_dust` (ground; cover), `candle_stubs` (ground; cover; light #ffb060), `skull_pile` (ground), `candelabra` (ground; light #ffc070), `sarcophagus` (ground; blocking), `funeral_urn` (ground), `bone_lantern` (ground; light #ffc070), `skull_wall` (wall), `candle_niche` (wall; light #ffb060), `bone_chandelier` (ceiling; light #ffc070; sway 0.15), `skull_ledge` (lip) |
 | ossuary landmarks | `bone_arch`, `crypt_shrine` (light #ffb060) |
 
+### Landmarks
+
+Every theme has at least two (the highlands four). Their role says how a reward site is built
+around them (`cubegen/sites.js`):
+
+| Role | Site | Landmarks |
+|---|---|---|
+| shrine | the chest stands in front of it | `chorten_great`, `royal_cell`, `step_shrine`, `giant_shell`, `furnace`, `crypt_shrine`, `wishing_well`, `hollow_stump`, `ice_throne`, `giant_geode`, `fire_shrine`, `void_throne` |
+| gate | you walk through it to the chest behind it | `salt_arch`, `bone_arch`, `ice_arch`, `root_gate`, `web_gate`, `headframe`, `temple_gate` |
+| camp | the chest stands beside it, with small things of the theme around | `nomad_tent`, `hermitage`, `pavilion`, `salt_harvest`, `shipwreck`, `stilt_hut`, `expedition_camp`, `covered_wagon`, `witch_hut` |
+| monument | it stands beside the chest, reaching back | `mani_wall`, `karst_tower`, `sky_gate`, `wind_harp`, `comb_tower`, `ceiba_roots`, `sunken_bell`, `great_gear`, `windmill`, `windpump`, `frozen_falls`, `giant_toadstool`, `brood_cluster`, `colossus_head`, `fumarole`, `chained_obelisk` |
+
+The classic themes' landmarks (`themes_classic.py`): meadow `windmill`, `wishing_well`; peaks
+`expedition_camp`, `ice_arch`; badlands `covered_wagon`, `windpump`; roots `root_gate`,
+`hollow_stump`; frozen `ice_throne`, `frozen_falls`; swamp `giant_toadstool` (light #8fff7a),
+`witch_hut` (light #8fff7a); nests `web_gate`, `brood_cluster`; mines `headframe` (light
+#ffcf8a), `giant_geode` (light #c08fff); ruins `temple_gate`, `colossus_head`; volcanic
+`fire_shrine` (light #ff6a20), `fumarole` (light #ff7a30); abyss `chained_obelisk` (light
+#ff3030), `void_throne` (light #a050ff). They are named after the classic sets
+(`meadow_windmill_a`) but only live in `themes.glb`; the classic sets get nothing else here.
+
+Their colliders and occluders are derived from the mesh when the library is built
+(`volumes()` in `themes.py`, nothing authored by hand). The mesh is sampled on an eighth-cell
+raster of vertical columns. A column with geometry in the walking band (over a step, 0.3,
+under head height, 1.3) is solid from the ground to its top; what such columns enclose (a
+tower's inside) is solid too. A column with geometry only above the band (a lintel, a roof)
+is an overhang the character walks under but cannot jump through. Below 0.3 nothing counts:
+it is walked over like ground cover. Colliders are merged into boxes on a quarter-cell raster,
+occluders (for the cutaway) on the eighth-cell one with half-unit heights. Gates are checked to
+leave a way through along their Z axis at x = 0.
+
 Regular props come in `_a`/`_b` variants. Landmarks have a single variant. Object names are
 `<set>_<prop>_<a|b>`, matching `clutter.glb`, and no names collide with it.
 
@@ -80,7 +112,9 @@ Everything in `docs/assets/clutter.md` applies. In addition:
 | extra | meaning |
 |---|---|
 | `attach: "line"` | One segment of a hanging string. Origin at the string's start; it runs along glTF +X from 0 to 1 (one cell) at y = 0, flags hang below (y < 0), thin along Z. The game stretches it along a sagging curve. Shear each segment vertically (do not rotate it) so the flags keep hanging straight down. `string_segments()` in `themes.py` is the reference. ≤ 400 triangles. |
-| `landmark: true` | A ground prop bigger than one cell. It is a destination piece placed deliberately, like town buildings, and is never scattered. Radius ≤ 1.75, ≤ 4000 triangles. Adds `footprint` [x, z] in cells and `height`. |
+| `landmark: true` | A ground prop bigger than one cell. It is a destination piece placed deliberately, like town buildings, and is never scattered. Radius ≤ 1.75, ≤ 4000 triangles. Adds `footprint` [x, z] in cells and `height`. Its front (what faces the approach) is glTF +Z. |
+| `role` | Landmarks: `shrine`, `gate`, `camp` or `monument` (see "Landmarks"). |
+| `colliders` / `occluders` | Landmarks: `[x0, z0, x1, z1, bottom, top]` boxes in glTF space, derived from the mesh. |
 | `anchors` | Points in glTF space (Y up) where flag strings may be tied: pole tops, chorten spires, tent ridges, wall ends. |
 | `fluid: "honey"` | A new fluid for the hive. |
 
@@ -98,11 +132,17 @@ Done (see [world.md](../world.md#themes-per-world-themesindexjs-themescavesjs-th
 - `src/render/props.js` loads `themes.glb`; `src/core/propmetadata.js` includes it
   (`npm run prop-metadata`). The ambient scatter uses the sets' ground, cover, lip, wall and
   water props. Landmarks and `line` segments count as signature props: never scattered.
+- Landmarks: each depth's major reward site (rare or exceptional) is built around one of its
+  theme's landmarks, chosen with the site's plan (`world/sites.js`; the next depth of the same
+  theme gets the next one). The site is laid out by the landmark's role; its colliders block
+  the cells the character could not stand on, and its overhangs keep structures out
+  (`cubegen/sites.js placeLandmark`). The map gets the colliders (`staticBlockers`), the
+  occluders and `rewardSites[].landmark` ({ name, role, x, y, z, yaw, anchors in cube space }).
+  Landmarks also show in the low-detail surroundings (`render/neighbors.js`).
+  Checks: `tests/landmarks.test.js`.
 
 Still to do:
 
-- Landmarks: place them in reward sites (exceptional / rare) or as cube centrepieces, with
-  colliders from `footprint`.
 - Songs of their own (each alternative plays its slot's classic song) and enemy rosters that
   follow the theme (rosters go by depth: frost spiders in the highlands are fine, in the grotto
   less so).
@@ -115,7 +155,7 @@ Still to do:
 - Hive needs a honey fluid (slows instead of hurting); until then its rivers are water and
   `honey_bubbles` / `comb_raft` are never placed. Forge steam vents can reuse the gust push
   upwards.
-- `themes.glb` is 6.5 MB and loads with the other libraries before the game starts; loading
+- `themes.glb` is 7.5 MB and loads with the other libraries before the game starts; loading
   only the sets a world picked would save most of it.
 
 ## Rebuild

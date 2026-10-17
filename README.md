@@ -84,8 +84,8 @@ Blender -b --python blender/props.py          # likewise character, spider, stun
                                               # fireface, triangle, firecat, shraps, spicy, wolla, wolk, sword
 Blender -b --python blender/clutter.py        # libraries: clutter, items, town, town_trees
 Blender -b --python blender/tests/test_clutter.py
-Blender -b --python blender/themes.py         # the alternative themes' library (themes.glb;
-                                              # see docs/assets/themes.md)
+Blender -b --python blender/themes.py         # the alternative themes' library and every theme's
+                                              # landmarks (themes.glb; see docs/assets/themes.md)
 npm run prop-metadata                         # after props/clutter changes
 Blender -b --python blender/loadout.py        # the player with each kind of weapon and the
                                               # villagers (previews; -- --mounts solves the mounts
