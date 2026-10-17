@@ -193,7 +193,7 @@
     "src/render/blendtree.js#RATE": "15edf7fc",
     "src/render/blendtree.js#updateBlend": "76d4da42",
     "src/render/cutshader.js#CORNERS": "c447ab95",
-    "src/render/cutshader.js#REGION": "6a6e4a6f",
+    "src/render/cutshader.js#REGION": "aac12169",
     "src/render/fade.js#DITHER": "cccb8f0e",
     "src/render/scene.js#camera": "45385ecf",
     "src/render/scene.js#hemi": "b78f7517",

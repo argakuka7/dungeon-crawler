@@ -63,6 +63,25 @@ const REGION = `
     vec2 ndc = gl_FragCoord.xy / uRes * 2.0 - 1.0;
     return inPoly((ndc - uCenter) * vec2(uAspect, 1.0) / uRadius) ? 1.0 : 0.0;
   }
+  // whether something has been cut away in front of this point: it lies in the cutaway's shape
+  // on screen, or its line of sight to the camera leaves the box through a wall that has come
+  // down (frontWall), above where it was cut
+  bool underCut() {
+    if (uCutY < 999.0) {
+      vec2 ndc = gl_FragCoord.xy / uRes * 2.0 - 1.0;
+      if (inPoly((ndc - uCenter) * vec2(uAspect, 1.0) / uRadius)) return true;
+    }
+    if (!any(greaterThan(uFront, vec4(0.5)))) return false;
+    vec3 d = cameraPosition - vCutW;
+    // where the line of sight leaves the box (x0, x1, z0, z1) on its way to the camera
+    float tx = d.x > 1e-5 ? (uWallBox.y - vCutW.x) / d.x : d.x < -1e-5 ? (uWallBox.x - vCutW.x) / d.x : 1e9;
+    float tz = d.z > 1e-5 ? (uWallBox.w - vCutW.z) / d.z : d.z < -1e-5 ? (uWallBox.z - vCutW.z) / d.z : 1e9;
+    vec3 q = vCutW + clamp(min(tx, tz), 0.0, 1.0) * d;
+    if (q.y <= uWallY) return false;
+    vec4 e = vec4(uWallBox.y - q.x, q.x - uWallBox.x, uWallBox.w - q.z, q.z - uWallBox.z);
+    float b = uWallBand;
+    return any(bvec4(e.x < b && uFront.x > 0.5, e.y < b && uFront.y > 0.5, e.z < b && uFront.z > 0.5, e.w < b && uFront.w > 0.5));
+  }
   // caves and house interiors: the walls on the sides towards the camera are cut down
   // (+x, -x, +z, -z flags)
   bool frontWall() {
