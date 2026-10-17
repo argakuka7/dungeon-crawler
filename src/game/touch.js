@@ -3,11 +3,12 @@
 // the thumb lands, it pushes the way to move (a little: walk, further: run). On the right the
 // action button attacks while held (as Shift); with a flask in hand it is a stick that aims
 // the throw (core/stick.js aimReach): let go to throw, back to the middle to call it off, and a
-// tap throws at the best enemy in range. The jump button sits beside it. On the game itself a
-// tap does what a click does, except walking (an enemy, an item, a chest, a villager), a long
-// press collects what is around (as C), and two fingers pinch to zoom and twist to turn the
-// view. The quick bar moves to the top with a bag button (game/quickbar.js, style.css).
-import { stickVector, pinchStep, twistStep } from '../core/stick.js';
+// tap throws at the best enemy in range. The jump button sits beside it. A turn button at each
+// side of the screen turns the view a quarter (as Q and E). On the game itself a tap does what
+// a click does, except walking (an enemy, an item, a chest, a villager), a long press collects
+// what is around (as C), and two fingers pinch to zoom. The quick bar moves to the top with a
+// bag button (game/quickbar.js, style.css).
+import { stickVector, pinchStep } from '../core/stick.js';
 import { stepZoom } from '../core/zoom.js';
 import { readiedFlask } from '../core/combat.js';
 import { equippedItem } from '../core/inventory.js';
@@ -28,7 +29,8 @@ const SLOP = 12;                  // px a finger may wander and still tap or lon
 const $ = id => document.getElementById(id);
 const root = $('touch'), zone = $('touch-stick'), ring = $('touch-ring'), knob = $('touch-knob'),
   action = $('touch-action'), aimKnob = $('touch-action-knob'), icon = action.querySelector('img'),
-  jump = $('touch-jump'), hold = $('touch-hold'), canvas = renderer.domElement;
+  jump = $('touch-jump'), hold = $('touch-hold'), turnLeft = $('touch-turn-left'), turnRight = $('touch-turn-right'),
+  canvas = renderer.domElement;
 const now = () => performance.now();
 const place = (el, x, y) => { el.style.transform = `translate(${x}px, ${y}px)`; };
 // the knob dx, dy px off its middle, kept within r
@@ -115,14 +117,22 @@ jump.addEventListener('pointerdown', e => {
   if (!state.inventoryOpen && !state.transitioning) controls.jumpPressed = true;
 });
 
-// --- fingers on the game: tap, long press, pinch and twist ----------------------------------------
+// the turn buttons: a quarter turn of the view, the left one as Q, the right one as E
+for (const [button, way] of [[turnLeft, -1], [turnRight, 1]]) {
+  button.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!state.inventoryOpen) view.yawTarget += way * Math.PI / 2;
+  });
+}
+
+// --- fingers on the game: tap, long press, pinch ---------------------------------------------------
 
 const fingers = new Map();   // pointerId -> { x, y, x0, y0, t0, tap }
-let pressTimer = 0, gesture = null;   // gesture: { d, angle } of two fingers when last stepped
+let pressTimer = 0, gesture = null;   // gesture: { d } of two fingers when last stepped
 
 function pair() {
   const [a, b] = fingers.values();
-  return { d: Math.hypot(b.x - a.x, b.y - a.y), angle: Math.atan2(b.y - a.y, b.x - a.x) };
+  return { d: Math.hypot(b.x - a.x, b.y - a.y) };
 }
 function startHold(f) {
   place(hold, f.x, f.y);
@@ -151,7 +161,7 @@ canvas.addEventListener('pointerdown', e => {
   const f = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now(), tap: true };
   fingers.set(e.pointerId, f);
   if (fingers.size === 1) { startHold(f); return; }
-  // a second finger: no tap, no long press, but a pinch / twist with the first two
+  // a second finger: no tap, no long press, but a pinch with the first two
   stopHold();
   for (const g of fingers.values()) g.tap = false;
   if (fingers.size === 2) gesture = pair();
@@ -162,10 +172,8 @@ canvas.addEventListener('pointermove', e => {
   f.x = e.clientX; f.y = e.clientY;
   if (f.tap && Math.hypot(f.x - f.x0, f.y - f.y0) > SLOP) { f.tap = false; stopHold(); }
   if (!gesture || fingers.size !== 2 || state.inventoryOpen) return;
-  const p = pair(), zoom = pinchStep(p.d / gesture.d), turn = twistStep(p.angle - gesture.angle);
+  const p = pair(), zoom = pinchStep(p.d / gesture.d);
   if (zoom) { view.zoomTarget = stepZoom(view.zoomTarget, zoom); gesture.d = p.d; }
-  // the view turns along with the fingers (clockwise on the screen: yaw up)
-  if (turn) { view.yawTarget += turn * Math.PI / 2; gesture.angle = p.angle; }
 });
 function endFinger(e) {
   const f = fingers.get(e.pointerId);

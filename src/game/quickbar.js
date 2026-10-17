@@ -3,9 +3,9 @@
 // (the town portal scroll starts its cast, game/townportal.js; a potion is drunk, core/
 // potions.js; a flask is taken in hand to throw, or put away again, game/equipment.js). With
 // the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
-// the same slot: off). A potion's slot fills while its cooldown runs. With touch controls
-// (game/touch.js) the bar sits at the top, with a bag button at its end for the inventory and a
-// menu button for the Esc menu (game/escmenu.js).
+// the same slot: off; the bar pulses while such an item is selected). A potion's slot fills
+// while its cooldown runs. With touch controls (game/touch.js) the bar sits at the top, with a
+// bag button at its end for the inventory and a menu button for the Esc menu (game/escmenu.js).
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS } from '../core/items.js';
@@ -16,7 +16,7 @@ import { displayName } from '../core/gear/stats.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { equipOwnedWeapon, readyFlask } from './equipment.js';
 import { useTownPortal } from './townportal.js';
-import { assignSelectedToBar, toggleInventory, setInventoryOpen } from './inventory.js';
+import { assignSelectedToBar, toggleInventory, setInventoryOpen, barReady } from './inventory.js';
 import { toggleMenu } from './escmenu.js';
 
 const bar = document.getElementById('quickbar');
@@ -116,6 +116,7 @@ export function updateQuickbar() {
   const inv = player.inventory, next = `${inv.version}:${inv.equipped}:${inv.readied}`;
   if (next !== signature || inv !== shown) { signature = next; shown = inv; draw(); }
   bar.classList.toggle('assigning', state.inventoryOpen);
+  bar.classList.toggle('ready', barReady());
   const c = state.cast;
   buttons.forEach((b, i) => {
     const e = barEntry(inv, i), def = e && ITEMS[e.itemId], on = !!c && def?.use === c.kind;

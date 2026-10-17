@@ -19,8 +19,12 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   go calls the throw off. A tap without dragging throws at the best enemy in range and in sight,
   or straight ahead.
 - **Jump** is the smaller button beside it.
+- **Turn**: a button at the middle of each side of the screen turns the view a quarter, the
+  left one like Q, the right one like E.
 - **The quick bar** moves to the top, with a bag button at its end that opens the inventory and
-  a menu button for the Esc menu.
+  a menu button for the Esc menu. With the inventory open, a bag item goes on the bar with
+  the Quick bar buttons (1-6) beside it, or a tap on a slot of the bar (which pulses while such
+  an item is selected); the same slot again takes it off.
   The potions at work show below it; the minimap gets smaller.
 - The stick and buttons hide while the inventory is open.
 
@@ -32,14 +36,14 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
 - **Long press** (about half a second, held still): collects coins and items around, like C.
   A ring fills under the finger.
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
-  closer), twist to turn the view a quarter (each 35 degrees).
+  closer).
 - The page itself never zooms (`src/game/nozoom.js`), only the game's view:
   - no double-tap zoom: `touch-action: manipulation` on every element (the game and the touch
     controls take all touches, `none`);
   - no pinch zoom: the viewport is not scalable (`user-scalable=no`, enough for Android); iOS
     ignores that, so Safari's own `gesturestart` / `gesturechange` events are called off, and
     any `touchmove` with two or more fingers too (one finger still scrolls a list). The game's
-    pinch and twist read pointer events and go on;
+    pinch reads pointer events and goes on;
   - no zoom into a field getting focus (iOS does that for text under 16 px): fields have 16 px
     text on touch screens (and `maximum-scale=1`);
   - no browser zoom from a trackpad pinch (a wheel with Ctrl: over the game it still zooms the

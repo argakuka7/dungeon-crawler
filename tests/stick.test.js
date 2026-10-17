@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stickVector, screenToWorld, aimReach, pinchStep, twistStep, DEAD_ZONE, PINCH_STEP, TWIST_STEP } from '../src/core/stick.js';
+import { stickVector, screenToWorld, aimReach, pinchStep, DEAD_ZONE, PINCH_STEP } from '../src/core/stick.js';
 
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 
@@ -35,12 +35,8 @@ test('an aimed throw reaches from close by to the full range', () => {
   near(aimReach(5, 8), 8);
 });
 
-test('pinching and twisting step only past their thresholds', () => {
+test('pinching steps only past its threshold', () => {
   assert.equal(pinchStep(1), 0);
   assert.equal(pinchStep(PINCH_STEP), -1);
   assert.equal(pinchStep(1 / PINCH_STEP), 1);
-  assert.equal(twistStep(TWIST_STEP / 2), 0);
-  assert.equal(twistStep(TWIST_STEP), 1);
-  assert.equal(twistStep(-TWIST_STEP), -1);
-  assert.equal(twistStep(2 * Math.PI - TWIST_STEP), -1);   // wrapped around
 });

@@ -122,15 +122,18 @@
       <div><h2>Bag · 24 slots</h2><div id="inventory-grid"></div></div>
       <aside id="inventory-details"><img id="inventory-item-icon" alt="" hidden><h2 id="inventory-item-name">Select an item</h2>
         <div id="inventory-item-base"></div><p id="inventory-item-stats"></p><ul id="inventory-item-affixes"></ul><p id="inventory-item-compare"></p>
+        <div id="inventory-bar" hidden><span>Quick bar</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot"></div><small id="inventory-bar-hint"></small></div>
         <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div></aside>
     </div>
-    <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · 1-6 puts the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
+    <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · 1-6 (or the Quick bar buttons) put the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
   </section>
 </div>
 <div id="effects" aria-label="Potions at work"></div>
 <div id="quickbar" aria-label="Quick bar"></div>
 <div id="touch" hidden aria-hidden="true">
   <div id="touch-stick"><div id="touch-ring" hidden><div id="touch-knob"></div></div></div>
+  <button id="touch-turn-left" class="touch-turn" tabindex="-1" aria-label="Turn the view left"><svg viewBox="0 0 24 24"><path d="M8.6 5.2 4 9.8l4.6 4.6V11a7 7 0 0 1 9.9 6.4h2.4A9.4 9.4 0 0 0 8.6 8.6z"/></svg></button>
+  <button id="touch-turn-right" class="touch-turn" tabindex="-1" aria-label="Turn the view right"><svg viewBox="0 0 24 24"><path d="M15.4 5.2 20 9.8l-4.6 4.6V11a7 7 0 0 0-9.9 6.4H3.1a9.4 9.4 0 0 1 12.3-8.8z"/></svg></button>
   <button id="touch-jump" tabindex="-1" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 4l-7 8h4.5v7h5v-7H19z"/></svg></button>
   <button id="touch-action" tabindex="-1" aria-label="Attack"><img alt="" hidden><span id="touch-action-knob"></span></button>
   <div id="touch-hold"></div>

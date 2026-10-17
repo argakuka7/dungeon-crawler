@@ -3,15 +3,16 @@
 // within C's reach (and from then on while it stays open, also once something is dropped).
 // Take (Enter or a double-click) moves a floor item into the bag; Drop puts a bag item down.
 // You can drop every weapon, even the last one: then you cannot attack until you pick one up.
-// Bound items (the town portal scroll) cannot be dropped. Keys 1-6 put the selected bag item on
-// the quick bar (game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
+// Bound items (the town portal scroll) cannot be dropped. Keys 1-6, the Quick bar buttons in the
+// details or a tap on a quick bar slot put the selected bag item on the quick bar (again on the
+// same slot: off; game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
 // uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
 // of their own (core/shops.js): Buy, Enter or a double-click buys one.
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS, COINS } from '../core/items.js';
 import { BURST_SHARE } from '../core/shots.js';
-import { equippedItem, ownedItem, assignBar, barAllowed, barIndexOf, countOf, copperTotal, formatCoins, hasRoom, autoBar } from '../core/inventory.js';
+import { BAR_SIZE, equippedItem, ownedItem, assignBar, barAllowed, barIndexOf, countOf, copperTotal, formatCoins, hasRoom, autoBar } from '../core/inventory.js';
 import { shopOf, priceOf, buy as buyWare } from '../core/shops.js';
 import { flaskStats, cooldownLeft } from '../core/potions.js';
 import { xpProgress, levelDamage } from '../core/progression.js';
@@ -29,6 +30,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // selected: { from: 'bag', id: instanceId } | { from: 'floor', id: pickup id } |
 // { from: 'shop', id: item id } | null; trader: the villager whose wares are shown (or null)
 let selected = null, signature = '', shown = null, previousFocus = null, floorMode = false, trader = null;
+
+// the details' Quick bar row: one button per slot
+$('inventory-bar-keys').innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button data-bar-key="${i}" aria-pressed="false">${i + 1}</button>`).join('');
+const barButtons = [...$('inventory-bar-keys').querySelectorAll('[data-bar-key]')];
+const touchOn = () => document.body.classList.contains('touch');
 
 export const inventoryFloor = () => state.inventoryOpen && floorMode;
 // villager: open with their wares (a villager with a shop) instead of the floor
@@ -65,6 +71,12 @@ export function assignSelectedToBar(i) {
   assignBar(player.inventory, i, slot.instanceId);
   setStatus(was ? `${displayName(slot)} taken off the quick bar` : `${displayName(slot)} on quick bar slot ${i + 1}`);
   return true;
+}
+
+// a bag item that can go on the quick bar is selected (the bar calls for a tap: game/quickbar.js)
+export function barReady() {
+  const slot = state.inventoryOpen && selected?.from === 'bag' && ownedItem(player.inventory, selected.id);
+  return !!slot && barAllowed(slot.itemId);
 }
 
 const floorPickup = id => floorItems().find(p => p.id === id) || null;
@@ -171,13 +183,20 @@ export function updateInventory() {
   $('inventory-item-name').textContent = item ? displayName(item) : 'Select an item';
   $('inventory-item-name').style.color = item?.gen ? rarityOf(item).css : '';
   $('inventory-item-base').textContent = item ? baseLine(item) ?? '' : '';
+  // the Quick bar row: the slot it is on lit (again: off)
   const barKey = selected?.from === 'bag' ? barIndexOf(inv, item) : -1;
-  const barLine = !item || selected?.from !== 'bag' || !barAllowed(item.itemId) ? ''
-    : barKey >= 0 ? `\nQuick bar: ${barKey + 1}` : '\nPress 1-6 to put it on the quick bar';
+  $('inventory-bar').hidden = !item || selected?.from !== 'bag' || !barAllowed(item.itemId);
+  barButtons.forEach((b, i) => {
+    b.classList.toggle('on', i === barKey);
+    b.setAttribute('aria-pressed', String(i === barKey));
+    b.title = i === barKey ? `Take it off quick bar slot ${i + 1}` : `Put it on quick bar slot ${i + 1}`;
+  });
+  $('inventory-bar-hint').textContent = barKey >= 0 ? 'Again to take it off'
+    : touchOn() ? 'Or tap a slot of the bar above' : 'Or press 1-6';
   $('inventory-item-stats').textContent = (def?.weapon ? weaponText(item)
     : def?.effect || def?.flask ? potionText(item, selected?.from)
     : def?.use ? `${def.stackLimit > 1 ? `Count ${item.count}\n` : ''}${def.description}${def.bound ? '\nBound: it cannot be dropped' : ''}`
-    : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\nNo use action yet` : selected ? '' : 'Select a bag slot to inspect it.') + barLine;
+    : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\nNo use action yet` : selected ? '' : 'Select a bag slot to inspect it.');
   $('inventory-item-affixes').innerHTML = item ? affixLines(item).map(l => `<li>${esc(l)}</li>`).join('') : '';
   $('inventory-item-compare').innerHTML = def?.weapon ? compareText(item) : '';
   const inBag = selected?.from === 'bag', isEquipped = inBag && item?.instanceId === inv.equipped;
@@ -280,6 +299,12 @@ $('inventory-shop').addEventListener('click', e => {
   refresh();
 });
 $('inventory-shop').addEventListener('dblclick', e => { if (e.target.closest('[data-ware]')) buy(); });
+$('inventory-bar-keys').addEventListener('click', e => {
+  const b = e.target.closest('[data-bar-key]');
+  if (!b) return;
+  assignSelectedToBar(Number(b.dataset.barKey));
+  refresh();
+});
 $('inventory-buy').addEventListener('click', buy);
 $('inventory-equip').addEventListener('click', async () => {
   if (await equipOwnedWeapon(selected?.id)) selected = { from: 'bag', id: player.inventory.equipped };
