@@ -2,7 +2,9 @@
 // a gap of one or two cells. Ladders are kept in their own list (not structure pieces): the
 // lower floor's cell holds the ladder against the wall of the higher column.
 import { LH, DIRS, OPP } from '../core/constants.js';
-import { idx, inb } from '../core/util.js';
+import { idx, inb, hash32 } from '../core/util.js';
+import { laddersOf, pickLadder } from '../themes/builds.js';
+import { themeOf } from '../themes/depth.js';
 
 // ladder from f to the floor g in the neighbouring column n (3-14 levels apart, either way).
 // With ctx.bigLadders (ways onto cut-off platforms and out of pits) also long ones up to 24
@@ -68,7 +70,15 @@ export function placeClimb(m, claims, pathEdges, ladders) {
   return true;
 }
 
+// how a ladder is built: one of the theme's ladder styles that fits (themes/builds.js), from a
+// hash of the cube and the floors it joins (not the generator's random stream, which would
+// change everything after it)
+export function ladderStyle(spec, l) {
+  const h = hash32(spec.seed ^ Math.imul(l.lo.id + 1, 0x9e3779b1) ^ Math.imul(l.hi.id + 1, 0x85ebca6b));
+  return pickLadder(laddersOf(themeOf(spec), spec.forceLadder), l.hang, h / 2 ** 32);
+}
+
 // what the game needs to know about a ladder (plain data)
-export const ladderInfo = l => ({
-  c: l.lo.c, x: l.lo.x, z: l.lo.z, d: l.d, y0: l.lo.top * LH, y1: l.hi.top * LH, layer: l.lo.layer, lo: l.lo.id, hi: l.hi.id, hang: l.hang,
+export const ladderInfo = (l, style) => ({
+  c: l.lo.c, x: l.lo.x, z: l.lo.z, d: l.d, y0: l.lo.top * LH, y1: l.hi.top * LH, layer: l.lo.layer, lo: l.lo.id, hi: l.hi.id, hang: l.hang, style,
 });

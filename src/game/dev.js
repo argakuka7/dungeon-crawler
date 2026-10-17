@@ -108,7 +108,7 @@ export async function goStructure(kind, style, from) {
   if (state.transitioning || state.inventoryOpen) return;
   const cubes = state.cubes, here = from ?? state.map?.depth ?? 0, last = lastStructure[kind + ':' + style];
   const list = m => kind === 'bridge' ? m.runs.filter(r => r.kind === 'bridge') : m.ladders;
-  const fits = o => !style || (o.style ?? (kind === 'ladder' ? 'wood' : null)) === style;
+  const fits = o => !style || o.style === style;
   clearMouseInput(); state.transitioning = true;
   try {
     let pick = null, passed = !last;
@@ -133,7 +133,7 @@ export async function goStructure(kind, style, from) {
     } else {
       const [dx, dz] = DIRS[o.d];
       spawnAt(o.x + 0.5 - dx * 0.2, o.y0, o.z + 0.5 - dz * 0.2);
-      setStatus(`${o.style ?? 'wood'} ladder${o.hang ? ' · hanging' : ''} · ${((o.y1 - o.y0) / LH) | 0} levels · depth ${c.map.depth} · ${c.map.biome}`);
+      setStatus(`${o.style} ladder${o.hang ? ' · hanging' : ''} · ${((o.y1 - o.y0) / LH) | 0} levels · depth ${c.map.depth} · ${c.map.biome}`);
     }
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }

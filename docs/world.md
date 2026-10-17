@@ -512,7 +512,7 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
 ## Themed structures (`themes/builds.js`, `render/bridges.js`)
 
 - **Materials per theme:** each theme (by its prop set) names the stone, wood, rope, iron and
-  (where it builds ice bridges) ice its structures are made of. Stairs, landings, bridges,
+  (where it builds ice bridges or vine ladders) ice and vines its structures are made of. Stairs, landings, bridges,
   fences and ladders use shades of those; natural rock arches take the ground's own rock and
   grass. Examples: grey stone and dark wood in the peaks, sandstone in the badlands and
   ruins, mossy wood in the swamp, basalt and iron in the volcanic depths.
@@ -577,6 +577,41 @@ Routes can now also use these moves:
   - Pushing towards the wall climbs, pulling away climbs down, and Space lets go.
   - At the top you step onto the upper floor.
   - There is no climb animation yet: the walk cycle stands in.
+  - **Styles** (`LADDER_STYLES` in `themes/builds.js`, drawn by `render/ladders.js`): every
+    style keeps its rungs or holds where the wooden ladder has them (0.28 apart from a
+    quarter over the foot), so the climb meets them.
+
+    | Style | Look | Hangs free |
+    |---|---|---|
+    | `wood` | two rails and rungs, a little over the top | yes, at a quarter of its weight |
+    | `rope` | rope sides, wooden rungs, a slight bow, over the edge to two stakes | yes |
+    | `vine` | two or three twisting vines with leaves, loops to step on, a tuft over the edge | yes |
+    | `iron` | U-shaped rungs bolted into the rock, two grab handles over the edge | no |
+    | `footholds` | holds cut into the rock left and right in turn, a chain from a peg on the edge | no |
+
+  - **Pick:** among the theme's weights (`BUILDS[theme].ladders`) the ones that fit; a
+    ladder hanging from a floating platform only takes the styles that can hang (rope if none
+    of the theme's can). The roll is a hash of the cube's seed and the two floors
+    (`ladderStyle` in `cubegen/climbs.js`), not the generator's random stream, so the rest of
+    the cube does not change with it. The style is on the map's ladder (`style`).
+
+    | Theme | Ladders | Theme | Ladders |
+    |---|---|---|---|
+    | meadow | wood 2, rope 1 | roots | vine 2, wood 1, rope 1 |
+    | clouds | rope 3, wood 1 | frozen | footholds 2, iron 1, rope 1 |
+    | lagoon | rope 2, wood 1, vine 1 | grotto | rope 2, vine 1, wood 1 |
+    | karst | vine 2, wood 1, footholds 1 | swamp | vine 3, wood 1 |
+    | peaks | iron 2, rope 1, wood 1 | hive | wood 2, rope 1, footholds 1 |
+    | highlands | wood 2, rope 1, footholds 1 | cenote | vine 3, footholds 1, rope 1 |
+    | badlands | wood 2, footholds 2 | nests | rope 3, footholds 1 |
+    | saltflats | wood 2, footholds 1 | ossuary | footholds 2, wood 1 |
+    | canyon | rope 2, footholds 2, wood 1 | mines | wood 2, iron 2 |
+    | ruins | footholds 3, wood 1, rope 1 | forge | iron 3, wood 1 |
+    | volcanic | iron 2, footholds 2 | abyss | iron 2, rope 1, footholds 1 |
+
+  - **Dev:** `?ladder=<style>` (with `?dev=1`; `new World(seed, { ladder })` in tests) puts
+    that style wherever it fits; `/ladder [style] [depth]` stands you at the foot of the next
+    one. Checks in `tests/builds.test.js`.
 - **Jump:** over one or two cells of open drop (or void).
   - The target is at most 1 level higher and at most 2 lower. Over two cells it must be
     exactly 2 lower, for the time in the air.

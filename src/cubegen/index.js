@@ -6,7 +6,7 @@ import { createContext } from './context.js';
 import { chooseLayers, groundHeights } from './ground.js';
 import { placePortals } from './portals.js';
 import { shapeCube } from './archetypes.js';
-import { ladderInfo } from './climbs.js';
+import { ladderInfo, ladderStyle } from './climbs.js';
 import { carveRiver } from './river.js';
 import { buildSlabs } from './slabs.js';
 import { addRamps, addSupports } from './supports.js';
@@ -111,7 +111,7 @@ function tryGenerate(seed, spec) {
   return {
     seed, K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves, portals, ...sites, horde,
     roomRole: spec.roomRole, biome: spec.biome, populationScale: spec.populationScale,
-    ladders: ctx.ladders.map(ladderInfo), exit: spec.exit,
+    ladders: ctx.ladders.map(l => ladderInfo(l, ladderStyle(spec, l))), exit: spec.exit,
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
     safe: Uint8Array.from(floors, f => !safe || safe.has(f.id) ? 1 : 0),   // floors that lead to the exit
     kind: spec.kind, archetype: spec.archetype, key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: !!spec.walled, enemyFree: !!spec.enemyFree,

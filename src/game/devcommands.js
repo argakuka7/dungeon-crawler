@@ -13,7 +13,7 @@ import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
 import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, FEATURES } from './dev.js';
-import { BRIDGE_STYLES } from '../themes/builds.js';
+import { BRIDGE_STYLES, LADDER_STYLES } from '../themes/builds.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
 import { forceMood } from './music.js';
@@ -76,6 +76,12 @@ dev({
   name: 'bridge', help: 'stand at the next bridge (of a style) from this depth (or that one) on down',
   args: [{ name: 'style', type: 'bridgestyle', optional: true }, { name: 'depth', type: 'depth', optional: true }],
   async run({ style, depth }) { await goStructure('bridge', style, depth === undefined ? undefined : Number(depth)); },
+});
+addType(commands, { name: 'ladderstyle', values: () => Object.keys(LADDER_STYLES).map(s => ({ value: s, label: s })) });
+dev({
+  name: 'ladder', help: 'stand at the foot of the next ladder (of a style) from this depth (or that one) on down',
+  args: [{ name: 'style', type: 'ladderstyle', optional: true }, { name: 'depth', type: 'depth', optional: true }],
+  async run({ style, depth }) { await goStructure('ladder', style, depth === undefined ? undefined : Number(depth)); },
 });
 addType(commands, { name: 'feature', values: () => FEATURES.map(f => ({ value: f, label: f })) });
 dev({

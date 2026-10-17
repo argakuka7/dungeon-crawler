@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILDS, BRIDGE_STYLES, bridgeFits, pickBridge, bridgesOf } from '../src/themes/builds.js';
+import { BUILDS, BRIDGE_STYLES, bridgeFits, pickBridge, bridgesOf, LADDER_STYLES, HANG_WOOD, pickLadder, laddersOf } from '../src/themes/builds.js';
+import { LADDERS, buildLadder } from '../src/render/ladders.js';
+import { GeoBuilder } from '../src/render/builder.js';
 import { SURFACES } from '../src/core/footing.js';
 import { BRIDGES } from '../src/render/bridges.js';
 import { THEMES } from '../src/themes/index.js';
@@ -124,4 +126,54 @@ test('themes build their own bridges: logs in the roots, ice in the frozen caves
     for (const s of Object.keys(n)) assert.ok(s in BUILDS[theme].bridges || s === 'plank', `${theme}: ${s}`);
     assert.ok(n[style] > all * 0.25, `${theme}: ${JSON.stringify(n)}`);
   }
+});
+
+test('every theme weights known ladder styles, and hanging ladders are the ones that can hang', () => {
+  for (const name of Object.keys(LADDER_STYLES)) assert.ok(LADDERS[name], `${name}: builder`);
+  for (const t of THEMES) for (const [s, v] of Object.entries(BUILDS[t.props].ladders)) assert.ok(LADDER_STYLES[s] && v > 0, `${t.props}: ${s}`);
+  const count = (weights, hang) => {
+    const n = {};
+    for (let i = 0; i < 1000; i++) { const s = pickLadder(weights, hang, (i + 0.5) / 1000); n[s] = (n[s] || 0) + 1; }
+    return n;
+  };
+  assert.deepEqual(count({ iron: 1, footholds: 1 }, false), { iron: 500, footholds: 500 });
+  assert.deepEqual(count({ iron: 1, footholds: 1 }, true), { rope: 1000 });   // none can hang
+  assert.deepEqual(count({ wood: 4, vine: 1, iron: 5 }, true), { wood: 1000 * 4 * HANG_WOOD / (4 * HANG_WOOD + 1), vine: 1000 / (4 * HANG_WOOD + 1) });
+  assert.deepEqual(laddersOf(THEMES[0], 'vine'), { vine: 1 });
+});
+
+test('ladders in generated worlds keep to their theme\'s styles and are drawn', () => {
+  const seen = {};
+  for (const seed of [1, 2]) {
+    const w = new World(seed);
+    for (let d = 1; d <= 20; d++) for (const k of [...w.layout(d).exists].slice(0, 6)) {
+      const m = w.cube(k).map, weights = BUILDS[m.biome].ladders;
+      for (const l of m.ladders) {
+        seen[l.style] = (seen[l.style] || 0) + 1;
+        assert.ok(l.style in weights || l.style === 'rope', `${k}: ${l.style} in ${m.biome}`);
+        if (l.hang) assert.ok(LADDER_STYLES[l.style].hang, `${k}: a hanging ${l.style} ladder`);
+      }
+    }
+  }
+  assert.ok(Object.keys(LADDER_STYLES).every(s => seen[s] > 3), JSON.stringify(seen));
+  // the same ladders whichever way round the cube is made; every style drawn, hanging too
+  const A = new World(3), B = new World(3), route = A.layout(2).route;
+  for (const k of [...route].reverse()) B.cube(k);
+  for (const k of route) assert.deepEqual(A.cube(k).map.ladders, B.cube(k).map.ladders, k);
+  for (const style of Object.keys(LADDER_STYLES)) for (const hang of [false, true]) {
+    const L = { terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder() };
+    buildLadder({ c: 5, x: 5, z: 0, d: 2, y0: 1, y1: 4.5, hang, style }, L);
+    const pos = [...L.terrain.pos, ...L.wood.pos];
+    assert.ok(pos.length && pos.every(Number.isFinite), `${style}: drawn`);
+  }
+});
+
+test('a forced ladder style goes wherever it fits', () => {
+  const w = new World(1, { ladder: 'footholds' });
+  let n = 0;
+  for (let d = 1; d <= 6; d++) for (const k of w.layout(d).exists) for (const l of w.cube(k).map.ladders) {
+    assert.equal(l.style, l.hang ? 'rope' : 'footholds');
+    n++;
+  }
+  assert.ok(n > 10);
 });
