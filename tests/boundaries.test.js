@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { N, CHAR_R, DIRS } from '../src/core/constants.js';
 import { faceKey, step, OPP6 } from '../src/world/coords.js';
-import { isFaceOpen, openedSides, faceDistance, approachingFace, boundaryArrival, discoveredFaces } from '../src/core/boundaries.js';
+import { isFaceOpen, openedSides, faceDistance, approachingFace, boundaryArrival, discoveredFaces, visitedFaces } from '../src/core/boundaries.js';
 import { flatMap, state } from './fixtures.js';
 import { player } from '../src/game/state.js';
 import { canMove, railedFace } from '../src/physics/canmove.js';
@@ -111,4 +111,14 @@ test('a stair or bridge along an open face keeps its side rail there, not its en
   // where a crossing would arrive: the neighbour's map
   assert.equal(railedFace(0.6, 8.5, 2, 1, other), true);
   assert.equal(railedFace(0.6, 8.5, 2, 1), false);
+});
+
+// a saved world (or the host's run) brings only faces whose cubes were both visited: a save from
+// before large areas were discovered a cube at a time held their inner faces open unvisited
+test('carried-over open faces keep only those between two visited cubes', () => {
+  const a = '0,-5,0', b = step(a, 0), c = step(a, 2), d = step(b, 2);
+  const faces = [faceKey(a, 0), faceKey(a, 2), faceKey(b, 2), faceKey(c, 0), faceKey(d, 1)];
+  assert.deepEqual(visitedFaces(faces, new Set([a, b])), [faceKey(a, 0)]);
+  assert.deepEqual(visitedFaces(faces, new Set([a, b, c])), [faceKey(a, 0), faceKey(a, 2)]);
+  assert.deepEqual(visitedFaces(faces, new Set([a, b, c, d])), faces);
 });

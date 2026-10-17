@@ -30,6 +30,7 @@
 // Each game writes it into its own chronicle (game/log.js) as the friend's.
 import { player, state, setStatus } from '../game/state.js';
 import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
+import { visitedFaces } from '../core/boundaries.js';
 import { STEP } from '../core/constants.js';
 import { supportedPoint } from '../physics/respawn.js';
 import { blockedAt } from '../physics/collide.js';
@@ -614,7 +615,7 @@ function takeRun(run) {
   state.run.dropped = new Set(run.dropped);
   for (const id of run.chests) shareChest(id);
   for (const k of run.visited) shareVisit(k);
-  shareFaces(run.faces);
+  shareFaces(visitedFaces(run.faces, new Set(run.visited)));
   facesSent = state.openedFaces.size;
 }
 

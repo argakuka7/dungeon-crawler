@@ -130,7 +130,9 @@ saves last as long as the page.
 ## Loading
 
 `newWorld(seed, { keepPlayer, restore })` (`game/flow.js`) starts the saved world: the run, the
-open faces and the floor loot come back at once, the hero comes in at its spot (the town, if that
+open faces (only those between two discovered cubes, `visitedFaces`: older saves held a large
+area's inner faces open before its cubes were visited) and the floor loot come back at once, the
+hero comes in at its spot (the town, if that
 cube does not come: the generator changed), then the discovered cubes are made again in the
 background, the nearest first, for the minimap. `knowDepths` tells the chronicle which depths
 were reached before.

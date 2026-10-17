@@ -5,6 +5,13 @@ import { portalLocked } from './guardians.js';
 
 export const isFaceOpen = (opened, key, dir) => dir < 4 && dir >= 0 && opened.has(faceKey(key, dir));
 export const openedSides = (opened, key) => DIRS.map((_, dir) => isFaceOpen(opened, key, dir));
+// An open face always has both of its cubes visited (discovery, or walking through its portal).
+// Faces carried over from elsewhere (a saved world, the host's run) keep to that: a save from
+// before large areas were discovered a cube at a time holds their inner faces open unvisited.
+export const visitedFaces = (faces, visited) => faces.filter(fk => {
+  const [k, d] = fk.split('/');
+  return visited.has(k) && visited.has(step(k, +d));
+});
 // Two route sections (a room on the route plus its branches) may be joined by discovery
 // only over ground already covered: every route room between them discovered, and none of
 // their forward exits still locked by a guardian. A shortcut then never skips an unseen

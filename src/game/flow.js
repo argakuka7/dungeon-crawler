@@ -1,7 +1,7 @@
 // Level flow: the world of cubes, entering a cube, travelling through portals, spawning and
 // taking damage.
 import { DIRS } from '../core/constants.js';
-import { isFaceOpen, openedSides, discoveredFaces } from '../core/boundaries.js';
+import { isFaceOpen, openedSides, discoveredFaces, visitedFaces } from '../core/boundaries.js';
 import { showNeighbors, clearNeighbors, clearNeighborCache } from '../render/neighbors.js';
 import { discoveredCubes } from '../core/viewdistance.js';
 import { WorldClient } from '../world/client.js';
@@ -282,7 +282,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
 }
 
 // a saved world's progress into the fresh run (newWorld)
-function restoreRun({ run, faces }) {
+function restoreRun({ run, faces, visited }) {
   const r = state.run;
   for (const id of run.defeated) r.defeated.add(id);
   for (const k of run.gates) r.unlockedGates.add(k);
@@ -290,7 +290,7 @@ function restoreRun({ run, faces }) {
   for (const s of run.dropped) r.dropped.add(s);
   r.townPortal = run.townPortal;
   takeLoot(run.loot);
-  for (const k of faces) state.openedFaces.add(k);
+  for (const k of visitedFaces(faces, new Set(visited))) state.openedFaces.add(k);
 }
 
 // Back to the main menu (game/menu.js): the world goes, and nothing of it stays in the scene
