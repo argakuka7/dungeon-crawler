@@ -38,8 +38,8 @@ test('distance fade is smooth, bounded, and only affects the outer half-cube ban
   for (let d = 0; d < VIEW_DISTANCE + 10; d++) assert.ok(distanceFade(d) >= distanceFade(d + 1));
 });
 
-test('sighted cubes (the far side of a gorge span) show like visited ones', () => {
-  const far = { ...cube(7, -1, 0, 0), sighted: true }, unseen = cube(6, -1, 0, 0);
-  const result = discoveredCubes(store([cube(5, -1, 0), far, unseen]), key(5, -1, 0));
-  assert.deepEqual(result.map(c => c.key), [far.key]);
+test('a gorge span shows no cube before it is visited (its far side included)', () => {
+  const gorge = cube(6, -1, 0, 0), far = cube(7, -1, 0, 0);
+  const result = discoveredCubes(store([cube(5, -1, 0), gorge, far]), key(5, -1, 0));
+  assert.deepEqual(result.map(c => c.key), []);
 });

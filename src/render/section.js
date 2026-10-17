@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { N, LH, CUBE_H, LAVA, ACID } from '../core/constants.js';
 import { GeoBuilder } from './builder.js';
 import { C, gradient } from './palette.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { buildOf } from '../themes/builds.js';
 import { scene, camera, renderer } from './scene.js';
 import { U, inject, turnShape, CUT_KINDS } from './cutshader.js';
@@ -65,10 +65,10 @@ let key = '', capKey = '';
 // cap colours for the theme of `map`: rock is the cliff strata band at height y (as on the
 // cliff walls, see walls.js), stone and wood are the theme's structure materials
 function capColors(map, y) {
-  const depth = map?.depth ?? 0, band = Math.max(0, Math.floor(y)), k = depth + ':' + band;
+  const theme = themeOf(map), band = Math.max(0, Math.floor(y)), k = theme.props + ':' + band;
   if (k === capKey) return;
   capKey = k;
-  const theme = themeAt(depth), build = buildOf(theme);
+  const build = buildOf(theme);
   U.uCapRock.value.copy(gradient(theme.side, band / LH)).multiplyScalar(0.94);
   U.uCapStone.value.set(build.stone);
   U.uCapWood.value.set(build.wood);

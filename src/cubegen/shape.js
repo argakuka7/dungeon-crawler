@@ -3,13 +3,13 @@
 import { LH, SHEAD, OPP, EDGE_CORNERS } from '../core/constants.js';
 import { runY } from '../core/surfaces.js';
 import { buildOf } from '../themes/builds.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { spanSag } from './span.js';
 
 export function shapeStructures(ctx) {
   const { R, cols, pieces, runs, pathFloors } = ctx;
   // the depth's bridge styles by weight (stone arches only over ground close below)
-  const weights = Object.entries(buildOf(themeAt(ctx.spec.depth ?? 0)).bridges);
+  const weights = Object.entries(buildOf(themeOf(ctx.spec)).bridges);
   const bridgeStyle = (solid, R) => {
     const w = weights.filter(([s]) => solid || s !== 'stone');
     let r = R() * w.reduce((a, [, v]) => a + v, 0);

@@ -1,5 +1,5 @@
-// Decoration props from assets/props.glb: a catalog by theme and attachment (from the glTF
-// extras), and instanced meshes per cube. Materials are cloned per cube (cubes fade and get cut
+// Decoration props from assets/props.glb, clutter.glb and themes.glb: a catalog by theme and
+// attachment (from the glTF extras), and instanced meshes per cube. Materials are cloned per cube (cubes fade and get cut
 // on their own); props with `sway` move in the wind; glowing props add light sources.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -9,7 +9,7 @@ import { buildChests } from './chests.js';
 import { props, catalogProp, propMetadata } from '../core/propcatalog.js';
 export { props } from '../core/propcatalog.js';
 
-const URLS = ['assets/props.glb', 'assets/clutter.glb', 'assets/items/treasure_chest.glb'];
+const URLS = ['assets/props.glb', 'assets/clutter.glb', 'assets/themes.glb', 'assets/items/treasure_chest.glb'];
 const wind = { value: 0 };
 const onReady = [];
 export const whenPropsReady = fn => props.ready ? fn() : onReady.push(fn);

@@ -986,8 +986,9 @@ def finish(m, name, attach, hints, collection):
     elif attach == "ceiling":
         dz = -max(z for x, y, z in m.vertices)
         m.vertices = [(x, y, z + dz) for x, y, z in m.vertices]
-    elif attach in ("lip", "water"):
-        # Authored in attachment space (clutter.py): cliff edge / waterline at the origin.
+    elif attach in ("lip", "water", "line"):
+        # Authored in attachment space (clutter.py, themes.py): cliff edge / waterline /
+        # string start at the origin.
         pass
     else:
         dy = -min(y for x, y, z in m.vertices)

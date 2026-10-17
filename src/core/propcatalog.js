@@ -2,11 +2,12 @@
 import { PROP_METADATA } from './propmetadata.js';
 
 // Focal props are placed by site recipes, not a uniform scatter draw. Asset priority is
-// unrelated to reward prestige. Older architectural props also need deliberate placement.
+// unrelated to reward prestige. Older architectural props also need deliberate placement, and so do
+// landmarks (themes.glb: bigger than a cell) and string segments (attach 'line').
 const SIGNATURES = new Set(['altar', 'broken_altar', 'ritual_circle', 'weapon_graveyard',
   'collapsed_arch', 'frozen_adventurer', 'adventurer_remains', 'abandoned_pack', 'old_campfire',
   'signpost', 'sword_in_ground', 'sarcophagus', 'statue', 'mine_rail', 'rail', 'support_frame']);
-export const signatureProp = p => SIGNATURES.has(p.base) || /rail|frame/.test(p.base);
+export const signatureProp = p => p.landmark || SIGNATURES.has(p.base) || /rail|frame/.test(p.base);
 export const propMetadata = new Map(PROP_METADATA.map(p => [p.name, p]));
 export const props = { ready: false, byName: new Map(), sets: new Map() };
 

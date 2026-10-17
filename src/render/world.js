@@ -15,7 +15,7 @@ import { buildProps } from './props.js';
 import { openedChest, tickChests } from './chests.js';
 import { placeProps } from './propplace.js';
 import { buildVillagers, tickVillagers } from './villagers.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
 
 export function disposeWorld(world) {
@@ -35,7 +35,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeGeometry(m), open =
   lavaLights(m, group, lights);
   const markers = buildMarkers(m, group, showPath, seen, open, locked);
   // decoration (also sets the colliders of blocking props on the map)
-  const placed = placeProps(m, themeAt(m.depth ?? 0));
+  const placed = placeProps(m, themeOf(m));
   m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list]);
   buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
   const villagers = buildVillagers(m.villagers, group);

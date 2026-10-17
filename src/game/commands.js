@@ -28,7 +28,7 @@ addType(commands, { name: 'wearable', values: once(() => [...WEARABLES.filter(w 
 addType(commands, { name: 'enemy', values: once(() => Object.values(ENEMY_KINDS).sort((a, b) => !!a.guardian - !!b.guardian)
   .map(k => ({ value: k.type, label: k.label, hint: k.guardian ? `guardian (${k.guardianRole})` : k.species }))) });
 addType(commands, { name: 'rarity', values: () => RARITIES.map(r => ({ value: r.id, label: r.name, color: r.css })) });
-addType(commands, { name: 'depth', values: () => Array.from({ length: MAX_DEPTH + 1 }, (_, d) => ({ value: String(d), label: String(d), hint: themeAt(d).name })) });
+addType(commands, { name: 'depth', values: () => Array.from({ length: MAX_DEPTH + 1 }, (_, d) => ({ value: String(d), label: String(d), hint: themeAt(d, state.cubes?.layout.themes).name })) });
 addType(commands, { name: 'mood', values: () => [...MOODS.map(m => ({ value: m, label: m })), { value: 'auto', label: 'auto', hint: 'the game picks again' }] });
 const choice = (name, list) => addType(commands, { name, values: () => list.map(([value, hint]) => ({ value, label: value, hint })) });
 choice('toggle', [['on'], ['off']]);

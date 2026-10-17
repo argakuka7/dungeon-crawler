@@ -11,7 +11,7 @@
 // The mood rises at once and falls back after the calmer reason has held for a moment.
 import { player, state } from './state.js';
 import { allEnemies } from './enemies.js';
-import { themeAt, MAX_DEPTH } from '../themes/depth.js';
+import { themeOf, MAX_DEPTH } from '../themes/depth.js';
 import { playSong, setMood } from '../audio/music.js';
 import { MOODS } from '../audio/score.js';
 
@@ -65,7 +65,7 @@ function wanted() {
 }
 
 // learn: sound.html#mood-code (see learn/README.md)
-export const songFor = map => map.enemyFree ? 'town' : map.depth >= MAX_DEPTH ? 'core' : themeAt(map.depth).music;
+export const songFor = map => map.enemyFree ? 'town' : map.depth >= MAX_DEPTH ? 'core' : themeOf(map).music;
 
 // learn: sound.html#mood-code (see learn/README.md)
 export function updateMusic(dt) {

@@ -5,6 +5,7 @@ import { N, MAX_L } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
 import { VOID } from '../world/profile.js';
 import { isVoid } from '../world/voids.js';
+import { themeOf } from '../themes/depth.js';
 
 export function chooseLayers(ctx) {
   ctx.K = ctx.spec.K; ctx.B = ctx.spec.B; ctx.stats.layers = ctx.K;
@@ -35,7 +36,7 @@ function relief(ctx) {
 // inside the cube the world-space void field decides (where the world allows void here)
 export function groundHeights(ctx) {
   const { noise, spec } = ctx;
-  const P = spec.faces.map(f => f.profile), extra = relief(ctx);
+  const P = spec.faces.map(f => f.profile), extra = relief(ctx), theme = themeOf(spec);
   const lvl0 = new Int16Array(N * N), void0 = new Uint8Array(N * N);
   for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
     const d = [N - 1 - x, x, N - 1 - z, z], p = [P[0][z], P[1][z], P[2][x], P[3][x]];
@@ -44,7 +45,7 @@ export function groundHeights(ctx) {
     for (let k = 0; k < 4; k++) if (p[k] !== VOID) { const w = 1 / (d[k] + 0.6) ** 2; s += w * p[k]; ws += w; }
     const base = ws ? s / ws : 4, e = clamp(d[near] / 3, 0, 1);
     if (d[near] === 0) void0[i] = p[near] === VOID ? 1 : 0;
-    else void0[i] = spec.voidOK && isVoid(spec.noise, spec.X * N + x + 0.5, spec.Z * N + z + 0.5, spec.depth) ? 1 : 0;
+    else void0[i] = spec.voidOK && isVoid(spec.noise, spec.X * N + x + 0.5, spec.Z * N + z + 0.5, spec.depth, theme.void) ? 1 : 0;
     let v = d[near] === 0 && p[near] !== VOID ? p[near] : Math.round(base + e * ((noise(x * 0.21 + 0.5, z * 0.21 + 0.5) - 0.5) * 3 + extra[i]));
     // cave walls: the outer ring is rock, the ring inside it a rough half-height foot
     const wall = d[near] <= 1 ? spec.faces[near].wall?.[near < 2 ? z : x] : 0;

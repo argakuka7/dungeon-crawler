@@ -18,7 +18,7 @@
 import { mulberry32, hash32 } from '../core/util.js';
 import { N } from '../core/constants.js';
 import { key, parse, step, faceKey } from './coords.js';
-import { themeAt, MAX_DEPTH } from '../themes/depth.js';
+import { spansAt, MAX_DEPTH } from '../themes/depth.js';
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const id = c => c.join(',');
@@ -35,7 +35,7 @@ const HIGH = 8;
 // island and its gorge).
 // learn: world.html#bridges (see learn/README.md)
 export function planSpans(seed, d, spine, K, blocked, free, budget) {
-  const cfg = themeAt(d).spans;
+  const cfg = spansAt(d);
   const spans = [], cells = new Map(), lonely = new Set();
   if (!cfg || d === 0 || d >= MAX_DEPTH) return { spans, cells, apart: lonely };
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x5ba9e7)));
@@ -171,9 +171,6 @@ export function spanVertex(world, vx, Y, vz) {
   const face = span.dir % 2 ? a0 - along : along - a0 - 1;   // index of the crossing plane (end0's face is 0)
   return { span, natural: face === 0 || face === span.n && !span.island };
 }
-
-// the spans cube k is part of (either end included)
-export const spansThrough = (layout, k) => (layout.spans || []).filter(s => s.keys.includes(k));
 
 // the layout's lookup tables for its spans
 export function indexSpans(layout, spans, cells) {

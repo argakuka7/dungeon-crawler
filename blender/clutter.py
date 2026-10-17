@@ -244,7 +244,7 @@ def validate(objects):
     return report
 
 
-def check(obj):
+def check(obj, fluids=FLUIDS):
     """Checks for one prop; returns its manifest entry."""
     mesh = obj.data
     mesh.calc_loop_triangles()
@@ -283,7 +283,7 @@ def check(obj):
         assert abs(obj["drop"] + lo[2]) < 1e-3, obj.name
     elif attach == "water":
         assert -0.2 <= lo[2] < 0 < hi[2], (obj.name, lo[2], hi[2])
-        assert radius <= props.MAX_RADIUS + 1e-4 and obj["fluid"] in FLUIDS, obj.name
+        assert radius <= props.MAX_RADIUS + 1e-4 and obj["fluid"] in fluids, obj.name
     if obj.get("shore"):
         assert attach == "ground", obj.name
     if theme == "any":

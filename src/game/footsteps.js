@@ -7,7 +7,7 @@ import { character } from '../render/character.js';
 import { blend, W } from '../render/blendtree.js';
 import { footstep } from '../audio/footsteps.js';
 import { surfaceAt } from '../core/footing.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 
 let prev = null, prevClimb = null, landCount = 0, surface = null;
 
@@ -16,7 +16,7 @@ const mixPhase = (a, b, t) => (a + (((b - a) % 1 + 1.5) % 1 - 0.5) * t + 1) % 1;
 
 // While travelling the support still belongs to the cube we left: keep its surface
 function underfoot() {
-  if (!state.transitioning) surface = surfaceAt(player.support, state.map, themeAt(state.map.depth).props, player.x, player.z);
+  if (!state.transitioning) surface = surfaceAt(player.support, state.map, themeOf(state.map).props, player.x, player.z);
   return surface;
 }
 

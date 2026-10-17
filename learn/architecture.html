@@ -184,14 +184,14 @@
   <h2 lang="de">Probier es: Folge einem Würfel, von der Bestellung bis zum Bildschirm</h2>
   <div class="cols wide-right">
     <ol class="steps journey small">
-      <li data-at="game" lang="en">You enter a cube. The game (<code>game/flow.js</code>) orders the cubes behind its portals, just in case. (At a long bridge, all the cubes along it, so you see its far side.)</li>
-      <li data-at="game" lang="de">Du betrittst einen Würfel. Das Spiel (<code>game/flow.js</code>) bestellt vorsichtshalber die Würfel hinter seinen Portalen. (An einer langen Brücke alle Würfel entlang der Brücke, damit du ihre andere Seite siehst.)</li>
+      <li data-at="game" lang="en">You enter a cube. The game (<code>game/flow.js</code>) orders the cubes behind its portals, just in case.</li>
+      <li data-at="game" lang="de">Du betrittst einen Würfel. Das Spiel (<code>game/flow.js</code>) bestellt vorsichtshalber die Würfel hinter seinen Portalen.</li>
       <li data-at="world" lang="en"><code>world/client.js</code> writes a letter to the worker: "please make this cube".</li>
       <li data-at="world" lang="de"><code>world/client.js</code> schreibt dem Worker einen Brief: "Bitte bau diesen Würfel."</li>
       <li data-at="world" lang="en">In the worker, the planner (<code>world/world.js</code>) solves the puzzle for the cube's whole depth (only the first time it needs a cube from there), and fixes the walls the cube shares with its neighbours.</li>
       <li data-at="world" lang="de">Im Worker löst der Planer (<code>world/world.js</code>) das Puzzle für die ganze Tiefe des Würfels (nur beim ersten Würfel, den er von dort braucht) und legt die Wände fest, die der Würfel mit seinen Nachbarn teilt.</li>
-      <li data-at="themes" lang="en">It looks up the theme of the depth: how hilly, how much water, which colours.</li>
-      <li data-at="themes" lang="de">Er schaut das Thema der Tiefe nach: wie hügelig, wie viel Wasser, welche Farben.</li>
+      <li data-at="themes" lang="en">It looks up the theme of the depth: how hilly, how much water, which colours. Most depths have more than one theme, and every world picks its own, so one world has clouds under the town and another a lagoon.</li>
+      <li data-at="themes" lang="de">Er schaut das Thema der Tiefe nach: wie hügelig, wie viel Wasser, welche Farben. Die meisten Tiefen haben mehr als ein Thema, und jede Welt sucht sich ihres aus: Die eine hat Wolken unter der Stadt, die andere eine Lagune.</li>
       <li data-at="cubegen" lang="en">The cube factory (<code>cubegen/</code>) builds the cube step by step, and checks it. Can't get through? Throw it away, try again.</li>
       <li data-at="cubegen" lang="de">Die Würfelfabrik (<code>cubegen/</code>) baut den Würfel Schritt für Schritt und prüft ihn. Man kommt nicht durch? Wegwerfen, noch mal.</li>
       <li data-at="core" lang="en">All along, it uses the rule book: how big a cube is, how high a step is, its own dice.</li>

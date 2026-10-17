@@ -14,6 +14,17 @@ export const BUILDS = {
   ruins: { stone: '#c8b48a', wood: '#7a6040', rope: '#b8a070', iron: '#5a5048', bridges: { stone: 3, plank: 1 } },
   volcanic: { stone: '#4a4040', wood: '#3a2c24', rope: '#7a6a5a', iron: '#3c3a3e', bridges: { iron: 3, stone: 1 } },
   abyss: { stone: '#3a3644', wood: '#2a2430', rope: '#5a5060', iron: '#2e2c34', bridges: { iron: 2, stone: 2 } },
+  // the themes a world may pick instead (themes/index.js SLOTS)
+  clouds: { stone: '#dfe2ec', wood: '#c4ac8c', rope: '#f0e8d8', iron: '#8a90a8', bridges: { rope: 3, plank: 1, stone: 1 } },
+  lagoon: { stone: '#d4c49c', wood: '#94704a', rope: '#d8c090', iron: '#5a5c64', bridges: { plank: 2, rope: 2 } },
+  karst: { stone: '#b8b6aa', wood: '#9a4a2a', rope: '#c8b070', iron: '#5a5c64', bridges: { stone: 3, plank: 1, rope: 1 } },
+  highlands: { stone: '#d8d0c0', wood: '#7a3a2a', rope: '#e0c870', iron: '#5a5c64', bridges: { rope: 3, stone: 1, plank: 1 } },
+  saltflats: { stone: '#e4dcd0', wood: '#9a8068', rope: '#d0c0a0', iron: '#6a6460', bridges: { plank: 2, stone: 2 } },
+  grotto: { stone: '#8aaaa8', wood: '#6a7468', rope: '#a8c0b0', iron: '#4a5a60', bridges: { plank: 2, rope: 1, stone: 1 } },
+  hive: { stone: '#d0a048', wood: '#7a5020', rope: '#e8c870', iron: '#5a4a30', bridges: { plank: 2, rope: 1, stone: 1 } },
+  ossuary: { stone: '#c8bca4', wood: '#4a3a2e', rope: '#8a7a68', iron: '#3a3836', bridges: { stone: 3, plank: 1 } },
+  forge: { stone: '#5a5450', wood: '#5a4030', rope: '#8a7a60', iron: '#4a4a52', bridges: { iron: 3, stone: 1 } },
+  cenote: { stone: '#b8a888', wood: '#6a5030', rope: '#8a9a50', iron: '#4a4a40', bridges: { rope: 2, stone: 2, plank: 1 } },
 };
 
 export const buildOf = theme => BUILDS[theme.props] || BUILDS.meadow;

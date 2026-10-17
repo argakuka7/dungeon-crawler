@@ -5,16 +5,16 @@
 import { N } from '../core/constants.js';
 import { clamp } from '../core/util.js';
 import { key, parse } from './coords.js';
-import { themeAt } from '../themes/depth.js';
 import { voidAllowed, isVoid } from './voids.js';
 import { isClearing, TOWN_LEVEL } from './town.js';
 import { spanFace, spanVertex, spanU, valleyFloor } from './spans.js';
 
 export const VOID = -1;
 
-export function levelAt(noise, sock, wx, wz, Y) {
+// relief: how tall the theme's highlands get
+export function levelAt(noise, sock, wx, wz, Y, relief) {
   const n = clamp((noise(wx * 0.21 + Y * 101, wz * 0.21) - 0.25) / 0.5, 0, 1);
-  return sock === 'H' ? 8 + Math.floor(n * (3.99 + 6 * themeAt(-Y).relief)) : 3 + Math.floor(n * 3.99);
+  return sock === 'H' ? 8 + Math.floor(n * (3.99 + 6 * relief)) : 3 + Math.floor(n * 3.99);
 }
 
 // socket of the east (d=0) or south (d=2) face of cube (X,Y,Z), from whichever side is collapsed
@@ -30,9 +30,10 @@ function vertexLevel(world, vx, Y, vz) {
   if (cubes.some(k => isClearing(k, world.seed))) return TOWN_LEVEL;
   const sv = spanVertex(world, vx, Y, vz);
   if (sv && !sv.natural) return valleyFloor(sv.span, world.noise, vx * N, vz * N, Y);
-  if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y)) return VOID;
+  const theme = world.layout(-Y).theme;
+  if (cubes.every(c => voidAllowed(world, c)) && isVoid(world.noise, vx * N, vz * N, -Y, theme.void)) return VOID;
   const s = [sockAt(world, vx - 1, Y, vz - 1, 0), sockAt(world, vx - 1, Y, vz, 0), sockAt(world, vx - 1, Y, vz - 1, 2), sockAt(world, vx, Y, vz - 1, 2)];
-  return levelAt(world.noise, s.filter(x => x === 'H').length > 2 ? 'H' : 'L', vx * N, vz * N, Y);
+  return levelAt(world.noise, s.filter(x => x === 'H').length > 2 ? 'H' : 'L', vx * N, vz * N, Y, theme.relief);
 }
 
 export function profile(world, fk, sock) {
@@ -40,9 +41,10 @@ export function profile(world, fk, sock) {
   const other = d === '0' ? key(X + 1, Y, Z) : key(X, Y, Z + 1);
   if (isClearing(k, world.seed) || isClearing(other, world.seed)) return out.fill(TOWN_LEVEL);
   const open = voidAllowed(world, k) && voidAllowed(world, d === '0' ? key(X + 1, Y, Z) : key(X, Y, Z + 1));
+  const theme = world.layout(-Y).theme;
   for (let t = 0; t < N; t++) {
     const wx = d === '0' ? (X + 1) * N : X * N + t + 0.5, wz = d === '0' ? Z * N + t + 0.5 : (Z + 1) * N;
-    out[t] = open && isVoid(world.noise, wx, wz, -Y) ? VOID : levelAt(world.noise, sock, wx, wz, Y);
+    out[t] = open && isVoid(world.noise, wx, wz, -Y, theme.void) ? VOID : levelAt(world.noise, sock, wx, wz, Y, theme.relief);
   }
   out[0] = d === '0' ? vertexLevel(world, X + 1, Y, Z) : vertexLevel(world, X, Y, Z + 1);
   out[N - 1] = vertexLevel(world, X + 1, Y, Z + 1);
@@ -84,7 +86,7 @@ function spanProfile(world, fk, out) {
 // the shared vertex), so the four faces meeting at a corner agree.
 export function caveWall(world, fk, f) {
   const [k, d] = fk.split('/'), [X, Y, Z] = parse(k);
-  if (!themeAt(-Y).cave) return null;
+  if (!world.layout(-Y).theme.cave) return null;
   const out = new Int16Array(N);
   for (let t = 0; t < N; t++) {
     if ((f.portal && Math.abs(t - f.portal.pos) <= 2) || (f.spout && Math.abs(t - f.spout.pos) <= 2)) continue;

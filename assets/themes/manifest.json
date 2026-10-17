@@ -1,0 +1,8355 @@
+{
+  "units": "cells",
+  "up": "Y",
+  "front": "+Z",
+  "glb": "themes.glb",
+  "sets": {
+    "highlands": [
+      "blue_poppy",
+      "butter_lamps",
+      "chorten_great",
+      "chorten_small",
+      "flag_drape",
+      "flag_run",
+      "glacier_floe",
+      "hermitage",
+      "juniper_shrub",
+      "khata_drape",
+      "lhatse",
+      "lungta_scraps",
+      "mani_stones",
+      "mani_wall",
+      "nomad_tent",
+      "prayer_wheel",
+      "prayer_wheel_row",
+      "sang_burner",
+      "scree_patch",
+      "tharchok",
+      "tsatsa_niche",
+      "tussock_grass",
+      "yak_skull"
+    ],
+    "karst": [
+      "bamboo_clump",
+      "bamboo_raft",
+      "banana_plant",
+      "fern_curtain",
+      "karst_needle",
+      "karst_tower",
+      "lotus",
+      "moss_stones",
+      "pavilion",
+      "rice_sheaves",
+      "rice_shoots",
+      "scarecrow",
+      "stone_lantern",
+      "wall_shrine"
+    ],
+    "clouds": [
+      "cloud_bush",
+      "cloud_spill",
+      "cloud_tufts",
+      "rainbow_crystal",
+      "raincloud",
+      "sky_gate",
+      "sky_nest",
+      "storm_jar",
+      "weather_vane",
+      "wind_chimes",
+      "wind_feathers",
+      "wind_harp"
+    ],
+    "saltflats": [
+      "bleached_shrub",
+      "brine_crystals",
+      "flamingo",
+      "pink_halite",
+      "salt_arch",
+      "salt_bricks",
+      "salt_cones",
+      "salt_crust",
+      "salt_crust_lip",
+      "salt_crystals",
+      "salt_harvest",
+      "salt_pillar",
+      "wading_flamingo"
+    ],
+    "lagoon": [
+      "barnacles",
+      "beach_grass",
+      "buried_chest",
+      "coral_head",
+      "crab",
+      "driftwood",
+      "palm_tree",
+      "rowboat",
+      "sand_ripples",
+      "seaweed_drape",
+      "shell_scatter",
+      "shipwreck",
+      "stilt_hut",
+      "tiki_torch"
+    ],
+    "hive": [
+      "bee_husk",
+      "comb_mound",
+      "comb_raft",
+      "comb_tower",
+      "giant_flower",
+      "honey_bubbles",
+      "honey_drips",
+      "honey_overflow",
+      "honey_pot",
+      "larva_cells",
+      "pollen_dust",
+      "royal_cell",
+      "wall_comb",
+      "wax_candles",
+      "wax_flakes"
+    ],
+    "cenote": [
+      "ceiba_roots",
+      "cenote_lilies",
+      "copal_bowl",
+      "glyph_panel",
+      "hanging_vines",
+      "jade_idol",
+      "jade_shards",
+      "jungle_drape",
+      "jungle_litter",
+      "macaw_perch",
+      "monstera",
+      "orchid_rock",
+      "serpent_head",
+      "step_shrine"
+    ],
+    "grotto": [
+      "anemone",
+      "brain_coral",
+      "coral_wall",
+      "giant_clam",
+      "giant_shell",
+      "glow_strands",
+      "jelly_lantern",
+      "jellyfish",
+      "kelp_drape",
+      "kelp_stalk",
+      "pearl_sand",
+      "sea_glass",
+      "sunken_anchor",
+      "sunken_bell"
+    ],
+    "forge": [
+      "anvil_block",
+      "chain_hoist",
+      "coal_bin",
+      "crucible",
+      "furnace",
+      "gauge_panel",
+      "gear_pile",
+      "great_gear",
+      "ingot_stack",
+      "metal_shavings",
+      "pipe_bend",
+      "pipe_run",
+      "slag_bits",
+      "slag_raft",
+      "steam_vent",
+      "valve_pipe"
+    ],
+    "ossuary": [
+      "bone_arch",
+      "bone_chandelier",
+      "bone_dust",
+      "bone_lantern",
+      "candelabra",
+      "candle_niche",
+      "candle_stubs",
+      "crypt_shrine",
+      "funeral_urn",
+      "sarcophagus",
+      "skull_ledge",
+      "skull_pile",
+      "skull_wall"
+    ]
+  },
+  "triangles": 71636,
+  "props": [
+    {
+      "name": "highlands_tussock_grass_a",
+      "set": "highlands",
+      "prop": "tussock_grass",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2367,
+      "triangles": 110,
+      "size": [
+        0.419,
+        0.428,
+        0.277
+      ],
+      "bounds_blender": [
+        [
+          -0.2306,
+          -0.2108,
+          0.0
+        ],
+        [
+          0.1883,
+          0.2168,
+          0.2768
+        ]
+      ],
+      "sway": 0.35,
+      "cover": true
+    },
+    {
+      "name": "highlands_tussock_grass_b",
+      "set": "highlands",
+      "prop": "tussock_grass",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2323,
+      "triangles": 126,
+      "size": [
+        0.435,
+        0.333,
+        0.278
+      ],
+      "bounds_blender": [
+        [
+          -0.2322,
+          -0.1899,
+          0.0
+        ],
+        [
+          0.2024,
+          0.1429,
+          0.2777
+        ]
+      ],
+      "sway": 0.35,
+      "cover": true
+    },
+    {
+      "name": "highlands_scree_patch_a",
+      "set": "highlands",
+      "prop": "scree_patch",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3265,
+      "triangles": 96,
+      "size": [
+        0.449,
+        0.443,
+        0.059
+      ],
+      "bounds_blender": [
+        [
+          -0.2171,
+          -0.1661,
+          0.0
+        ],
+        [
+          0.2315,
+          0.2774,
+          0.0595
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "highlands_scree_patch_b",
+      "set": "highlands",
+      "prop": "scree_patch",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3263,
+      "triangles": 124,
+      "size": [
+        0.424,
+        0.554,
+        0.058
+      ],
+      "bounds_blender": [
+        [
+          -0.2603,
+          -0.2424,
+          0.0
+        ],
+        [
+          0.164,
+          0.3115,
+          0.0583
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "highlands_lungta_scraps_a",
+      "set": "highlands",
+      "prop": "lungta_scraps",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3387,
+      "triangles": 160,
+      "size": [
+        0.538,
+        0.398,
+        0.055
+      ],
+      "bounds_blender": [
+        [
+          -0.2132,
+          -0.1316,
+          0.0
+        ],
+        [
+          0.3251,
+          0.2665,
+          0.055
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "highlands_lungta_scraps_b",
+      "set": "highlands",
+      "prop": "lungta_scraps",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.347,
+      "triangles": 196,
+      "size": [
+        0.419,
+        0.556,
+        0.055
+      ],
+      "bounds_blender": [
+        [
+          -0.2322,
+          -0.2412,
+          0.0
+        ],
+        [
+          0.1872,
+          0.3152,
+          0.055
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "highlands_blue_poppy_a",
+      "set": "highlands",
+      "prop": "blue_poppy",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1701,
+      "triangles": 176,
+      "size": [
+        0.31,
+        0.294,
+        0.373
+      ],
+      "bounds_blender": [
+        [
+          -0.17,
+          -0.1472,
+          0.0
+        ],
+        [
+          0.14,
+          0.1472,
+          0.3729
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "highlands_blue_poppy_b",
+      "set": "highlands",
+      "prop": "blue_poppy",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2497,
+      "triangles": 240,
+      "size": [
+        0.388,
+        0.294,
+        0.351
+      ],
+      "bounds_blender": [
+        [
+          -0.1398,
+          -0.1431,
+          0.0
+        ],
+        [
+          0.2477,
+          0.1511,
+          0.3508
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "highlands_juniper_shrub_a",
+      "set": "highlands",
+      "prop": "juniper_shrub",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.386,
+      "triangles": 288,
+      "size": [
+        0.618,
+        0.684,
+        0.319
+      ],
+      "bounds_blender": [
+        [
+          -0.2948,
+          -0.3376,
+          0.0
+        ],
+        [
+          0.3233,
+          0.346,
+          0.3191
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "highlands_juniper_shrub_b",
+      "set": "highlands",
+      "prop": "juniper_shrub",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4076,
+      "triangles": 330,
+      "size": [
+        0.699,
+        0.669,
+        0.319
+      ],
+      "bounds_blender": [
+        [
+          -0.4053,
+          -0.3229,
+          0.0
+        ],
+        [
+          0.2941,
+          0.3465,
+          0.3191
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "highlands_mani_stones_a",
+      "set": "highlands",
+      "prop": "mani_stones",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4195,
+      "triangles": 320,
+      "size": [
+        0.77,
+        0.684,
+        0.42
+      ],
+      "bounds_blender": [
+        [
+          -0.393,
+          -0.3491,
+          0.0
+        ],
+        [
+          0.377,
+          0.3346,
+          0.4196
+        ]
+      ]
+    },
+    {
+      "name": "highlands_mani_stones_b",
+      "set": "highlands",
+      "prop": "mani_stones",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4235,
+      "triangles": 380,
+      "size": [
+        0.778,
+        0.736,
+        0.462
+      ],
+      "bounds_blender": [
+        [
+          -0.3855,
+          -0.3537,
+          0.0
+        ],
+        [
+          0.3922,
+          0.3825,
+          0.4624
+        ]
+      ]
+    },
+    {
+      "name": "highlands_lhatse_a",
+      "set": "highlands",
+      "prop": "lhatse",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 350,
+      "size": [
+        0.761,
+        0.871,
+        1.302
+      ],
+      "bounds_blender": [
+        [
+          -0.34,
+          -0.4325,
+          0.0
+        ],
+        [
+          0.4212,
+          0.4387,
+          1.3019
+        ]
+      ],
+      "sway": 0.2,
+      "anchors": [
+        [
+          0.2211,
+          1.3,
+          -0.0935
+        ]
+      ]
+    },
+    {
+      "name": "highlands_lhatse_b",
+      "set": "highlands",
+      "prop": "lhatse",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 386,
+      "size": [
+        0.76,
+        0.755,
+        1.302
+      ],
+      "bounds_blender": [
+        [
+          -0.3607,
+          -0.4035,
+          0.0
+        ],
+        [
+          0.3989,
+          0.3518,
+          1.3019
+        ]
+      ],
+      "sway": 0.2,
+      "anchors": [
+        [
+          0.2211,
+          1.3,
+          -0.0935
+        ]
+      ]
+    },
+    {
+      "name": "highlands_tharchok_a",
+      "set": "highlands",
+      "prop": "tharchok",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3475,
+      "triangles": 400,
+      "size": [
+        0.568,
+        0.621,
+        2.52
+      ],
+      "bounds_blender": [
+        [
+          -0.313,
+          -0.3284,
+          0.0
+        ],
+        [
+          0.2554,
+          0.2925,
+          2.52
+        ]
+      ],
+      "sway": 0.15,
+      "anchors": [
+        [
+          0.01,
+          2.25,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "highlands_tharchok_b",
+      "set": "highlands",
+      "prop": "tharchok",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4035,
+      "triangles": 320,
+      "size": [
+        0.667,
+        0.667,
+        2.78
+      ],
+      "bounds_blender": [
+        [
+          -0.3332,
+          -0.3328,
+          0.0
+        ],
+        [
+          0.3339,
+          0.3341,
+          2.78
+        ]
+      ],
+      "sway": 0.15,
+      "anchors": [
+        [
+          0.01,
+          2.55,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "highlands_chorten_small_a",
+      "set": "highlands",
+      "prop": "chorten_small",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4243,
+      "triangles": 356,
+      "size": [
+        0.6,
+        0.6,
+        0.993
+      ],
+      "bounds_blender": [
+        [
+          -0.3,
+          -0.3,
+          0.0
+        ],
+        [
+          0.3,
+          0.3,
+          0.9928
+        ]
+      ],
+      "anchors": [
+        [
+          0.0,
+          0.9926,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "highlands_chorten_small_b",
+      "set": "highlands",
+      "prop": "chorten_small",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4243,
+      "triangles": 392,
+      "size": [
+        0.6,
+        0.6,
+        1.125
+      ],
+      "bounds_blender": [
+        [
+          -0.3,
+          -0.3,
+          0.0
+        ],
+        [
+          0.3,
+          0.3,
+          1.1252
+        ]
+      ],
+      "anchors": [
+        [
+          0.0,
+          1.1251,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "highlands_prayer_wheel_a",
+      "set": "highlands",
+      "prop": "prayer_wheel",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.32,
+      "triangles": 306,
+      "size": [
+        0.48,
+        0.453,
+        1.155
+      ],
+      "bounds_blender": [
+        [
+          -0.24,
+          -0.2263,
+          0.0
+        ],
+        [
+          0.24,
+          0.2263,
+          1.155
+        ]
+      ]
+    },
+    {
+      "name": "highlands_prayer_wheel_b",
+      "set": "highlands",
+      "prop": "prayer_wheel",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.297,
+      "triangles": 294,
+      "size": [
+        0.42,
+        0.42,
+        1.14
+      ],
+      "bounds_blender": [
+        [
+          -0.21,
+          -0.21,
+          0.0
+        ],
+        [
+          0.21,
+          0.21,
+          1.14
+        ]
+      ]
+    },
+    {
+      "name": "highlands_butter_lamps_a",
+      "set": "highlands",
+      "prop": "butter_lamps",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3892,
+      "triangles": 348,
+      "size": [
+        0.7,
+        0.34,
+        0.37
+      ],
+      "bounds_blender": [
+        [
+          -0.35,
+          -0.17,
+          0.0
+        ],
+        [
+          0.35,
+          0.17,
+          0.37
+        ]
+      ],
+      "light": "#ffc060",
+      "intensity": 1.2
+    },
+    {
+      "name": "highlands_butter_lamps_b",
+      "set": "highlands",
+      "prop": "butter_lamps",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3053,
+      "triangles": 378,
+      "size": [
+        0.499,
+        0.522,
+        0.181
+      ],
+      "bounds_blender": [
+        [
+          -0.2543,
+          -0.2319,
+          0.0
+        ],
+        [
+          0.2443,
+          0.2903,
+          0.1814
+        ]
+      ],
+      "light": "#ffc060",
+      "intensity": 1.2
+    },
+    {
+      "name": "highlands_sang_burner_a",
+      "set": "highlands",
+      "prop": "sang_burner",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2472,
+      "triangles": 290,
+      "size": [
+        0.486,
+        0.485,
+        1.087
+      ],
+      "bounds_blender": [
+        [
+          -0.2472,
+          -0.2433,
+          0.0
+        ],
+        [
+          0.2384,
+          0.2415,
+          1.0875
+        ]
+      ],
+      "light": "#ff9a50",
+      "intensity": 0.8
+    },
+    {
+      "name": "highlands_sang_burner_b",
+      "set": "highlands",
+      "prop": "sang_burner",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3257,
+      "triangles": 332,
+      "size": [
+        0.535,
+        0.483,
+        1.273
+      ],
+      "bounds_blender": [
+        [
+          -0.2937,
+          -0.245,
+          0.0
+        ],
+        [
+          0.2412,
+          0.2379,
+          1.2725
+        ]
+      ],
+      "light": "#ff9a50",
+      "intensity": 0.8
+    },
+    {
+      "name": "highlands_yak_skull_a",
+      "set": "highlands",
+      "prop": "yak_skull",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3232,
+      "triangles": 282,
+      "size": [
+        0.596,
+        0.431,
+        0.509
+      ],
+      "bounds_blender": [
+        [
+          -0.2829,
+          -0.3032,
+          0.0
+        ],
+        [
+          0.3129,
+          0.1278,
+          0.5089
+        ]
+      ]
+    },
+    {
+      "name": "highlands_yak_skull_b",
+      "set": "highlands",
+      "prop": "yak_skull",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3233,
+      "triangles": 318,
+      "size": [
+        0.585,
+        0.6,
+        0.528
+      ],
+      "bounds_blender": [
+        [
+          -0.3129,
+          -0.3043,
+          0.0
+        ],
+        [
+          0.2721,
+          0.2953,
+          0.5284
+        ]
+      ]
+    },
+    {
+      "name": "highlands_khata_drape_a",
+      "set": "highlands",
+      "prop": "khata_drape",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.3201,
+      "triangles": 108,
+      "size": [
+        0.483,
+        0.334,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.32,
+          -0.2408,
+          -0.6002
+        ],
+        [
+          0.1627,
+          0.093,
+          0.1
+        ]
+      ],
+      "sway": 0.4,
+      "drop": 0.6002
+    },
+    {
+      "name": "highlands_khata_drape_b",
+      "set": "highlands",
+      "prop": "khata_drape",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.3801,
+      "triangles": 144,
+      "size": [
+        0.65,
+        0.328,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.27,
+          -0.2353,
+          -0.6002
+        ],
+        [
+          0.38,
+          0.093,
+          0.1
+        ]
+      ],
+      "sway": 0.4,
+      "drop": 0.6002
+    },
+    {
+      "name": "highlands_flag_drape_a",
+      "set": "highlands",
+      "prop": "flag_drape",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.4935,
+      "triangles": 228,
+      "size": [
+        0.976,
+        0.237,
+        0.243
+      ],
+      "bounds_blender": [
+        [
+          -0.4935,
+          -0.1471,
+          -0.1633
+        ],
+        [
+          0.482,
+          0.0895,
+          0.08
+        ]
+      ],
+      "sway": 0.5,
+      "drop": 0.1633
+    },
+    {
+      "name": "highlands_flag_drape_b",
+      "set": "highlands",
+      "prop": "flag_drape",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.4924,
+      "triangles": 336,
+      "size": [
+        0.978,
+        0.256,
+        0.661
+      ],
+      "bounds_blender": [
+        [
+          -0.4855,
+          -0.1485,
+          -0.581
+        ],
+        [
+          0.4923,
+          0.1077,
+          0.08
+        ]
+      ],
+      "sway": 0.5,
+      "drop": 0.581
+    },
+    {
+      "name": "highlands_prayer_wheel_row_a",
+      "set": "highlands",
+      "prop": "prayer_wheel_row",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5971,
+      "triangles": 284,
+      "size": [
+        0.96,
+        0.22,
+        0.71
+      ],
+      "bounds_blender": [
+        [
+          -0.48,
+          0.0,
+          -0.355
+        ],
+        [
+          0.48,
+          0.22,
+          0.355
+        ]
+      ]
+    },
+    {
+      "name": "highlands_prayer_wheel_row_b",
+      "set": "highlands",
+      "prop": "prayer_wheel_row",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.6801,
+      "triangles": 346,
+      "size": [
+        1.16,
+        0.22,
+        0.71
+      ],
+      "bounds_blender": [
+        [
+          -0.58,
+          0.0,
+          -0.355
+        ],
+        [
+          0.58,
+          0.22,
+          0.355
+        ]
+      ]
+    },
+    {
+      "name": "highlands_tsatsa_niche_a",
+      "set": "highlands",
+      "prop": "tsatsa_niche",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5133,
+      "triangles": 336,
+      "size": [
+        0.76,
+        0.18,
+        0.68
+      ],
+      "bounds_blender": [
+        [
+          -0.38,
+          0.0,
+          -0.335
+        ],
+        [
+          0.38,
+          0.18,
+          0.345
+        ]
+      ]
+    },
+    {
+      "name": "highlands_tsatsa_niche_b",
+      "set": "highlands",
+      "prop": "tsatsa_niche",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5133,
+      "triangles": 392,
+      "size": [
+        0.76,
+        0.18,
+        0.68
+      ],
+      "bounds_blender": [
+        [
+          -0.38,
+          0.0,
+          -0.335
+        ],
+        [
+          0.38,
+          0.18,
+          0.345
+        ]
+      ]
+    },
+    {
+      "name": "highlands_glacier_floe_a",
+      "set": "highlands",
+      "prop": "glacier_floe",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3527,
+      "triangles": 40,
+      "size": [
+        0.448,
+        0.459,
+        0.146
+      ],
+      "bounds_blender": [
+        [
+          -0.2931,
+          -0.1794,
+          -0.08
+        ],
+        [
+          0.1552,
+          0.2801,
+          0.0663
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "highlands_glacier_floe_b",
+      "set": "highlands",
+      "prop": "glacier_floe",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3602,
+      "triangles": 60,
+      "size": [
+        0.685,
+        0.327,
+        0.149
+      ],
+      "bounds_blender": [
+        [
+          -0.3472,
+          -0.1944,
+          -0.08
+        ],
+        [
+          0.3378,
+          0.1322,
+          0.0686
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "highlands_flag_run_a",
+      "set": "highlands",
+      "prop": "flag_run",
+      "variant": "a",
+      "priority": 1,
+      "attach": "line",
+      "blocking": false,
+      "radius": 1.0001,
+      "triangles": 294,
+      "size": [
+        1.0,
+        0.041,
+        0.201
+      ],
+      "bounds_blender": [
+        [
+          -0.0,
+          -0.021,
+          -0.198
+        ],
+        [
+          1.0,
+          0.0203,
+          0.0035
+        ]
+      ],
+      "sway": 0.6
+    },
+    {
+      "name": "highlands_flag_run_b",
+      "set": "highlands",
+      "prop": "flag_run",
+      "variant": "b",
+      "priority": 1,
+      "attach": "line",
+      "blocking": false,
+      "radius": 1.0001,
+      "triangles": 294,
+      "size": [
+        1.0,
+        0.041,
+        0.271
+      ],
+      "bounds_blender": [
+        [
+          -0.0,
+          -0.021,
+          -0.268
+        ],
+        [
+          1.0,
+          0.0203,
+          0.0035
+        ]
+      ],
+      "sway": 0.6
+    },
+    {
+      "name": "highlands_chorten_great_a",
+      "set": "highlands",
+      "prop": "chorten_great",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.6264,
+      "triangles": 1400,
+      "size": [
+        2.918,
+        3.03,
+        3.736
+      ],
+      "bounds_blender": [
+        [
+          -1.4716,
+          -1.55,
+          0.0
+        ],
+        [
+          1.4466,
+          1.4801,
+          3.7364
+        ]
+      ],
+      "light": "#ffd080",
+      "intensity": 0.8,
+      "landmark": true,
+      "footprint": [
+        2.918,
+        3.03
+      ],
+      "height": 3.736,
+      "anchors": [
+        [
+          0.0,
+          3.696,
+          0.0
+        ],
+        [
+          -0.75,
+          1.42,
+          0.75
+        ],
+        [
+          -0.75,
+          1.42,
+          -0.75
+        ],
+        [
+          0.75,
+          1.42,
+          0.75
+        ],
+        [
+          0.75,
+          1.42,
+          -0.75
+        ]
+      ]
+    },
+    {
+      "name": "highlands_nomad_tent_a",
+      "set": "highlands",
+      "prop": "nomad_tent",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.7284,
+      "triangles": 676,
+      "size": [
+        2.694,
+        2.611,
+        1.901
+      ],
+      "bounds_blender": [
+        [
+          -1.5602,
+          -1.3055,
+          0.0
+        ],
+        [
+          1.1336,
+          1.3055,
+          1.9011
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.694,
+        2.611
+      ],
+      "height": 1.901,
+      "anchors": [
+        [
+          1.1,
+          1.88,
+          0.3
+        ]
+      ]
+    },
+    {
+      "name": "highlands_mani_wall_a",
+      "set": "highlands",
+      "prop": "mani_wall",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.6309,
+      "triangles": 1322,
+      "size": [
+        3.22,
+        0.619,
+        0.931
+      ],
+      "bounds_blender": [
+        [
+          -1.61,
+          -0.315,
+          0.0
+        ],
+        [
+          1.61,
+          0.3041,
+          0.9312
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        3.22,
+        0.619
+      ],
+      "height": 0.931,
+      "anchors": [
+        [
+          -1.35,
+          1.05,
+          0.0
+        ],
+        [
+          1.35,
+          1.05,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "highlands_hermitage_a",
+      "set": "highlands",
+      "prop": "hermitage",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.1336,
+      "triangles": 426,
+      "size": [
+        1.7,
+        1.745,
+        2.25
+      ],
+      "bounds_blender": [
+        [
+          -0.85,
+          -0.995,
+          0.0
+        ],
+        [
+          0.85,
+          0.75,
+          2.25
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        1.7,
+        1.745
+      ],
+      "height": 2.25,
+      "anchors": [
+        [
+          -0.697,
+          2.24,
+          0.615
+        ],
+        [
+          0.697,
+          2.24,
+          0.615
+        ]
+      ]
+    },
+    {
+      "name": "karst_rice_shoots_a",
+      "set": "karst",
+      "prop": "rice_shoots",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3228,
+      "triangles": 154,
+      "size": [
+        0.576,
+        0.609,
+        0.27
+      ],
+      "bounds_blender": [
+        [
+          -0.2732,
+          -0.3146,
+          0.0
+        ],
+        [
+          0.3027,
+          0.2942,
+          0.27
+        ]
+      ],
+      "sway": 0.4,
+      "cover": true
+    },
+    {
+      "name": "karst_rice_shoots_b",
+      "set": "karst",
+      "prop": "rice_shoots",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3406,
+      "triangles": 186,
+      "size": [
+        0.61,
+        0.533,
+        0.27
+      ],
+      "bounds_blender": [
+        [
+          -0.3068,
+          -0.2758,
+          0.0
+        ],
+        [
+          0.3035,
+          0.2574,
+          0.27
+        ]
+      ],
+      "sway": 0.4,
+      "cover": true
+    },
+    {
+      "name": "karst_moss_stones_a",
+      "set": "karst",
+      "prop": "moss_stones",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2783,
+      "triangles": 104,
+      "size": [
+        0.413,
+        0.475,
+        0.132
+      ],
+      "bounds_blender": [
+        [
+          -0.2038,
+          -0.2509,
+          0.0
+        ],
+        [
+          0.2088,
+          0.2241,
+          0.132
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "karst_moss_stones_b",
+      "set": "karst",
+      "prop": "moss_stones",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2817,
+      "triangles": 130,
+      "size": [
+        0.501,
+        0.423,
+        0.132
+      ],
+      "bounds_blender": [
+        [
+          -0.266,
+          -0.1859,
+          0.0
+        ],
+        [
+          0.2354,
+          0.2368,
+          0.132
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "karst_bamboo_clump_a",
+      "set": "karst",
+      "prop": "bamboo_clump",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 322,
+      "size": [
+        0.651,
+        0.709,
+        2.105
+      ],
+      "bounds_blender": [
+        [
+          -0.3772,
+          -0.3517,
+          0.0
+        ],
+        [
+          0.2738,
+          0.3572,
+          2.1055
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "karst_bamboo_clump_b",
+      "set": "karst",
+      "prop": "bamboo_clump",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 382,
+      "size": [
+        0.789,
+        0.729,
+        2.107
+      ],
+      "bounds_blender": [
+        [
+          -0.3809,
+          -0.3318,
+          0.0
+        ],
+        [
+          0.4084,
+          0.3973,
+          2.1071
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "karst_banana_plant_a",
+      "set": "karst",
+      "prop": "banana_plant",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4189,
+      "triangles": 128,
+      "size": [
+        0.836,
+        0.753,
+        1.03
+      ],
+      "bounds_blender": [
+        [
+          -0.4178,
+          -0.3767,
+          0.0
+        ],
+        [
+          0.4178,
+          0.3767,
+          1.03
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "karst_banana_plant_b",
+      "set": "karst",
+      "prop": "banana_plant",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4189,
+      "triangles": 268,
+      "size": [
+        0.781,
+        0.828,
+        1.18
+      ],
+      "bounds_blender": [
+        [
+          -0.3903,
+          -0.414,
+          0.0
+        ],
+        [
+          0.3903,
+          0.414,
+          1.18
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "karst_stone_lantern_a",
+      "set": "karst",
+      "prop": "stone_lantern",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.2856,
+      "triangles": 162,
+      "size": [
+        0.563,
+        0.491,
+        0.94
+      ],
+      "bounds_blender": [
+        [
+          -0.2773,
+          -0.2455,
+          0.0
+        ],
+        [
+          0.2856,
+          0.2451,
+          0.94
+        ]
+      ],
+      "light": "#ffd080",
+      "intensity": 1.2
+    },
+    {
+      "name": "karst_stone_lantern_b",
+      "set": "karst",
+      "prop": "stone_lantern",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.357,
+      "triangles": 186,
+      "size": [
+        0.591,
+        0.656,
+        1.04
+      ],
+      "bounds_blender": [
+        [
+          -0.2759,
+          -0.3459,
+          0.0
+        ],
+        [
+          0.3154,
+          0.3099,
+          1.04
+        ]
+      ],
+      "light": "#ffd080",
+      "intensity": 1.2
+    },
+    {
+      "name": "karst_scarecrow_a",
+      "set": "karst",
+      "prop": "scarecrow",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4205,
+      "triangles": 170,
+      "size": [
+        0.84,
+        0.507,
+        1.2
+      ],
+      "bounds_blender": [
+        [
+          -0.42,
+          -0.2529,
+          0.0
+        ],
+        [
+          0.42,
+          0.2544,
+          1.2
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "karst_scarecrow_b",
+      "set": "karst",
+      "prop": "scarecrow",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4471,
+      "triangles": 190,
+      "size": [
+        0.863,
+        0.526,
+        1.2
+      ],
+      "bounds_blender": [
+        [
+          -0.42,
+          -0.2628,
+          0.0
+        ],
+        [
+          0.443,
+          0.2635,
+          1.2
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "karst_rice_sheaves_a",
+      "set": "karst",
+      "prop": "rice_sheaves",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4005,
+      "triangles": 228,
+      "size": [
+        0.8,
+        0.125,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.4,
+          -0.0638,
+          0.0
+        ],
+        [
+          0.4,
+          0.0609,
+          0.7
+        ]
+      ]
+    },
+    {
+      "name": "karst_rice_sheaves_b",
+      "set": "karst",
+      "prop": "rice_sheaves",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4005,
+      "triangles": 306,
+      "size": [
+        0.8,
+        0.327,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.4,
+          -0.064,
+          0.0
+        ],
+        [
+          0.4,
+          0.263,
+          0.7
+        ]
+      ]
+    },
+    {
+      "name": "karst_karst_needle_a",
+      "set": "karst",
+      "prop": "karst_needle",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4497,
+      "triangles": 296,
+      "size": [
+        0.694,
+        0.734,
+        1.54
+      ],
+      "bounds_blender": [
+        [
+          -0.2446,
+          -0.3842,
+          0.0
+        ],
+        [
+          0.449,
+          0.3494,
+          1.54
+        ]
+      ]
+    },
+    {
+      "name": "karst_karst_needle_b",
+      "set": "karst",
+      "prop": "karst_needle",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4254,
+      "triangles": 296,
+      "size": [
+        0.728,
+        0.817,
+        1.84
+      ],
+      "bounds_blender": [
+        [
+          -0.3377,
+          -0.422,
+          0.0
+        ],
+        [
+          0.3905,
+          0.3948,
+          1.84
+        ]
+      ]
+    },
+    {
+      "name": "karst_lotus_a",
+      "set": "karst",
+      "prop": "lotus",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 192,
+      "size": [
+        0.423,
+        0.637,
+        0.332
+      ],
+      "bounds_blender": [
+        [
+          -0.2766,
+          -0.3482,
+          -0.012
+        ],
+        [
+          0.146,
+          0.2892,
+          0.32
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "karst_lotus_b",
+      "set": "karst",
+      "prop": "lotus",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 272,
+      "size": [
+        0.634,
+        0.611,
+        0.362
+      ],
+      "bounds_blender": [
+        [
+          -0.3415,
+          -0.2613,
+          -0.012
+        ],
+        [
+          0.2923,
+          0.3496,
+          0.35
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "karst_bamboo_raft_a",
+      "set": "karst",
+      "prop": "bamboo_raft",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 150,
+      "size": [
+        0.779,
+        0.398,
+        0.159
+      ],
+      "bounds_blender": [
+        [
+          -0.3753,
+          -0.1992,
+          -0.019
+        ],
+        [
+          0.4035,
+          0.1992,
+          0.14
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "karst_bamboo_raft_b",
+      "set": "karst",
+      "prop": "bamboo_raft",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 164,
+      "size": [
+        0.779,
+        0.398,
+        0.249
+      ],
+      "bounds_blender": [
+        [
+          -0.3753,
+          -0.1992,
+          -0.019
+        ],
+        [
+          0.4035,
+          0.1992,
+          0.23
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "karst_fern_curtain_a",
+      "set": "karst",
+      "prop": "fern_curtain",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.452,
+      "triangles": 308,
+      "size": [
+        0.9,
+        0.318,
+        0.699
+      ],
+      "bounds_blender": [
+        [
+          -0.452,
+          -0.2,
+          -0.6491
+        ],
+        [
+          0.448,
+          0.118,
+          0.05
+        ]
+      ],
+      "sway": 0.35,
+      "drop": 0.6491
+    },
+    {
+      "name": "karst_fern_curtain_b",
+      "set": "karst",
+      "prop": "fern_curtain",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.462,
+      "triangles": 354,
+      "size": [
+        0.92,
+        0.318,
+        0.722
+      ],
+      "bounds_blender": [
+        [
+          -0.462,
+          -0.2,
+          -0.6715
+        ],
+        [
+          0.458,
+          0.118,
+          0.05
+        ]
+      ],
+      "sway": 0.35,
+      "drop": 0.6715
+    },
+    {
+      "name": "karst_wall_shrine_a",
+      "set": "karst",
+      "prop": "wall_shrine",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.2724,
+      "triangles": 184,
+      "size": [
+        0.424,
+        0.312,
+        0.46
+      ],
+      "bounds_blender": [
+        [
+          -0.2121,
+          0.0,
+          -0.19
+        ],
+        [
+          0.2121,
+          0.3121,
+          0.27
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.8
+    },
+    {
+      "name": "karst_wall_shrine_b",
+      "set": "karst",
+      "prop": "wall_shrine",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.2724,
+      "triangles": 208,
+      "size": [
+        0.424,
+        0.312,
+        0.46
+      ],
+      "bounds_blender": [
+        [
+          -0.2121,
+          0.0,
+          -0.19
+        ],
+        [
+          0.2121,
+          0.3121,
+          0.27
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.8
+    },
+    {
+      "name": "karst_pavilion_a",
+      "set": "karst",
+      "prop": "pavilion",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.3976,
+      "triangles": 694,
+      "size": [
+        2.424,
+        2.795,
+        2.61
+      ],
+      "bounds_blender": [
+        [
+          -1.2119,
+          -1.3975,
+          0.0
+        ],
+        [
+          1.2119,
+          1.3975,
+          2.61
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.424,
+        2.795
+      ],
+      "height": 2.61
+    },
+    {
+      "name": "karst_karst_tower_a",
+      "set": "karst",
+      "prop": "karst_tower",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.5205,
+      "triangles": 794,
+      "size": [
+        2.747,
+        2.903,
+        4.16
+      ],
+      "bounds_blender": [
+        [
+          -1.2274,
+          -1.425,
+          0.0
+        ],
+        [
+          1.5198,
+          1.4777,
+          4.16
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.747,
+        2.903
+      ],
+      "height": 4.16
+    },
+    {
+      "name": "clouds_cloud_tufts_a",
+      "set": "clouds",
+      "prop": "cloud_tufts",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2468,
+      "triangles": 150,
+      "size": [
+        0.343,
+        0.419,
+        0.143
+      ],
+      "bounds_blender": [
+        [
+          -0.2229,
+          -0.2229,
+          0.0
+        ],
+        [
+          0.1205,
+          0.1964,
+          0.143
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "clouds_cloud_tufts_b",
+      "set": "clouds",
+      "prop": "cloud_tufts",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2463,
+      "triangles": 200,
+      "size": [
+        0.464,
+        0.34,
+        0.143
+      ],
+      "bounds_blender": [
+        [
+          -0.242,
+          -0.1425,
+          0.0
+        ],
+        [
+          0.2225,
+          0.198,
+          0.143
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "clouds_wind_feathers_a",
+      "set": "clouds",
+      "prop": "wind_feathers",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2401,
+      "triangles": 60,
+      "size": [
+        0.233,
+        0.345,
+        0.026
+      ],
+      "bounds_blender": [
+        [
+          -0.1699,
+          -0.2298,
+          0.0
+        ],
+        [
+          0.0633,
+          0.1154,
+          0.0258
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "clouds_wind_feathers_b",
+      "set": "clouds",
+      "prop": "wind_feathers",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 80,
+      "size": [
+        0.593,
+        0.406,
+        0.03
+      ],
+      "bounds_blender": [
+        [
+          -0.3161,
+          -0.2175,
+          0.0
+        ],
+        [
+          0.2771,
+          0.1881,
+          0.0304
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "clouds_cloud_bush_a",
+      "set": "clouds",
+      "prop": "cloud_bush",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3368,
+      "triangles": 262,
+      "size": [
+        0.563,
+        0.614,
+        0.578
+      ],
+      "bounds_blender": [
+        [
+          -0.3174,
+          -0.3301,
+          0.0
+        ],
+        [
+          0.2459,
+          0.2841,
+          0.5784
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "clouds_cloud_bush_b",
+      "set": "clouds",
+      "prop": "cloud_bush",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3624,
+      "triangles": 312,
+      "size": [
+        0.677,
+        0.588,
+        0.578
+      ],
+      "bounds_blender": [
+        [
+          -0.3537,
+          -0.2809,
+          0.0
+        ],
+        [
+          0.3229,
+          0.3073,
+          0.5784
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "clouds_storm_jar_a",
+      "set": "clouds",
+      "prop": "storm_jar",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1864,
+      "triangles": 238,
+      "size": [
+        0.366,
+        0.341,
+        0.674
+      ],
+      "bounds_blender": [
+        [
+          -0.1857,
+          -0.1703,
+          0.0
+        ],
+        [
+          0.18,
+          0.1703,
+          0.6737
+        ]
+      ],
+      "light": "#a8d0ff",
+      "intensity": 1.2
+    },
+    {
+      "name": "clouds_storm_jar_b",
+      "set": "clouds",
+      "prop": "storm_jar",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3145,
+      "triangles": 388,
+      "size": [
+        0.552,
+        0.556,
+        0.674
+      ],
+      "bounds_blender": [
+        [
+          -0.2396,
+          -0.3058,
+          0.0
+        ],
+        [
+          0.3123,
+          0.2502,
+          0.6737
+        ]
+      ],
+      "light": "#a8d0ff",
+      "intensity": 1.2
+    },
+    {
+      "name": "clouds_wind_chimes_a",
+      "set": "clouds",
+      "prop": "wind_chimes",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3871,
+      "triangles": 376,
+      "size": [
+        0.544,
+        0.406,
+        1.468
+      ],
+      "bounds_blender": [
+        [
+          -0.1571,
+          -0.2001,
+          0.0
+        ],
+        [
+          0.387,
+          0.2057,
+          1.4679
+        ]
+      ],
+      "sway": 0.5
+    },
+    {
+      "name": "clouds_wind_chimes_b",
+      "set": "clouds",
+      "prop": "wind_chimes",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3897,
+      "triangles": 400,
+      "size": [
+        0.547,
+        0.399,
+        1.468
+      ],
+      "bounds_blender": [
+        [
+          -0.1576,
+          -0.2029,
+          0.0
+        ],
+        [
+          0.3896,
+          0.1963,
+          1.4679
+        ]
+      ],
+      "sway": 0.5
+    },
+    {
+      "name": "clouds_rainbow_crystal_a",
+      "set": "clouds",
+      "prop": "rainbow_crystal",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2867,
+      "triangles": 262,
+      "size": [
+        0.564,
+        0.482,
+        0.74
+      ],
+      "bounds_blender": [
+        [
+          -0.2843,
+          -0.2463,
+          0.0
+        ],
+        [
+          0.2798,
+          0.2358,
+          0.74
+        ]
+      ],
+      "light": "#e8f0ff",
+      "intensity": 1
+    },
+    {
+      "name": "clouds_rainbow_crystal_b",
+      "set": "clouds",
+      "prop": "rainbow_crystal",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2804,
+      "triangles": 262,
+      "size": [
+        0.499,
+        0.512,
+        0.89
+      ],
+      "bounds_blender": [
+        [
+          -0.2449,
+          -0.2647,
+          0.0
+        ],
+        [
+          0.2546,
+          0.2472,
+          0.89
+        ]
+      ],
+      "light": "#e8f0ff",
+      "intensity": 1
+    },
+    {
+      "name": "clouds_sky_nest_a",
+      "set": "clouds",
+      "prop": "sky_nest",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3453,
+      "triangles": 298,
+      "size": [
+        0.68,
+        0.65,
+        0.28
+      ],
+      "bounds_blender": [
+        [
+          -0.3453,
+          -0.325,
+          0.0
+        ],
+        [
+          0.3345,
+          0.325,
+          0.28
+        ]
+      ]
+    },
+    {
+      "name": "clouds_sky_nest_b",
+      "set": "clouds",
+      "prop": "sky_nest",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3568,
+      "triangles": 268,
+      "size": [
+        0.709,
+        0.653,
+        0.28
+      ],
+      "bounds_blender": [
+        [
+          -0.3525,
+          -0.3276,
+          0.0
+        ],
+        [
+          0.3568,
+          0.325,
+          0.28
+        ]
+      ]
+    },
+    {
+      "name": "clouds_weather_vane_a",
+      "set": "clouds",
+      "prop": "weather_vane",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.44,
+      "triangles": 252,
+      "size": [
+        0.8,
+        0.499,
+        1.67
+      ],
+      "bounds_blender": [
+        [
+          -0.36,
+          -0.2494,
+          0.0
+        ],
+        [
+          0.44,
+          0.25,
+          1.67
+        ]
+      ]
+    },
+    {
+      "name": "clouds_weather_vane_b",
+      "set": "clouds",
+      "prop": "weather_vane",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.2667,
+      "triangles": 306,
+      "size": [
+        0.508,
+        0.496,
+        1.656
+      ],
+      "bounds_blender": [
+        [
+          -0.2437,
+          -0.2484,
+          0.0
+        ],
+        [
+          0.2638,
+          0.2476,
+          1.656
+        ]
+      ]
+    },
+    {
+      "name": "clouds_cloud_spill_a",
+      "set": "clouds",
+      "prop": "cloud_spill",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.4471,
+      "triangles": 350,
+      "size": [
+        0.889,
+        0.47,
+        0.606
+      ],
+      "bounds_blender": [
+        [
+          -0.4471,
+          -0.2394,
+          -0.456
+        ],
+        [
+          0.4417,
+          0.2306,
+          0.15
+        ]
+      ],
+      "sway": 0.2,
+      "drop": 0.456
+    },
+    {
+      "name": "clouds_cloud_spill_b",
+      "set": "clouds",
+      "prop": "cloud_spill",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.4542,
+      "triangles": 400,
+      "size": [
+        0.882,
+        0.454,
+        0.706
+      ],
+      "bounds_blender": [
+        [
+          -0.4542,
+          -0.2326,
+          -0.556
+        ],
+        [
+          0.4283,
+          0.2214,
+          0.15
+        ]
+      ],
+      "sway": 0.2,
+      "drop": 0.556
+    },
+    {
+      "name": "clouds_raincloud_a",
+      "set": "clouds",
+      "prop": "raincloud",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.3618,
+      "triangles": 256,
+      "size": [
+        0.618,
+        0.672,
+        0.728
+      ],
+      "bounds_blender": [
+        [
+          -0.3036,
+          -0.3551,
+          -0.7281
+        ],
+        [
+          0.3144,
+          0.3169,
+          0.0
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "clouds_raincloud_b",
+      "set": "clouds",
+      "prop": "raincloud",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.3832,
+      "triangles": 314,
+      "size": [
+        0.674,
+        0.618,
+        0.728
+      ],
+      "bounds_blender": [
+        [
+          -0.3773,
+          -0.2708,
+          -0.7281
+        ],
+        [
+          0.2965,
+          0.3475,
+          0.0
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "clouds_sky_gate_a",
+      "set": "clouds",
+      "prop": "sky_gate",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.4567,
+      "triangles": 838,
+      "size": [
+        2.845,
+        0.781,
+        2.6
+      ],
+      "bounds_blender": [
+        [
+          -1.4503,
+          -0.393,
+          0.0
+        ],
+        [
+          1.3946,
+          0.3879,
+          2.6
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.845,
+        0.781
+      ],
+      "height": 2.6
+    },
+    {
+      "name": "clouds_wind_harp_a",
+      "set": "clouds",
+      "prop": "wind_harp",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.7885,
+      "triangles": 512,
+      "size": [
+        1.569,
+        1.363,
+        2.58
+      ],
+      "bounds_blender": [
+        [
+          -0.7872,
+          -0.6931,
+          0.0
+        ],
+        [
+          0.7819,
+          0.67,
+          2.58
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        1.569,
+        1.363
+      ],
+      "height": 2.58
+    },
+    {
+      "name": "saltflats_salt_crust_a",
+      "set": "saltflats",
+      "prop": "salt_crust",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3441,
+      "triangles": 120,
+      "size": [
+        0.491,
+        0.486,
+        0.025
+      ],
+      "bounds_blender": [
+        [
+          -0.2492,
+          -0.1995,
+          0.0
+        ],
+        [
+          0.2417,
+          0.2862,
+          0.025
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "saltflats_salt_crust_b",
+      "set": "saltflats",
+      "prop": "salt_crust",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3372,
+      "triangles": 140,
+      "size": [
+        0.473,
+        0.562,
+        0.025
+      ],
+      "bounds_blender": [
+        [
+          -0.2837,
+          -0.2398,
+          0.0
+        ],
+        [
+          0.1896,
+          0.3224,
+          0.025
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "saltflats_salt_crystals_a",
+      "set": "saltflats",
+      "prop": "salt_crystals",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2613,
+      "triangles": 72,
+      "size": [
+        0.333,
+        0.327,
+        0.067
+      ],
+      "bounds_blender": [
+        [
+          -0.1611,
+          -0.1192,
+          0.0
+        ],
+        [
+          0.1721,
+          0.2082,
+          0.0673
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "saltflats_salt_crystals_b",
+      "set": "saltflats",
+      "prop": "salt_crystals",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2525,
+      "triangles": 96,
+      "size": [
+        0.314,
+        0.398,
+        0.072
+      ],
+      "bounds_blender": [
+        [
+          -0.2151,
+          -0.1601,
+          0.0
+        ],
+        [
+          0.0987,
+          0.2378,
+          0.0724
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "saltflats_salt_pillar_a",
+      "set": "saltflats",
+      "prop": "salt_pillar",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3923,
+      "triangles": 116,
+      "size": [
+        0.611,
+        0.694,
+        0.97
+      ],
+      "bounds_blender": [
+        [
+          -0.3452,
+          -0.3462,
+          0.0
+        ],
+        [
+          0.2662,
+          0.3481,
+          0.97
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_salt_pillar_b",
+      "set": "saltflats",
+      "prop": "salt_pillar",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4039,
+      "triangles": 116,
+      "size": [
+        0.629,
+        0.624,
+        1.27
+      ],
+      "bounds_blender": [
+        [
+          -0.3118,
+          -0.3531,
+          0.0
+        ],
+        [
+          0.317,
+          0.2708,
+          1.27
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_pink_halite_a",
+      "set": "saltflats",
+      "prop": "pink_halite",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2465,
+      "triangles": 60,
+      "size": [
+        0.431,
+        0.439,
+        0.226
+      ],
+      "bounds_blender": [
+        [
+          -0.201,
+          -0.2179,
+          0.0
+        ],
+        [
+          0.2296,
+          0.2212,
+          0.2263
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_pink_halite_b",
+      "set": "saltflats",
+      "prop": "pink_halite",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2603,
+      "triangles": 72,
+      "size": [
+        0.476,
+        0.423,
+        0.226
+      ],
+      "bounds_blender": [
+        [
+          -0.2583,
+          -0.1928,
+          0.0
+        ],
+        [
+          0.218,
+          0.2305,
+          0.2263
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_flamingo_a",
+      "set": "saltflats",
+      "prop": "flamingo",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.272,
+      "triangles": 178,
+      "size": [
+        0.496,
+        0.175,
+        1.095
+      ],
+      "bounds_blender": [
+        [
+          -0.2237,
+          -0.0861,
+          0.0
+        ],
+        [
+          0.2719,
+          0.0891,
+          1.0951
+        ]
+      ],
+      "sway": 0.05
+    },
+    {
+      "name": "saltflats_flamingo_b",
+      "set": "saltflats",
+      "prop": "flamingo",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.272,
+      "triangles": 178,
+      "size": [
+        0.478,
+        0.171,
+        0.941
+      ],
+      "bounds_blender": [
+        [
+          -0.206,
+          -0.0897,
+          0.0
+        ],
+        [
+          0.2719,
+          0.0816,
+          0.9415
+        ]
+      ],
+      "sway": 0.05
+    },
+    {
+      "name": "saltflats_salt_bricks_a",
+      "set": "saltflats",
+      "prop": "salt_bricks",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3993,
+      "triangles": 168,
+      "size": [
+        0.616,
+        0.329,
+        0.703
+      ],
+      "bounds_blender": [
+        [
+          -0.2363,
+          -0.1643,
+          0.0
+        ],
+        [
+          0.3792,
+          0.1643,
+          0.7026
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_salt_bricks_b",
+      "set": "saltflats",
+      "prop": "salt_bricks",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3993,
+      "triangles": 216,
+      "size": [
+        0.616,
+        0.337,
+        0.703
+      ],
+      "bounds_blender": [
+        [
+          -0.2363,
+          -0.1683,
+          0.0
+        ],
+        [
+          0.3792,
+          0.1683,
+          0.7026
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_bleached_shrub_a",
+      "set": "saltflats",
+      "prop": "bleached_shrub",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2973,
+      "triangles": 146,
+      "size": [
+        0.568,
+        0.553,
+        0.502
+      ],
+      "bounds_blender": [
+        [
+          -0.277,
+          -0.2853,
+          0.0
+        ],
+        [
+          0.2915,
+          0.2675,
+          0.5023
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_bleached_shrub_b",
+      "set": "saltflats",
+      "prop": "bleached_shrub",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2972,
+      "triangles": 166,
+      "size": [
+        0.553,
+        0.569,
+        0.502
+      ],
+      "bounds_blender": [
+        [
+          -0.2672,
+          -0.2916,
+          0.0
+        ],
+        [
+          0.2855,
+          0.2773,
+          0.5019
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_salt_cones_a",
+      "set": "saltflats",
+      "prop": "salt_cones",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3776,
+      "triangles": 52,
+      "size": [
+        0.522,
+        0.477,
+        0.28
+      ],
+      "bounds_blender": [
+        [
+          -0.3217,
+          -0.198,
+          0.0
+        ],
+        [
+          0.2002,
+          0.2787,
+          0.28
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_salt_cones_b",
+      "set": "saltflats",
+      "prop": "salt_cones",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3724,
+      "triangles": 78,
+      "size": [
+        0.682,
+        0.424,
+        0.28
+      ],
+      "bounds_blender": [
+        [
+          -0.3441,
+          -0.2285,
+          0.0
+        ],
+        [
+          0.3378,
+          0.1955,
+          0.28
+        ]
+      ]
+    },
+    {
+      "name": "saltflats_brine_crystals_a",
+      "set": "saltflats",
+      "prop": "brine_crystals",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3206,
+      "triangles": 96,
+      "size": [
+        0.387,
+        0.543,
+        0.092
+      ],
+      "bounds_blender": [
+        [
+          -0.2671,
+          -0.301,
+          -0.02
+        ],
+        [
+          0.12,
+          0.2419,
+          0.0717
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "saltflats_brine_crystals_b",
+      "set": "saltflats",
+      "prop": "brine_crystals",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3217,
+      "triangles": 128,
+      "size": [
+        0.602,
+        0.461,
+        0.092
+      ],
+      "bounds_blender": [
+        [
+          -0.3176,
+          -0.184,
+          -0.02
+        ],
+        [
+          0.2844,
+          0.2766,
+          0.0717
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "saltflats_wading_flamingo_a",
+      "set": "saltflats",
+      "prop": "wading_flamingo",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.272,
+      "triangles": 298,
+      "size": [
+        0.528,
+        0.335,
+        1.245
+      ],
+      "bounds_blender": [
+        [
+          -0.256,
+          -0.1974,
+          -0.1501
+        ],
+        [
+          0.2719,
+          0.1374,
+          1.095
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "saltflats_wading_flamingo_b",
+      "set": "saltflats",
+      "prop": "wading_flamingo",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.272,
+      "triangles": 298,
+      "size": [
+        0.528,
+        0.335,
+        1.091
+      ],
+      "bounds_blender": [
+        [
+          -0.256,
+          -0.1974,
+          -0.1501
+        ],
+        [
+          0.2719,
+          0.1374,
+          0.9413
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "saltflats_salt_crust_lip_a",
+      "set": "saltflats",
+      "prop": "salt_crust_lip",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 122,
+      "size": [
+        0.9,
+        0.328,
+        0.428
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          -0.22,
+          -0.3781
+        ],
+        [
+          0.45,
+          0.1082,
+          0.05
+        ]
+      ],
+      "drop": 0.3781
+    },
+    {
+      "name": "saltflats_salt_crust_lip_b",
+      "set": "saltflats",
+      "prop": "salt_crust_lip",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 140,
+      "size": [
+        0.9,
+        0.328,
+        0.439
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          -0.22,
+          -0.369
+        ],
+        [
+          0.45,
+          0.1078,
+          0.07
+        ]
+      ],
+      "drop": 0.369
+    },
+    {
+      "name": "saltflats_salt_harvest_a",
+      "set": "saltflats",
+      "prop": "salt_harvest",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.3577,
+      "triangles": 412,
+      "size": [
+        2.565,
+        1.358,
+        0.563
+      ],
+      "bounds_blender": [
+        [
+          -1.3251,
+          -0.6917,
+          0.0
+        ],
+        [
+          1.2398,
+          0.6666,
+          0.563
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.565,
+        1.358
+      ],
+      "height": 0.563
+    },
+    {
+      "name": "saltflats_salt_arch_a",
+      "set": "saltflats",
+      "prop": "salt_arch",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.6194,
+      "triangles": 258,
+      "size": [
+        3.173,
+        2.873,
+        2.22
+      ],
+      "bounds_blender": [
+        [
+          -1.5554,
+          -1.3592,
+          0.0
+        ],
+        [
+          1.618,
+          1.5139,
+          2.2203
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        3.173,
+        2.873
+      ],
+      "height": 2.22
+    },
+    {
+      "name": "lagoon_shell_scatter_a",
+      "set": "lagoon",
+      "prop": "shell_scatter",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2807,
+      "triangles": 114,
+      "size": [
+        0.47,
+        0.304,
+        0.065
+      ],
+      "bounds_blender": [
+        [
+          -0.2094,
+          -0.1315,
+          0.0
+        ],
+        [
+          0.2601,
+          0.1724,
+          0.0649
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "lagoon_shell_scatter_b",
+      "set": "lagoon",
+      "prop": "shell_scatter",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2908,
+      "triangles": 134,
+      "size": [
+        0.301,
+        0.439,
+        0.065
+      ],
+      "bounds_blender": [
+        [
+          -0.2154,
+          -0.1615,
+          0.0
+        ],
+        [
+          0.0861,
+          0.2775,
+          0.0653
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "lagoon_sand_ripples_a",
+      "set": "lagoon",
+      "prop": "sand_ripples",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 94,
+      "size": [
+        0.629,
+        0.588,
+        0.041
+      ],
+      "bounds_blender": [
+        [
+          -0.3323,
+          -0.2727,
+          0.0
+        ],
+        [
+          0.2968,
+          0.3155,
+          0.041
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "lagoon_sand_ripples_b",
+      "set": "lagoon",
+      "prop": "sand_ripples",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 106,
+      "size": [
+        0.663,
+        0.64,
+        0.041
+      ],
+      "bounds_blender": [
+        [
+          -0.3162,
+          -0.2902,
+          0.0
+        ],
+        [
+          0.347,
+          0.35,
+          0.041
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "lagoon_palm_tree_a",
+      "set": "lagoon",
+      "prop": "palm_tree",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4357,
+      "triangles": 566,
+      "size": [
+        0.655,
+        0.665,
+        1.56
+      ],
+      "bounds_blender": [
+        [
+          -0.4143,
+          -0.3359,
+          0.0
+        ],
+        [
+          0.2409,
+          0.3288,
+          1.5603
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "lagoon_palm_tree_b",
+      "set": "lagoon",
+      "prop": "palm_tree",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4372,
+      "triangles": 566,
+      "size": [
+        0.662,
+        0.664,
+        1.76
+      ],
+      "bounds_blender": [
+        [
+          -0.2402,
+          -0.3394,
+          0.0
+        ],
+        [
+          0.4218,
+          0.3241,
+          1.7602
+        ]
+      ],
+      "sway": 0.3
+    },
+    {
+      "name": "lagoon_beach_grass_a",
+      "set": "lagoon",
+      "prop": "beach_grass",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2573,
+      "triangles": 102,
+      "size": [
+        0.438,
+        0.416,
+        0.585
+      ],
+      "bounds_blender": [
+        [
+          -0.197,
+          -0.1982,
+          0.0
+        ],
+        [
+          0.2406,
+          0.2175,
+          0.5849
+        ]
+      ],
+      "sway": 0.4
+    },
+    {
+      "name": "lagoon_beach_grass_b",
+      "set": "lagoon",
+      "prop": "beach_grass",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2401,
+      "triangles": 118,
+      "size": [
+        0.456,
+        0.44,
+        0.595
+      ],
+      "bounds_blender": [
+        [
+          -0.22,
+          -0.2336,
+          0.0
+        ],
+        [
+          0.236,
+          0.2061,
+          0.5948
+        ]
+      ],
+      "sway": 0.4
+    },
+    {
+      "name": "lagoon_driftwood_a",
+      "set": "lagoon",
+      "prop": "driftwood",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 68,
+      "size": [
+        0.798,
+        0.491,
+        0.185
+      ],
+      "bounds_blender": [
+        [
+          -0.4011,
+          -0.2088,
+          0.0
+        ],
+        [
+          0.3967,
+          0.2825,
+          0.1849
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_driftwood_b",
+      "set": "lagoon",
+      "prop": "driftwood",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 98,
+      "size": [
+        0.798,
+        0.491,
+        0.185
+      ],
+      "bounds_blender": [
+        [
+          -0.4011,
+          -0.2088,
+          0.0
+        ],
+        [
+          0.3967,
+          0.2825,
+          0.1849
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_tiki_torch_a",
+      "set": "lagoon",
+      "prop": "tiki_torch",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1935,
+      "triangles": 242,
+      "size": [
+        0.321,
+        0.343,
+        1.51
+      ],
+      "bounds_blender": [
+        [
+          -0.1314,
+          -0.1708,
+          0.0
+        ],
+        [
+          0.1897,
+          0.1722,
+          1.51
+        ]
+      ],
+      "light": "#ffa040",
+      "intensity": 1.5
+    },
+    {
+      "name": "lagoon_tiki_torch_b",
+      "set": "lagoon",
+      "prop": "tiki_torch",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1954,
+      "triangles": 242,
+      "size": [
+        0.317,
+        0.322,
+        1.66
+      ],
+      "bounds_blender": [
+        [
+          -0.1869,
+          -0.1604,
+          0.0
+        ],
+        [
+          0.1298,
+          0.1614,
+          1.66
+        ]
+      ],
+      "light": "#ffa040",
+      "intensity": 1.5
+    },
+    {
+      "name": "lagoon_rowboat_a",
+      "set": "lagoon",
+      "prop": "rowboat",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4447,
+      "triangles": 180,
+      "size": [
+        0.86,
+        0.351,
+        0.237
+      ],
+      "bounds_blender": [
+        [
+          -0.43,
+          -0.1753,
+          0.0
+        ],
+        [
+          0.43,
+          0.1759,
+          0.2373
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_rowboat_b",
+      "set": "lagoon",
+      "prop": "rowboat",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4447,
+      "triangles": 180,
+      "size": [
+        0.86,
+        0.351,
+        0.237
+      ],
+      "bounds_blender": [
+        [
+          -0.43,
+          -0.1759,
+          0.0
+        ],
+        [
+          0.43,
+          0.1753,
+          0.2373
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_buried_chest_a",
+      "set": "lagoon",
+      "prop": "buried_chest",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3998,
+      "triangles": 172,
+      "size": [
+        0.753,
+        0.693,
+        0.31
+      ],
+      "bounds_blender": [
+        [
+          -0.3751,
+          -0.3643,
+          0.0
+        ],
+        [
+          0.3781,
+          0.3284,
+          0.31
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_buried_chest_b",
+      "set": "lagoon",
+      "prop": "buried_chest",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.4009,
+      "triangles": 212,
+      "size": [
+        0.772,
+        0.731,
+        0.309
+      ],
+      "bounds_blender": [
+        [
+          -0.3956,
+          -0.3305,
+          0.0
+        ],
+        [
+          0.3759,
+          0.4009,
+          0.3085
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_crab_a",
+      "set": "lagoon",
+      "prop": "crab",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2153,
+      "triangles": 224,
+      "size": [
+        0.283,
+        0.325,
+        0.146
+      ],
+      "bounds_blender": [
+        [
+          -0.0884,
+          -0.1623,
+          0.0
+        ],
+        [
+          0.1945,
+          0.1623,
+          0.1464
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_crab_b",
+      "set": "lagoon",
+      "prop": "crab",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2133,
+      "triangles": 224,
+      "size": [
+        0.333,
+        0.34,
+        0.146
+      ],
+      "bounds_blender": [
+        [
+          -0.1771,
+          -0.1271,
+          0.0
+        ],
+        [
+          0.1561,
+          0.2125,
+          0.1464
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_coral_head_a",
+      "set": "lagoon",
+      "prop": "coral_head",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3045,
+      "triangles": 178,
+      "size": [
+        0.588,
+        0.482,
+        0.402
+      ],
+      "bounds_blender": [
+        [
+          -0.2979,
+          -0.2515,
+          -0.14
+        ],
+        [
+          0.2899,
+          0.2301,
+          0.2621
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "lagoon_coral_head_b",
+      "set": "lagoon",
+      "prop": "coral_head",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.2983,
+      "triangles": 206,
+      "size": [
+        0.489,
+        0.537,
+        0.403
+      ],
+      "bounds_blender": [
+        [
+          -0.2482,
+          -0.2846,
+          -0.14
+        ],
+        [
+          0.2404,
+          0.2525,
+          0.2626
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "lagoon_seaweed_drape_a",
+      "set": "lagoon",
+      "prop": "seaweed_drape",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.375,
+      "triangles": 204,
+      "size": [
+        0.74,
+        0.243,
+        0.659
+      ],
+      "bounds_blender": [
+        [
+          -0.365,
+          -0.1698,
+          -0.599
+        ],
+        [
+          0.375,
+          0.073,
+          0.06
+        ]
+      ],
+      "sway": 0.3,
+      "drop": 0.599
+    },
+    {
+      "name": "lagoon_seaweed_drape_b",
+      "set": "lagoon",
+      "prop": "seaweed_drape",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.375,
+      "triangles": 270,
+      "size": [
+        0.74,
+        0.335,
+        0.659
+      ],
+      "bounds_blender": [
+        [
+          -0.365,
+          -0.1838,
+          -0.599
+        ],
+        [
+          0.375,
+          0.1508,
+          0.06
+        ]
+      ],
+      "sway": 0.3,
+      "drop": 0.599
+    },
+    {
+      "name": "lagoon_barnacles_a",
+      "set": "lagoon",
+      "prop": "barnacles",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.2873,
+      "triangles": 254,
+      "size": [
+        0.451,
+        0.06,
+        0.398
+      ],
+      "bounds_blender": [
+        [
+          -0.2443,
+          0.0,
+          -0.18
+        ],
+        [
+          0.2065,
+          0.06,
+          0.2182
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_barnacles_b",
+      "set": "lagoon",
+      "prop": "barnacles",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.3629,
+      "triangles": 330,
+      "size": [
+        0.598,
+        0.06,
+        0.397
+      ],
+      "bounds_blender": [
+        [
+          -0.2446,
+          0.0,
+          -0.18
+        ],
+        [
+          0.3537,
+          0.06,
+          0.2171
+        ]
+      ]
+    },
+    {
+      "name": "lagoon_shipwreck_a",
+      "set": "lagoon",
+      "prop": "shipwreck",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.6139,
+      "triangles": 484,
+      "size": [
+        2.882,
+        2.305,
+        1.909
+      ],
+      "bounds_blender": [
+        [
+          -1.418,
+          -1.186,
+          0.0
+        ],
+        [
+          1.4635,
+          1.1186,
+          1.9093
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.882,
+        2.305
+      ],
+      "height": 1.909
+    },
+    {
+      "name": "lagoon_stilt_hut_a",
+      "set": "lagoon",
+      "prop": "stilt_hut",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.2309,
+      "triangles": 364,
+      "size": [
+        1.571,
+        1.938,
+        2.459
+      ],
+      "bounds_blender": [
+        [
+          -0.75,
+          -1.2176,
+          0.0
+        ],
+        [
+          0.8214,
+          0.7206,
+          2.4594
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        1.571,
+        1.938
+      ],
+      "height": 2.459
+    },
+    {
+      "name": "hive_wax_flakes_a",
+      "set": "hive",
+      "prop": "wax_flakes",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2846,
+      "triangles": 120,
+      "size": [
+        0.382,
+        0.365,
+        0.012
+      ],
+      "bounds_blender": [
+        [
+          -0.1924,
+          -0.1338,
+          0.0
+        ],
+        [
+          0.19,
+          0.2317,
+          0.012
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "hive_wax_flakes_b",
+      "set": "hive",
+      "prop": "wax_flakes",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2849,
+      "triangles": 160,
+      "size": [
+        0.353,
+        0.46,
+        0.012
+      ],
+      "bounds_blender": [
+        [
+          -0.2325,
+          -0.1869,
+          0.0
+        ],
+        [
+          0.1208,
+          0.2731,
+          0.012
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "hive_pollen_dust_a",
+      "set": "hive",
+      "prop": "pollen_dust",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2804,
+      "triangles": 142,
+      "size": [
+        0.434,
+        0.323,
+        0.027
+      ],
+      "bounds_blender": [
+        [
+          -0.1701,
+          -0.1106,
+          0.0
+        ],
+        [
+          0.2635,
+          0.2126,
+          0.0275
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "hive_pollen_dust_b",
+      "set": "hive",
+      "prop": "pollen_dust",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2817,
+      "triangles": 178,
+      "size": [
+        0.31,
+        0.423,
+        0.027
+      ],
+      "bounds_blender": [
+        [
+          -0.21,
+          -0.1493,
+          0.0
+        ],
+        [
+          0.0997,
+          0.2732,
+          0.0275
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "hive_comb_mound_a",
+      "set": "hive",
+      "prop": "comb_mound",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4501,
+      "triangles": 320,
+      "size": [
+        0.863,
+        0.745,
+        0.56
+      ],
+      "bounds_blender": [
+        [
+          -0.4438,
+          -0.3897,
+          0.0
+        ],
+        [
+          0.4197,
+          0.3557,
+          0.56
+        ]
+      ],
+      "light": "#ffb030",
+      "intensity": 0.6
+    },
+    {
+      "name": "hive_comb_mound_b",
+      "set": "hive",
+      "prop": "comb_mound",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 320,
+      "size": [
+        0.868,
+        0.733,
+        0.64
+      ],
+      "bounds_blender": [
+        [
+          -0.4297,
+          -0.3434,
+          0.0
+        ],
+        [
+          0.4387,
+          0.3897,
+          0.64
+        ]
+      ],
+      "light": "#ffb030",
+      "intensity": 0.6
+    },
+    {
+      "name": "hive_wax_candles_a",
+      "set": "hive",
+      "prop": "wax_candles",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.279,
+      "triangles": 224,
+      "size": [
+        0.482,
+        0.504,
+        0.4
+      ],
+      "bounds_blender": [
+        [
+          -0.2356,
+          -0.2325,
+          0.0
+        ],
+        [
+          0.2463,
+          0.2719,
+          0.4
+        ]
+      ],
+      "light": "#ffd080",
+      "intensity": 1.2
+    },
+    {
+      "name": "hive_wax_candles_b",
+      "set": "hive",
+      "prop": "wax_candles",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2964,
+      "triangles": 286,
+      "size": [
+        0.524,
+        0.457,
+        0.402
+      ],
+      "bounds_blender": [
+        [
+          -0.2273,
+          -0.2205,
+          0.0
+        ],
+        [
+          0.2963,
+          0.2369,
+          0.4025
+        ]
+      ],
+      "light": "#ffd080",
+      "intensity": 1.2
+    },
+    {
+      "name": "hive_larva_cells_a",
+      "set": "hive",
+      "prop": "larva_cells",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3463,
+      "triangles": 252,
+      "size": [
+        0.599,
+        0.492,
+        0.205
+      ],
+      "bounds_blender": [
+        [
+          -0.2563,
+          -0.246,
+          0.0
+        ],
+        [
+          0.3429,
+          0.246,
+          0.205
+        ]
+      ]
+    },
+    {
+      "name": "hive_larva_cells_b",
+      "set": "hive",
+      "prop": "larva_cells",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3463,
+      "triangles": 276,
+      "size": [
+        0.599,
+        0.492,
+        0.205
+      ],
+      "bounds_blender": [
+        [
+          -0.2563,
+          -0.246,
+          0.0
+        ],
+        [
+          0.3429,
+          0.246,
+          0.205
+        ]
+      ]
+    },
+    {
+      "name": "hive_honey_pot_a",
+      "set": "hive",
+      "prop": "honey_pot",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2266,
+      "triangles": 218,
+      "size": [
+        0.438,
+        0.452,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.2138,
+          -0.2266,
+          0.0
+        ],
+        [
+          0.2241,
+          0.2258,
+          0.7
+        ]
+      ]
+    },
+    {
+      "name": "hive_honey_pot_b",
+      "set": "hive",
+      "prop": "honey_pot",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3806,
+      "triangles": 268,
+      "size": [
+        0.567,
+        0.435,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.215,
+          -0.2158,
+          0.0
+        ],
+        [
+          0.3525,
+          0.2191,
+          0.7
+        ]
+      ]
+    },
+    {
+      "name": "hive_giant_flower_a",
+      "set": "hive",
+      "prop": "giant_flower",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2845,
+      "triangles": 138,
+      "size": [
+        0.56,
+        0.48,
+        0.802
+      ],
+      "bounds_blender": [
+        [
+          -0.28,
+          -0.22,
+          0.0
+        ],
+        [
+          0.28,
+          0.26,
+          0.802
+        ]
+      ],
+      "sway": 0.2
+    },
+    {
+      "name": "hive_giant_flower_b",
+      "set": "hive",
+      "prop": "giant_flower",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2845,
+      "triangles": 138,
+      "size": [
+        0.56,
+        0.48,
+        0.952
+      ],
+      "bounds_blender": [
+        [
+          -0.28,
+          -0.22,
+          0.0
+        ],
+        [
+          0.28,
+          0.26,
+          0.9517
+        ]
+      ],
+      "sway": 0.2
+    },
+    {
+      "name": "hive_bee_husk_a",
+      "set": "hive",
+      "prop": "bee_husk",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3097,
+      "triangles": 186,
+      "size": [
+        0.464,
+        0.479,
+        0.201
+      ],
+      "bounds_blender": [
+        [
+          -0.16,
+          -0.2393,
+          0.0
+        ],
+        [
+          0.3039,
+          0.2393,
+          0.2006
+        ]
+      ]
+    },
+    {
+      "name": "hive_bee_husk_b",
+      "set": "hive",
+      "prop": "bee_husk",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3214,
+      "triangles": 186,
+      "size": [
+        0.472,
+        0.469,
+        0.239
+      ],
+      "bounds_blender": [
+        [
+          -0.2468,
+          -0.3199,
+          0.0
+        ],
+        [
+          0.2248,
+          0.1493,
+          0.2395
+        ]
+      ]
+    },
+    {
+      "name": "hive_honey_bubbles_a",
+      "set": "hive",
+      "prop": "honey_bubbles",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3382,
+      "triangles": 88,
+      "size": [
+        0.46,
+        0.427,
+        0.066
+      ],
+      "bounds_blender": [
+        [
+          -0.2212,
+          -0.1496,
+          -0.01
+        ],
+        [
+          0.2389,
+          0.2777,
+          0.0559
+        ]
+      ],
+      "fluid": "honey"
+    },
+    {
+      "name": "hive_honey_bubbles_b",
+      "set": "hive",
+      "prop": "honey_bubbles",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3341,
+      "triangles": 132,
+      "size": [
+        0.415,
+        0.515,
+        0.066
+      ],
+      "bounds_blender": [
+        [
+          -0.2649,
+          -0.2032,
+          -0.01
+        ],
+        [
+          0.1505,
+          0.3121,
+          0.0559
+        ]
+      ],
+      "fluid": "honey"
+    },
+    {
+      "name": "hive_comb_raft_a",
+      "set": "hive",
+      "prop": "comb_raft",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.2771,
+      "triangles": 180,
+      "size": [
+        0.479,
+        0.394,
+        0.1
+      ],
+      "bounds_blender": [
+        [
+          -0.2051,
+          -0.1968,
+          -0.05
+        ],
+        [
+          0.2744,
+          0.1968,
+          0.05
+        ]
+      ],
+      "fluid": "honey"
+    },
+    {
+      "name": "hive_comb_raft_b",
+      "set": "hive",
+      "prop": "comb_raft",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3458,
+      "triangles": 240,
+      "size": [
+        0.618,
+        0.394,
+        0.1
+      ],
+      "bounds_blender": [
+        [
+          -0.2744,
+          -0.1968,
+          -0.05
+        ],
+        [
+          0.3436,
+          0.1968,
+          0.05
+        ]
+      ],
+      "fluid": "honey"
+    },
+    {
+      "name": "hive_wall_comb_a",
+      "set": "hive",
+      "prop": "wall_comb",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.4327,
+      "triangles": 280,
+      "size": [
+        0.657,
+        0.08,
+        0.546
+      ],
+      "bounds_blender": [
+        [
+          -0.2915,
+          0.0,
+          -0.2729
+        ],
+        [
+          0.3651,
+          0.08,
+          0.2729
+        ]
+      ],
+      "light": "#ffb030",
+      "intensity": 0.5
+    },
+    {
+      "name": "hive_wall_comb_b",
+      "set": "hive",
+      "prop": "wall_comb",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.3798,
+      "triangles": 280,
+      "size": [
+        0.657,
+        0.11,
+        0.546
+      ],
+      "bounds_blender": [
+        [
+          -0.2915,
+          0.0,
+          -0.2729
+        ],
+        [
+          0.3651,
+          0.11,
+          0.2729
+        ]
+      ],
+      "light": "#ffb030",
+      "intensity": 0.5
+    },
+    {
+      "name": "hive_honey_drips_a",
+      "set": "hive",
+      "prop": "honey_drips",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2432,
+      "triangles": 148,
+      "size": [
+        0.454,
+        0.388,
+        0.499
+      ],
+      "bounds_blender": [
+        [
+          -0.2139,
+          -0.1938,
+          -0.499
+        ],
+        [
+          0.2399,
+          0.194,
+          0.0
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "hive_honey_drips_b",
+      "set": "hive",
+      "prop": "honey_drips",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2359,
+      "triangles": 176,
+      "size": [
+        0.426,
+        0.385,
+        0.499
+      ],
+      "bounds_blender": [
+        [
+          -0.2205,
+          -0.1874,
+          -0.499
+        ],
+        [
+          0.2059,
+          0.1978,
+          0.0
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "hive_honey_overflow_a",
+      "set": "hive",
+      "prop": "honey_overflow",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.42,
+      "triangles": 208,
+      "size": [
+        0.84,
+        0.292,
+        0.601
+      ],
+      "bounds_blender": [
+        [
+          -0.42,
+          -0.2,
+          -0.5712
+        ],
+        [
+          0.42,
+          0.0915,
+          0.03
+        ]
+      ],
+      "drop": 0.5712
+    },
+    {
+      "name": "hive_honey_overflow_b",
+      "set": "hive",
+      "prop": "honey_overflow",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.42,
+      "triangles": 252,
+      "size": [
+        0.84,
+        0.297,
+        0.59
+      ],
+      "bounds_blender": [
+        [
+          -0.42,
+          -0.2,
+          -0.5604
+        ],
+        [
+          0.42,
+          0.0968,
+          0.03
+        ]
+      ],
+      "drop": 0.5604
+    },
+    {
+      "name": "hive_comb_tower_a",
+      "set": "hive",
+      "prop": "comb_tower",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.183,
+      "triangles": 770,
+      "size": [
+        2.247,
+        2.193,
+        2.82
+      ],
+      "bounds_blender": [
+        [
+          -1.1198,
+          -1.1036,
+          0.0
+        ],
+        [
+          1.1269,
+          1.0895,
+          2.82
+        ]
+      ],
+      "light": "#ffb030",
+      "intensity": 1,
+      "landmark": true,
+      "footprint": [
+        2.247,
+        2.193
+      ],
+      "height": 2.82
+    },
+    {
+      "name": "hive_royal_cell_a",
+      "set": "hive",
+      "prop": "royal_cell",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.9264,
+      "triangles": 1130,
+      "size": [
+        1.566,
+        1.319,
+        2.25
+      ],
+      "bounds_blender": [
+        [
+          -0.7226,
+          -0.6594,
+          0.0
+        ],
+        [
+          0.8439,
+          0.6594,
+          2.25
+        ]
+      ],
+      "light": "#ffe090",
+      "intensity": 1.5,
+      "landmark": true,
+      "footprint": [
+        1.566,
+        1.319
+      ],
+      "height": 2.25
+    },
+    {
+      "name": "cenote_jungle_litter_a",
+      "set": "cenote",
+      "prop": "jungle_litter",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 96,
+      "size": [
+        0.462,
+        0.483,
+        0.02
+      ],
+      "bounds_blender": [
+        [
+          -0.2475,
+          -0.206,
+          0.0
+        ],
+        [
+          0.2141,
+          0.2769,
+          0.02
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "cenote_jungle_litter_b",
+      "set": "cenote",
+      "prop": "jungle_litter",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 108,
+      "size": [
+        0.392,
+        0.474,
+        0.02
+      ],
+      "bounds_blender": [
+        [
+          -0.2217,
+          -0.1478,
+          0.0
+        ],
+        [
+          0.17,
+          0.3265,
+          0.02
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "cenote_jade_shards_a",
+      "set": "cenote",
+      "prop": "jade_shards",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2271,
+      "triangles": 138,
+      "size": [
+        0.286,
+        0.362,
+        0.093
+      ],
+      "bounds_blender": [
+        [
+          -0.1483,
+          -0.1693,
+          0.0
+        ],
+        [
+          0.1379,
+          0.1924,
+          0.0931
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "cenote_jade_shards_b",
+      "set": "cenote",
+      "prop": "jade_shards",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.253,
+      "triangles": 166,
+      "size": [
+        0.297,
+        0.427,
+        0.095
+      ],
+      "bounds_blender": [
+        [
+          -0.1938,
+          -0.2036,
+          0.0
+        ],
+        [
+          0.1027,
+          0.2237,
+          0.0951
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "cenote_monstera_a",
+      "set": "cenote",
+      "prop": "monstera",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.404,
+      "triangles": 320,
+      "size": [
+        0.759,
+        0.781,
+        0.41
+      ],
+      "bounds_blender": [
+        [
+          -0.355,
+          -0.3906,
+          0.0
+        ],
+        [
+          0.4038,
+          0.3906,
+          0.4102
+        ]
+      ],
+      "sway": 0.25
+    },
+    {
+      "name": "cenote_monstera_b",
+      "set": "cenote",
+      "prop": "monstera",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.404,
+      "triangles": 384,
+      "size": [
+        0.769,
+        0.805,
+        0.409
+      ],
+      "bounds_blender": [
+        [
+          -0.3846,
+          -0.4023,
+          0.0
+        ],
+        [
+          0.3846,
+          0.4023,
+          0.4095
+        ]
+      ],
+      "sway": 0.25
+    },
+    {
+      "name": "cenote_orchid_rock_a",
+      "set": "cenote",
+      "prop": "orchid_rock",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3673,
+      "triangles": 236,
+      "size": [
+        0.642,
+        0.59,
+        0.553
+      ],
+      "bounds_blender": [
+        [
+          -0.3309,
+          -0.316,
+          0.0
+        ],
+        [
+          0.3107,
+          0.2742,
+          0.553
+        ]
+      ]
+    },
+    {
+      "name": "cenote_orchid_rock_b",
+      "set": "cenote",
+      "prop": "orchid_rock",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3516,
+      "triangles": 316,
+      "size": [
+        0.596,
+        0.646,
+        0.553
+      ],
+      "bounds_blender": [
+        [
+          -0.3167,
+          -0.315,
+          0.0
+        ],
+        [
+          0.279,
+          0.3306,
+          0.553
+        ]
+      ]
+    },
+    {
+      "name": "cenote_jade_idol_a",
+      "set": "cenote",
+      "prop": "jade_idol",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3265,
+      "triangles": 192,
+      "size": [
+        0.62,
+        0.42,
+        1.17
+      ],
+      "bounds_blender": [
+        [
+          -0.31,
+          -0.21,
+          0.0
+        ],
+        [
+          0.31,
+          0.21,
+          1.17
+        ]
+      ]
+    },
+    {
+      "name": "cenote_jade_idol_b",
+      "set": "cenote",
+      "prop": "jade_idol",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3265,
+      "triangles": 192,
+      "size": [
+        0.62,
+        0.42,
+        1.17
+      ],
+      "bounds_blender": [
+        [
+          -0.31,
+          -0.21,
+          0.0
+        ],
+        [
+          0.31,
+          0.21,
+          1.17
+        ]
+      ]
+    },
+    {
+      "name": "cenote_serpent_head_a",
+      "set": "cenote",
+      "prop": "serpent_head",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4209,
+      "triangles": 204,
+      "size": [
+        0.655,
+        0.78,
+        0.44
+      ],
+      "bounds_blender": [
+        [
+          -0.3252,
+          -0.4151,
+          0.0
+        ],
+        [
+          0.3294,
+          0.3645,
+          0.44
+        ]
+      ]
+    },
+    {
+      "name": "cenote_serpent_head_b",
+      "set": "cenote",
+      "prop": "serpent_head",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4209,
+      "triangles": 204,
+      "size": [
+        0.655,
+        0.78,
+        0.44
+      ],
+      "bounds_blender": [
+        [
+          -0.3294,
+          -0.4151,
+          0.0
+        ],
+        [
+          0.3252,
+          0.3645,
+          0.44
+        ]
+      ]
+    },
+    {
+      "name": "cenote_copal_bowl_a",
+      "set": "cenote",
+      "prop": "copal_bowl",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2493,
+      "triangles": 198,
+      "size": [
+        0.457,
+        0.453,
+        0.97
+      ],
+      "bounds_blender": [
+        [
+          -0.2245,
+          -0.2262,
+          0.0
+        ],
+        [
+          0.2321,
+          0.2268,
+          0.97
+        ]
+      ],
+      "light": "#ffb050",
+      "intensity": 1
+    },
+    {
+      "name": "cenote_copal_bowl_b",
+      "set": "cenote",
+      "prop": "copal_bowl",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2553,
+      "triangles": 246,
+      "size": [
+        0.49,
+        0.483,
+        0.97
+      ],
+      "bounds_blender": [
+        [
+          -0.2433,
+          -0.2385,
+          0.0
+        ],
+        [
+          0.2468,
+          0.2447,
+          0.97
+        ]
+      ],
+      "light": "#ffb050",
+      "intensity": 1
+    },
+    {
+      "name": "cenote_macaw_perch_a",
+      "set": "cenote",
+      "prop": "macaw_perch",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 214,
+      "size": [
+        0.195,
+        0.885,
+        1.285
+      ],
+      "bounds_blender": [
+        [
+          -0.0966,
+          -0.4486,
+          0.0
+        ],
+        [
+          0.0981,
+          0.4363,
+          1.285
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "cenote_macaw_perch_b",
+      "set": "cenote",
+      "prop": "macaw_perch",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 214,
+      "size": [
+        0.193,
+        0.885,
+        1.285
+      ],
+      "bounds_blender": [
+        [
+          -0.0966,
+          -0.4486,
+          0.0
+        ],
+        [
+          0.0966,
+          0.4363,
+          1.285
+        ]
+      ],
+      "sway": 0.1
+    },
+    {
+      "name": "cenote_hanging_vines_a",
+      "set": "cenote",
+      "prop": "hanging_vines",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2562,
+      "triangles": 186,
+      "size": [
+        0.429,
+        0.368,
+        1.084
+      ],
+      "bounds_blender": [
+        [
+          -0.2077,
+          -0.1766,
+          -1.0844
+        ],
+        [
+          0.221,
+          0.1913,
+          0.0
+        ]
+      ],
+      "sway": 0.4
+    },
+    {
+      "name": "cenote_hanging_vines_b",
+      "set": "cenote",
+      "prop": "hanging_vines",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2212,
+      "triangles": 216,
+      "size": [
+        0.425,
+        0.411,
+        1.15
+      ],
+      "bounds_blender": [
+        [
+          -0.2188,
+          -0.1956,
+          -1.1503
+        ],
+        [
+          0.2063,
+          0.2158,
+          0.0
+        ]
+      ],
+      "sway": 0.4
+    },
+    {
+      "name": "cenote_jungle_drape_a",
+      "set": "cenote",
+      "prop": "jungle_drape",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.475,
+      "triangles": 310,
+      "size": [
+        0.929,
+        0.33,
+        0.792
+      ],
+      "bounds_blender": [
+        [
+          -0.475,
+          -0.2,
+          -0.7418
+        ],
+        [
+          0.454,
+          0.1298,
+          0.05
+        ]
+      ],
+      "sway": 0.35,
+      "drop": 0.7418
+    },
+    {
+      "name": "cenote_jungle_drape_b",
+      "set": "cenote",
+      "prop": "jungle_drape",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.475,
+      "triangles": 356,
+      "size": [
+        0.929,
+        0.329,
+        0.817
+      ],
+      "bounds_blender": [
+        [
+          -0.475,
+          -0.2,
+          -0.7674
+        ],
+        [
+          0.454,
+          0.1285,
+          0.05
+        ]
+      ],
+      "sway": 0.35,
+      "drop": 0.7674
+    },
+    {
+      "name": "cenote_glyph_panel_a",
+      "set": "cenote",
+      "prop": "glyph_panel",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5,
+      "triangles": 276,
+      "size": [
+        0.8,
+        0.157,
+        0.6
+      ],
+      "bounds_blender": [
+        [
+          -0.4,
+          0.0,
+          -0.3
+        ],
+        [
+          0.4,
+          0.157,
+          0.3
+        ]
+      ]
+    },
+    {
+      "name": "cenote_glyph_panel_b",
+      "set": "cenote",
+      "prop": "glyph_panel",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5,
+      "triangles": 288,
+      "size": [
+        0.8,
+        0.157,
+        0.6
+      ],
+      "bounds_blender": [
+        [
+          -0.4,
+          0.0,
+          -0.3
+        ],
+        [
+          0.4,
+          0.157,
+          0.3
+        ]
+      ]
+    },
+    {
+      "name": "cenote_cenote_lilies_a",
+      "set": "cenote",
+      "prop": "cenote_lilies",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3592,
+      "triangles": 240,
+      "size": [
+        0.451,
+        0.645,
+        0.072
+      ],
+      "bounds_blender": [
+        [
+          -0.2709,
+          -0.355,
+          -0.012
+        ],
+        [
+          0.18,
+          0.2905,
+          0.06
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "cenote_cenote_lilies_b",
+      "set": "cenote",
+      "prop": "cenote_lilies",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.37,
+      "triangles": 280,
+      "size": [
+        0.648,
+        0.632,
+        0.072
+      ],
+      "bounds_blender": [
+        [
+          -0.3471,
+          -0.2624,
+          -0.012
+        ],
+        [
+          0.3006,
+          0.3695,
+          0.06
+        ]
+      ],
+      "fluid": "water"
+    },
+    {
+      "name": "cenote_step_shrine_a",
+      "set": "cenote",
+      "prop": "step_shrine",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.6547,
+      "triangles": 540,
+      "size": [
+        2.703,
+        3.005,
+        2.04
+      ],
+      "bounds_blender": [
+        [
+          -1.3532,
+          -1.54,
+          0.0
+        ],
+        [
+          1.35,
+          1.4647,
+          2.04
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.703,
+        3.005
+      ],
+      "height": 2.04
+    },
+    {
+      "name": "cenote_ceiba_roots_a",
+      "set": "cenote",
+      "prop": "ceiba_roots",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.4717,
+      "triangles": 508,
+      "size": [
+        2.792,
+        2.718,
+        3.0
+      ],
+      "bounds_blender": [
+        [
+          -1.4546,
+          -1.3022,
+          0.0
+        ],
+        [
+          1.337,
+          1.416,
+          3.0
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.792,
+        2.718
+      ],
+      "height": 3.0
+    },
+    {
+      "name": "grotto_sea_glass_a",
+      "set": "grotto",
+      "prop": "sea_glass",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2787,
+      "triangles": 106,
+      "size": [
+        0.366,
+        0.388,
+        0.055
+      ],
+      "bounds_blender": [
+        [
+          -0.1843,
+          -0.1495,
+          0.0
+        ],
+        [
+          0.1819,
+          0.2387,
+          0.055
+        ]
+      ],
+      "light": "#7fe0ff",
+      "intensity": 0.4,
+      "cover": true
+    },
+    {
+      "name": "grotto_sea_glass_b",
+      "set": "grotto",
+      "prop": "sea_glass",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.28,
+      "triangles": 122,
+      "size": [
+        0.34,
+        0.437,
+        0.055
+      ],
+      "bounds_blender": [
+        [
+          -0.2173,
+          -0.1719,
+          0.0
+        ],
+        [
+          0.1229,
+          0.2647,
+          0.055
+        ]
+      ],
+      "light": "#7fe0ff",
+      "intensity": 0.4,
+      "cover": true
+    },
+    {
+      "name": "grotto_pearl_sand_a",
+      "set": "grotto",
+      "prop": "pearl_sand",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 118,
+      "size": [
+        0.617,
+        0.656,
+        0.065
+      ],
+      "bounds_blender": [
+        [
+          -0.2905,
+          -0.3063,
+          0.0
+        ],
+        [
+          0.3262,
+          0.35,
+          0.065
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "grotto_pearl_sand_b",
+      "set": "grotto",
+      "prop": "pearl_sand",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 136,
+      "size": [
+        0.648,
+        0.62,
+        0.065
+      ],
+      "bounds_blender": [
+        [
+          -0.31,
+          -0.2712,
+          0.0
+        ],
+        [
+          0.3375,
+          0.3488,
+          0.065
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "grotto_kelp_stalk_a",
+      "set": "grotto",
+      "prop": "kelp_stalk",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2996,
+      "triangles": 198,
+      "size": [
+        0.355,
+        0.51,
+        1.512
+      ],
+      "bounds_blender": [
+        [
+          -0.1875,
+          -0.296,
+          0.0
+        ],
+        [
+          0.1679,
+          0.2138,
+          1.5122
+        ]
+      ],
+      "sway": 0.5
+    },
+    {
+      "name": "grotto_kelp_stalk_b",
+      "set": "grotto",
+      "prop": "kelp_stalk",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2453,
+      "triangles": 198,
+      "size": [
+        0.378,
+        0.389,
+        1.662
+      ],
+      "bounds_blender": [
+        [
+          -0.2105,
+          -0.2428,
+          0.0
+        ],
+        [
+          0.1679,
+          0.1462,
+          1.6619
+        ]
+      ],
+      "sway": 0.5
+    },
+    {
+      "name": "grotto_anemone_a",
+      "set": "grotto",
+      "prop": "anemone",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2053,
+      "triangles": 118,
+      "size": [
+        0.386,
+        0.382,
+        0.402
+      ],
+      "bounds_blender": [
+        [
+          -0.199,
+          -0.2035,
+          0.0
+        ],
+        [
+          0.1872,
+          0.1788,
+          0.4019
+        ]
+      ],
+      "light": "#ff7ad0",
+      "intensity": 0.6,
+      "sway": 0.2
+    },
+    {
+      "name": "grotto_anemone_b",
+      "set": "grotto",
+      "prop": "anemone",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2053,
+      "triangles": 118,
+      "size": [
+        0.386,
+        0.382,
+        0.402
+      ],
+      "bounds_blender": [
+        [
+          -0.199,
+          -0.2035,
+          0.0
+        ],
+        [
+          0.1872,
+          0.1788,
+          0.4019
+        ]
+      ],
+      "light": "#ff7ad0",
+      "intensity": 0.6,
+      "sway": 0.2
+    },
+    {
+      "name": "grotto_giant_clam_a",
+      "set": "grotto",
+      "prop": "giant_clam",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3669,
+      "triangles": 298,
+      "size": [
+        0.703,
+        0.721,
+        0.524
+      ],
+      "bounds_blender": [
+        [
+          -0.3503,
+          -0.3583,
+          0.0
+        ],
+        [
+          0.353,
+          0.3626,
+          0.5244
+        ]
+      ],
+      "light": "#e8f4ff",
+      "intensity": 0.8
+    },
+    {
+      "name": "grotto_giant_clam_b",
+      "set": "grotto",
+      "prop": "giant_clam",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3706,
+      "triangles": 298,
+      "size": [
+        0.728,
+        0.711,
+        0.75
+      ],
+      "bounds_blender": [
+        [
+          -0.3629,
+          -0.3587,
+          0.0
+        ],
+        [
+          0.3652,
+          0.3519,
+          0.7499
+        ]
+      ],
+      "light": "#e8f4ff",
+      "intensity": 0.8
+    },
+    {
+      "name": "grotto_brain_coral_a",
+      "set": "grotto",
+      "prop": "brain_coral",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3653,
+      "triangles": 132,
+      "size": [
+        0.716,
+        0.704,
+        0.328
+      ],
+      "bounds_blender": [
+        [
+          -0.3513,
+          -0.3409,
+          0.0
+        ],
+        [
+          0.3652,
+          0.3636,
+          0.3278
+        ]
+      ]
+    },
+    {
+      "name": "grotto_brain_coral_b",
+      "set": "grotto",
+      "prop": "brain_coral",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3653,
+      "triangles": 132,
+      "size": [
+        0.688,
+        0.71,
+        0.328
+      ],
+      "bounds_blender": [
+        [
+          -0.3587,
+          -0.3653,
+          0.0
+        ],
+        [
+          0.3291,
+          0.3452,
+          0.3278
+        ]
+      ]
+    },
+    {
+      "name": "grotto_sunken_anchor_a",
+      "set": "grotto",
+      "prop": "sunken_anchor",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4501,
+      "triangles": 222,
+      "size": [
+        0.66,
+        0.515,
+        1.153
+      ],
+      "bounds_blender": [
+        [
+          -0.2458,
+          -0.2411,
+          0.0
+        ],
+        [
+          0.4145,
+          0.2735,
+          1.1533
+        ]
+      ]
+    },
+    {
+      "name": "grotto_sunken_anchor_b",
+      "set": "grotto",
+      "prop": "sunken_anchor",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 222,
+      "size": [
+        0.618,
+        0.415,
+        1.071
+      ],
+      "bounds_blender": [
+        [
+          -0.2032,
+          -0.202,
+          0.0
+        ],
+        [
+          0.4145,
+          0.2127,
+          1.071
+        ]
+      ]
+    },
+    {
+      "name": "grotto_jelly_lantern_a",
+      "set": "grotto",
+      "prop": "jelly_lantern",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3248,
+      "triangles": 154,
+      "size": [
+        0.442,
+        0.213,
+        1.137
+      ],
+      "bounds_blender": [
+        [
+          -0.1177,
+          -0.1056,
+          0.0
+        ],
+        [
+          0.3247,
+          0.1072,
+          1.1367
+        ]
+      ],
+      "light": "#9ae0ff",
+      "intensity": 1.2
+    },
+    {
+      "name": "grotto_jelly_lantern_b",
+      "set": "grotto",
+      "prop": "jelly_lantern",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3238,
+      "triangles": 154,
+      "size": [
+        0.444,
+        0.208,
+        1.137
+      ],
+      "bounds_blender": [
+        [
+          -0.1206,
+          -0.1033,
+          0.0
+        ],
+        [
+          0.3237,
+          0.1045,
+          1.1367
+        ]
+      ],
+      "light": "#9ae0ff",
+      "intensity": 1.2
+    },
+    {
+      "name": "grotto_jellyfish_a",
+      "set": "grotto",
+      "prop": "jellyfish",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.1314,
+      "triangles": 124,
+      "size": [
+        0.244,
+        0.247,
+        0.281
+      ],
+      "bounds_blender": [
+        [
+          -0.1184,
+          -0.1225,
+          -0.181
+        ],
+        [
+          0.1258,
+          0.1243,
+          0.1
+        ]
+      ],
+      "light": "#a8e8ff",
+      "intensity": 0.8,
+      "fluid": "water"
+    },
+    {
+      "name": "grotto_jellyfish_b",
+      "set": "grotto",
+      "prop": "jellyfish",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3592,
+      "triangles": 146,
+      "size": [
+        0.343,
+        0.476,
+        0.281
+      ],
+      "bounds_blender": [
+        [
+          -0.1842,
+          -0.1511,
+          -0.181
+        ],
+        [
+          0.1586,
+          0.3249,
+          0.1
+        ]
+      ],
+      "light": "#a8e8ff",
+      "intensity": 0.8,
+      "fluid": "water"
+    },
+    {
+      "name": "grotto_glow_strands_a",
+      "set": "grotto",
+      "prop": "glow_strands",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2071,
+      "triangles": 264,
+      "size": [
+        0.369,
+        0.35,
+        0.855
+      ],
+      "bounds_blender": [
+        [
+          -0.1823,
+          -0.1797,
+          -0.855
+        ],
+        [
+          0.1867,
+          0.1705,
+          0.0
+        ]
+      ],
+      "light": "#7fe8ff",
+      "intensity": 0.6,
+      "sway": 0.2
+    },
+    {
+      "name": "grotto_glow_strands_b",
+      "set": "grotto",
+      "prop": "glow_strands",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2114,
+      "triangles": 302,
+      "size": [
+        0.371,
+        0.358,
+        0.855
+      ],
+      "bounds_blender": [
+        [
+          -0.1799,
+          -0.1585,
+          -0.855
+        ],
+        [
+          0.1911,
+          0.1996,
+          0.0
+        ]
+      ],
+      "light": "#7fe8ff",
+      "intensity": 0.6,
+      "sway": 0.2
+    },
+    {
+      "name": "grotto_coral_wall_a",
+      "set": "grotto",
+      "prop": "coral_wall",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.3674,
+      "triangles": 220,
+      "size": [
+        0.707,
+        0.265,
+        0.602
+      ],
+      "bounds_blender": [
+        [
+          -0.3673,
+          0.0,
+          -0.3
+        ],
+        [
+          0.34,
+          0.2651,
+          0.3019
+        ]
+      ],
+      "light": "#ff9ad0",
+      "intensity": 0.4
+    },
+    {
+      "name": "grotto_coral_wall_b",
+      "set": "grotto",
+      "prop": "coral_wall",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.4159,
+      "triangles": 246,
+      "size": [
+        0.799,
+        0.265,
+        0.602
+      ],
+      "bounds_blender": [
+        [
+          -0.3832,
+          0.0,
+          -0.3
+        ],
+        [
+          0.4158,
+          0.2651,
+          0.3019
+        ]
+      ],
+      "light": "#ff9ad0",
+      "intensity": 0.4
+    },
+    {
+      "name": "grotto_kelp_drape_a",
+      "set": "grotto",
+      "prop": "kelp_drape",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.38,
+      "triangles": 224,
+      "size": [
+        0.76,
+        0.291,
+        0.759
+      ],
+      "bounds_blender": [
+        [
+          -0.38,
+          -0.172,
+          -0.699
+        ],
+        [
+          0.38,
+          0.1194,
+          0.06
+        ]
+      ],
+      "sway": 0.4,
+      "drop": 0.699
+    },
+    {
+      "name": "grotto_kelp_drape_b",
+      "set": "grotto",
+      "prop": "kelp_drape",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.38,
+      "triangles": 252,
+      "size": [
+        0.76,
+        0.288,
+        0.759
+      ],
+      "bounds_blender": [
+        [
+          -0.38,
+          -0.1711,
+          -0.699
+        ],
+        [
+          0.38,
+          0.1171,
+          0.06
+        ]
+      ],
+      "sway": 0.4,
+      "drop": 0.699
+    },
+    {
+      "name": "grotto_sunken_bell_a",
+      "set": "grotto",
+      "prop": "sunken_bell",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.396,
+      "triangles": 580,
+      "size": [
+        2.644,
+        2.608,
+        2.031
+      ],
+      "bounds_blender": [
+        [
+          -1.2676,
+          -1.3012,
+          0.0
+        ],
+        [
+          1.3765,
+          1.3072,
+          2.0309
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.644,
+        2.608
+      ],
+      "height": 2.031
+    },
+    {
+      "name": "grotto_giant_shell_a",
+      "set": "grotto",
+      "prop": "giant_shell",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.2147,
+      "triangles": 436,
+      "size": [
+        2.287,
+        2.361,
+        2.809
+      ],
+      "bounds_blender": [
+        [
+          -1.1333,
+          -1.1509,
+          0.0
+        ],
+        [
+          1.1537,
+          1.2097,
+          2.8087
+        ]
+      ],
+      "light": "#9ae0ff",
+      "intensity": 1,
+      "landmark": true,
+      "footprint": [
+        2.287,
+        2.361
+      ],
+      "height": 2.809
+    },
+    {
+      "name": "forge_metal_shavings_a",
+      "set": "forge",
+      "prop": "metal_shavings",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3095,
+      "triangles": 106,
+      "size": [
+        0.385,
+        0.395,
+        0.036
+      ],
+      "bounds_blender": [
+        [
+          -0.1826,
+          -0.1579,
+          0.0
+        ],
+        [
+          0.2025,
+          0.2373,
+          0.0357
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "forge_metal_shavings_b",
+      "set": "forge",
+      "prop": "metal_shavings",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2947,
+      "triangles": 120,
+      "size": [
+        0.377,
+        0.453,
+        0.036
+      ],
+      "bounds_blender": [
+        [
+          -0.2236,
+          -0.1887,
+          0.0
+        ],
+        [
+          0.1537,
+          0.2643,
+          0.0358
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "forge_slag_bits_a",
+      "set": "forge",
+      "prop": "slag_bits",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2752,
+      "triangles": 130,
+      "size": [
+        0.362,
+        0.358,
+        0.06
+      ],
+      "bounds_blender": [
+        [
+          -0.1777,
+          -0.1215,
+          0.0
+        ],
+        [
+          0.1839,
+          0.2361,
+          0.0605
+        ]
+      ],
+      "light": "#ff7030",
+      "intensity": 0.4,
+      "cover": true
+    },
+    {
+      "name": "forge_slag_bits_b",
+      "set": "forge",
+      "prop": "slag_bits",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2822,
+      "triangles": 156,
+      "size": [
+        0.353,
+        0.436,
+        0.06
+      ],
+      "bounds_blender": [
+        [
+          -0.2349,
+          -0.1662,
+          0.0
+        ],
+        [
+          0.1179,
+          0.2697,
+          0.0605
+        ]
+      ],
+      "light": "#ff7030",
+      "intensity": 0.4,
+      "cover": true
+    },
+    {
+      "name": "forge_anvil_block_a",
+      "set": "forge",
+      "prop": "anvil_block",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.35,
+      "triangles": 104,
+      "size": [
+        0.58,
+        0.478,
+        0.64
+      ],
+      "bounds_blender": [
+        [
+          -0.23,
+          -0.2308,
+          0.0
+        ],
+        [
+          0.35,
+          0.2476,
+          0.64
+        ]
+      ]
+    },
+    {
+      "name": "forge_anvil_block_b",
+      "set": "forge",
+      "prop": "anvil_block",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.35,
+      "triangles": 116,
+      "size": [
+        0.58,
+        0.485,
+        0.64
+      ],
+      "bounds_blender": [
+        [
+          -0.23,
+          -0.2516,
+          0.0
+        ],
+        [
+          0.35,
+          0.2337,
+          0.64
+        ]
+      ]
+    },
+    {
+      "name": "forge_ingot_stack_a",
+      "set": "forge",
+      "prop": "ingot_stack",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2401,
+      "triangles": 96,
+      "size": [
+        0.39,
+        0.28,
+        0.175
+      ],
+      "bounds_blender": [
+        [
+          -0.195,
+          -0.14,
+          0.0
+        ],
+        [
+          0.195,
+          0.14,
+          0.175
+        ]
+      ]
+    },
+    {
+      "name": "forge_ingot_stack_b",
+      "set": "forge",
+      "prop": "ingot_stack",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2401,
+      "triangles": 120,
+      "size": [
+        0.39,
+        0.28,
+        0.235
+      ],
+      "bounds_blender": [
+        [
+          -0.195,
+          -0.14,
+          0.0
+        ],
+        [
+          0.195,
+          0.14,
+          0.235
+        ]
+      ]
+    },
+    {
+      "name": "forge_gear_pile_a",
+      "set": "forge",
+      "prop": "gear_pile",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3712,
+      "triangles": 336,
+      "size": [
+        0.466,
+        0.592,
+        0.165
+      ],
+      "bounds_blender": [
+        [
+          -0.2485,
+          -0.3291,
+          0.0
+        ],
+        [
+          0.218,
+          0.2634,
+          0.165
+        ]
+      ]
+    },
+    {
+      "name": "forge_gear_pile_b",
+      "set": "forge",
+      "prop": "gear_pile",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3385,
+      "triangles": 336,
+      "size": [
+        0.472,
+        0.472,
+        0.165
+      ],
+      "bounds_blender": [
+        [
+          -0.2616,
+          -0.3019,
+          0.0
+        ],
+        [
+          0.2105,
+          0.1698,
+          0.165
+        ]
+      ]
+    },
+    {
+      "name": "forge_steam_vent_a",
+      "set": "forge",
+      "prop": "steam_vent",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3316,
+      "triangles": 194,
+      "size": [
+        0.659,
+        0.656,
+        0.692
+      ],
+      "bounds_blender": [
+        [
+          -0.3301,
+          -0.3315,
+          0.0
+        ],
+        [
+          0.3292,
+          0.3248,
+          0.692
+        ]
+      ]
+    },
+    {
+      "name": "forge_steam_vent_b",
+      "set": "forge",
+      "prop": "steam_vent",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.332,
+      "triangles": 224,
+      "size": [
+        0.647,
+        0.65,
+        0.92
+      ],
+      "bounds_blender": [
+        [
+          -0.3247,
+          -0.3234,
+          0.0
+        ],
+        [
+          0.3222,
+          0.3263,
+          0.92
+        ]
+      ]
+    },
+    {
+      "name": "forge_crucible_a",
+      "set": "forge",
+      "prop": "crucible",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3251,
+      "triangles": 192,
+      "size": [
+        0.65,
+        0.385,
+        0.55
+      ],
+      "bounds_blender": [
+        [
+          -0.325,
+          -0.1926,
+          0.0
+        ],
+        [
+          0.325,
+          0.1925,
+          0.55
+        ]
+      ],
+      "light": "#ff8030",
+      "intensity": 1.2
+    },
+    {
+      "name": "forge_crucible_b",
+      "set": "forge",
+      "prop": "crucible",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3251,
+      "triangles": 192,
+      "size": [
+        0.65,
+        0.407,
+        0.55
+      ],
+      "bounds_blender": [
+        [
+          -0.325,
+          -0.2007,
+          0.0
+        ],
+        [
+          0.325,
+          0.2063,
+          0.55
+        ]
+      ],
+      "light": "#ff8030",
+      "intensity": 1.2
+    },
+    {
+      "name": "forge_valve_pipe_a",
+      "set": "forge",
+      "prop": "valve_pipe",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3539,
+      "triangles": 224,
+      "size": [
+        0.453,
+        0.334,
+        1.18
+      ],
+      "bounds_blender": [
+        [
+          -0.1032,
+          -0.244,
+          0.0
+        ],
+        [
+          0.35,
+          0.0898,
+          1.18
+        ]
+      ]
+    },
+    {
+      "name": "forge_valve_pipe_b",
+      "set": "forge",
+      "prop": "valve_pipe",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.3539,
+      "triangles": 224,
+      "size": [
+        0.451,
+        0.333,
+        1.18
+      ],
+      "bounds_blender": [
+        [
+          -0.1011,
+          -0.244,
+          0.0
+        ],
+        [
+          0.35,
+          0.0885,
+          1.18
+        ]
+      ]
+    },
+    {
+      "name": "forge_coal_bin_a",
+      "set": "forge",
+      "prop": "coal_bin",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4148,
+      "triangles": 224,
+      "size": [
+        0.641,
+        0.47,
+        0.765
+      ],
+      "bounds_blender": [
+        [
+          -0.31,
+          -0.21,
+          0.0
+        ],
+        [
+          0.3315,
+          0.26,
+          0.7655
+        ]
+      ]
+    },
+    {
+      "name": "forge_coal_bin_b",
+      "set": "forge",
+      "prop": "coal_bin",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4148,
+      "triangles": 248,
+      "size": [
+        0.641,
+        0.47,
+        0.765
+      ],
+      "bounds_blender": [
+        [
+          -0.31,
+          -0.21,
+          0.0
+        ],
+        [
+          0.3315,
+          0.26,
+          0.7655
+        ]
+      ]
+    },
+    {
+      "name": "forge_pipe_run_a",
+      "set": "forge",
+      "prop": "pipe_run",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.4966,
+      "triangles": 164,
+      "size": [
+        0.9,
+        0.21,
+        0.462
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          0.0,
+          -0.23
+        ],
+        [
+          0.45,
+          0.2104,
+          0.232
+        ]
+      ]
+    },
+    {
+      "name": "forge_pipe_run_b",
+      "set": "forge",
+      "prop": "pipe_run",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.4966,
+      "triangles": 140,
+      "size": [
+        0.9,
+        0.219,
+        0.682
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          0.0,
+          -0.2316
+        ],
+        [
+          0.45,
+          0.219,
+          0.45
+        ]
+      ]
+    },
+    {
+      "name": "forge_gauge_panel_a",
+      "set": "forge",
+      "prop": "gauge_panel",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.375,
+      "triangles": 288,
+      "size": [
+        0.6,
+        0.11,
+        0.45
+      ],
+      "bounds_blender": [
+        [
+          -0.3,
+          0.0,
+          -0.225
+        ],
+        [
+          0.3,
+          0.11,
+          0.225
+        ]
+      ],
+      "light": "#7aff9a",
+      "intensity": 0.5
+    },
+    {
+      "name": "forge_gauge_panel_b",
+      "set": "forge",
+      "prop": "gauge_panel",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.375,
+      "triangles": 288,
+      "size": [
+        0.6,
+        0.11,
+        0.45
+      ],
+      "bounds_blender": [
+        [
+          -0.3,
+          0.0,
+          -0.225
+        ],
+        [
+          0.3,
+          0.11,
+          0.225
+        ]
+      ],
+      "light": "#7aff9a",
+      "intensity": 0.5
+    },
+    {
+      "name": "forge_chain_hoist_a",
+      "set": "forge",
+      "prop": "chain_hoist",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.175,
+      "triangles": 344,
+      "size": [
+        0.303,
+        0.18,
+        0.771
+      ],
+      "bounds_blender": [
+        [
+          -0.15,
+          -0.09,
+          -0.7715
+        ],
+        [
+          0.1533,
+          0.09,
+          0.0
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "forge_chain_hoist_b",
+      "set": "forge",
+      "prop": "chain_hoist",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.175,
+      "triangles": 368,
+      "size": [
+        0.303,
+        0.18,
+        0.859
+      ],
+      "bounds_blender": [
+        [
+          -0.15,
+          -0.09,
+          -0.859
+        ],
+        [
+          0.1533,
+          0.09,
+          0.0
+        ]
+      ],
+      "sway": 0.15
+    },
+    {
+      "name": "forge_slag_raft_a",
+      "set": "forge",
+      "prop": "slag_raft",
+      "variant": "a",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3165,
+      "triangles": 64,
+      "size": [
+        0.404,
+        0.392,
+        0.117
+      ],
+      "bounds_blender": [
+        [
+          -0.269,
+          -0.1479,
+          -0.06
+        ],
+        [
+          0.1346,
+          0.2437,
+          0.0572
+        ]
+      ],
+      "light": "#ff6020",
+      "intensity": 0.8,
+      "fluid": "lava"
+    },
+    {
+      "name": "forge_slag_raft_b",
+      "set": "forge",
+      "prop": "slag_raft",
+      "variant": "b",
+      "priority": 1,
+      "attach": "water",
+      "blocking": false,
+      "radius": 0.3186,
+      "triangles": 96,
+      "size": [
+        0.568,
+        0.369,
+        0.117
+      ],
+      "bounds_blender": [
+        [
+          -0.3034,
+          -0.2222,
+          -0.06
+        ],
+        [
+          0.2642,
+          0.1473,
+          0.0573
+        ]
+      ],
+      "light": "#ff6020",
+      "intensity": 0.8,
+      "fluid": "lava"
+    },
+    {
+      "name": "forge_pipe_bend_a",
+      "set": "forge",
+      "prop": "pipe_bend",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.1,
+      "triangles": 96,
+      "size": [
+        0.2,
+        0.473,
+        0.646
+      ],
+      "bounds_blender": [
+        [
+          -0.1,
+          -0.3,
+          -0.5
+        ],
+        [
+          0.1,
+          0.1733,
+          0.1464
+        ]
+      ],
+      "drop": 0.5
+    },
+    {
+      "name": "forge_pipe_bend_b",
+      "set": "forge",
+      "prop": "pipe_bend",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.1,
+      "triangles": 96,
+      "size": [
+        0.2,
+        0.473,
+        0.797
+      ],
+      "bounds_blender": [
+        [
+          -0.1,
+          -0.3,
+          -0.65
+        ],
+        [
+          0.1,
+          0.1727,
+          0.1465
+        ]
+      ],
+      "drop": 0.65
+    },
+    {
+      "name": "forge_great_gear_a",
+      "set": "forge",
+      "prop": "great_gear",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.2817,
+      "triangles": 656,
+      "size": [
+        2.4,
+        2.076,
+        2.46
+      ],
+      "bounds_blender": [
+        [
+          -1.2,
+          -1.0379,
+          0.0
+        ],
+        [
+          1.2,
+          1.0379,
+          2.46
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.4,
+        2.076
+      ],
+      "height": 2.46
+    },
+    {
+      "name": "forge_furnace_a",
+      "set": "forge",
+      "prop": "furnace",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.4051,
+      "triangles": 632,
+      "size": [
+        2.457,
+        2.519,
+        3.14
+      ],
+      "bounds_blender": [
+        [
+          -1.1339,
+          -1.3806,
+          0.0
+        ],
+        [
+          1.323,
+          1.138,
+          3.14
+        ]
+      ],
+      "light": "#ff7a30",
+      "intensity": 2,
+      "landmark": true,
+      "footprint": [
+        2.457,
+        2.519
+      ],
+      "height": 3.14
+    },
+    {
+      "name": "ossuary_bone_dust_a",
+      "set": "ossuary",
+      "prop": "bone_dust",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 130,
+      "size": [
+        0.635,
+        0.563,
+        0.043
+      ],
+      "bounds_blender": [
+        [
+          -0.2846,
+          -0.3092,
+          0.0
+        ],
+        [
+          0.35,
+          0.2535,
+          0.0432
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "ossuary_bone_dust_b",
+      "set": "ossuary",
+      "prop": "bone_dust",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.35,
+      "triangles": 142,
+      "size": [
+        0.678,
+        0.578,
+        0.043
+      ],
+      "bounds_blender": [
+        [
+          -0.3283,
+          -0.2706,
+          0.0
+        ],
+        [
+          0.35,
+          0.3076,
+          0.0432
+        ]
+      ],
+      "cover": true
+    },
+    {
+      "name": "ossuary_candle_stubs_a",
+      "set": "ossuary",
+      "prop": "candle_stubs",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2519,
+      "triangles": 152,
+      "size": [
+        0.443,
+        0.391,
+        0.19
+      ],
+      "bounds_blender": [
+        [
+          -0.207,
+          -0.2363,
+          0.0
+        ],
+        [
+          0.2358,
+          0.1544,
+          0.19
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.5,
+      "cover": true
+    },
+    {
+      "name": "ossuary_candle_stubs_b",
+      "set": "ossuary",
+      "prop": "candle_stubs",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2631,
+      "triangles": 152,
+      "size": [
+        0.427,
+        0.442,
+        0.19
+      ],
+      "bounds_blender": [
+        [
+          -0.2158,
+          -0.2278,
+          0.0
+        ],
+        [
+          0.2113,
+          0.2138,
+          0.19
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.5,
+      "cover": true
+    },
+    {
+      "name": "ossuary_skull_pile_a",
+      "set": "ossuary",
+      "prop": "skull_pile",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3349,
+      "triangles": 360,
+      "size": [
+        0.559,
+        0.542,
+        0.4
+      ],
+      "bounds_blender": [
+        [
+          -0.2537,
+          -0.2752,
+          0.0
+        ],
+        [
+          0.3056,
+          0.2666,
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_skull_pile_b",
+      "set": "ossuary",
+      "prop": "skull_pile",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3632,
+      "triangles": 360,
+      "size": [
+        0.61,
+        0.492,
+        0.4
+      ],
+      "bounds_blender": [
+        [
+          -0.3062,
+          -0.2301,
+          0.0
+        ],
+        [
+          0.3035,
+          0.2621,
+          0.4
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_candelabra_a",
+      "set": "ossuary",
+      "prop": "candelabra",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2401,
+      "triangles": 246,
+      "size": [
+        0.472,
+        0.282,
+        1.13
+      ],
+      "bounds_blender": [
+        [
+          -0.2321,
+          -0.1396,
+          0.0
+        ],
+        [
+          0.2401,
+          0.1424,
+          1.13
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1.2
+    },
+    {
+      "name": "ossuary_candelabra_b",
+      "set": "ossuary",
+      "prop": "candelabra",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.2409,
+      "triangles": 246,
+      "size": [
+        0.474,
+        0.282,
+        1.28
+      ],
+      "bounds_blender": [
+        [
+          -0.2332,
+          -0.1439,
+          0.0
+        ],
+        [
+          0.2409,
+          0.1385,
+          1.28
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1.2
+    },
+    {
+      "name": "ossuary_sarcophagus_a",
+      "set": "ossuary",
+      "prop": "sarcophagus",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.4501,
+      "triangles": 136,
+      "size": [
+        0.845,
+        0.441,
+        0.52
+      ],
+      "bounds_blender": [
+        [
+          -0.4227,
+          -0.2205,
+          0.0
+        ],
+        [
+          0.4227,
+          0.2205,
+          0.52
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_sarcophagus_b",
+      "set": "ossuary",
+      "prop": "sarcophagus",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 0.45,
+      "triangles": 136,
+      "size": [
+        0.721,
+        0.483,
+        0.52
+      ],
+      "bounds_blender": [
+        [
+          -0.3148,
+          -0.1499,
+          0.0
+        ],
+        [
+          0.4059,
+          0.3328,
+          0.52
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_funeral_urn_a",
+      "set": "ossuary",
+      "prop": "funeral_urn",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.262,
+      "triangles": 212,
+      "size": [
+        0.524,
+        0.404,
+        0.64
+      ],
+      "bounds_blender": [
+        [
+          -0.262,
+          -0.2035,
+          0.0
+        ],
+        [
+          0.262,
+          0.2003,
+          0.64
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_funeral_urn_b",
+      "set": "ossuary",
+      "prop": "funeral_urn",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.3377,
+      "triangles": 244,
+      "size": [
+        0.584,
+        0.402,
+        0.64
+      ],
+      "bounds_blender": [
+        [
+          -0.262,
+          -0.2029,
+          0.0
+        ],
+        [
+          0.3225,
+          0.199,
+          0.64
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_bone_lantern_a",
+      "set": "ossuary",
+      "prop": "bone_lantern",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1858,
+      "triangles": 266,
+      "size": [
+        0.352,
+        0.314,
+        0.74
+      ],
+      "bounds_blender": [
+        [
+          -0.1754,
+          -0.1609,
+          0.0
+        ],
+        [
+          0.1763,
+          0.1528,
+          0.74
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1
+    },
+    {
+      "name": "ossuary_bone_lantern_b",
+      "set": "ossuary",
+      "prop": "bone_lantern",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": false,
+      "radius": 0.1852,
+      "triangles": 266,
+      "size": [
+        0.365,
+        0.326,
+        0.74
+      ],
+      "bounds_blender": [
+        [
+          -0.1801,
+          -0.1715,
+          0.0
+        ],
+        [
+          0.1851,
+          0.1548,
+          0.74
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1
+    },
+    {
+      "name": "ossuary_skull_wall_a",
+      "set": "ossuary",
+      "prop": "skull_wall",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5701,
+      "triangles": 368,
+      "size": [
+        0.9,
+        0.243,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          0.0,
+          -0.35
+        ],
+        [
+          0.45,
+          0.2426,
+          0.35
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_skull_wall_b",
+      "set": "ossuary",
+      "prop": "skull_wall",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.5701,
+      "triangles": 368,
+      "size": [
+        0.9,
+        0.242,
+        0.7
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          0.0,
+          -0.35
+        ],
+        [
+          0.45,
+          0.2425,
+          0.35
+        ]
+      ]
+    },
+    {
+      "name": "ossuary_candle_niche_a",
+      "set": "ossuary",
+      "prop": "candle_niche",
+      "variant": "a",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.3717,
+      "triangles": 196,
+      "size": [
+        0.5,
+        0.191,
+        0.625
+      ],
+      "bounds_blender": [
+        [
+          -0.25,
+          0.0,
+          -0.275
+        ],
+        [
+          0.25,
+          0.1907,
+          0.35
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.8
+    },
+    {
+      "name": "ossuary_candle_niche_b",
+      "set": "ossuary",
+      "prop": "candle_niche",
+      "variant": "b",
+      "priority": 1,
+      "attach": "wall",
+      "blocking": false,
+      "radius": 0.3717,
+      "triangles": 230,
+      "size": [
+        0.5,
+        0.191,
+        0.625
+      ],
+      "bounds_blender": [
+        [
+          -0.25,
+          0.0,
+          -0.275
+        ],
+        [
+          0.25,
+          0.1913,
+          0.35
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 0.8
+    },
+    {
+      "name": "ossuary_bone_chandelier_a",
+      "set": "ossuary",
+      "prop": "bone_chandelier",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2751,
+      "triangles": 344,
+      "size": [
+        0.55,
+        0.55,
+        0.516
+      ],
+      "bounds_blender": [
+        [
+          -0.275,
+          -0.275,
+          -0.5162
+        ],
+        [
+          0.275,
+          0.275,
+          0.0
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1.2,
+      "sway": 0.15
+    },
+    {
+      "name": "ossuary_bone_chandelier_b",
+      "set": "ossuary",
+      "prop": "bone_chandelier",
+      "variant": "b",
+      "priority": 1,
+      "attach": "ceiling",
+      "blocking": false,
+      "radius": 0.2751,
+      "triangles": 382,
+      "size": [
+        0.55,
+        0.55,
+        0.516
+      ],
+      "bounds_blender": [
+        [
+          -0.275,
+          -0.275,
+          -0.5162
+        ],
+        [
+          0.275,
+          0.275,
+          0.0
+        ]
+      ],
+      "light": "#ffc070",
+      "intensity": 1.2,
+      "sway": 0.15
+    },
+    {
+      "name": "ossuary_skull_ledge_a",
+      "set": "ossuary",
+      "prop": "skull_ledge",
+      "variant": "a",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 244,
+      "size": [
+        0.9,
+        0.265,
+        0.643
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          -0.23,
+          -0.4503
+        ],
+        [
+          0.45,
+          0.0348,
+          0.193
+        ]
+      ],
+      "drop": 0.4503
+    },
+    {
+      "name": "ossuary_skull_ledge_b",
+      "set": "ossuary",
+      "prop": "skull_ledge",
+      "variant": "b",
+      "priority": 1,
+      "attach": "lip",
+      "blocking": false,
+      "radius": 0.45,
+      "triangles": 260,
+      "size": [
+        0.9,
+        0.265,
+        0.643
+      ],
+      "bounds_blender": [
+        [
+          -0.45,
+          -0.23,
+          -0.4503
+        ],
+        [
+          0.45,
+          0.0348,
+          0.193
+        ]
+      ],
+      "drop": 0.4503
+    },
+    {
+      "name": "ossuary_bone_arch_a",
+      "set": "ossuary",
+      "prop": "bone_arch",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.221,
+      "triangles": 2436,
+      "size": [
+        2.439,
+        0.711,
+        2.85
+      ],
+      "bounds_blender": [
+        [
+          -1.2195,
+          -0.4613,
+          0.0
+        ],
+        [
+          1.2195,
+          0.25,
+          2.85
+        ]
+      ],
+      "landmark": true,
+      "footprint": [
+        2.439,
+        0.711
+      ],
+      "height": 2.85
+    },
+    {
+      "name": "ossuary_crypt_shrine_a",
+      "set": "ossuary",
+      "prop": "crypt_shrine",
+      "variant": "a",
+      "priority": 1,
+      "attach": "ground",
+      "blocking": true,
+      "radius": 1.35,
+      "triangles": 488,
+      "size": [
+        2.0,
+        1.909,
+        2.77
+      ],
+      "bounds_blender": [
+        [
+          -1.0,
+          -0.9546,
+          0.0
+        ],
+        [
+          1.0,
+          0.9546,
+          2.77
+        ]
+      ],
+      "light": "#ffb060",
+      "intensity": 1,
+      "landmark": true,
+      "footprint": [
+        2.0,
+        1.909
+      ],
+      "height": 2.77
+    }
+  ]
+}

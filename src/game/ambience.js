@@ -4,13 +4,15 @@
 // the charge of a well, ring or the town portal pad, and the cast of the town portal scroll.
 import { N, LH, CUBE_H, WATER, LAVA, ACID } from '../core/constants.js';
 import { player, state } from './state.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { portalChargeDuration } from './portals.js';
 import { setAmbience, setDrone, drip, pop } from '../audio/loops.js';
 import { sfx } from '../audio/sfx.js';
 
-const WIND = { meadow: 0.3, peaks: 0.7, badlands: 0.45 };   // under an open sky; others 0.3
-const DRIPS = { roots: 0.6, frozen: 0.9, swamp: 0.8, nests: 0.3, mines: 0.4, ruins: 0.5, volcanic: 0.1, abyss: 0.25 };   // per second
+const WIND = { meadow: 0.3, peaks: 0.7, badlands: 0.45, clouds: 0.65, lagoon: 0.4, karst: 0.3,
+  highlands: 0.75, saltflats: 0.5 };   // under an open sky; others 0.3
+const DRIPS = { roots: 0.6, frozen: 0.9, swamp: 0.8, nests: 0.3, mines: 0.4, ruins: 0.5, volcanic: 0.1, abyss: 0.25,
+  grotto: 0.9, hive: 0.4, ossuary: 0.3, forge: 0.15, cenote: 0.7 };   // per second
 const KIND = { [WATER]: 'water', [LAVA]: 'lava', [ACID]: 'acid' };
 
 let sources = null, sourcesOf = null, charging = null, last = {};
@@ -33,7 +35,7 @@ const falloff = (d, near, far) => { const t = Math.min(1, Math.max(0, (far - d) 
 export function updateAmbience(dt) {
   const m = state.map, p = player;
   if (!m) return;
-  const theme = themeAt(m.depth), levels = { water: 0, falls: 0, lava: 0, acid: 0, wind: 0, cave: 0 };
+  const theme = themeOf(m), levels = { water: 0, falls: 0, lava: 0, acid: 0, wind: 0, cave: 0 };
   for (const s of soundSources(m)) {
     const d = Math.hypot(s.x - p.x, (s.y - p.y) * 0.5, s.z - p.z);
     if (s.fall && s.kind === 'water') levels.falls = Math.max(levels.falls, falloff(d, 1.5, 12));

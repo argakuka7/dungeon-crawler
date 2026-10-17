@@ -1,7 +1,7 @@
 // The dev overlay (?dev=1: seed, depth, layer, fps, cube stats) and screen fades. What the game
 // says (setStatus) shows in the chat box (game/console.js).
 // The player's own bars float over the character (render/playerbar.js).
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { isFaceOpen } from '../core/boundaries.js';
 import { state } from './state.js';
 import { population } from '../core/spawns.js';
@@ -21,7 +21,7 @@ if (state.dev) {
 export function showStats(map, cube, seed, visits) {
   // the cube's drawn population (before placement); * marks the lead species
   const pop = [...population(map)].map(([type, p]) => `${type} ${p.count}${p.lead ? '*' : ''}`).join(', ');
-  put('dev-depth', `${map.depth} · ${map.town ? 'Town' : map.merchantCamp ? 'Merchant camp' : map.interior ? 'Inside ' + map.interior.building : themeAt(map.depth).name}${map.horde ? ' · HORDE' : ''}${map.enemyFree ? ' · safe' : pop ? ' · ' + pop : ''}`);
+  put('dev-depth', `${map.depth} · ${map.town ? 'Town' : map.merchantCamp ? 'Merchant camp' : map.interior ? 'Inside ' + map.interior.building : themeOf(map).name}${map.horde ? ' · HORDE' : ''}${map.enemyFree ? ' · safe' : pop ? ' · ' + pop : ''}`);
   put('dev-seed', String(seed));
   const s = map.stats;
   const portals = map.portals.filter(p => p.kind !== 'spawn' && !isFaceOpen(state.openedFaces, cube, p.dir)).map(p => ['E', 'W', 'S', 'N', 'down', 'up'][p.dir] + (p.layer ? '@L' + p.layer : ''));

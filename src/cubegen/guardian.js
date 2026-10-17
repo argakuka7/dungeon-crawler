@@ -8,7 +8,7 @@ import { idx, edgeKey, clamp, mulberry32, hash32, makeNoise } from '../core/util
 import { floorY } from '../core/surfaces.js';
 import { indexBlockers } from '../core/blockers.js';
 import { population } from '../core/spawns.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { createContext } from './context.js';
 import { groundHeights } from './ground.js';
 import { placePortals } from './portals.js';
@@ -116,7 +116,7 @@ export function generateGuardian(spec) {
     E: inward([ex, ez], entry.dir), U, G: exit < 4 ? inward([px, pz], exit) : [px, pz] };
 
   const requested = spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills';
-  const theme = themeAt(spec.depth ?? 0), tint = theme.side[1][1];
+  const theme = themeOf(spec), tint = theme.side[1][1];
   let arena = null;
   for (const type of [...new Set([requested, 'hills', 'crater'])]) {
     const shape = SHAPES[type](frame), floors = buildFloors(ctx, base, shape, level);

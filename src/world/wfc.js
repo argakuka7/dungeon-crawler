@@ -8,12 +8,12 @@
 import { mulberry32, hash32 } from '../core/util.js';
 import { TILES, layersOf } from './tiles.js';
 import { OPP6, step, hashKey } from './coords.js';
-import { themeAt, depthOf } from '../themes/depth.js';
+import { depthOf } from '../themes/depth.js';
 import { TOWN_KEY, merchantCampKey } from './town.js';
 import { spanPins } from './spans.js';
 
-// tile weight at cube k: the base weight scaled by the depth's theme
-const weightAt = k => { const m = themeAt(depthOf(k)).tiles; return t => t.weight * (m[t.kind] ?? 1); };
+// tile weight at cube k: the base weight scaled by the depth's theme (layout: depth -> layout)
+const weightAt = (layout, k) => { const m = layout(depthOf(k)).theme.tiles; return t => t.weight * (m[t.kind] ?? 1); };
 
 export class WFC {
   // layout: depth -> its layout (layout.js), for the cubes each depth collapses
@@ -60,10 +60,10 @@ export class WFC {
     while (todo.size) {
       let best = null, bestE = Infinity, bestDom = null;
       for (const k of todo) {
-        const dom = this.domain(k), e = this.entropy(dom, weightAt(k)) + (hashKey(k) % 1000) * 1e-6;   // tiny tie-break
+        const dom = this.domain(k), e = this.entropy(dom, weightAt(this.layout, k)) + (hashKey(k) % 1000) * 1e-6;   // tiny tie-break
         if (e < bestE) { best = k; bestE = e; bestDom = dom; }
       }
-      const R = this.rng(best), w = weightAt(best), sum = bestDom.reduce((s, t) => s + w(t), 0);
+      const R = this.rng(best), w = weightAt(this.layout, best), sum = bestDom.reduce((s, t) => s + w(t), 0);
       let r = R() * sum, tile = bestDom[bestDom.length - 1];
       for (const t of bestDom) if ((r -= w(t)) < 0) { tile = t; break; }
       const near = [0, 1, 2, 3].map(d => this.tiles.get(step(best, d))?.K).filter(Boolean);

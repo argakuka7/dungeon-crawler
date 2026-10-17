@@ -79,7 +79,7 @@ export function generateClearing(spec) {
     fences: new Map(), fenceList: [], stats: ctx.stats, moves, portals, exit: spec.exit,
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
     safe: Uint8Array.from(floors, f => prev.has(f.c) ? 1 : 0),
-    kind: 'meadow', archetype: 'plain', key: spec.key, depth: 0, cave: false, enemyFree: true,
+    kind: 'meadow', archetype: 'plain', key: spec.key, depth: 0, cave: false, enemyFree: true, biome: 'meadow',
     staticBlockers, blockers: staticBlockers, occluders: plan.occluders, authoredProps: plan.placements, doors: plan.doors,
     villagers: plan.villagers,
     ...(camp ? { merchantCamp: clearing } : { town: clearing }),

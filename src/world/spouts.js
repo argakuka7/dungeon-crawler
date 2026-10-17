@@ -36,5 +36,5 @@ export function spout(world, fk, f, base) {
     if (low) cands.push(pos);
   }
   if (!cands.length) return null;
-  return { pos: cands[Math.floor(R() * cands.length)], layer, from, type: fallFluid(-parse(a)[1], R) };
+  return { pos: cands[Math.floor(R() * cands.length)], layer, from, type: fallFluid(L.theme, R) };
 }

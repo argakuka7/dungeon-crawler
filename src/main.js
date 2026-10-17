@@ -117,7 +117,7 @@ function frame() {
   tickTeach();   // what the Guide draws over the world (game/teach.js)
   // the look follows the depth smoothly (also while sliding down / up)
   if (state.cubeKey) state.lookDepth += (depthOf(state.cubeKey) - state.lookDepth) * Math.min(1, dt * 2.5);
-  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)));
+  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes);
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   cullNeighbors(player.x, player.z, !state.transitioning, state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));
   updatePlayerBar();
@@ -151,7 +151,7 @@ function menuFrame(dt, start) {
   tickProps(state.time);
   if (state.world) animateWorld(state.world, dt, state.time);
   updateCamera(dt);
-  applyLook(state.lookDepth, camera.position.distanceTo(menuFocus));
+  applyLook(state.lookDepth, camera.position.distanceTo(menuFocus), state.cubes?.layout.themes);
   updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
   renderer.render(scene, camera);

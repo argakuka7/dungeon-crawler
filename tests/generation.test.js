@@ -79,7 +79,7 @@ test('reward destinations remain accessible, framed and collider-safe across dep
 
 test('all six mine/ruin settings generate and prestige invests more space without rerolling identity', () => {
   for (const [depth, settings] of [[13, ['storage', 'gallery', 'excavation']], [15, ['burial', 'hall', 'courtyard']]]) {
-    const w = new World(1), key = w.layout(depth).sitePlans.keys().next().value;
+    const w = new World(1, { themes: ['mines', 'ruins'] }), key = w.layout(depth).sitePlans.keys().next().value;
     w.prepare(key);
     const spec = w.spec(key), sizes = [];
     for (const prestige of PRESTIGE) for (const setting of settings) {
@@ -99,7 +99,7 @@ test('all six mine/ruin settings generate and prestige invests more space withou
 });
 
 test('unplaceable destinations are reported without downgrading or breaking required routes', () => {
-  const w = new World(3), key = w.layout(13).sitePlans.keys().next().value;
+  const w = new World(3, { themes: ['mines'] }), key = w.layout(13).sitePlans.keys().next().value;
   w.prepare(key);
   const spec = w.spec(key);
   // An overcrowded budget cannot fit: test bounded best-effort generation without a fake floor fallback.

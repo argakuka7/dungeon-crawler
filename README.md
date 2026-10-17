@@ -23,7 +23,8 @@ docs that explain how the game works, from the big ideas down to the real code:
     falls across faces, sites, town plan), plus the worker that owns it.
   - `src/cubegen/`: builds one cube's map from the spec `world/` hands it. Files named like
     a `world/` file (`cascades`, `spouts`, `sites`, `town`) carve that shared decision into the cube.
-  - `src/themes/`: per-depth data: palettes, lighting, generator settings, structure materials.
+  - `src/themes/`: per-depth data: palettes, lighting, generator settings, structure materials;
+    each world picks one theme per slot of depths from its seed (`themes/depth.js`).
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
@@ -83,6 +84,8 @@ Blender -b --python blender/props.py          # likewise character, spider, stun
                                               # fireface, triangle, firecat, shraps, spicy, wolla, wolk, sword
 Blender -b --python blender/clutter.py        # libraries: clutter, items, town, town_trees
 Blender -b --python blender/tests/test_clutter.py
+Blender -b --python blender/themes.py         # the alternative themes' library (themes.glb;
+                                              # see docs/assets/themes.md)
 npm run prop-metadata                         # after props/clutter changes
 Blender -b --python blender/loadout.py        # the player with each kind of weapon and the
                                               # villagers (previews; -- --mounts solves the mounts

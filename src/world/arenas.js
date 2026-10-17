@@ -2,7 +2,6 @@
 // depth on its own stream, so routes and terrain are unaffected. Within a depth no two arenas
 // share a type. Descents lean to the grander arenas, side gates to the wilder ones.
 import { mulberry32, hash32 } from '../core/util.js';
-import { themeAt } from '../themes/depth.js';
 
 export const ARENA_WEIGHTS = {
   descent: { colosseum: 3, dais: 3, crater: 2, henge: 2, courtyard: 2, gorge: 1, hills: 1, grove: 1 },
@@ -13,7 +12,7 @@ const CAVE = { grove: .6, hills: .7, gorge: 1.3, courtyard: 1.3 };
 
 export function planArenas(seed, layout) {
   const R = mulberry32(hash32(seed ^ Math.imul(layout.depth + 1, 0x2c1b3c6d) ^ 0xa4e9a));
-  const cave = themeAt(layout.depth).cave, used = new Set();
+  const cave = layout.theme.cave, used = new Set();
   for (const g of layout.guardians.values()) {
     const options = Object.entries(ARENA_WEIGHTS[g.role]).filter(([t]) => !used.has(t))
       .map(([t, w]) => [t, w * (cave ? CAVE[t] ?? 1 : 1)]);

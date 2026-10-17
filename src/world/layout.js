@@ -3,7 +3,7 @@
 // The core has no further descent. Adjacent, non-linked route sections stay sealed.
 import { mulberry32, hash32 } from '../core/util.js';
 import { key, faceKey } from './coords.js';
-import { MAX_DEPTH } from '../themes/depth.js';
+import { MAX_DEPTH, themeAt, worldThemes } from '../themes/depth.js';
 import { planSites } from './sites.js';
 import { planHordes } from './hordes.js';
 import { planArenas } from './arenas.js';
@@ -42,7 +42,7 @@ function route(candidates, prefix, length, goal, R) {
 export const guardianDepth = (_seed, d) => d >= 0 && d < MAX_DEPTH;
 
 // learn: world.html#backtracking #route (see learn/README.md)
-function build(seed, d, above) {
+function build(seed, d, above, theme) {
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x9e3779b1))), Y = -d, r = RADIUS(d);
   const K = c => key(c[0], Y, c[1]);
   const candidates = [];
@@ -113,7 +113,7 @@ function build(seed, d, above) {
     cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
     routeIndex.set(K(n), routeIndex.get(K(c))); distance.set(K(n), 1);
   }
-  const layout = { depth: d, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex,
+  const layout = { depth: d, theme, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex,
     exists: new Set(cells.map(K)), portals, exit, guardians, gateFaces, hordes,
     up: d ? K(start) : null, down: d < MAX_DEPTH ? K(end) : null, guardian: guardianDepth(seed, d) };
   indexSpans(layout, spanPlan.spans, spanPlan.cells);
@@ -130,8 +130,11 @@ function build(seed, d, above) {
   return layout;
 }
 
-export function makeLayouts(seed) {
+// themes: the world's theme picks (themes/depth.js worldThemes). They only decide what the reward
+// sites are like (layout.theme); which rooms exist and how they connect depends on the seed alone.
+export function makeLayouts(seed, themes = worldThemes(seed)) {
   const cache = [];
-  const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null)));
+  const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null, themeAt(d, themes))));
+  get.themes = themes;
   return get;
 }

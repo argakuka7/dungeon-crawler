@@ -5,7 +5,7 @@
 import { createLog, addEntry, clearLog, deathRecord } from '../core/chronicle.js';
 import { equippedItem } from '../core/inventory.js';
 import { displayName } from '../core/gear/stats.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { relay } from '../net/online.js';
 import { player, state } from './state.js';
 
@@ -24,7 +24,7 @@ export const clearChronicle = () => clearLog(chronicle);
 
 // the name of the place a cube is in
 export const placeOf = map => !map ? '' : map.town ? 'Town' : map.merchantCamp ? 'Merchant camp'
-  : map.interior ? `inside the ${map.interior.building}` : themeAt(map.depth).name;
+  : map.interior ? `inside the ${map.interior.building}` : themeOf(map).name;
 
 // We died (game/flow.js die): what did it is the last blow that hurt us (player.lastHurt,
 // game/enemycombat.js, game/ragdoll.js)

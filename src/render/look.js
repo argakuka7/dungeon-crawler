@@ -14,9 +14,10 @@ const sky = [new THREE.Color(), new THREE.Color(), new THREE.Color(), new THREE.
 // sky: [top, bottom, haze, tint]; haze and tint default to top and bottom
 const skyStop = (s, i) => s[i] ?? s[i - 2];
 
-// camDist: distance from the camera to what it looks at (fog is placed around that)
-export function applyLook(depth, camDist) {
-  const { a, b, t } = lightAt(depth);
+// camDist: distance from the camera to what it looks at (fog is placed around that); themes: the
+// world's theme picks (themes/depth.js worldThemes)
+export function applyLook(depth, camDist, themes) {
+  const { a, b, t } = lightAt(depth, themes);
   hemi.color.copy(mix(a.hemi[0], b.hemi[0], t));
   hemi.groundColor.copy(mix(a.hemi[1], b.hemi[1], t));
   hemi.intensity = lerp(a.hemi[2], b.hemi[2], t);

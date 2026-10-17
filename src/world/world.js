@@ -6,7 +6,7 @@ import { generate } from '../cubegen/index.js';
 import { WFC } from './wfc.js';
 import { key, parse, step, faceKey, hashKey } from './coords.js';
 import { decideFaces, LAYER_BASE } from './faces.js';
-import { themeAt } from '../themes/depth.js';
+import { worldThemes } from '../themes/depth.js';
 import { makeLayouts } from './layout.js';
 import { voidAllowed, fallMask } from './voids.js';
 import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './town.js';
@@ -26,11 +26,13 @@ function archetype(theme, kind, R) {
 }
 
 export class World {
-  // opts.arche: force one archetype everywhere (dev)
+  // opts.arche: force one archetype everywhere (dev); opts.themes: theme ids that win their slot
+  // (dev, tests; themes/depth.js worldThemes)
   constructor(seed, opts = {}) {
     this.seed = seed;
     this.opts = opts;
-    this.layout = makeLayouts(seed);   // depth -> which cubes exist and how they connect
+    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // depth -> which cubes exist and how they connect
+    this.themes = this.layout.themes;   // the theme of every slot
     this.wfc = new WFC(seed, this.layout);
     this.noise = worldNoise(seed);
     this.faces = new Map();
@@ -48,7 +50,7 @@ export class World {
 
   // learn: architecture.html#cube-journey (see learn/README.md)
   spec(k) {
-    const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = themeAt(-Y);
+    const [X, Y, Z] = parse(k), t = this.wfc.tiles.get(k), theme = this.layout(-Y).theme;
     const span = spanSpec(this.layout(-Y), k, buildOf(theme).bridges);
     const faces = [0, 1, 2, 3].map(d => {
       const f = this.faces.get(faceKey(k, d));

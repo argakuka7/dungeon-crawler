@@ -29,8 +29,6 @@ import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
-import { spansThrough } from '../world/spans.js';
-import { depthOf } from '../themes/depth.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 
@@ -221,23 +219,9 @@ export function settleIn(neighbors = true) {
   drawMinimap();
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
   if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
-  sightSpans();
   // get the cubes behind our portals (and doors) ready in the background
   state.cubes.prefetch([...c.map.portals.filter(p => p.kind !== 'spawn').map(p => step(state.cubeKey, p.dir)),
     ...(c.map.doors || []).map(d => d.to)]);
-}
-
-// A gorge span (world/spans.js) is seen whole from any of its cubes: across the valley the far
-// side shows before you get there. Its cubes are fetched and sighted (shown, not discovered).
-function sightSpans() {
-  const cubes = state.cubes, k = state.cubeKey;
-  if (isInterior(k)) return;
-  for (const span of spansThrough(cubes.layout(depthOf(k)), k)) for (const s of span.keys)
-    cubes.get(s).then(c => {
-      if (state.cubes !== cubes || c.sighted) return;
-      c.sighted = true;
-      updateNeighbors();
-    }).catch(() => {});
 }
 
 // Discovered cubes within the render budget, on the active stratum only.
@@ -269,7 +253,10 @@ whenPropsReady(() => {
 export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = state.keepHero, restore = null } = {}) {
   clearNeighbors(); clearNeighborCache();
   state.cubes?.dispose();
-  state.cubes = new WorldClient(seed, { arche: state.dev && new URLSearchParams(location.search).get('arche') });
+  const params = new URLSearchParams(location.search);
+  // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths
+  state.cubes = new WorldClient(seed, { arche: state.dev && params.get('arche'),
+    themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [] });
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
   state.transitioning = true;
   cancelSword(true);

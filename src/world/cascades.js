@@ -5,7 +5,6 @@
 //   fall: { x, z, d, type }: (x, z) the void cell it pours down, d the flow direction into it
 import { N, DIRS, WATER, LAVA, ACID } from '../core/constants.js';
 import { parse, step, faceKey } from './coords.js';
-import { themeAt } from '../themes/depth.js';
 import { voidAllowed, isVoid } from './voids.js';
 
 const CHANCE = 0.45;
@@ -30,18 +29,18 @@ function decide(world, up) {
   if (world.layout(d).down === up) avoid.push(portalAt(world, faceKey(up, 4)));    // the well here = the ring below
   if (world.layout(d).up === up) avoid.push(portalAt(world, faceKey(up, 5)));      // the ring here
   if (world.layout(d + 1).down === low) avoid.push(portalAt(world, faceKey(low, 4)));   // the well below
-  const open = (x, z) => isVoid(world.noise, X * N + x + 0.5, Z * N + z + 0.5, d);
+  const theme = world.layout(d).theme, open = (x, z) => isVoid(world.noise, X * N + x + 0.5, Z * N + z + 0.5, d, theme.void);
   const cands = [];
   for (let z = 4; z <= 11; z++) for (let x = 4; x <= 11; x++) {
     if (!open(x, z) || avoid.some(([ax, az]) => Math.max(Math.abs(ax - x), Math.abs(az - z)) < 5)) continue;
     DIRS.forEach(([dx, dz], dir) => { if (!open(x - dx, z - dz)) cands.push({ x, z, d: dir }); });
   }
   if (!cands.length) return null;
-  return { ...cands[Math.floor(R() * cands.length)], type: fallFluid(d, R) };
+  return { ...cands[Math.floor(R() * cands.length)], type: fallFluid(theme, R) };
 }
 
-// the fluid of a fall at depth d: mostly the river fluid, else from the depth's mix
-export function fallFluid(d, R) {
-  const t = themeAt(d), [w, l, a] = t.fluids, r = R() * (w + l + a);
+// the fluid of a fall in theme t: mostly the river fluid, else from the theme's mix
+export function fallFluid(t, R) {
+  const [w, l, a] = t.fluids, r = R() * (w + l + a);
   return R() < 0.6 ? t.river : r < w ? WATER : r < w + l ? LAVA : ACID;
 }

@@ -328,10 +328,9 @@ one long bridge over a valley.
   long and as steep as the levels say. It is placed like any bridge, in one style for the
   whole span (from the theme's weights), with a deeper sag for rope and tall trestles under
   plank and iron. Invisible side rails keep you on it like on every bridge.
-- **Seen from across:** entering any cube of a span (its rooms at the ends included) fetches
-  all of its cubes and marks them `sighted` (`game/flow.js sightSpans`): the low-detail
-  surroundings show them like visited cubes, so the far side and the island are in view
-  before you get there. Sighting is not a visit: no faces open, the minimap does not show them.
+- **Discovery as usual:** a span's cubes show only once visited, like every other cube. Each
+  crossing is a portal, so the gorge, the far bank and the island come into view one cube at
+  a time as you cross.
 - **Dev:** `/span [n]` jumps to the start of the world's next (or n-th) span.
 - **Checks:** `tests/spans.test.js` covers the plan (straight, in budget, unguarded, islands
   apart), the pads on both sides of every crossing, matching ground on every face of every
@@ -379,6 +378,44 @@ under plank bridges never stand where another structure passes underneath.
   cutaway shader (`frontWall` in `render/cutshader.js`). The cut rock shows as a flat
   cross-section, like a cutaway model.
 
+## Themes per world (`themes/index.js`, `themes/caves.js`, `themes/depth.js`)
+
+The depths are cut into **slots**. A slot starts at a depth and lasts until the next one, and
+offers one or more themes. Every world picks one theme per slot from its seed
+(`worldThemes(seed)`, its own random stream per slot, each theme equally likely):
+
+| Depths | Themes (the first is the classic one) |
+|---|---|
+| 0 | Meadow islands (the town and its road, always) |
+| 1–2 | Meadow islands, Cloud kingdom, Lagoon isles, Karst terraces |
+| 3 | Snowy peaks, Prayer highlands |
+| 4 | Badlands, Salt flats |
+| 5–6 | Root caves |
+| 7–8 | Frozen caves, Sunken grotto |
+| 9–10 | Fungal swamp, Honey hive |
+| 11–12 | Spider nests, Ossuary |
+| 13–14 | Crystal mines, Dwarven forge |
+| 15–16 | Buried ruins, Jungle cenote |
+| 17–18 | Volcanic depths |
+| 19–20 | Obsidian abyss |
+
+- **Where it is read:** the picks live on the layouts (`world.layout.themes`, each depth's
+  `layout.theme`). The worker reads a depth's theme from there (WFC weights, void, relief,
+  cave walls, fluids of falls and spouts, reward sites); a spec and its map carry the theme's
+  id as `biome` (its prop set), and everything that draws or sounds a map reads it back with
+  `themeOf(map)` (palette, props, footsteps, ambience, music, names). The light follows the
+  world's picks (`lightAt(depth, themes)`).
+- **The rooms stay the same:** the slots' themes agree on `cave`, and what shapes the layout
+  (the gorge spans) belongs to the slot, not the theme. So which rooms a world has does not
+  depend on its picks, and a world saved before keeps its rooms (it may look different).
+- **Same per depth:** the enemy rosters (`DEPTH_SPAWNS`) go by depth, and each alternative
+  plays the song of its slot's classic theme for now.
+- **Dev:** `?theme=clouds,forge` (with `?dev=1`) picks those themes for their depths.
+  `new World(seed, { themes: ['mines'] })` does the same in tests.
+- **Checks:** `tests/themes.test.js`: the picks (stable, even, the town always in the meadows),
+  every theme complete (structures, arenas, site recipes, its own props), the same rooms
+  whatever the picks, and every alternative generating its depths dressed from its own set.
+
 ## Themed structures (`themes/builds.js`, `render/bridges.js`)
 
 - **Materials per theme:** each theme (by its prop set) names the stone, wood, rope and iron
@@ -416,8 +453,9 @@ Routes can now also use these moves:
 
 ## Props (`render/props.js`, `render/propplace.js`)
 
-Decoration comes from `assets/props.glb` (133 models) and `assets/clutter.glb`
-(222 additional models). Each theme names its prop set (`props`); neutral `any_*` rocks are
+Decoration comes from `assets/props.glb` (133 models), `assets/clutter.glb`
+(222 additional models) and `assets/themes.glb` (274 models for the alternative themes, see
+[the theme library](assets/themes.md)). Each theme names its prop set (`props`); neutral `any_*` rocks are
 tinted with the theme's rock colour. Placement runs on the main thread when a cube's meshes
 are built, seeded by the cube.
 
@@ -432,6 +470,8 @@ are built, seeded by the cube.
 - **Shore:** only beside fluids; **water props:** only on matching fluid surfaces.
 - **Lip props:** drape over cliff tops with sufficient hanging clearance.
 - **Signature assets:** reserved for deliberate destination recipes, not uniform scatter.
+  So are the theme library's landmarks (bigger than a cell) and string segments (`line`),
+  which nothing places yet.
 
 They are drawn as one instanced mesh per prop (and per material part), with per-cube
 material clones so they fade and get cut with their cube. Props with `sway` bend in the
@@ -651,9 +691,8 @@ exactly the pixels the other drops. Every cube, full or proxy, sits in its own g
 (`render/glass.js`) that moves and fades with it (`game/travelfx.js`), with panes omitted
 on opened side connections.
 
-The minimap and the low-detail surroundings only show cubes you have visited (the
-surroundings also the cubes of a gorge span you are on, see above); prefetching never
-discovers a cube. Surroundings include diagonals and distant cubes on the active
+The minimap and the low-detail surroundings only show cubes you have visited; prefetching
+never discovers a cube. Surroundings include diagonals and distant cubes on the active
 stratum, within 48 world units (three cube widths) of the player's horizontal position.
 Distance is measured to cube bounds, with an eight-unit dither fade at the outer edge.
 `core/viewdistance.js` holds the radius and discovery selection.

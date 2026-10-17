@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { WATER, LAVA } from '../src/core/constants.js';
 import { SURFACES, surfaceAt } from '../src/core/footing.js';
 import { THEMES } from '../src/themes/index.js';
-import { themeAt } from '../src/themes/depth.js';
+import { themeOf } from '../src/themes/depth.js';
 import { World } from '../src/world/world.js';
 import './fixtures.js';
 
@@ -32,7 +32,7 @@ test('terrain goes by theme and height, banks are mud', () => {
 });
 
 test('town paths are dirt, the rest of the town grass', () => {
-  const w = new World(5), m = w.cube(w.start).map, theme = themeAt(m.depth).props;
+  const w = new World(5), m = w.cube(w.start).map, theme = themeOf(m).props;
   const f = m.floors.find(g => !g.fluid && !g.link.some(h => h?.fluid));
   const [[ax, az], [bx, bz]] = m.town.paths[0].points;
   assert.equal(surfaceAt(f, m, theme, (ax + bx) / 2, (az + bz) / 2), 'dirt');
@@ -49,7 +49,7 @@ test('town paths are dirt, the rest of the town grass', () => {
 test('every floor and structure of generated cubes has a surface', () => {
   const w = new World(11);
   for (const depth of [1, 3, 4, 5, 7, 9, 11, 13, 15, 17, 19]) {
-    const m = w.cube(w.layout(depth).route[0]).map, props = themeAt(depth).props;
+    const m = w.cube(w.layout(depth).route[0]).map, props = themeOf(m).props;
     for (const f of m.floors) if (!f.fluid) assert.ok(SURFACES.includes(surfaceAt(f, m, props, f.x + 0.5, f.z + 0.5)));
     for (const r of m.runs) for (const p of r.pieces) assert.ok(SURFACES.includes(surfaceAt(p, m, props, 0, 0)), `${r.kind} ${r.style}`);
   }

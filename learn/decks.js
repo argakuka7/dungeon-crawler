@@ -84,9 +84,15 @@ export const THEME_NAMES = {
   meadow: 'Meadow islands', peaks: 'Snowy peaks', badlands: 'Badlands', roots: 'Root caves', frozen: 'Frozen caves',
   swamp: 'Fungal swamp', nests: 'Spider nests', mines: 'Crystal mines', ruins: 'Buried ruins', volcanic: 'Volcanic depths',
   abyss: 'Obsidian abyss', core: 'The core',
+  clouds: 'Cloud kingdom', lagoon: 'Lagoon isles', karst: 'Karst terraces', highlands: 'Prayer highlands',
+  saltflats: 'Salt flats', grotto: 'Sunken grotto', hive: 'Honey hive', ossuary: 'Ossuary', forge: 'Dwarven forge',
+  cenote: 'Jungle cenote',
 };
 export const THEME_NAMES_DE = {
   meadow: 'Wiesen-Inseln', peaks: 'Schneegipfel', badlands: 'Ödland', roots: 'Wurzelhöhlen', frozen: 'Eishöhlen',
   swamp: 'Pilzsumpf', nests: 'Spinnennester', mines: 'Kristallminen', ruins: 'Verschüttete Ruinen', volcanic: 'Vulkantiefen',
   abyss: 'Obsidian-Abgrund', core: 'Der Kern',
+  clouds: 'Wolkenreich', lagoon: 'Lagunen-Inseln', karst: 'Karstterrassen', highlands: 'Gebetsfahnen-Hochland',
+  saltflats: 'Salzebene', grotto: 'Versunkene Grotte', hive: 'Honigstock', ossuary: 'Beinhaus', forge: 'Zwergenschmiede',
+  cenote: 'Dschungel-Cenote',
 };

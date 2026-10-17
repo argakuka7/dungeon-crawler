@@ -8,7 +8,7 @@ import { PRESTIGE } from '../world/sites.js';
 import { search, take } from './route.js';
 import { reachTo } from './reach.js';
 
-const RECIPES = {
+export const RECIPES = {
   mines: { storage: ['sacks', 'plank_stack', 'lantern'], gallery: ['sacks', 'pickaxe_in_rock', 'lantern'],
     excavation: ['ore_pile', 'tipped_cart', 'crystal_cluster'] },
   ruins: { burial: ['sarcophagus', 'urn', 'brazier'], hall: ['column_base', 'stone_tablet', 'brazier'],
@@ -18,6 +18,11 @@ const RECIPES = {
   volcanic: ['fire_crystal', 'scorched_bones', 'obsidian_shard'], abyss: ['broken_altar', 'void_crystal', 'ritual_circle'],
   meadow: ['fairy_ring', 'fern', 'berry_bush'], peaks: ['expedition_flag', 'alpine_flowers', 'ice_crystal'],
   badlands: ['rib_cage', 'agave', 'broken_wagon_wheel'],
+  clouds: ['rainbow_crystal', 'sky_nest', 'storm_jar'], lagoon: ['buried_chest', 'tiki_torch', 'driftwood'],
+  karst: ['rice_sheaves', 'stone_lantern', 'banana_plant'], highlands: ['butter_lamps', 'mani_stones', 'chorten_small'],
+  saltflats: ['pink_halite', 'salt_cones', 'salt_bricks'], grotto: ['giant_clam', 'jelly_lantern', 'sunken_anchor'],
+  hive: ['wax_candles', 'honey_pot', 'comb_mound'], ossuary: ['candelabra', 'funeral_urn', 'sarcophagus'],
+  forge: ['crucible', 'ingot_stack', 'anvil_block'], cenote: ['copal_bowl', 'orchid_rock', 'jade_idol'],
 };
 const rotate = (u, v, yaw) => [[u, v], [-v, u], [-u, -v], [v, -u]][yaw];
 const at = (site, u, v) => { const [dx, dz] = rotate(u, v, site.turn); return idx(site.cx + dx, site.cz + dz); };

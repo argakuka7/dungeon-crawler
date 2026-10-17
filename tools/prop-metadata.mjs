@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 export function assetMetadata(directory) {
   const out = [];
-  for (const file of ['props.glb', 'clutter.glb', 'items/treasure_chest.glb']) {
+  for (const file of ['props.glb', 'clutter.glb', 'themes.glb', 'items/treasure_chest.glb']) {
     const b = readFileSync(resolve(directory, file));
     const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)));
     for (const i of j.scenes[j.scene || 0].nodes) {

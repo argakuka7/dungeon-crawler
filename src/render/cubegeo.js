@@ -4,13 +4,13 @@
 import { N, BASE, FLUIDS } from '../core/constants.js';
 import { GeoBuilder } from './builder.js';
 import { BEDROCK, usePalette } from './palette.js';
-import { themeAt } from '../themes/depth.js';
+import { themeOf } from '../themes/depth.js';
 import { buildFloors } from './floors.js';
 import { buildStructures } from './structures.js';
 import { buildInteriorWalls } from './interior.js';
 
 export function buildCubeGeometry(m) {
-  usePalette(themeAt(m.depth ?? 0));
+  usePalette(themeOf(m));
   const layers = Array.from({ length: m.K }, () => ({
     terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder(),
     fluids: Object.fromEntries(FLUIDS.map(t => [t, new GeoBuilder()])),

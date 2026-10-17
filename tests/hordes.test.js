@@ -19,7 +19,7 @@ import { createPlayerStats, createRun, awardKill } from '../src/core/progression
 import { restoreDefeated, gateLocked } from '../src/core/guardians.js';
 import { enemyDrops } from '../src/core/gear/drops.js';
 import { placeProps } from '../src/render/propplace.js';
-import { themeAt } from '../src/themes/depth.js';
+import { themeOf } from '../src/themes/depth.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 
 for (const p of PROP_METADATA) catalogProp(p);
@@ -85,7 +85,7 @@ test('local wild patches keep normal terrain, hold their crowd and survive worke
       for (const b of spots) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= a.kind.radius + b.kind.radius + .1);
     }
     for (const cfg of ENEMY_PROFILES) assert.equal(enemySpots(map, cfg).length, cfg.species === spots[0].kind.species ? spots.length : 0);
-    const placed = placeProps(map, themeAt(depth));
+    const placed = placeProps(map, themeOf(map));
     for (const f of map.floors) if (f.hordeReserved) assert.equal(placed.blockers[f.c].length, 0);
     for (const q of placed.out) {
       const f = map.cols[Math.floor(q.z) * 16 + Math.floor(q.x)].find(f => f.hordeReserved && Math.abs(floorY(f, .5, .5) - q.y) < .1);

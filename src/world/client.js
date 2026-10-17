@@ -3,13 +3,14 @@
 // cubes early (prefetch) makes walking through a portal instant.
 import { key } from './coords.js';
 import { makeLayouts } from './layout.js';
+import { worldThemes } from '../themes/depth.js';
 
 // learn: architecture.html#worker (see learn/README.md)
 export class WorldClient {
   constructor(seed, opts = {}) {
     this.seed = seed;
     this.start = key(0, 0, 0);
-    this.layout = makeLayouts(seed);   // which cubes exist (cheap, also needed here)
+    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // which cubes exist (cheap, also needed here)
     this.cubes = new Map();
     this.waiting = new Map();   // key -> [resolve, reject][]
     this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });

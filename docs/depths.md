@@ -1,8 +1,10 @@
 # Depths
 
 Quick reference for every depth (`Y = 0` to `Y = -20`, `depth = -Y`). Themes come from
-`src/themes/index.js` and `src/themes/caves.js`. A theme starts at its depth and lasts until
-the next one. The layout comes from `src/world/layout.js`, the enemy roster per depth from
+`src/themes/index.js` and `src/themes/caves.js`. A slot of themes starts at its depth and lasts
+until the next one; each world picks one theme per slot (the classic one first, then the others it
+may pick instead; see [world.md](world.md#themes-per-world-themesindexjs-themescavesjs-themesdepthjs)).
+The fluids column is the classic theme's. The layout comes from `src/world/layout.js`, the enemy roster per depth from
 `DEPTH_SPAWNS` in `src/core/spawns.js`, and enemy levels from `enemyRoll` in
 `src/core/enemies.js`. Enemy kinds (recoloured, stronger versions of a species) are described
 in `docs/enemy-kinds.md`.
@@ -12,22 +14,22 @@ in `docs/enemy-kinds.md`.
 | Depth | Theme | Kind | Layout (ring radius) | Fluids / river | Enemy level (base, range) |
 |---:|---|---|---|---|---|
 | 0 | Meadow islands | surface | town + road to the first well | water | 1 (always 1) |
-| 1 | Meadow islands | surface, sky islands | arc, r=3, gorge spans | water | 1 (always 1) |
-| 2 | Meadow islands | surface, sky islands | arc, r=3, gorge spans | water | 2 (1–3) |
-| 3 | Snowy peaks | surface, sky islands | arc, r=3 | water | 3 (2–4) |
-| 4 | Badlands | surface | arc, r=3 | water (some lava / acid) | 4 (3–5) |
+| 1 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3, gorge spans | water | 1 (always 1) |
+| 2 | Meadow islands / Cloud kingdom / Lagoon isles / Karst terraces | surface, sky islands | arc, r=3, gorge spans | water | 2 (1–3) |
+| 3 | Snowy peaks / Prayer highlands | surface, sky islands | arc, r=3 | water | 3 (2–4) |
+| 4 | Badlands / Salt flats | surface | arc, r=3 | water (some lava / acid) | 4 (3–5) |
 | 5 | Root caves | cave | arc, r=3 | water | 5 (4–6) |
 | 6 | Root caves | cave | arc, r=2 | water | 6 (5–7) |
-| 7 | Frozen caves | cave | arc, r=2 | water | 7 (6–8) |
-| 8 | Frozen caves | cave | arc, r=2 | water | 8 (7–9) |
-| 9 | Fungal swamp | cave | arc, r=2 | acid river | 9 (8–10) |
-| 10 | Fungal swamp | cave | arc, r=2 | acid river | 10 (9–11) |
-| 11 | Spider nests | cave | arc, r=2 | acid river | 11 (10–12) |
-| 12 | Spider nests | cave | arc, r=2 | acid river | 12 (11–13) |
-| 13 | Crystal mines | cave | arc, r=1 | water (some lava) | 13 (12–14) |
-| 14 | Crystal mines | cave | arc, r=1 | water (some lava) | 14 (13–15) |
-| 15 | Buried ruins | cave | arc, r=1 | acid river, lava | 15 (14–16) |
-| 16 | Buried ruins | cave | arc, r=1 | acid river, lava | 16 (15–17) |
+| 7 | Frozen caves / Sunken grotto | cave | arc, r=2 | water | 7 (6–8) |
+| 8 | Frozen caves / Sunken grotto | cave | arc, r=2 | water | 8 (7–9) |
+| 9 | Fungal swamp / Honey hive | cave | arc, r=2 | acid river | 9 (8–10) |
+| 10 | Fungal swamp / Honey hive | cave | arc, r=2 | acid river | 10 (9–11) |
+| 11 | Spider nests / Ossuary | cave | arc, r=2 | acid river | 11 (10–12) |
+| 12 | Spider nests / Ossuary | cave | arc, r=2 | acid river | 12 (11–13) |
+| 13 | Crystal mines / Dwarven forge | cave | arc, r=1 | water (some lava) | 13 (12–14) |
+| 14 | Crystal mines / Dwarven forge | cave | arc, r=1 | water (some lava) | 14 (13–15) |
+| 15 | Buried ruins / Jungle cenote | cave | arc, r=1 | acid river, lava | 15 (14–16) |
+| 16 | Buried ruins / Jungle cenote | cave | arc, r=1 | acid river, lava | 16 (15–17) |
 | 17 | Volcanic depths | cave | arc, r=1 | lava river | 17 (16–18) |
 | 18 | Volcanic depths | cave | arc, r=1 | lava river | 18 (17–19) |
 | 19 | Obsidian abyss | cave, large voids | arc, r=1 | lava only | 19 (18–20) |

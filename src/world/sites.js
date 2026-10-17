@@ -1,7 +1,6 @@
 // World-level destination budgets: fixed before terrain retries or asset loading.
 import { hash32, mulberry32 } from '../core/util.js';
 import { hashKey } from './coords.js';
-import { themeAt } from '../themes/depth.js';
 
 export const PRESTIGE = ['basic', 'uncommon', 'rare', 'exceptional'];
 const SETTINGS = {
@@ -21,7 +20,7 @@ export function siteIntent(seed, key, biome, prestige, slot = 0) {
 
 export function planSites(seed, layout, distance) {
   const plans = new Map(), roles = new Map();
-  const biome = themeAt(layout.depth).props;
+  const biome = layout.theme.props;
   for (const key of layout.exists) roles.set(key, distance.get(key) ? 'branch' : 'connector');
   if (layout.up) roles.set(layout.up, 'entrance');
   if (layout.down) roles.set(layout.down, 'descent');
