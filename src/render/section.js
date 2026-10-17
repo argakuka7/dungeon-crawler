@@ -111,6 +111,25 @@ function capColors(map, y) {
   U.uCapStone.value.set(build.stone);
   U.uCapWood.value.set(build.wood);
 }
+// Caves and canyons: the walls on the camera's sides never come down below what stands behind
+// them (the ground, a stair or bridge on it, at its lowest in that cell, and a little more):
+// lower, they would hide nothing more. That is the first cell inside the band (uWallBand) the
+// walls are cut in (in a corner, diagonally inside); per side (+x, -x, +z, -z), 16 heights
+// along it.
+const OVER_LAND = 0.25;
+let floorsOf = null;
+function wallFloors(map) {
+  const a = U.uWallFloor.value;
+  if (map === floorsOf) return;
+  floorsOf = map;
+  a.fill(0);
+  if (!map?.walled || map.interior) return;
+  const tops = map.cols.map(col => Math.max(0, ...col.map(f => f.fluid ? f.surf * LH : Math.min(...f.cs))));
+  for (const r of map.runs) for (const p of r.pieces) tops[p.z * N + p.x] = Math.max(tops[p.z * N + p.x], Math.min(p.y0, p.y1));
+  const top = (x, z) => tops[Math.min(N - 3, Math.max(2, z)) * N + Math.min(N - 3, Math.max(2, x))] + OVER_LAND;
+  for (let t = 0; t < N; t++) { a[t] = top(N - 3, t); a[N + t] = top(2, t); a[2 * N + t] = top(t, N - 3); a[3 * N + t] = top(t, 2); }
+}
+
 // y = height of the cut (Infinity for none), (px, py, pz) = the point to keep visible
 export function setCut(y, map, px, py, pz) {
   const on = y < CUBE_H;
@@ -126,6 +145,7 @@ export function setCut(y, map, px, py, pz) {
   else { U.uWallBox.value.set(0, N, 0, N); U.uWallBand.value = 2.2; U.uFrontKinds.value.set(1, 1, 1, 1); U.uFrontCorners.value = 1; }
   const box = U.uWallBox.value, walled = !!map?.walled || !!room;
   const cx = camera.position.x - (box.x + box.y) / 2, cz = camera.position.z - (box.z + box.w) / 2;
+  wallFloors(map);
   U.uFront.value.set(walled && cx > 6 ? 1 : 0, walled && cx < -6 ? 1 : 0, walled && cz > 6 ? 1 : 0, walled && cz < -6 ? 1 : 0);
   // a room's walls whose inner face the camera is not beyond: no line of sight from the camera
   // into the room crosses them, so the cutaway must not open holes in them

@@ -14,6 +14,9 @@ export const U = {
   uFront: { value: new THREE.Vector4() }, uWallY: { value: 1e3 },
   // the walls that come down: within uWallBand inside the box (x0, x1, z0, z1)
   uWallBox: { value: new THREE.Vector4(0, 16, 0, 16) }, uWallBand: { value: 2.2 },
+  // ... but never below the land behind them: per side (+x, -x, +z, -z) 16 heights along it
+  // (section.js wallFloors)
+  uWallFloor: { value: new Float32Array(64) },
   // which kinds of material come down with them: rock, stone, wood, the rest (see inject)
   uFrontKinds: { value: new THREE.Vector4(1, 1, 1, 1) },
   // 1: where a wall that comes down meets one that does not (the far corners of a cave), it
@@ -63,6 +66,18 @@ const REGION = `
     vec2 ndc = gl_FragCoord.xy / uRes * 2.0 - 1.0;
     return inPoly((ndc - uCenter) * vec2(uAspect, 1.0) / uRadius) ? 1.0 : 0.0;
   }
+  // the height the walls come down to at p: uWallY, but not below the land behind them on any
+  // side that comes down there
+  float wallFloor(vec3 p) {
+    vec4 d = vec4(uWallBox.y - p.x, p.x - uWallBox.x, uWallBox.w - p.z, p.z - uWallBox.z);
+    int tx = clamp(int(floor(p.x)), 0, 15), tz = clamp(int(floor(p.z)), 0, 15);
+    float b = uWallBand, h = uWallY;
+    if (d.x < b && uFront.x > 0.5) h = max(h, uWallFloor[tz]);
+    if (d.y < b && uFront.y > 0.5) h = max(h, uWallFloor[16 + tz]);
+    if (d.z < b && uFront.z > 0.5) h = max(h, uWallFloor[32 + tx]);
+    if (d.w < b && uFront.w > 0.5) h = max(h, uWallFloor[48 + tx]);
+    return h;
+  }
   // whether something has been cut away in front of this point: it lies in the cutaway's shape
   // on screen, or its line of sight to the camera leaves the box through a wall that has come
   // down (frontWall), above where it was cut
@@ -77,7 +92,7 @@ const REGION = `
     float tx = d.x > 1e-5 ? (uWallBox.y - vCutW.x) / d.x : d.x < -1e-5 ? (uWallBox.x - vCutW.x) / d.x : 1e9;
     float tz = d.z > 1e-5 ? (uWallBox.w - vCutW.z) / d.z : d.z < -1e-5 ? (uWallBox.z - vCutW.z) / d.z : 1e9;
     vec3 q = vCutW + clamp(min(tx, tz), 0.0, 1.0) * d;
-    if (q.y <= uWallY) return false;
+    if (q.y <= wallFloor(q)) return false;
     vec4 e = vec4(uWallBox.y - q.x, q.x - uWallBox.x, uWallBox.w - q.z, q.z - uWallBox.z);
     float b = uWallBand;
     return any(bvec4(e.x < b && uFront.x > 0.5, e.y < b && uFront.y > 0.5, e.z < b && uFront.z > 0.5, e.w < b && uFront.w > 0.5));
@@ -90,7 +105,7 @@ const REGION = `
     float b = uWallBand;
     bool front = any(bvec4(d.x < b && uFront.x > 0.5, d.y < b && uFront.y > 0.5, d.z < b && uFront.z > 0.5, d.w < b && uFront.w > 0.5));
     bool back = any(bvec4(d.x < b && uFront.x < 0.5, d.y < b && uFront.y < 0.5, d.z < b && uFront.z < 0.5, d.w < b && uFront.w < 0.5));
-    return front && !(back && uFrontCorners > 0.5);
+    return front && !(back && uFrontCorners > 0.5) && vCutW.y > wallFloor(vCutW);
   }`;
 
 // patch a built-in material: world position / view depth varyings, uniforms, region test;
@@ -102,7 +117,7 @@ export function inject(mat, fragCode, key, kind = 3) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = 'varying vec3 vCutW;\n' + sh.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\n#if defined(USE_BATCHING)\n  vCutW = (modelMatrix * batchingMatrix * vec4(transformed, 1.0)).xyz;\n#elif defined(USE_INSTANCING)\n  vCutW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\n#else\n  vCutW = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#endif');
-    sh.fragmentShader = `varying vec3 vCutW;\nuniform float uCutY, uRadius, uAspect, uWallY, uWallBand, uFrontCorners;\nuniform vec2 uCenter, uRes;\nuniform vec3 uSide;\nuniform vec4 uFront, uWallBox, uFrontKinds, uBack;\n#define CUT_KIND ${kind}\nuniform vec3 uCapRock, uCapStone, uCapWood;\nuniform vec2 uPoly[${CORNERS}];\n`
+    sh.fragmentShader = `varying vec3 vCutW;\nuniform float uCutY, uRadius, uAspect, uWallY, uWallBand, uFrontCorners;\nuniform vec2 uCenter, uRes;\nuniform vec3 uSide;\nuniform vec4 uFront, uWallBox, uFrontKinds, uBack;\nuniform float uWallFloor[64];\n#define CUT_KIND ${kind}\nuniform vec3 uCapRock, uCapStone, uCapWood;\nuniform vec2 uPoly[${CORNERS}];\n`
       + REGION + '\n' + fragCode(sh.fragmentShader);
   };
   mat.customProgramCacheKey = () => key;
