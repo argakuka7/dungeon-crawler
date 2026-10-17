@@ -1,6 +1,6 @@
 # Loot and player equipment
 
-![58-asset overview](../../blender/previews/items-preview.png)
+![59-asset overview](../../blender/previews/items-preview.png)
 
 Built and inspected through Blender MCP. Matches the existing flat-faceted,
 texture-free clay style: warm timber, leather wraps, muted brass and steel,
@@ -22,11 +22,11 @@ one animated asset.
 | Potions | `item_potion_health` (red, round), `item_potion_mana` (blue, tall), `item_potion_stamina` (green, square), `item_potion_health_minor` (slim vial), `item_potion_health_greater` (deeper red, gold band and cap), `item_potion_health_superior` (crimson cone, gold, a star over the heart), `item_potion_antidote` (teal, a cross), `item_potion_swiftness` (sky blue, a wing), `item_potion_haste` (amber vial, a bolt), `item_potion_might` (rust red, iron band, a sword), `item_potion_leaping` (lime cone, an arrow up) |
 | Flasks | `item_flask_blast` (smoky glass, iron bands, a lit fuse), `item_flask_fire` (orange, a rag in the neck, a flame), `item_flask_toxic` (green, wax seal, bubbles, a skull); held by the neck to throw (extras `weapon: 'throw'`, `mount_*`, see [potions.md](../potions.md)) |
 | Treasure chest | `treasure_chest` (empty, lid on a hinge, `Open` / `Close` clips) |
-| Tools | `item_town_portal` (parchment scroll on two rollers, violet portal sigil, wax seal) |
+| Tools | `item_town_portal` (parchment scroll on two rollers, violet portal sigil, wax seal), `item_room_portal` (the same scroll with a teal sigil and seal) |
 | Headwear | `wear_headscarf` (plum kerchief with golden dots, knotted at the nape), `wear_welding_mask` (flat olive shield, dark green window, headband and crown strap), `wear_wizard_hat` (indigo, drooping brim, gold band and stars, bent tip) |
 | Held | `held_towel` (striped, folded over a forearm), `held_crystal_ball` (faceted, three shards circling it), `held_rope` (a coil with a loose, frayed end), `held_hammer`, `held_pliers` (holding a glowing billet), `held_feed_bag` (burlap, grain and a carrot) |
 
-**58 assets / 22,384 triangles total.** Sticks vary in length and branching; gemstones have
+**59 assets / 23,642 triangles total.** Sticks vary in length and branching; gemstones have
 distinct cuts; swords vary in blade length, width, guard and grip, not just scale; bows in
 length, bend and recurve; crossbows in stock, prod and fittings; staffs in their heads.
 
@@ -45,7 +45,7 @@ At rest (no clip) the lid is closed. Its floor is at `contents_gltf` (`[0, .118,
 game builds each chest as its own object, not an instance, and plays the clips with an
 `AnimationMixer` (`src/render/chests.js`); collision uses the closed bounds.
 
-The town portal scroll only renders its icon; the game never puts tools on the floor.
+The portal scrolls only render their icons; the game never puts tools on the floor.
 
 ## Files
 

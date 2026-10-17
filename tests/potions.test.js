@@ -132,7 +132,7 @@ test('one potion of a family goes on the quick bar by itself', () => {
   assert.equal(autoBar(inv, 'item_potion_health_minor'), false, 'a health potion is there already');
   for (const id of ['item_potion_antidote', 'item_potion_haste', 'item_flask_fire']) { addItem(inv, id); assert.ok(autoBar(inv, id), id); }
   for (const id of ['item_potion_might', 'item_flask_toxic']) { addItem(inv, id); assert.equal(autoBar(inv, id), false, id); }
-  assert.deepEqual(inv.bar.map(r => r && (r.itemId ?? 'scroll')), ['scroll', HEALTH_POTION.id, 'item_potion_antidote', 'item_potion_haste', 'item_flask_fire', null]);
+  assert.deepEqual(inv.bar.map(r => r && (r.itemId ?? 'scroll')), ['scroll', HEALTH_POTION.id, 'item_potion_antidote', 'item_potion_haste', 'item_flask_fire', 'scroll']);
 });
 
 test('the alchemist sells every potion for its price, all or nothing', () => {

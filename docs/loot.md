@@ -36,7 +36,7 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
   uses it; arrows move through both columns. I, V or Esc closes.
 - With touch controls ([touch.md](touch.md)) a long press on the game collects like the action key.
 - Weapons can go on the quick bar (**1**–**6**, see `docs/progression.md`): using one equips it.
-  The Town Portal Scroll is bound and cannot be dropped.
+  The Town Portal and Room Portal Scrolls are bound and cannot be dropped.
 - You may drop every weapon, including the equipped one and the last one. Without a weapon you
   cannot attack ("No weapon equipped") until you pick one up and equip it.
 - Items you put down are `kept`: a death leaves them on the floor, while weapons enemies dropped

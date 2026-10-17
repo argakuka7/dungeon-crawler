@@ -663,6 +663,31 @@ The Town Portal Scroll (quick bar slot 1) opens a two-way portal to town:
 Run `await (await import('./tests/browser/townportal.js')).runTownPortalChecks()` to check the
 quick bar, assignment, the cast and its interruptions, both trips and closing.
 
+### Getting unstuck (`physics/unstuck.js`, `game/roomportal.js`)
+
+- **Wedged:** the controller should never walk the body into anything, but knockbacks, gusts,
+  ragdolls, moving villagers, jumps into low blockers and concave corners (the rim probes of
+  `canMove` can leave the body overlapping two walls, so every move fails) still wedge it.
+  The body counts as wedged with something solid through its middle (`blockedAt` up to 0.45,
+  so a low ceiling over the head does not count) or when it cannot move 0.06 in any of the
+  four directions. Not while rising or falling, on a ladder, in a ragdoll, between cubes or in
+  a fall through cubes. After 0.3 s (`WEDGED_TIME`) it is put on the nearest spot it stands
+  freely on, within 2 cells, on its level, a step up or on top of what it is stuck in (1.5 up
+  or down at most), preferring floors that lead out of the cube (`map.safe`); with none of those
+  close by, at the last safe spot; failing that the nearest free spot at all. No countdown
+  and no message.
+- **The last safe spot** (`player.safe`, `physics/hazards.js`) is only taken from floors that
+  lead out of the cube (`map.safe`), never from the bottom of a pit.
+- **Room Portal Scroll** (quick bar slot 6, bound, never used up): the way out of a place you
+  cannot leave on foot. Using it starts a 3 s cast (`ROOM_PORTAL_CAST`, `core/items.js`) that
+  moving, jumping, a mouse order, attacking, taking damage, being knocked over, travel,
+  opening the inventory or using it again cancels, as does falling more than 1 or drifting
+  more than 1 cell away. Unlike the town portal it needs no firm ground (it works in a pit,
+  on a ladder, or wedged), and it works in town and houses too. Then the screen fades and you
+  stand where you came into this cube (`state.arrival`), with your health and conditions as
+  they were; the cube is not reset as on a death. Portals and open faces at the arrival point
+  wait until you step out of them (`lockPortalsHere`).
+
 ### Opened side connections
 
 A shared side face opens as soon as the cubes on both sides have been discovered

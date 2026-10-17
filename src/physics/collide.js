@@ -30,11 +30,12 @@ export function groundAt(x, z, y, step, map = state.map) {
 }
 
 // does something solid occupy the body (between y+step and the head)?
-// piecesOnly: inside our own cell only structures hanging overhead count
-export function blockedAt(x, z, y, step, piecesOnly = false) {
+// piecesOnly: inside our own cell only structures hanging overhead count; h: how tall the body
+// is (physics/unstuck.js asks about its middle only)
+export function blockedAt(x, z, y, step, piecesOnly = false, h = player.h) {
   const i = cellAt(x, z);
   if (i < 0) return true;
-  const [fx, fz] = local(x, z), head = y + player.h;
+  const [fx, fz] = local(x, z), head = y + h;
   // Trees use trunk circles; town buildings use their rotated footprint boxes.
   for (const b of state.map.blockers?.[i] || []) if (containsXZ(b, x, z) && b.bottom < head && b.top > y + step) return true;
   if (!piecesOnly) for (const f of state.map.cols[i]) if (floorY(f, fx, fz) > y + step && f.bottom * LH < head) return true;

@@ -11,6 +11,7 @@ import { knockDown, stepRagdoll, tickGetUp } from './ragdoll.js';
 import { movePlayer, updateLayer } from '../physics/move.js';
 import { applyHazards } from '../physics/hazards.js';
 import { climb } from '../physics/climb.js';
+import { unstick } from '../physics/unstuck.js';
 import { landFall } from './fall.js';
 import { tickCast, cancelCast } from './townportal.js';
 import { tickEffects, effectMod } from '../core/potions.js';
@@ -57,6 +58,7 @@ export function updatePlayer(dt) {
   // always run (mouse orders too), unless Ctrl is held or a swing plants the feet
   const gr = movePlayer(dt, dx, dz, !wantsWalk() && !s.active, jump);
   updateLayer(gr);
+  if (unstick(dt)) return;   // wedged in something: out onto the nearest free spot (physics/unstuck.js)
 
   // Fluid contact takes priority over landing damage (even a high fall into water).
   if (!applyHazards(dt, gr)) return;

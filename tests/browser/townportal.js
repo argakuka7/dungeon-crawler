@@ -46,7 +46,8 @@ export async function runTownPortalChecks() {
       const slots = [...document.querySelectorAll('#quickbar .qb-slot')];
       check(slots.length === 6 && barEntry(inv, 0)?.slot === scroll && !slots[0].querySelector('img').hidden
         && barEntry(inv, 1)?.itemId === 'item_potion_health' && !slots[1].querySelector('img').hidden
-        && slots.slice(2).every(b => b.querySelector('img').hidden), 'A run starts with the scroll on quick bar slot 1 and potions on 2');
+        && slots.slice(2, 5).every(b => b.querySelector('img').hidden) && !slots[5].querySelector('img').hidden,
+        'A run starts with the scroll on quick bar slot 1, potions on 2 and the room portal scroll on 6');
       check(!dropFromBag(scroll.instanceId) && inv.slots.includes(scroll), 'The scroll cannot be dropped');
       results.push('quick bar / scroll on 1 / bound');
 

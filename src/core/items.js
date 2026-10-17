@@ -114,6 +114,15 @@ export const TOWN_PORTAL = {
   description: 'Opens a portal to town after 5 seconds of standing still. Step back through it in town to return here. Never used up.',
   icon: icon('item_town_portal'),
 };
+// the way out of a spot you cannot leave (game/roomportal.js)
+export const ROOM_PORTAL_CAST = 3;   // s holding still to read it
+export const ROOM_PORTAL = {
+  id: 'item_room_portal', name: 'Room Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'roomPortal',
+  description: `Takes you back to where you came into this room after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere: the way out when you are stuck. One way. Never used up.`,
+  icon: icon('item_room_portal'),
+};
+// every hero carries these (core/progression.js carryTools)
+export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];
 // Things a character wears or carries (render/figure.js puts them on): `slot` is where they go,
 // one thing per slot (OUTFIT_SLOTS): on the head, or in the right or the left hand. Their models
 // say which bone they sit on, how, and how the arm holds them (blender/items.py WEARS).
@@ -145,5 +154,5 @@ export function outfitOf(ids) {
   }
   return out;
 }
-export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, TOWN_PORTAL, ...WEARABLES].map(i => [i.id, i]));
+export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, ...TOOLS, ...WEARABLES].map(i => [i.id, i]));
 export const OLD_SWORD = WEAPONS[0];

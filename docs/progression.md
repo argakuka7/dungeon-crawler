@@ -27,8 +27,9 @@
 ## Run state
 
 A new run starts with level 1, 0 XP, 100 HP, one owned/equipped Common Old Sword, the
-Town Portal Scroll on quick bar slot 1 and three health potions on slot 2 (with `?dev=1`, also
-5000 gold).
+Town Portal Scroll on quick bar slot 1, three health potions on slot 2 and the Room Portal
+Scroll on slot 6 (with `?dev=1`, also 5000 gold). Every hero carries both scrolls: a hero saved
+before one existed gets it when loaded (`carryTools`, `core/progression.js`).
 Progression, currency, inventory and equipment survive cube travel and death.
 Death (or `R`) restores the current maximum HP; there is no death penalty yet. Death also
 resets the cube to how it was when you came in: enemies killed since come back (and give XP

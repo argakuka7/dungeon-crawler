@@ -45,11 +45,18 @@ export function useTownPortal() {
   if (why) { say(why); return false; }
   // look for room first: no point standing still for 5 s to learn there is none
   if (!padSpot()) { say(NO_ROOM); sfx('fizzle'); return false; }
-  state.cast = { kind: 'townPortal', t: 0, duration: CAST_TIME, x: player.x, z: player.z, since: state.time };
-  sfx('castStart');
-  clearMouseInput();
+  startCast({ kind: 'townPortal', duration: CAST_TIME, firm: true, done: openTownPortal });
   setStatus('Opening a portal to town... hold still');
   return true;
+}
+
+// Start reading a scroll (this one, or the room portal scroll, game/roomportal.js): kind: the
+// item's `use`; done: what happens once it is read; firm: it needs you standing on firm ground
+// all along (else only not to fall or drift off far).
+export function startCast({ kind, duration, firm, done }) {
+  state.cast = { kind, t: 0, duration, firm, done, x: player.x, y: player.y, z: player.z, since: state.time };
+  sfx('castStart');
+  clearMouseInput();
 }
 
 export function cancelCast(message = '') {
@@ -62,13 +69,14 @@ export function cancelCast(message = '') {
 export function tickCast(dt, moving) {
   const c = state.cast, p = player;
   if (!c) return;
-  if (moving || p.sword.active || p.sword.requested || p.lastDamageAt > c.since || p.ragdoll || p.climb
-    || p.swimming || !p.grounded || state.fallFrom || Math.hypot(p.x - c.x, p.z - c.z) > 0.2) {
+  const drift = Math.hypot(p.x - c.x, p.z - c.z);
+  if (moving || p.sword.active || p.sword.requested || p.lastDamageAt > c.since || p.ragdoll || state.fallFrom
+    || (c.firm ? p.climb || p.swimming || !p.grounded || drift > 0.2 : drift > 1 || c.y - p.y > 1)) {
     cancelCast('Portal interrupted');
     return;
   }
   c.t += dt;
-  if (c.t >= c.duration) { state.cast = null; openTownPortal(); }
+  if (c.t >= c.duration) { state.cast = null; c.done(); }
 }
 
 // on (or right next to) one of the cube's own portal pads: wells and rings (a side gate is

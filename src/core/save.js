@@ -20,7 +20,7 @@
 // wrote it: migrate brings older ones up.
 import { ITEMS, COINS } from './items.js';
 import { BAG_SIZE, BAR_SIZE, createInventory, whole } from './inventory.js';
-import { createPlayerStats, levelFromXP, maxHealth } from './progression.js';
+import { createPlayerStats, carryTools, levelFromXP, maxHealth } from './progression.js';
 import { validGen, validPickup } from './loot.js';
 import { worldName } from './names.js';
 
@@ -60,7 +60,7 @@ export const heroLevel = h => levelFromXP(h.xp);
 // (the fields of core/progression.js createPlayerStats)
 export function heroStats(h) {
   const level = levelFromXP(h.xp), maxHp = maxHealth(level);
-  return { ...createPlayerStats(), xp: h.xp, level, maxHp, hp: maxHp, inventory: structuredClone(h.inventory) };
+  return { ...createPlayerStats(), xp: h.xp, level, maxHp, hp: maxHp, inventory: carryTools(structuredClone(h.inventory)) };
 }
 
 // A bag as it was saved, checked: slots with items the game no longer knows (or that do not

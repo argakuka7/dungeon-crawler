@@ -1,5 +1,5 @@
 import { createInventory, addInstance, addItem, equipItem, assignBar, whole } from './inventory.js';
-import { OLD_SWORD, TOWN_PORTAL, HEALTH_POTION } from './items.js';
+import { OLD_SWORD, TOWN_PORTAL, ROOM_PORTAL, TOOLS, HEALTH_POTION } from './items.js';
 import { fixedWeapon } from './gear/generate.js';
 import { createPotionState } from './potions.js';
 
@@ -41,14 +41,26 @@ export function xpScale(playerLevel, enemyLevel) {
 export function xpProgress(p) {
   return { current: p.xp - xpForLevel(p.level), required: xpToNext(p.level) };
 }
-// a new run: the Old Sword in hand, the town portal scroll on quick bar slot 1 and a few health
-// potions on slot 2; with the dev tools (dev: true) also DEV_GOLD gold to try the shops with
+// a new run: the Old Sword in hand, the town portal scroll on quick bar slot 1, a few health
+// potions on slot 2 and the room portal scroll on the last slot; with the dev tools (dev: true)
+// also DEV_GOLD gold to try the shops with
 export const START_POTIONS = 3, DEV_GOLD = 5000;
+const BAR_SLOTS = { [TOWN_PORTAL.id]: 0, [ROOM_PORTAL.id]: 5 };
+// every hero carries the tools (core/items.js TOOLS): a hero saved before one existed gets it
+// (on its quick bar slot, if that is free); a full bag waits for room
+export function carryTools(inventory) {
+  for (const t of TOOLS) {
+    if (inventory.slots.some(s => s?.itemId === t.id)) continue;
+    const id = addInstance(inventory, { itemId: t.id }), slot = BAR_SLOTS[t.id];
+    if (id && slot !== undefined && !inventory.bar[slot]) assignBar(inventory, slot, id);
+  }
+  return inventory;
+}
 export function createPlayerStats(dev = false) {
   const inventory = createInventory();
   if (dev) addItem(inventory, 'item_coin_gold', DEV_GOLD);
   equipItem(inventory, addInstance(inventory, fixedWeapon(OLD_SWORD.id)));
-  assignBar(inventory, 0, addInstance(inventory, { itemId: TOWN_PORTAL.id }));
+  carryTools(inventory);
   addItem(inventory, HEALTH_POTION.id, START_POTIONS);
   assignBar(inventory, 1, inventory.slots.find(s => s?.itemId === HEALTH_POTION.id).instanceId);
   return { xp: 0, level: 1, maxHp: maxHealth(1), hp: maxHealth(1), lastDamageAt: -Infinity, toxic: null, ...createPotionState(), inventory };

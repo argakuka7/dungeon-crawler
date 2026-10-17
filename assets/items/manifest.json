@@ -1277,6 +1277,32 @@
       "glb": "items/item_town_portal.glb"
     },
     {
+      "name": "item_room_portal",
+      "triangles": 1258,
+      "size": [
+        0.562,
+        0.5768,
+        0.16
+      ],
+      "bounds_blender": [
+        [
+          -0.281000018119812,
+          -0.41067248582839966,
+          0.0
+        ],
+        [
+          0.281000018119812,
+          0.16608452796936035,
+          0.1600000411272049
+        ]
+      ],
+      "attach": "ground",
+      "category": "tool",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/item_room_portal.glb"
+    },
+    {
       "name": "wear_headscarf",
       "triangles": 1242,
       "size": [

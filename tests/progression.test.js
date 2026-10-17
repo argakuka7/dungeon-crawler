@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { assetsRoot } from './paths.js';
-import { ITEMS, WEAPONS, OLD_SWORD, COINS, TOWN_PORTAL, HEALTH_POTION } from '../src/core/items.js';
+import { ITEMS, WEAPONS, OLD_SWORD, COINS, TOWN_PORTAL, ROOM_PORTAL, HEALTH_POTION } from '../src/core/items.js';
 import { createInventory, addItem, addInstance, removeItem, takeItem, equipItem, equippedItem, addCopper, spendCopper, copperTotal, coinCounts,
   assignBar, autoBar, barEntry, barIndexOf, BAR_SIZE } from '../src/core/inventory.js';
 import { fixedWeapon } from '../src/core/gear/generate.js';
-import { createPlayerStats, createRun, xpForLevel, xpToNext, levelFromXP, xpProgress, xpScale, awardXP, awardKill, takeDamage, regenerate,
+import { createPlayerStats, carryTools, createRun, xpForLevel, xpToNext, levelFromXP, xpProgress, xpScale, awardXP, awardKill, takeDamage, regenerate,
   levelDamage, maxHealth, START_POTIONS, DEV_GOLD } from '../src/core/progression.js';
 import { drinkPotion, tickEffects } from '../src/core/potions.js';
 import { SPIDER, STUNDER, enemyProfile, enemyRoll, makeEnemy, coinRange, depthLevel } from '../src/core/enemies.js';
@@ -21,30 +21,49 @@ function equip(p, id) {
   equipItem(p.inventory, p.inventory.slots.find(s => s?.itemId === id).instanceId);
 }
 
-test('a new player has an equipped Old Sword, the scroll and a few potions on the quick bar and empty currency slots', () => {
+test('a new player has an equipped Old Sword, the scrolls and a few potions on the quick bar and empty currency slots', () => {
   const p = createPlayerStats();
   assert.deepEqual([p.xp, p.level, p.hp, p.maxHp], [0, 1, 100, 100]);
   assert.equal(p.inventory.slots.length, 24);
-  assert.deepEqual(p.inventory.slots.filter(Boolean).map(s => s.itemId), [OLD_SWORD.id, TOWN_PORTAL.id, HEALTH_POTION.id]);
+  assert.deepEqual(p.inventory.slots.filter(Boolean).map(s => s.itemId), [OLD_SWORD.id, TOWN_PORTAL.id, ROOM_PORTAL.id, HEALTH_POTION.id]);
   assert.equal(equippedItem(p.inventory).itemId, OLD_SWORD.id);
   assert.equal(p.inventory.bar.length, BAR_SIZE);
   assert.equal(barEntry(p.inventory, 0).slot.itemId, TOWN_PORTAL.id);
-  assert.deepEqual(barEntry(p.inventory, 1), { itemId: HEALTH_POTION.id, slot: p.inventory.slots[2], count: START_POTIONS });
-  assert.ok(p.inventory.bar.slice(2).every(r => r === null));
+  assert.deepEqual(barEntry(p.inventory, 1), { itemId: HEALTH_POTION.id, slot: p.inventory.slots[3], count: START_POTIONS });
+  assert.ok(p.inventory.bar.slice(2, 5).every(r => r === null));
+  assert.equal(barEntry(p.inventory, 5).slot.itemId, ROOM_PORTAL.id, 'the room portal scroll on the last slot');
   assert.equal(createRun().townPortal, null);
   assert.deepEqual(p.inventory.currency.map(s => s.itemId), COINS.map(c => c.id));
   assert.deepEqual(p.inventory.currency.map(s => s.count), [0, 0, 0]);
   // with the dev tools: gold to spend
   assert.equal(copperTotal(createPlayerStats(true).inventory), DEV_GOLD * 1000);
 });
-test('the town portal scroll is bound: it never leaves the bag and never stacks', () => {
-  const inv = createPlayerStats().inventory, scroll = inv.slots.find(s => s?.itemId === TOWN_PORTAL.id);
-  assert.ok(TOWN_PORTAL.bound && TOWN_PORTAL.use && !TOWN_PORTAL.model && TOWN_PORTAL.icon === 'assets/items/item_town_portal.png');
-  const before = JSON.stringify(inv);
-  assert.equal(takeItem(inv, scroll.instanceId), null);
-  assert.equal(JSON.stringify(inv), before);
-  assert.ok(takeItem(inv, inv.equipped));   // ordinary items still can
-  assert.equal(TOWN_PORTAL.stackLimit, 1);
+test('the portal scrolls are bound: they never leave the bag and never stack', () => {
+  for (const [def, name] of [[TOWN_PORTAL, 'item_town_portal'], [ROOM_PORTAL, 'item_room_portal']]) {
+    const inv = createPlayerStats().inventory, scroll = inv.slots.find(s => s?.itemId === def.id);
+    assert.ok(def.bound && def.use && !def.model && def.icon === `assets/items/${name}.png`);
+    const before = JSON.stringify(inv);
+    assert.equal(takeItem(inv, scroll.instanceId), null);
+    assert.equal(JSON.stringify(inv), before);
+    assert.ok(takeItem(inv, inv.equipped));   // ordinary items still can
+    assert.equal(def.stackLimit, 1);
+  }
+});
+test('a hero from before the room portal scroll gets one, on the last bar slot if it is free', () => {
+  const old = () => {
+    const inv = createPlayerStats().inventory, i = inv.slots.findIndex(s => s?.itemId === ROOM_PORTAL.id);
+    inv.bar[5] = null; inv.slots[i] = null;
+    return inv;
+  };
+  const inv = carryTools(old());
+  assert.equal(inv.slots.filter(s => s?.itemId === ROOM_PORTAL.id).length, 1);
+  assert.equal(barEntry(inv, 5).slot.itemId, ROOM_PORTAL.id);
+  assert.equal(carryTools(inv).slots.filter(s => s?.itemId === ROOM_PORTAL.id).length, 1, 'only once');
+  const busy = old(), potion = busy.slots.find(s => s?.itemId === HEALTH_POTION.id);
+  assignBar(busy, 5, potion.instanceId);
+  carryTools(busy);
+  assert.ok(busy.slots.some(s => s?.itemId === ROOM_PORTAL.id));
+  assert.deepEqual(busy.bar[5], { itemId: HEALTH_POTION.id }, 'a slot in use stays as it is');
 });
 test('the quick bar references bag items: moves, toggles, keeps stacks and forgets items that leave', () => {
   const inv = createInventory();
@@ -170,10 +189,10 @@ test('a health potion pours part of the maximum in within a second, one drink a 
 });
 test('picked-up potions go on the first free quick bar slot unless they are on it already', () => {
   const inv = createPlayerStats().inventory;
-  removeItem(inv, inv.slots[2].instanceId, START_POTIONS);
+  removeItem(inv, inv.slots.find(s => s?.itemId === HEALTH_POTION.id).instanceId, START_POTIONS);
   assert.deepEqual(barEntry(inv, 1).count, 0, 'the empty slot stays');
   addItem(inv, HEALTH_POTION.id, 2); assert.ok(autoBar(inv, HEALTH_POTION.id));
-  assert.deepEqual(inv.bar.filter(Boolean).length, 2, 'not twice');
+  assert.deepEqual(inv.bar.filter(r => r?.itemId === HEALTH_POTION.id).length, 1, 'not twice');
   inv.bar[1] = null; assert.ok(autoBar(inv, HEALTH_POTION.id));
   assert.deepEqual(inv.bar[1], { itemId: HEALTH_POTION.id });
   addItem(inv, 'item_crystal_ruby'); assert.equal(autoBar(inv, 'item_crystal_ruby'), false);

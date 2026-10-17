@@ -113,7 +113,7 @@ export function fits(inv, item) {
   const capacity = inv.slots.reduce((n, s) => n + (!s ? def.stackLimit : s.itemId === item.itemId ? def.stackLimit - s.count : 0), 0);
   return capacity >= (item.count ?? 1);
 }
-// a bound item (the town portal scroll) never leaves the bag
+// a bound item (a portal scroll) never leaves the bag
 export const isBound = itemId => !!ITEMS[itemId]?.bound;
 // the whole slot out of the bag (unequipping it): { itemId, count, gen? }, or null (also for
 // bound items)

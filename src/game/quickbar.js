@@ -1,8 +1,8 @@
 // The quick bar: six slots along the bottom of the screen, on keys 1-6 (or a click). A slot
 // points at a bag item (core/inventory.js assignBar): a weapon is equipped, a usable item used
-// (the town portal scroll starts its cast, game/townportal.js; a potion is drunk, core/
-// potions.js; a flask is taken in hand to throw, or put away again, game/equipment.js). With
-// the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
+// (the town and room portal scrolls start their casts, game/townportal.js, roomportal.js; a
+// potion is drunk, core/potions.js; a flask is taken in hand to throw, or put away again,
+// game/equipment.js). With the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
 // the same slot: off; the bar pulses while such an item is selected). A potion's slot fills
 // while its cooldown runs. With touch controls (game/touch.js) the bar sits at the top, with a
 // bag button at its end for the inventory and a menu button for the Esc menu (game/escmenu.js).
@@ -16,6 +16,7 @@ import { displayName } from '../core/gear/stats.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { equipOwnedWeapon, readyFlask } from './equipment.js';
 import { useTownPortal } from './townportal.js';
+import { useRoomPortal } from './roomportal.js';
 import { assignSelectedToBar, toggleInventory, setInventoryOpen, barReady } from './inventory.js';
 import { toggleMenu } from './escmenu.js';
 
@@ -41,6 +42,7 @@ export function useItem(instanceId) {
     return true;
   }
   if (def.use === 'townPortal') return useTownPortal();
+  if (def.use === 'roomPortal') return useRoomPortal();
   if (def.use === 'drink') return drink(slot, def);
   if (def.use === 'throw') return readyFlask(inv.readied === def.id ? null : def.id);
   setStatus(`${def.name} cannot be used yet`);

@@ -49,6 +49,8 @@ LILAC = '#c4a2e6'
 RIM = '#9a72c4'
 PORTAL = '#2b1d42'
 GLEAM = '#f0e6f5'
+# portal scroll sigils (pool, rim, swirl, heart, seal): the town portal's violet, the room portal's teal
+SCROLL_INKS = [(PORTAL, RIM, LILAC, GLEAM, VIOLET), ('#123a37', '#3f9c8f', '#8fdcc9', '#e6f7f1', '#2f6e66')]
 # Chest lid hinge (Blender, before the ground shift, which is 0 for the chest) and its clips:
 # (frame, lid angle in degrees about +X, handle type); negative opens it backwards.
 CHEST_HINGE = (0, .30, .445)
@@ -810,8 +812,10 @@ def flask(m, v):
 
 
 def scroll(m, v=0):
-    """Town portal scroll: a parchment sheet between two rollers, sloping down towards the
-    viewer from the fat back roll, with a violet portal sigil and a dangling wax seal."""
+    """Portal scrolls: a parchment sheet between two rollers, sloping down towards the viewer
+    from the fat back roll, with a portal sigil and a dangling wax seal; violet for the town
+    portal (v=0), teal for the room portal (v=1)."""
+    PORTAL, RIM, LILAC, GLEAM, VIOLET = SCROLL_INKS[v]
     back, front = (.09, .08), (-.25, .036)        # roll centres (y, z); radii are the z
     # Rolls of parchment on wooden rods with brass knobs; the back one holds most of the sheet.
     for (y, r), half, rod in ((back, .21, .017), (front, .2, .013)):
@@ -1281,7 +1285,8 @@ SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
     *[(f'item_potion_{p}', potion, i, 'consumable', 'ground') for i, p in enumerate(POTIONS)],
     *[(f'item_flask_{f}', flask, i, 'consumable', 'ground') for i, f in enumerate(FLASKS)],
     ('treasure_chest', chest, 0, 'container', 'ground'),
-    ('item_town_portal', scroll, 0, 'tool', 'ground')] + [
+    ('item_town_portal', scroll, 0, 'tool', 'ground'),
+    ('item_room_portal', scroll, 1, 'tool', 'ground')] + [
     ('wear_headscarf', headscarf, 0, 'wearable', 'head'),
     ('wear_welding_mask', welding_mask, 0, 'wearable', 'head'),
     ('wear_wizard_hat', wizard_hat, 0, 'wearable', 'head'),
@@ -1355,7 +1360,7 @@ def build(scene=None):
 
 
 def validate(objects):
-    assert len(objects) == len(SPECS) == 58
+    assert len(objects) == len(SPECS) == 59
     assert {o.name for o in objects} == {s[0] for s in SPECS}
     report = []
     for obj in objects:
@@ -1423,7 +1428,7 @@ def setup_preview(scene, objects):
     rest = [o for o in objects if not any(o in g for g in groups)]
     groups += [rest[:8], rest[8:]]
     labels = {'weapon_sword_greatsword': 'GREATSWORD', 'treasure_chest': 'CHEST',
-              'item_town_portal': 'TOWN PORTAL'}
+              'item_town_portal': 'TOWN PORTAL', 'item_room_portal': 'ROOM PORTAL'}
     for row, group in enumerate(groups):
         for i, obj in enumerate(group):
             x, y = (i - (len(group) - 1) / 2) * 1.6, (4 - row) * 3.1

@@ -1,5 +1,5 @@
-// The cast in progress (reading the town portal scroll, game/townportal.js): a violet bar over
-// the player's own bars. Lives in the scene, not a cube, like the portal charge bar.
+// The cast in progress (reading a portal scroll, game/townportal.js, roomportal.js): a violet
+// bar over the player's own bars. Lives in the scene, not a cube, like the portal charge bar.
 import { scene, camera } from './scene.js';
 import { makeBar } from './bars.js';
 import { player, state } from '../game/state.js';

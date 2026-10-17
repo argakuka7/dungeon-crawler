@@ -3,7 +3,7 @@
 // within C's reach (and from then on while it stays open, also once something is dropped).
 // Take (Enter or a double-click) moves a floor item into the bag; Drop puts a bag item down.
 // You can drop every weapon, even the last one: then you cannot attack until you pick one up.
-// Bound items (the town portal scroll) cannot be dropped. Keys 1-6, the Quick bar buttons in the
+// Bound items (the portal scrolls) cannot be dropped. Keys 1-6, the Quick bar buttons in the
 // details or a tap on a quick bar slot put the selected bag item on the quick bar (again on the
 // same slot: off; game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
 // uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
