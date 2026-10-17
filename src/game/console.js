@@ -21,6 +21,7 @@ import { floatText } from '../render/floattext.js';
 import { partnerAt } from '../render/partner.js';
 import { player, state } from './state.js';
 import { clearInput } from './inputstate.js';
+import { useAction } from './chests.js';
 import { chronicle, log, note } from './log.js';
 import { commands, runCommand } from './commands.js';
 import './devcommands.js';
@@ -68,11 +69,12 @@ export function closeChat() {
   shown = -1; render();
 }
 
-// Enter: chat; `: a command (also with the inventory and the other panels' fields left alone)
+// Enter: the action key (open the chest beside the player, game/chests.js), else chat; `: a
+// command (also with the inventory and the other panels' fields left alone)
 addEventListener('keydown', e => {
   if (open || e.repeat || e.metaKey || e.ctrlKey || e.altKey || state.inventoryOpen || state.menuOpen || state.mode !== 'play') return;
   if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target?.tagName)) return;
-  if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); openChat(''); }
+  if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); if (!useAction()) openChat(''); }
   else if (e.code === 'Backquote') { e.preventDefault(); openChat('/'); }
 });
 

@@ -5,7 +5,8 @@ say to each other (chat) and the commands (the console).
 
 ## The box
 
-- **Enter** opens it to type. A line is chat; a line that starts with `/` is a command.
+- **Enter** opens it to type (unless a closed chest is next to the player: then Enter is the
+  action key and opens it, `game/chests.js useAction`). A line is chat; a line that starts with `/` is a command.
   **`** (the key left of 1, `^` on a German keyboard; by `e.code`, so any layout) opens it with
   the `/` already typed. **Esc** closes the list of suggestions first, then the box. Enter on an
   empty line closes it too, and so does running a command (Enter opens it again). The game goes on while it is open (it does not pause).

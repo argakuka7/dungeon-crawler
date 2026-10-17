@@ -16,7 +16,8 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
   still wins over an item; an item wins over a chest, a chest over the floor. A full bag says so
   and leaves it.
 - **Click** a closed treasure chest (or its label, "Treasure chest", coloured by how grand the
-  site is) to walk up and open it. X labels chests too.
+  site is) to walk up and open it. Standing next to one, **F** or **Enter** (the action key,
+  `game/chests.js useAction`) opens it. X labels chests too.
 - Potions are taken by walking over them or with **C**, like coins, and go on the quick
   bar by themselves (one of each family, [potions.md](potions.md)).
 - **X** toggles name labels over every item on the floor but coins. Without it only the item
