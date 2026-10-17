@@ -5,6 +5,9 @@ import { N, CUBE_H, BASE } from '../core/constants.js';
 import { dither } from './fade.js';
 
 const box = new THREE.BoxGeometry(N, CUBE_H, N), outline = new THREE.EdgesGeometry(box);
+// The panes lie in the planes of the cube's outer walls, whose insides show through a cut:
+// pushed back a little in depth, a pane always loses there instead of flickering over them.
+const BEHIND = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 4 };
 // BoxGeometry's faces are +x, -x, +y, -y, +z, -z. Keep one shared geometry per side.
 const sides = [0, 1, 4, 5].map(face => {
   const geo = box.clone();
@@ -21,7 +24,7 @@ export function makeGlass(strength = 1, open = []) {
   const g = new THREE.Group();
   const edges = new THREE.LineSegments(outline, new THREE.LineBasicMaterial({ color: 0x8fb3d9, transparent: true, opacity: 0.35 * strength }));
   edges.userData.sharedGeo = true;
-  const material = new THREE.MeshBasicMaterial({ color: 0x6d8db5, transparent: true, opacity: 0.05 * strength, side: THREE.BackSide, depthWrite: false });
+  const material = new THREE.MeshBasicMaterial({ color: 0x6d8db5, transparent: true, opacity: 0.05 * strength, side: THREE.BackSide, depthWrite: false, ...BEHIND });
   g.userData.panes = sides.map(geo => {
     const pane = new THREE.Mesh(geo, material);
     pane.userData.sharedGeo = true;
@@ -71,7 +74,7 @@ export function glassBatch(strength) {
   paneGeo.setAttribute('aSide', new THREE.Float32BufferAttribute(side, 1));
   lineGeo.setAttribute('position', outline.attributes.position);
   const panes = new THREE.Mesh(paneGeo, instancedGlass(new THREE.MeshBasicMaterial({ color: 0x6d8db5, transparent: true,
-    opacity: 0.05 * strength, side: THREE.BackSide, depthWrite: false }), true));
+    opacity: 0.05 * strength, side: THREE.BackSide, depthWrite: false, ...BEHIND }), true));
   const edges = new THREE.LineSegments(lineGeo, instancedGlass(new THREE.LineBasicMaterial({ color: 0x8fb3d9, transparent: true,
     opacity: 0.35 * strength }), false));
   for (const o of [panes, edges]) { o.frustumCulled = false; o.visible = false; }
