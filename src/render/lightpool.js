@@ -14,15 +14,22 @@ const tmp = new THREE.Vector3();
 export function adoptLights(group) {
   const found = [];
   group.traverse(o => { if (o.isPointLight) found.push(o); });
-  for (const l of found) { const parent = l.parent; parent.remove(l); sources.push({ l, parent, group, pos: new THREE.Vector3() }); }
+  for (const l of found) { const parent = l.parent; parent.remove(l); sources.push({ l, parent, group, gain: 1, pos: new THREE.Vector3() }); }
 }
 
 export function releaseLights(group) { sources = sources.filter(s => s.group !== group); }
 
 // a light that moves with `object` (an enemy, a projectile): light.position is local to it;
 // it shines while the object is visible, at whatever intensity the owner sets; group: the cube
-// it belongs to (fades and is released with it)
-export function trackLight(light, object, group = object) { sources.push({ l: light, parent: object, group, pos: new THREE.Vector3() }); }
+// it belongs to (fades and is released with it). It must not be in the scene itself: every
+// light that comes or goes there recompiles all lit shaders (seconds, with a few of them), so
+// one added to its object is taken out again. gain: how much brighter the pool light shines
+// than the source says (the lights of shots, projectiles, flask areas, loot and partners were
+// tuned while they shone twice, in the scene and from the pool: 2 keeps their look).
+export function trackLight(light, object, group = object, gain = 1) {
+  if (light.parent) light.parent.remove(light);
+  sources.push({ l: light, parent: object, group, gain, pos: new THREE.Vector3() });
+}
 export function untrackLight(light) { sources = sources.filter(s => s.l !== light); }
 
 export function updateLightPool(focus) {
@@ -37,7 +44,7 @@ export function updateLightPool(focus) {
     if (!s) { l.intensity = 0; return; }
     l.position.copy(s.pos);
     l.color.copy(s.l.color);
-    l.intensity = s.l.intensity * (s.group.userData.fade ?? 1);
+    l.intensity = s.l.intensity * s.gain * (s.group.userData.fade ?? 1);
     l.distance = s.l.distance; l.decay = s.l.decay;
   });
 }

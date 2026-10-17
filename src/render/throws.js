@@ -66,7 +66,7 @@ function areaView(a) {
   mesh.scale.setScalar(a.r); mesh.position.y = 0.04; mesh.renderOrder = 5;
   group.add(mesh);
   let light = null;
-  if (look.light) { light = new THREE.PointLight(look.light, 0, 3.5, 2); light.position.y = 0.5; group.add(light); trackLight(light, group); }
+  if (look.light) { light = new THREE.PointLight(look.light, 0, 3.5, 2); light.position.y = 0.5; trackLight(light, group, group, 2); }
   scene.add(group);
   return { group, material, light, look };
 }

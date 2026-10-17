@@ -57,8 +57,7 @@ function build(slot, name) {
   mesh.renderOrder = 1000;
   const light = new THREE.PointLight(shade(slot, 0.65), 0.8, 3, 2);
   light.position.y = 0.9;
-  group.add(light);
-  trackLight(light, group);
+  trackLight(light, group, group, 2);   // a pool light source, not in the scene (render/lightpool.js)
   // name, level and health, over the world like our own (render/playerbar.js)
   const tag = new THREE.Group(), bars = new THREE.Group(), hp = makeBar({ color: shade(slot, 0).getHex(), onTop: true });
   const label = makeLevelLabel(1, { onTop: true, color: '#' + shade(slot, 0.7).getHexString(), title: name });

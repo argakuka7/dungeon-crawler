@@ -23,6 +23,7 @@ import { tickFluidDeath } from './render/fluiddeath.js';
 import { applyLook } from './render/look.js';
 import { tickSky } from './render/sky.js';
 import { tickResolution } from './render/resolution.js';
+import { keepPrograms } from './render/programs.js';
 import { updatePlayerBar } from './render/playerbar.js';
 import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
@@ -129,6 +130,7 @@ function frame() {
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   renderer.render(scene, camera);
+  keepPrograms();   // compiled shaders stay (render/programs.js)
   tickResolution(start);   // fewer pixels while the GPU cannot keep up (render/resolution.js)
   requestAnimationFrame(frame);
 }
@@ -157,6 +159,7 @@ function menuFrame(dt, start) {
   tickSky(performance.now() / 1000);
   renderer.render(scene, camera);
   drawPortrait(heroBox());
+  keepPrograms();
   tickResolution(start);
   requestAnimationFrame(frame);
 }

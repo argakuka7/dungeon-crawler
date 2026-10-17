@@ -34,7 +34,7 @@ function makeView(shot) {
     group.add(new THREE.Mesh(orbGeometry, core), new THREE.Mesh(haloGeometry, halo));
     v.owned.push(core, halo);
     v.light = new THREE.PointLight(color, 2.2, 3, 2);
-    group.add(v.light); trackLight(v.light, group);
+    trackLight(v.light, group, group, 2);   // a pool light source, not in the scene (render/lightpool.js)
     v.trail = [shot.stats.color ?? '#c48cff', '#ffffff'];
   } else {
     // the model's +Y (nock to head) along the group's +Z (the flight), its head on the shot
