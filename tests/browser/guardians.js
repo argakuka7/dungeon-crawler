@@ -10,6 +10,7 @@ import { gateLocked, portalLocked } from '../../src/core/guardians.js';
 import { DIRS, N } from '../../src/core/constants.js';
 import { faceKey, step } from '../../src/world/coords.js';
 import { allEnemies, updateEnemies, drawEnemies } from '../../src/game/enemies.js';
+import { walkable, findPath, groundY } from '../../src/physics/enemynav.js';
 import { enterCube, spawnAt, die } from '../../src/game/flow.js';
 import { checkPortals } from '../../src/game/portals.js';
 import { startTravel, travelling, updateTravel } from '../../src/game/travel.js';
@@ -47,8 +48,22 @@ export async function runGuardianChecks() {
       check(!checkPortals(0, 0, 2) && !state.portalCharge, 'locked well cannot charge');
       startTravel(down);
       check(!state.transitioning && !travelling(), 'direct travel cannot bypass the guardian');
-      const before = allEnemies().map(e => [e, e.x, e.z]);
+      // shot at from beyond its post's reach, the guardian goes for the shooter
       player.hp = player.maxHp = 10000; state.enemyGrace = 60;
+      const g = map.guardian, h = guard.profile.height;
+      const stand = map.floors.find(f => f.encounter && walkable(f, h) && walkable(f, 0.9, true)
+        && Math.hypot(f.x + .5 - g.x, f.z + .5 - g.z) > 6 && findPath(guard.f, f, 40, h));
+      check(stand, 'a floor to shoot the guardian from');
+      spawnAt(stand.x + .5, groundY(stand, stand.x + .5, stand.z + .5), stand.z + .5);
+      for (let i = 0; i < 10; i++) updateEnemies(.05);
+      const off = Math.hypot(guard.x - player.x, guard.z - player.z);
+      check(!guard.defence.engage && guard.mode !== 'chase', 'out of its reach the guardian keeps to its post');
+      damageEnemy(guard, 1);
+      for (let i = 0; i < 40; i++) updateEnemies(.05);
+      check(guard.mode === 'chase' || guard.mode === 'attack', 'shot, it goes for the shooter: ' + guard.mode);
+      check(Math.hypot(guard.x - player.x, guard.z - player.z) < off - 1, 'and comes closer');
+      spawnAt(down.x + .5, down.y, down.z + .5);
+      const before = allEnemies().map(e => [e, e.x, e.z]);
       damageEnemy(guard, 1); updateEnemies(.3);
       check(allEnemies().filter(e => !e.guardian).every(e => e.defence.engage), 'attacking guardian rallies every defender');
       for (let i = 0; i < 20; i++) updateEnemies(.05);

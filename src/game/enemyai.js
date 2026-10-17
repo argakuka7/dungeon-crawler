@@ -204,9 +204,13 @@ function decide(e) {
   const alive = !p.ragdoll && p.hp > 0 && !state.transitioning, dist = Math.hypot(p.x - e.x, p.z - e.z);
   if (e.defence) {
     if (e.mode === 'attack') return;   // never cancel a committed wind-up
-    const engage = alive && target && e.defence.engage;
-    e.path = findPath(e.f, engage ? target : e.defence.post, 40, cfg.height);
-    e.mode = engage && e.path ? 'chase' : 'defend'; e.lost = 0;
+    // it engages when its room says so, or for a while after a hit: shot at from beyond its
+    // post's reach, it goes for the shooter (to their floor, else where it can strike them from)
+    // rather than stand there as a target; with no way to them it keeps to its post
+    const engage = alive && (e.defence.engage || e.provoked > 0);
+    const route = engage && ((target && findPath(e.f, target, FAR, cfg.height)) || postPath(e, p, FAR));
+    e.path = route || findPath(e.f, e.defence.post, 40, cfg.height);
+    e.mode = route ? 'chase' : 'defend'; e.lost = 0;
     return;
   }
   if (e.horde) {

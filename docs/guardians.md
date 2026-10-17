@@ -67,6 +67,10 @@ Rewards scale with level.
 `game/defence.js` coordinates intentions; existing species AI still owns movement
 and attacks. At most a third of defenders can be drawn towards the entrance.
 Committed attack wind-ups are not cancelled. Unlocking removes defence intentions.
+A guardian engages within 4.5 cells of its spot; a hit (from any range) makes it, or a
+defender, go for the shooter as well for 6 s after the hit (to their floor, else to where it can
+strike them from, `game/tactics.js`), so it is never a target that does not answer. With no
+way to the shooter it keeps to its post.
 
 ## Generation
 
