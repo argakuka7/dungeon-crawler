@@ -54,8 +54,9 @@ const REGION = `
     if (testY && vCutW.y <= uCutY) return 0.0;
     if (backWall()) return 0.0;
     // only what is on the camera's side of the character (seen from above), never what is
-    // behind it, however high it reaches
-    if (dot(vCutW.xz, uSide.xy) < uSide.z - 0.15) return 0.0;
+    // behind it, however high it reaches (no slack: a wall or pillar standing just behind the
+    // character's plane hides nothing of it and must keep its upper part)
+    if (dot(vCutW.xz, uSide.xy) <= uSide.z) return 0.0;
     vec2 ndc = gl_FragCoord.xy / uRes * 2.0 - 1.0;
     return inPoly((ndc - uCenter) * vec2(uAspect, 1.0) / uRadius) ? 1.0 : 0.0;
   }

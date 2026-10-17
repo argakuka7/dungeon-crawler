@@ -42,6 +42,9 @@ function target(m) {
   if (p.ragdoll && cut !== Infinity) return cut;
   // the character itself (chest and head) ...
   let need = Math.min(blockedAt(p.x, y + 0.6, p.z, info.top), blockedAt(p.x, y + 0.95, p.z, info.top));
+  // ... and once it is hidden, its legs too: a wall right in front, cut just under where it
+  // crosses the chest's line of sight, would still stand in front of them
+  if (need < Infinity) need = Math.min(need, blockedAt(p.x, y + 0.15, p.z, info.top));
   // ... and points around / ahead of it, but only for things overhead (not walls beside us)
   const ahead = [[p.vx * 0.45, p.vz * 0.45], [0.9, 0], [-0.9, 0], [0, 0.9], [0, -0.9]];
   for (const [ox, oz] of ahead) {
