@@ -1,6 +1,6 @@
 // The render resolution follows the frame rate (core/resolution.js): main.js hands over when each
 // frame began, after it rendered. ?res=<pixel ratio> pins it (1: CSS pixels), e.g. to compare.
-import { renderer } from './scene.js';
+import { renderer, fitView } from './scene.js';
 import { resolutionController } from '../core/resolution.js';
 
 const pinned = Number(new URLSearchParams(location.search).get('res'));
@@ -9,7 +9,7 @@ let last = 0;
 
 function apply(ratio) {
   renderer.setPixelRatio(ratio);
-  renderer.setSize(innerWidth, innerHeight);
+  fitView();
 }
 if (pinned > 0) apply(pinned);
 

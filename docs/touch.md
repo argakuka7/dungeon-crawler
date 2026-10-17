@@ -47,7 +47,13 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   - no zoom into a field getting focus (iOS does that for text under 16 px): fields have 16 px
     text on touch screens (and `maximum-scale=1`);
   - no browser zoom from a trackpad pinch (a wheel with Ctrl: over the game it still zooms the
-    game's view) or Ctrl/Cmd with + - 0.
+    game's view) or Ctrl/Cmd with + - 0;
+  - no zoom from a canvas bigger than the page: the game's canvas fills the window by CSS and its
+    size comes from the layout viewport, not `innerWidth` / `innerHeight` (in Safari the visual
+    viewport, wrong while the keyboard is up or an iPad turns);
+  - should Safari zoom anyway, the zoom is undone: when `visualViewport.scale` is off 1 (and after
+    a turn or a field losing focus) the viewport tag is written anew, which sends Safari back to
+    its first scale. Without that a stray zoom stayed, as the pinch back out is called off.
 
 The menu button at the end of the quick bar opens the Esc menu (`src/game/escmenu.js`): playing
 together, the controls and the music. Respawning has no touch control yet.

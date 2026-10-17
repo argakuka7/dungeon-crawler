@@ -5,7 +5,20 @@ import { N } from '../core/constants.js';
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.localClippingEnabled = true;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
+// The canvas fills the window by CSS (style.css, #view), so it can never be wider or taller than
+// the page: on an iPad a canvas bigger than the page for a moment (turning it, the keyboard) made
+// Safari change its zoom, and nothing turned it back. Its drawing buffer follows the layout
+// viewport: not innerWidth / innerHeight, which in Safari are the visual viewport (smaller while
+// the keyboard is up or the page is zoomed, stale while an iPad turns).
+export const viewSize = () => ({ w: document.documentElement.clientWidth || innerWidth, h: document.documentElement.clientHeight || innerHeight });
+export function fitView() {
+  const { w, h } = viewSize();
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+renderer.domElement.id = 'view';
+renderer.setSize(viewSize().w, viewSize().h, false);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
@@ -32,8 +45,6 @@ sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 
-addEventListener('resize', () => {
-  renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-});
+addEventListener('resize', fitView);
+// and whenever the canvas itself changes size: iOS settles the sizes late after a turn
+new ResizeObserver(() => fitView()).observe(renderer.domElement);
