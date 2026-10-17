@@ -5,6 +5,11 @@
 // faces are drawn as a flat cap, and the cut-away part as faint glass (ghosts.js). The cap
 // has one colour per kind of solid (rock strata at the cut height, structure stone, wood), so
 // the inner faces seen through the cut read as a single flat lid.
+// The caps are a twin of each solid mesh that draws only its back faces, moved out a little
+// along their normals: solids are built of boxes that touch (stair steps, a stair against a
+// cliff, a step on the ground, a panel on a wall), and where the cut opens one of them, the
+// back face it shows lies in the very plane of its neighbour's front face. In the same plane
+// the two flickered; moved out, the cap lies behind the front face and always loses there.
 // Cut fluids get flat caps.
 import * as THREE from 'three';
 import { N, LH, CUBE_H } from '../core/constants.js';
@@ -25,20 +30,37 @@ const CAP_SHADE = 0.68;
 
 const CAP_UNIFORM = { rock: 'uCapRock', stone: 'uCapStone', wood: 'uCapWood' };
 
-// a material that gets cut away; caps ('rock' | 'stone' | 'wood'): its back faces show as
-// the flat cap in that kind's colour, lit like an upward-facing floor (sky + sun, no
-// shadows), a little darker; ghost: the cut-away part is drawn again as glass (ghosts.js)
+const CUT_DISCARD = 'if (cutRegion(true) > 0.5 || frontWall()) discard;\n#include <clipping_planes_fragment>';
+
+// a material that gets cut away; caps ('rock' | 'stone' | 'wood'): a solid whose insides
+// show through the cut (its mesh gets a capTwin); ghost: the cut-away part is drawn again as
+// glass (ghosts.js)
 export function cutMaterial(mat, caps = false, ghost = !!caps) {
-  if (caps) { mat.side = THREE.DoubleSide; mat.shadowSide = THREE.BackSide; }
+  // the back faces are the cap twin's; shadows still come from them
+  if (caps) mat.shadowSide = THREE.BackSide;
   mat.userData.ghost = ghost;
   return inject(mat, fs => {
-    fs = fs.replace('#include <clipping_planes_fragment>', 'if (cutRegion(true) > 0.5 || frontWall()) discard;\n#include <clipping_planes_fragment>');
+    fs = fs.replace('#include <clipping_planes_fragment>', CUT_DISCARD);
     // cap-only faces (palette.js CAP_ONLY) are not drawn from the front
     if (caps) fs = fs.replace('#include <clipping_planes_fragment>', `#ifdef USE_COLOR
-        if (gl_FrontFacing && vColor.r + vColor.g + vColor.b < 1e-4) discard;
+        if (vColor.r + vColor.g + vColor.b < 1e-4) discard;
       #endif
       #include <clipping_planes_fragment>`);
-    if (caps) fs = fs.replace('#include <opaque_fragment>', `if (!gl_FrontFacing) {
+    return fs;
+  }, caps ? 'cut-solid-' + caps : 'cut', caps ? CUT_KINDS[caps] : 3);
+}
+
+// The caps of a solid ('rock' | 'stone' | 'wood'): its back faces, cut like it, in the flat cap
+// colour of that kind, lit like an upward-facing floor (sky + sun, no shadows), a little darker;
+// moved out along the normals so a front face in the same plane always wins (see the top).
+// By how far: CAP_PUSH steps of the depth buffer (24 bits) at that distance from the camera,
+// a step being z^2 / (near * 2^24). That is a few thousandths of a unit close up, under a
+// pixel everywhere: a depth offset (polygonOffset) instead grows with the slope of the face and
+// let what lies behind a cap's edges show through as a line a pixel wide.
+export const CAP_PUSH = { value: 8 };
+function capMaterial(caps) {
+  const mat = inject(new THREE.MeshLambertMaterial({ side: THREE.BackSide }), fs => fs.replace('#include <clipping_planes_fragment>', CUT_DISCARD)
+    .replace('#include <opaque_fragment>', `{
         vec3 capUp = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz), capIrr = vec3(0.0);
         #if NUM_HEMI_LIGHTS > 0
           for (int i = 0; i < NUM_HEMI_LIGHTS; i++) capIrr += getHemisphereLightIrradiance(hemisphereLights[i], capUp);
@@ -48,9 +70,26 @@ export function cutMaterial(mat, caps = false, ghost = !!caps) {
         #endif
         outgoingLight = BRDF_Lambert(${CAP_UNIFORM[caps]}) * capIrr * ${CAP_SHADE.toFixed(3)};
       }
-      #include <opaque_fragment>`);
-    return fs;
-  }, caps ? 'cut-caps-' + caps : 'cut', caps ? CUT_KINDS[caps] : 3);
+      #include <opaque_fragment>`), 'cut-cap-' + caps, CUT_KINDS[caps]);
+  const compile = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => {
+    compile.call(mat, sh, r);
+    sh.uniforms.uCapPush = CAP_PUSH;
+    sh.vertexShader = 'uniform float uCapPush;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      gl_Position.z += uCapPush * 2.0 / 16777216.0 * gl_Position.w;`);
+  };
+  return mat;
+}
+
+// the cap twin of a solid mesh (made with cutMaterial(mat, caps)): shares its geometry, casts
+// and takes no shadow, draws after the solids (their front faces hide most back faces early);
+// wrap: what the solid's material went through after cutMaterial (swaying flags)
+export function capTwin(mesh, caps, wrap = m => m) {
+  const twin = new THREE.Mesh(mesh.geometry, wrap(capMaterial(caps)));
+  twin.position.copy(mesh.position); twin.quaternion.copy(mesh.quaternion); twin.scale.copy(mesh.scale);
+  twin.renderOrder = mesh.renderOrder + 1;
+  twin.userData.sharedGeo = true;   // the solid owns the geometry
+  return twin;
 }
 
 // fluid caps: a flat quad at the cut height for every fluid cell it passes through, drawn

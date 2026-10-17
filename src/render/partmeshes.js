@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { LAVA } from '../core/constants.js';
 import { PARTS } from './parts.js';
 import { partMaterial, swayMaterial } from './materials.js';
-import { cutMaterial } from './section.js';
+import { cutMaterial, capTwin } from './section.js';
 
 // one part's arrays as geometry, in units of the cube's `scale` (the mesh or instance scales it)
 export function partGeometry(p) {
@@ -31,9 +31,11 @@ export function partMeshes(geo, group, shadowless = []) {
     const arrays = geo.parts[part.name];
     if (!arrays) continue;
     const material = cutMaterial(partMaterial(part, 'full'), part.cap || false);
-    const mesh = new THREE.Mesh(partGeometry(arrays), part.sway ? swayMaterial(material, geo.scale) : material);
+    const sway = m => part.sway ? swayMaterial(m, geo.scale) : m;
+    const mesh = new THREE.Mesh(partGeometry(arrays), sway(material));
     mesh.scale.setScalar(geo.scale);
     mesh.renderOrder = PART_ORDER[part.kind];
+    if (part.cap) group.add(capTwin(mesh, part.cap, sway));
     if (part.kind === 'solid') { mesh.castShadow = !shadowless.includes(part.name); mesh.receiveShadow = true; }
     if (part.kind === 'fluid') {
       mesh.receiveShadow = part.fluid !== LAVA;
