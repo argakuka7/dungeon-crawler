@@ -457,7 +457,9 @@ Decoration comes from `assets/props.glb` (133 models), `assets/clutter.glb`
 (222 additional models) and `assets/themes.glb` (274 models for the alternative themes, see
 [the theme library](assets/themes.md)). Each theme names its prop set (`props`); neutral `any_*` rocks are
 tinted with the theme's rock colour. Placement runs on the main thread when a cube's meshes
-are built, seeded by the cube.
+are built, seeded by the cube. One factor, `CLUTTER` in `core/propcatalog.js` (0.75), scales
+every scatter pass below, the guardian arenas' cover and loose things and the town's ground
+cover; authored set pieces keep their count.
 
 - **Ground props:** on dry floors without structures, only where they fit under the floor
   above.

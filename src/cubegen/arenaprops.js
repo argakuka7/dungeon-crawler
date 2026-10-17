@@ -6,7 +6,7 @@
 import { N, DIRS, OPP, EDGE_CORNERS } from '../core/constants.js';
 import { idx, inb } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
-import { propMetadata } from '../core/propcatalog.js';
+import { propMetadata, CLUTTER } from '../core/propcatalog.js';
 import { segDist } from './arenashapes.js';
 
 const L = (set, names) => names.split(' ').map(b => set + '_' + b);
@@ -189,7 +189,7 @@ export function dressArena(arena) {
   // ground cover, several per cell, tilted with the slope
   function cover(cells, rate, list) {
     for (const f of cells) for (let n = 0; n < 2; n++) {
-      if (R() >= (n ? rate * .5 : rate)) break;
+      if (R() >= (n ? rate * .5 : rate) * CLUTTER) break;
       const name = pick(list), p = name && propMetadata.get(name);
       if (!p || p.blocking || p.attach !== 'ground') continue;
       const s = .7 + R() * .35, room = Math.max(0, .9 - 2 * p.radius * s);
@@ -206,7 +206,7 @@ export function dressArena(arena) {
   };
   const near = (cells, [x, z], r) => cells.filter(f => Math.hypot(f.x - x, f.z - z) <= r);
   const closest = (cells, [x, z]) => [...cells].sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z));
-  const n = v => Math.round(v * k);
+  const n = v => Math.round(v * k * CLUTTER), loose = v => Math.round(v * CLUTTER);
   const open = zone.filter(f => !f.prot);
 
   // cliff faces seen from the zone, and the edges above them
@@ -221,11 +221,11 @@ export function dressArena(arena) {
         if (drop < .9) continue;
         const t = .3 + R() * .4, [ex, ez] = [[1, t], [0, t], [t, 1], [t, 0]][d];
         const yaw = Math.atan2(-DIRS[d][0], -DIRS[d][1]), s = .85 + R() * .3;
-        if (R() < lipRate) {
+        if (R() < lipRate * CLUTTER) {
           const name = pick(lips), p = name && propMetadata.get(name);
           if (p?.attach === 'lip' && (p.drop ?? 0) * s + .2 < drop) add(name, f.x + ex, top, f.z + ez, s, yaw);
         }
-        if (drop >= 1.2 && R() < wallRate) {
+        if (drop >= 1.2 && R() < wallRate * CLUTTER) {
           const name = pick(walls), p = name && propMetadata.get(name), y = low + drop * .5;
           if (p?.attach === 'wall' && y + p.minY * s >= low && y + p.maxY * s + .1 <= top) add(name, f.x + ex, y, f.z + ez, s, yaw);
         }
@@ -248,7 +248,7 @@ export function dressArena(arena) {
         if (!put(f, [...pal.tree, ...pal.stone], { gap: 1 })) put(f, ['any_cairn', pal.flag]);
       }
       scatter(open, n(3), pal.debris);
-      scatter(open, 9, [...pal.small, 'any_cairn']);
+      scatter(open, loose(9), [...pal.small, 'any_cairn']);
       remains(nearGuard, 3);
       faces(.15, .25);
       break;
@@ -256,9 +256,9 @@ export function dressArena(arena) {
     case 'gorge': {
       cover(zone, .55, [...pal.cover, ...RUBBLE]);
       scatter(edgeZone, n(5), ['any_boulder', ...pal.debris]);
-      scatter(edgeZone, 8, ['any_rock', 'any_pebbles', ...pal.small]);
+      scatter(edgeZone, loose(8), ['any_rock', 'any_pebbles', ...pal.small]);
       cover(scenery, .45, pal.cover);
-      for (const f of scenery) if (R() < .22) put(f, [...pal.tree, ...pal.tree, ...pal.small, ...pal.stone]);
+      for (const f of scenery) if (R() < .22 * CLUTTER) put(f, [...pal.tree, ...pal.tree, ...pal.small, ...pal.stone]);
       remains(open, 3);
       faces(.4, .4);
       break;
@@ -271,7 +271,7 @@ export function dressArena(arena) {
         else if (i % 6 === 2) put(f, [BRAZIER]);
         else if (R() < .4) put(f, [...RUBBLE, 'ruins_urn']);
       });
-      for (const f of scenery) if (!taken.has(f.c) && R() < .22) put(f, ['ruins_rubble', 'ruins_urn', 'ruins_statue_head', ...pal.small]);
+      for (const f of scenery) if (!taken.has(f.c) && R() < .22 * CLUTTER) put(f, ['ruins_rubble', 'ruins_urn', 'ruins_statue_head', ...pal.small]);
       cover(scenery, .3, [...RUBBLE, ...pal.cover]);
       scatter(edgeZone, n(2), ['abyss_weapon_graveyard', 'ruins_toppled_column']);
       remains(open, 6);
@@ -292,7 +292,7 @@ export function dressArena(arena) {
       scatter(flank, n(2), [...pal.stone, 'ruins_obelisk_broken'], { gap: 1, center: true });
       scatter(open.filter(f => cheb(f) === 2 && Math.abs(f.x - fr.U[0]) === 2 && Math.abs(f.z - fr.U[1]) === 2), 2, [BRAZIER]);
       const ledges = open.filter(f => nextTo(f, g => g.encounter && g.top !== f.top && !f.link.includes(g)));
-      scatter(ledges, 7, ['ruins_urn', 'ruins_stone_tablet', ...pal.small]);
+      scatter(ledges, loose(7), ['ruins_urn', 'ruins_stone_tablet', ...pal.small]);
       rim.forEach((f, i) => { if (i % 2 === 0) put(f, [COLUMN], { center: true }); else if (R() < .5) put(f, RUBBLE); });
       cover(scenery, .4, [...TILES, ...pal.cover]);
       remains(nearGuard, 3);
@@ -307,7 +307,7 @@ export function dressArena(arena) {
       if (mid && !(k > 0 && put(mid, ['ruins_altar'], { gap: 1, center: true }))) put(mid, [pal.ritual], { center: true });
       scatter(near(open, shape.marks.center, shape.marks.rad + .8).filter(f => Math.hypot(f.x - shape.marks.center[0], f.z - shape.marks.center[1]) > shape.marks.rad - .8),
         4, ['any_cairn']);
-      scatter(open, 6, pal.small);
+      scatter(open, loose(6), pal.small);
       remains(nearGuard, 2);
       gateLights();
       faces(.15, .25);

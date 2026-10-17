@@ -3,7 +3,7 @@
 import { N, LH, BASE, DIRS, EDGE_CORNERS, FLUID_NAME } from '../core/constants.js';
 import { mulberry32, hash32, idx, inb } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
-import { props, signatureProp } from '../core/propcatalog.js';
+import { props, signatureProp, CLUTTER } from '../core/propcatalog.js';
 
 function picker(theme, R) {
   const lists = new Map();
@@ -52,7 +52,7 @@ export function placeProps(m, theme) {
     const focal = reserved(f);
 
     // Ordinary objects retain the sparse one-prop draw. Shore items are never inland.
-    if (dry && !f.prot && !focal && R() < (theme.propDensity ?? 0.32)) {
+    if (dry && !f.prot && !focal && R() < (theme.propDensity ?? 0.32) * CLUTTER) {
       const blockOK = !nearRoute(f) && !nearPortal(f) && !nearSite(f) && !nearHorde(f) && slope < 0.25;
       const p = pick('ground', p => !p.cover && (!p.shore || shoreOf(f)) && (blockOK || !p.blocking));
       if (p) {
@@ -66,7 +66,7 @@ export function placeProps(m, theme) {
     }
 
     // Ground cover can dress routes and slopes, but not structure decks or focal footprints.
-    if (dry && (!focal || f.hordeReserved) && R() < (f.hordeReserved ? .12 : .55))
+    if (dry && (!focal || f.hordeReserved) && R() < (f.hordeReserved ? .12 : .55) * CLUTTER)
       for (let n = f.hordeReserved ? 1 : 1 + Math.floor(R() * 2); n > 0; n--) {
       const p = pick('ground', p => p.cover && !p.blocking);
       if (!p) break;
@@ -78,7 +78,7 @@ export function placeProps(m, theme) {
       if (top + p.maxY * cs + 0.2 < ceiling) add(p, f.x + fx, y, f.z + fz, R() * Math.PI * 2, cs, [-dx, 1, -dz]);
     }
 
-    if (f.fluid && !pieces.length && !focal && R() < 0.12) {
+    if (f.fluid && !pieces.length && !focal && R() < 0.12 * CLUTTER) {
       const p = pick('water', p => !p.blocking && p.fluid === FLUID_NAME[f.fluid]);
       if (p && f.surf * LH + p.maxY * s + 0.2 < ceiling)
         add(p, f.x + 0.5, f.surf * LH, f.z + 0.5, R() * Math.PI * 2, s);
@@ -99,13 +99,13 @@ export function placeProps(m, theme) {
         .map(g => g.fluid ? g.surf * LH : Math.max(...g.cs)));
       const t = 0.3 + R() * 0.4, [ex, ez] = [[1, t], [0, t], [t, 1], [t, 0]][d];
       const yaw = Math.atan2(-DIRS[d][0], -DIRS[d][1]);
-      if (R() < 0.15) {
+      if (R() < 0.15 * CLUTTER) {
         const p = pick('lip', p => !p.blocking && p.drop * s + 0.2 < edgeTop - low);
         if (p && edgeTop + p.maxY * s + 0.1 < ceiling)
           add(p, f.x + ex, edgeTop, f.z + ez, yaw, s);
       }
       const wallLow = Math.max(low, f.bottom * LH);
-      if (edgeTop - wallLow < 1.2 || R() > 0.12) continue;
+      if (edgeTop - wallLow < 1.2 || R() > 0.12 * CLUTTER) continue;
       const p = pick('wall', p => !p.blocking);
       if (p) {
         const y = wallLow + (edgeTop - wallLow) * 0.5;

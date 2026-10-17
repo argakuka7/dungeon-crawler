@@ -1,7 +1,7 @@
 // Town policy and authored clearing plans. Pure data; also runs in the worker.
 import { N, LH, CHAR_R } from '../core/constants.js';
 import { mulberry32, hash32 } from '../core/util.js';
-import { propMetadata } from '../core/propcatalog.js';
+import { propMetadata, CLUTTER } from '../core/propcatalog.js';
 import { parse, step } from './coords.js';
 
 export const TOWN_KEY = '0,0,0';
@@ -265,7 +265,7 @@ function leadTo(plan, path, i, via, width = .65) {
 
 // Meadow ground cover shared by both clearings, after the authored set pieces.
 function groundCover(R, scatter, scale = 1) {
-  const n = k => Math.round(k * scale), odd = ['any_rock_a', 'any_rock_b', 'any_rock_c',
+  const n = k => Math.round(k * scale * CLUTTER), odd = ['any_rock_a', 'any_rock_b', 'any_rock_c',
     'meadow_mushroom_small_a', 'meadow_mushroom_small_b'];
   // Leafy things first so they get the spots along walls and under the grove.
   scatter(n(9), () => variant(R, R() < .4 ? 'meadow_fern' : R() < .6 ? 'meadow_berry_bush' : 'meadow_bush'), -.4, [.8, 1.15]);

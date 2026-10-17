@@ -7,6 +7,10 @@ import { PROP_METADATA } from './propmetadata.js';
 const SIGNATURES = new Set(['altar', 'broken_altar', 'ritual_circle', 'weapon_graveyard',
   'collapsed_arch', 'frozen_adventurer', 'adventurer_remains', 'abandoned_pack', 'old_campfire',
   'signpost', 'sword_in_ground', 'sarcophagus', 'statue', 'mine_rail', 'rail', 'support_frame']);
+// How much clutter there is: a factor on every ambient scatter pass (render/propplace.js), on the
+// guardian arenas' cover and loose things (cubegen/arenaprops.js) and on the town's ground cover
+// (world/town.js). Authored set pieces are not affected.
+export const CLUTTER = 0.75;
 export const signatureProp = p => p.landmark || SIGNATURES.has(p.base) || /rail|frame/.test(p.base);
 export const propMetadata = new Map(PROP_METADATA.map(p => [p.name, p]));
 export const props = { ready: false, byName: new Map(), sets: new Map() };
