@@ -33,7 +33,7 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
 - **Tap**: what a click does, except walking: an enemy is attacked, an item picked up, a chest
   opened, a villager traded with; with a flask in hand it is thrown there. A tap on the floor
   does nothing.
-- **Long press** (about half a second, held still): collects coins and items around, like C.
+- **Long press** (about half a second, held still): collects coins and items around, like the action key (F or Enter).
   A ring fills under the finger.
 - **Two fingers**: pinch to zoom (one step each time they are a quarter further apart or
   closer).

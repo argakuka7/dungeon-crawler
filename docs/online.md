@@ -45,8 +45,8 @@ being helped up and getting back in. Up to four players, co-op.
 - Each explores where they like. Each friend is a dot in their colour on the minimap (or a
   line under it: another depth, in a house). **F** fades you over to a friend, beside them and
   locked out of any portal you arrive in (`session.js goToFriend`, `game/portals.js
-  lockPortalsHere`); F again goes to the next friend. Next to a closed chest F opens it
-  instead (the action key, `game/chests.js useAction`).
+  lockPortalsHere`); F again goes to the next friend. Next to a closed chest, a trading
+  villager or loot to collect, F does that instead (the action key, `game/action.js`).
 - A fifth player is turned away (`full`), another version too (`version`, `PROTOCOL` in
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for new guests. When the host leaves, the game is over for everyone.

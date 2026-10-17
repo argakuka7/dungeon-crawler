@@ -4,8 +4,9 @@
 // Mouse: click the floor to walk there, click an enemy to attack it (hold for more), click an
 // item on the floor to pick it up, click a treasure chest to open it, click a villager who
 // trades to go and trade. With a flask in hand (game/throws.js) a click throws it at the cursor
-// instead, whatever is there. F or Enter: the action key, opens the chest the player stands
-// next to (else F goes to a friend, Enter opens the chat). I (or V): the inventory, with the floor in reach beside the bag
+// instead, whatever is there. F or Enter: the action key (game/action.js): open the chest beside
+// the player, else trade with the villager beside them, else collect what lies around (else F
+// goes to a friend, Enter opens the chat). I (or V): the inventory, with the floor in reach beside the bag
 // when something lies there (game/inventory.js); X: item labels. 1-6: the quick bar (game/
 // quickbar.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
 // action button holds like Shift, and a tap on the game clicks there without walking.
@@ -16,7 +17,6 @@ import { knockDown } from './ragdoll.js';
 import { toggleInventory, setInventoryOpen } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
-import { requestCollect } from './loot.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
 import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade } from './orders.js';
 import { hoveredPickup, hoveredChest, hoveredVillager, toggleLabels, updateLootLabels } from './lootlabels.js';
@@ -30,7 +30,7 @@ import { toggleMusic } from '../audio/music.js';
 import { barKey } from './quickbar.js';
 import { setMenuOpen, toggleMenu } from './escmenu.js';
 import { goToFriend } from '../net/session.js';
-import { useAction } from './chests.js';
+import { useAction } from './action.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
 
@@ -79,11 +79,10 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') setStatus(toggleMusic() ? 'Music on' : 'Music off');
   if (e.code === 'KeyQ') view.yawTarget -= Math.PI / 2;
   if (e.code === 'KeyE') view.yawTarget += Math.PI / 2;
-  if (e.code === 'KeyC') requestCollect();
   if (e.code === 'KeyR') { spawnEntry(); setStatus('Respawned where you came in'); }
   if (e.code === 'KeyN' && state.dev) nextCube();   // (new worlds come from the main menu)
   if (e.code === 'KeyX') toggleLabels();
-  // F: the action key (open the chest beside us; Enter too, game/console.js), else playing
+  // F: the action key (chest, villager, collect; Enter too, game/console.js), else playing
   // together: over to the friend
   if (e.code === 'KeyF' && !useAction()) goToFriend();
   if (e.code === 'KeyK' || e.code === 'KeyL') { view.zoomTarget = stepZoom(view.zoomTarget, e.code === 'KeyK' ? -1 : 1); e.preventDefault(); }

@@ -11,25 +11,29 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
 
 ## Controls
 
-- Weapons are **not** taken by walking over them, by the coin magnet or by **C**.
+- **F** or **Enter** is the action key (`game/action.js`): it does the first that works of
+  opening the closed treasure chest beside you, trading with the villager beside you and
+  collecting every coin and stackable item within four cells (only when there is one; else F
+  goes to a friend and Enter opens the chat).
+- Weapons are **not** taken by walking over them, by the coin magnet or by collecting (the action key).
 - **Click** a weapon (or its label) to walk there and pick it up. The enemy under the cursor
   still wins over an item; an item wins over a chest, a chest over the floor. A full bag says so
   and leaves it.
 - **Click** a closed treasure chest (or its label, "Treasure chest", coloured by how grand the
   site is) to walk up and open it. Standing next to one, **F** or **Enter** (the action key,
-  `game/chests.js useAction`) opens it. X labels chests too.
-- Potions are taken by walking over them or with **C**, like coins, and go on the quick
+  `game/action.js`) opens it. X labels chests too.
+- Potions are taken by walking over them or by collecting, like coins, and go on the quick
   bar by themselves (one of each family, [potions.md](potions.md)).
 - **X** toggles name labels over every item on the floor but coins. Without it only the item
   under the cursor shows its name. Labels are in the rarity's colour and stack instead of
   overlapping; they are clickable.
 - **I** (or **V**) opens the inventory (paused) with a **Floor** column beside the bag whenever
-  something lies within C's reach (4 cells across, 1.5 up or down): every item but coins, best
+  something lies within collecting reach (4 cells across, 1.5 up or down): every item but coins, best
   first, then nearest. Once shown it stays while the panel is open (dropping the first item
   shows it). Take moves a floor item into the bag, Drop puts a bag item down at your feet.
   Enter (or Space) on a floor item, or a double-click, takes it; on a bag item it equips or
   uses it; arrows move through both columns. I, V or Esc closes.
-- With touch controls ([touch.md](touch.md)) a long press on the game collects like C.
+- With touch controls ([touch.md](touch.md)) a long press on the game collects like the action key.
 - Weapons can go on the quick bar (**1**–**6**, see `docs/progression.md`): using one equips it.
   The Town Portal Scroll is bound and cannot be dropped.
 - You may drop every weapon, including the equipped one and the last one. Without a weapon you
@@ -186,6 +190,7 @@ browser console:
 
 ```js
 const checks = await import('./tests/browser/inventory.js');
-await checks.runWeaponLootChecks();   // guardian drops, walk-over / C, labels, click pickup, the floor column, drops, deaths
+await checks.runWeaponLootChecks();   // guardian drops, walk-over / collect, labels, click pickup, the floor column, drops, deaths
 await (await import('./tests/browser/chests.js')).runChestChecks();   // hover, click, open, spill, deaths, potions
+await (await import('./tests/browser/chests.js')).runActionKeyChecks();   // F / Enter: chest, collect, chat, trader
 ```

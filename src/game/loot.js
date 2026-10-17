@@ -1,5 +1,6 @@
 // Loot lying in the cubes: defeated enemies scatter their coins and sometimes a weapon. Walking
-// over coins and stackables takes them, coins within a cell pull themselves in, and C pulls in
+// over coins and stackables takes them, coins within a cell pull themselves in, and the action
+// key (F or Enter, game/action.js, when no chest or villager is beside the player) pulls in
 // every stackable pickup within four cells. Weapons are only taken on purpose: click one (or
 // its label) to walk there and pick it up, or take it in the inventory (game/inventory.js), which also
 // puts things from the bag back on the floor. Pickups stay where they fell (per cube, for the
@@ -49,6 +50,9 @@ let gained = null, quiet = 0;      // pickups credited recently, shown together
 export const lootHere = () => state.run.loot.get(state.cubeKey) || [];
 const lootIn = key => { let l = state.run.loot.get(key); if (!l) state.run.loot.set(key, l = []); return l; };
 export function requestCollect() { collectRequested = true; }
+// is there anything a collect (the action key, game/action.js) would take?
+export const canCollect = () => lootHere().some(p => !p.fly && !p.claim && p.toss >= 0 && walkTakes(p)
+  && inCollectReach(p, player.x, player.y, player.z));
 // pickups dropped from now on have seq >= lootMark(); forgetLoot takes their drops out of a
 // cube again (except what is kept)
 export const lootMark = () => seq;
