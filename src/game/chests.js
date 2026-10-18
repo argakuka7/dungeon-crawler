@@ -5,6 +5,7 @@
 // `kept`: a death does not take it away, as the chest does not close again either. Playing
 // together a chest opens for everyone: the loot is the opener's roll (game/loot.js), and the
 // others see the lid open (shareChest).
+import { vaultLocked } from './trials.js';
 import { player, state, setStatus } from './state.js';
 import { chestLoot } from '../core/chests.js';
 import { favoredKind } from '../core/combat.js';
@@ -23,6 +24,7 @@ export const canReachChest = site => Math.hypot(site.anchor.x - player.x, site.a
 export function chestInReach() {
   let best = null, bestD = Infinity;
   for (const s of closedChests()) {
+    if (vaultLocked(s)) continue;   // a puzzle's vault, not solved yet (game/trials.js)
     const d = Math.hypot(s.anchor.x - player.x, s.anchor.z - player.z);
     if (d < bestD && canReachChest(s)) { best = s; bestD = d; }
   }

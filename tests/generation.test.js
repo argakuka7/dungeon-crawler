@@ -49,8 +49,10 @@ test('stratum budgets and site IDs are seeded, sparse, and independent of WFC or
     assert.equal(a(0).sitePlans.size, 0);
     for (let d = 20; d > 0; d--) {
       assert.deepEqual(a(d).sitePlans, b(d).sitePlans);
-      assert.ok(a(d).sitePlans.size <= 4);
-      const sites = [...a(d).sitePlans.values()].flat();
+      // (a puzzle's vault in a branch, world/trials.js, holds a site of its own besides)
+      const vaults = new Set(a(d).trials.filter(t => t.role === 'branch').map(t => t.key));
+      assert.ok([...a(d).sitePlans.keys()].filter(k => !vaults.has(k)).length <= 4);
+      const sites = [...a(d).sitePlans].filter(([k]) => !vaults.has(k)).flatMap(([, v]) => v);
       assert.equal(sites.filter(s => ['rare', 'exceptional'].includes(s.prestige)).length, 1);
       for (const key of a(d).sitePlans.keys()) {
         assert.ok(a(d).exists.has(key));

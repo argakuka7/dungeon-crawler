@@ -22,7 +22,8 @@ export const TRIALS = {
   chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060' },
   drift: { name: 'The drifting gate', family: 'event', sealed: true, timed: true, depths: [3, 19], themes: null, weight: 1, color: '#d080ff' },
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50' },
-  slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff' },
+  slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
+    population: 0.5 },
   mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060' },
   channels: { name: 'Rotating channels', family: 'puzzle', sealed: false, timed: false, depths: [1, 19],
     themes: ['grotto', 'cenote', 'lagoon', 'swamp', 'mines', 'forge', 'volcanic', 'meadow', 'karst', 'clouds', 'peaks', 'highlands', 'canyon', 'roots', 'frozen', 'hive', 'abyss'], weight: 1, color: '#50b0ff' },
@@ -134,8 +135,10 @@ export function fitFlood(from, to, needs = []) {
 // it was resolved) }. Puzzles never arm: they are just there.
 
 export const ARM_DISTANCE = 1.2;   // cells off the arrival pad that arm an event
+// bits: a puzzle's state, part id -> a small number (a lever's 0/1, a plate held ...); start: the
+// puzzle's own start (its parts as the generator left them, map.trial.start)
 export const newTrial = (trial, resolved = false) => ({ key: trial.key, kind: trial.kind, phase: resolved ? 'resolved' : 'idle', t: 0,
-  done: resolved ? Infinity : 0, at: null });
+  done: resolved ? Infinity : 0, at: null, bits: { ...trial.start } });
 
 // One step of dt s. input: { away (a player stepped off the arrival pad) }. Returns what happened:
 // 'armed', 'running' (the phase it came into), or nothing.
@@ -162,7 +165,18 @@ export function resolveTrial(s, level = null) {
   return true;
 }
 // back as built (a fail, a death, nobody left in the room)
-export function resetTrial(s) { Object.assign(s, { phase: 'idle', t: 0, done: 0, at: null }); }
+export function resetTrial(s, start = {}) { Object.assign(s, { phase: 'idle', t: 0, done: 0, at: null, bits: { ...start } }); }
+
+// what a part does when used (F): the puzzle's bits after it (a lever flips, a button stays down);
+// a reset lever puts every bit back to the start
+export function useBit(s, part, start = {}) {
+  if (part.type === 'lever') s.bits[part.id] = s.bits[part.id] ? 0 : 1;
+  else if (part.type === 'button') s.bits[part.id] = 1;
+  else if (part.type === 'reset') s.bits = { ...start };
+  return s.bits;
+}
+// is a plate held? by anything standing on its cell: bodies [{ x, y, z }] (players, crates)
+export const plateHeld = (p, bodies) => bodies.some(b => Math.floor(b.x) === Math.floor(p.x) && Math.floor(b.z) === Math.floor(p.z) && Math.abs(b.y - p.y) < 0.6);
 
 // the level (in levels) the trial's fluid stands at in map trial `m` with state s, or null for none
 export const BASIN = 2;   // the collapse's basin: its fluid's surface (cubegen/river.js RIVER_SURF)
@@ -181,7 +195,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -196,4 +210,38 @@ export function crustState(m, s, q) {
   if (!s || s.phase === 'idle' || s.phase === 'resolved') return 'whole';
   const at = crumbleTime(m.wave, q.d);
   return s.t >= at ? 'gone' : s.t >= at - WAVE.shake ? 'shaking' : 'whole';
+}
+
+// --- puzzles: parts (docs/trials.md "Puzzle parts") ----------------------------------------------
+// A puzzle is a layout of parts plus a rule. map.trial.parts: [{ id, type, x, y, z, yaw?, ... }]
+//   lever    F toggles it          button  F presses it once     plate   pressed while stood on
+//   gate     a portcullis across a gap (a box in the way while shut)
+//   reset    F puts the puzzle back to its start
+// The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
+export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again' };
+export const USE_TIME = 1;   // s an F on a part takes
+
+// --- slide (docs/trials.md, `slide`) -------------------------------------------------------------
+// The field: w x h cells of ice (rock: cells you cannot slide into), a rim round it with two gaps:
+// the entry (beside field cell entry, on side entry.side) and the goal's gate (goal, goal.side).
+// On the ice you slide the way you set off, along the grid, until a rock or the rim stops you.
+//   field: { w, h, rock: [0|1 ...] (row by row), entry: { x, z, side }, goal: { x, z, side } }
+// (sides as DIRS: 0 +x, 1 -x, 2 +z, 3 -z)
+const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+export const fieldIn = (F, x, z) => x >= 0 && z >= 0 && x < F.w && z < F.h;
+export const isRock = (F, x, z) => !!F.rock[z * F.w + x];
+// Where a slide from (x, z) along d ends: [x, z] on the field, or 'out' (through the entry gap, off
+// the field), or 'goal' (through the goal's gate, once it is open)
+export function slideStop(F, x, z, d, open = false) {
+  const [dx, dz] = SD[d];
+  for (;;) {
+    const nx = x + dx, nz = z + dz;
+    if (!fieldIn(F, nx, nz)) {
+      if (x === F.entry.x && z === F.entry.z && d === F.entry.side) return 'out';
+      if (open && x === F.goal.x && z === F.goal.z && d === F.goal.side) return 'goal';
+      return [x, z];
+    }
+    if (isRock(F, nx, nz)) return [x, z];
+    x = nx; z = nz;
+  }
 }

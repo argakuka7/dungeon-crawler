@@ -8,10 +8,11 @@ import { step } from '../world/coords.js';
 import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
-  nextPulse, floodEnd, trialSealed, trialGate, crustState } from '../core/trials.js';
+  nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld } from '../core/trials.js';
+import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust } from '../render/trials.js';
-import { setGoneFloors } from '../physics/collide.js';
+import { setGoneFloors, setPartBlockers } from '../physics/collide.js';
 import { openedSides } from '../core/boundaries.js';
 import { setPortalSeals } from '../render/world.js';
 import { player, state, setStatus } from './state.js';
@@ -24,6 +25,11 @@ import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWor
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
+const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+// what the HUD says while a puzzle waits to be solved
+const PUZZLE_HINT = {
+  slide: 'Slide across the ice onto the plate by the closed gate',
+};
 // what the banner says as an event arms
 const HOW = {
   flood: 'The water is coming. Climb to the summit and press the button.',
@@ -37,7 +43,8 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 // coming into a cube (game/flow.js enterCube): its trial, as built or resolved for good
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
-  gone.clear(); crust.clear();
+  gone.clear(); crust.clear(); ice = null;
+  partBlockers(map?.trial);
   showTrial(true);
 }
 
@@ -93,7 +100,7 @@ export function beforeTrialSpot() {
 // the trial room put back as it was (a death in it, game/flow.js; /trial reset)
 export function restartTrial() {
   if (!state.trial || state.trial.phase === 'resolved') return;
-  resetTrial(state.trial);
+  resetTrial(state.trial, mapTrial()?.start);
   showTrial();
 }
 
@@ -102,13 +109,14 @@ export const refreshTrialView = () => showTrial(true);
 function showTrial(immediate = false) {
   const m = mapTrial(), s = state.trial, level = trialFluidLevel(m, s);
   if (m) {
+    updatePartBlockers(m, s);
     const dirs = sealedDirs();
     setPortalSeals(state.world, dirs, immediate);
     setTrialBarriers(state.world, trialSealed(s) ? dirs : [], openedSides(state.openedFaces, state.cubeKey));
   }
   setTrialFluid(level == null ? null : { y: level * LH, fluid: m.fluid });
   setTrialWater(state.world, level == null ? null : level * LH, s?.phase ?? null);
-  setTrialParts(state.world, s);
+  setTrialParts(state.world, s, immediate);
   hud();
 }
 
@@ -134,6 +142,7 @@ export function updateTrial(dt) {
   announce(s, happened);
   stepCrust(m, s, dt);
   keystone(m, s);
+  stepParts(m, s);
   showTrial();
   if (!mirroring()) drown(m, s);
 }
@@ -163,7 +172,7 @@ export function trialActFrom(m) {
   const s = state.trial;
   if (!s || m.key !== s.key || mirroring()) return;
   if (m.act === 'away') awayFrom = true;
-  if (m.act === 'part' && m.id === 'keystone') { resolve(); return; }
+  if (m.act === 'part' && (m.id === 'keystone' || m.id === 'solve')) { resolve(); return; }
   if (m.act === 'part') { const p = mapTrial()?.parts?.find(q => q.id === m.id); if (p) usePart(p, true); }
 }
 // a trial resolved somewhere (by whoever): its gate is open for us too
@@ -197,21 +206,26 @@ export function partInReach() {
   if (!m?.parts || !s || s.phase === 'resolved') return null;
   let best = null, bestD = PART_REACH;
   for (const p of m.parts) {
+    if (!PART_LABELS[p.type]) continue;   // (plates, gates: nothing to use)
     const d = Math.hypot(p.x - player.x, p.z - player.z);
     if (d < bestD && Math.abs(p.y - player.y) < 1.2) { best = p; bestD = d; }
   }
   return best && { ...best, label: partLabel(best) };
 }
-const partLabel = p => ({ button: 'Press the button' })[p.type] ?? 'Use it';
+const partLabel = p => PART_LABELS[p.type] ?? 'Use it';
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's
 // trial, the press goes to its owner.
 export function usePart(p, fromOther = false) {
-  const s = state.trial;
-  if (!s) return false;
+  const s = state.trial, m = mapTrial();
+  if (!s || !m) return false;
   if (!fromOther && mirroring()) { sfx('clink'); relay.trialAct?.({ key: s.key, act: 'part', id: p.id }); return true; }
-  if (p.type === 'button') { if (!fromOther) sfx('clink'); resolve(); return true; }
-  return false;
+  if (p.type === 'button' && m.kind === 'flood') { if (!fromOther) sfx('clink'); resolve(); return true; }
+  if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' ? 'door' : 'clink');
+  useBit(s, p, m.start);
+  if (p.type === 'reset') { ice = null; setStatus('Back to the start'); }
+  showTrial();
+  return true;
 }
 
 // The goal is met: the gate into the run (saved, shared, respected by discovery like a guardian's),
@@ -226,7 +240,8 @@ export function resolve(tell = true) {
   if (tell) relay.trialDone?.({ key: s.key, gate: m.gate, time: s.t });   // resolved for everyone (net/session.js)
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
   setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
-  banner('Well done!', { flood: 'The water drains away.', collapse: 'The keystone holds: the floor is whole again.' }[m.kind] ?? '');
+  banner(isPuzzle(m.kind) ? 'Solved!' : 'Well done!', { flood: 'The water drains away.', collapse: 'The keystone holds: the floor is whole again.',
+    slide: m.role === 'branch' ? 'The gate is open, and the vault with it.' : 'The gate is open: the way on too.' }[m.kind] ?? '');
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
   showTrial();
   return true;
@@ -247,7 +262,8 @@ function hud() {
   const el = $('trial-hud'), s = state.trial, m = mapTrial();
   if (!el) return;
   if (bannerUntil && performance.now() > bannerUntil) { $('trial-banner').classList.add('out'); bannerUntil = 0; }
-  const show = !!s && !!m && (s.phase === 'armed' || s.phase === 'running');
+  // (an event while it runs; a puzzle while it is not solved)
+  const show = !!s && !!m && (s.phase === 'armed' || s.phase === 'running' || isPuzzle(s.kind) && s.phase !== 'resolved');
   el.hidden = !show;
   if (!show) return;
   $('trial-name').textContent = TRIALS[s.kind].name;
@@ -258,6 +274,7 @@ function hud() {
     else line = next != null ? `The water rises in ${Math.ceil(next - s.t)} s` : 'The water rises…';
     fill = Math.min(1, s.t / floodEnd(tl));
   }
+  if (isPuzzle(s.kind)) line = PUZZLE_HINT[s.kind] ?? '';
   if (s.kind === 'collapse') {
     line = s.phase === 'armed' ? 'The floor shakes…' : 'Run! Reach the far side';
     fill = m.crust.length ? gone.size / m.crust.length : 0;
@@ -266,7 +283,18 @@ function hud() {
   $('trial-bar').style.width = `${Math.round(fill * 100)}%`;
 }
 
-// the dev's /trial win | fail | reset | solve on the trial of this room (game/devcommands.js)
+// --- parts and their rules ------------------------------------------------------------------------
+
+// Every frame: the plates (held by a player standing on them: ours, a friend's here), then the
+// puzzle's rule on its bits; met, it is solved. (rule(m, s, plates): true when solved)
+const RULES = {};
+function stepParts(m, s) {
+  if (!m.parts?.length || s.phase === 'resolved' || !isPuzzle(m.kind)) return;
+  const bodies = [player, ...online.buddies.filter(b => b.here && b.hp > 0)];
+  const plates = {};
+  for (const p of m.parts) if (p.type === 'plate') plates[p.id] = plateHeld(p, bodies) ? 1 : 0;
+  if (RULES[m.kind]?.(m, s, plates)) solvePuzzle();
+}
 export function devTrial(what) {
   const s = state.trial, m = mapTrial();
   if (!s || !m) return 'No trial in this room';
@@ -296,6 +324,17 @@ export function failTrial(reason) {
 // up, each step with when a slow player leaves it and when it goes under
 function solveLens() {
   const m = mapTrial();
+  if (m?.field && m.check?.solution) {   // the ice slide: each slide of the shortest way, an arrow
+    const D = m.deck, y = D.level * LH + 0.3, at = ([x, z]) => ({ x: D.x0 + x + 0.5, y, z: D.z0 + z + 0.5 });
+    let cur = slideStop(m.field, m.field.entry.x, m.field.entry.z, m.field.entry.side ^ 1);   // (sliding in)
+    m.check.solution.forEach((d, i) => {
+      const next = slideStop(m.field, cur[0], cur[1], d);
+      teachPath([at(cur), at(next)], { id: `trial-solve-${i}`, color: TRIALS[m.kind].color, width: 0.08, head: true, ttl: 60 });
+      teachLabel(at(next), String(i + 1), { id: `trial-solve-n${i}`, size: 0.2, ttl: 60 });
+      cur = next;
+    });
+    return `${m.check.slides} slides (${m.check.decoys} stops lead nowhere): shown for a minute`;
+  }
   if (!m?.check?.path) return 'Nothing proved for this trial';
   const pts = m.check.path.map(p => ({ x: p.x, y: p.y, z: p.z }));
   teachPath(pts, { id: 'trial-solve', color: TRIALS[m.kind].color, width: 0.07, head: true, ttl: 60 });
@@ -344,4 +383,98 @@ export function updateTrialTip() {
   const t = TRIALS[show.kind], text = `${t.name} · ${t.family === 'event' ? 'an event: it seals the room' : 'a puzzle'}`;
   if (el.textContent !== text) { el.textContent = text; el.style.borderColor = t.color; }
   el.style.left = `${Math.round(show.x)}px`; el.style.top = `${Math.round(show.y - 34)}px`;
+}
+
+// --- puzzles (docs/trials.md "Puzzles") ----------------------------------------------------------
+
+// is a puzzle's gate open? (a solved puzzle's: for good)
+const gateOpen = (m, s, part) => !!s && s.phase === 'resolved';
+
+// the parts that stand in the way, as colliders (physics/collide.js): a gate while shut
+let partCells = null, partBoxes = [];
+function partBlockers(m) {
+  partBoxes = [];
+  partCells = Array.from({ length: N * N }, () => []);
+  for (const p of m?.parts || []) if (p.type === 'gate') {
+    const half = (p.w ?? 1) / 2, across = p.side < 2;
+    const b = { shape: 'box', part: p.id, bottom: p.y - 0.1, top: p.y + 2.4,
+      x0: across ? p.x - 0.14 : p.x - half, x1: across ? p.x + 0.14 : p.x + half, z0: across ? p.z - half : p.z - 0.14, z1: across ? p.z + half : p.z + 0.14 };
+    partBoxes.push(b);
+    for (let z = Math.floor(b.z0 - 0.3); z <= Math.floor(b.z1 + 0.3); z++) for (let x = Math.floor(b.x0 - 0.3); x <= Math.floor(b.x1 + 0.3); x++)
+      if (x >= 0 && z >= 0 && x < N && z < N) partCells[z * N + x].push(b);
+  }
+  setPartBlockers(partCells);
+}
+function updatePartBlockers(m, s) { for (const b of partBoxes) b.off = gateOpen(m, s, b.part); }
+
+// The vault (a puzzle in a branch room): its reward site's chest stays shut, caged, until it is solved
+export function vaultLocked(site) {
+  const m = state.map?.trial;
+  return !!m && m.role === 'branch' && (state.map.rewardSites || []).includes(site) && !state.run.unlockedGates.has(m.gate);
+}
+
+// --- the ice slide --------------------------------------------------------------------------------
+// On the field's ice you slide the way you set off until a rock or the rim stops you (core/trials.js
+// slideStop); no steering meanwhile. Stopping on the goal plate solves it; sliding back out through
+// the entry gap (or, solved, through the goal's open gate) takes you off the ice.
+export const SLIDE_SPEED = 5;   // cells a second on the ice
+let wasOnIce = false;
+let ice = null;   // a slide under way: { from: [x, z], to: [x, z], end ('stop' | 'out' | 'goal'), stop: [fx, fz], d, t, T }
+const fieldCell = (m, x, z) => [Math.floor(x) - m.deck.x0, Math.floor(z) - m.deck.z0];
+export function onIce(m = mapTrial()) {
+  if (!m?.field || !player.grounded || Math.abs(player.y - m.deck.level * LH) > 0.6) return null;
+  const [fx, fz] = fieldCell(m, player.x, player.z);
+  return fieldIn(m.field, fx, fz) && !isRock(m.field, fx, fz) ? [fx, fz] : null;
+}
+// one step of the player on the ice (game/update.js); true: it moved the player (nothing else does)
+export function iceStep(dt, dx, dz) {
+  const m = mapTrial(), s = state.trial;
+  if (!m?.field || !s) { ice = null; return false; }
+  const D = m.deck, y = D.level * LH, centre = ([fx, fz]) => [D.x0 + fx + 0.5, D.z0 + fz + 0.5];
+  if (ice) {
+    ice.t += dt;
+    const k = Math.min(1, ice.t / ice.T);
+    player.x = ice.from[0] + (ice.to[0] - ice.from[0]) * k; player.z = ice.from[1] + (ice.to[1] - ice.from[1]) * k;
+    player.y = y; player.vy = 0; player.grounded = true;
+    player.vx = k < 1 ? SD[ice.d][0] * SLIDE_SPEED : 0; player.vz = k < 1 ? SD[ice.d][1] * SLIDE_SPEED : 0;
+    player.yaw = Math.atan2(SD[ice.d][0], SD[ice.d][1]);
+    player.support = groundAt(player.x, player.z, y + 0.05, 0).s;
+    if (k >= 1) {
+      const end = ice; ice = null;
+      if (end.end === 'stop') { sfx('thud', { volume: 0.4 }); if (end.stop[0] === m.field.goal.x && end.stop[1] === m.field.goal.z) solvePuzzle(); }
+    }
+    return true;
+  }
+  const at = onIce(m), was = wasOnIce;
+  wasOnIce = !!at;
+  if (!at) return false;
+  const [cx, cz] = centre(at);
+  // stepping onto the ice through the entry gap: straight on, inwards, whatever the keys say
+  if (!was && at[0] === m.field.entry.x && at[1] === m.field.entry.z) { dx = -SD[m.field.entry.side][0]; dz = -SD[m.field.entry.side][1]; }
+  // on the ice and still: drift onto the cell's middle
+  const off = Math.hypot(player.x - cx, player.z - cz), push = Math.hypot(dx, dz);
+  if (push < 0.3 || off > 0.08) {
+    const k = Math.min(1, dt * 12);
+    player.x += (cx - player.x) * k; player.z += (cz - player.z) * k; player.vx = player.vz = 0; player.y = y;
+    if (push < 0.3) return true;
+  }
+  const d = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 0 : 1) : (dz > 0 ? 2 : 3);
+  const open = gateOpen(m, s), stop = slideStop(m.field, at[0], at[1], d, open);
+  if (Array.isArray(stop) && stop[0] === at[0] && stop[1] === at[1]) return true;   // a rock or the rim right there
+  // out through a gap: onto the walkway beyond it
+  const beyond = (cell, side) => [cell[0] + SD[side][0] * 2, cell[1] + SD[side][1] * 2];
+  const target = stop === 'out' ? beyond(at, m.field.entry.side) : stop === 'goal' ? beyond(at, m.field.goal.side) : stop;
+  const to = centre(target), from = [player.x, player.z];
+  ice = { from, to, end: Array.isArray(stop) ? 'stop' : stop, stop, d, t: 0, T: Math.max(0.05, Math.hypot(to[0] - from[0], to[1] - from[1]) / SLIDE_SPEED) };
+  sfx('swing', { volume: 0.25, pitch: 0.6 });
+  return true;
+}
+
+// a puzzle is solved: like an event met (its gate into the run, the gate in the rim open, the
+// exit or the vault open), and playing together the owner decides
+function solvePuzzle() {
+  const s = state.trial;
+  if (!s || s.phase === 'resolved') return;
+  if (mirroring()) { relay.trialAct?.({ key: s.key, act: 'part', id: 'solve' }); return; }
+  resolve();
 }

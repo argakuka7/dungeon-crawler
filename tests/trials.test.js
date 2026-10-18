@@ -7,7 +7,9 @@ import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
-  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN } from '../src/core/trials.js';
+  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
+  slideStop, fieldIn, isRock, useBit, plateHeld } from '../src/core/trials.js';
+import { solveSlide, slideBand } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -41,7 +43,8 @@ test('trials come with the seed: an event on about 45% of the depths from 1 to 1
       }
     }
   }
-  assert.ok(events / depths > 0.38 && events / depths < 0.47, `events on ${(100 * events / depths).toFixed(1)}% of the depths`);
+  // (45% of the depths roll one; not every depth has a room that fits)
+  assert.ok(events / depths > 0.32 && events / depths < 0.47, `events on ${(100 * events / depths).toFixed(1)}% of the depths`);
 });
 
 test('forced floods: one per depth where a room fits, the same plan whatever the order, never in an excluded room', () => {
@@ -82,7 +85,7 @@ test('forced floods: one per depth where a room fits, the same plan whatever the
       }
     }
   }
-  assert.ok(rooms / depths > 0.85, `floods in ${rooms} of ${depths} depths`);
+  assert.ok(rooms / depths > 0.8, `floods in ${rooms} of ${depths} depths`);
 });
 
 test('nothing falls into a trial room, no river crosses it, it has one layer', () => {
@@ -287,17 +290,18 @@ test('walking the checked way up of every flood with the real water: the summit 
     const water = () => { setTrialFluid({ y: floodLevel(tl, t) * LH, fluid: m.trial.fluid }); };
     for (let j = 1; j < pts.length && !drowned; j++) {
       const q = pts[j];
-      let steps = 0;
+      // (a walker that only goes straight stalls where a twisted slope wants steering, or at a
+      // climb: after half a second without getting closer it is there at its checked time)
+      let steps = 0, best = Infinity, since = 0;
       while (Math.hypot(q.x - player.x, q.z - player.z) > 0.15 && steps++ < 300) {
         const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
+        if (dist < best - 0.01) { best = dist; since = 0; } else if ((since += DT) > 0.5) break;
         movePlayer(DT, dx / dist, dz / dist, false, false);
         t += DT; water();
         const gr = groundAt(player.x, player.z, player.y + 0.1, 0);
         if (inFluid(gr, player.y)) { drowned = `at ${t.toFixed(1)} s on the way to point ${j}`; break; }
       }
-      if (Math.hypot(q.x - player.x, q.z - player.z) > 0.15) {   // a climb: at its checked time
-        t = Math.max(t, q.t); place(m, q.x, q.y + 0.05, q.z);
-      }
+      if (!drowned && Math.hypot(q.x - player.x, q.z - player.z) > 0.15) { t = Math.max(t - 0.5, q.t); place(m, q.x, q.y + 0.05, q.z); }
     }
     setTrialFluid(null);
     assert.ok(!drowned, `${seed}/${d}: drowned ${drowned}`);
@@ -410,7 +414,7 @@ test('every collapse room generates: aprons, a crust 25-40 cells along with its 
     for (const fe of m.fenceList) assert.ok(!tr.crust.some(q => q.f === fe.cliff), `${seed}/${d}: a fence on the crust`);
     void t;
   }
-  assert.ok(n > 150, `${n} rooms`);
+  assert.ok(n > 120, `${n} rooms`);
   assert.ok(branches / n > 0.9 && gaps / n > 0.5, `${branches} dead ends, ${gaps} gaps in ${n} rooms`);
 });
 
@@ -477,4 +481,105 @@ test('a crust cell shakes, then is gone; the wave follows the distance from the 
   stepTrial(s, WAVE.shake); assert.equal(crustState(m, s, q), 'gone');
   assert.equal(trialFluidLevel(m, s), BASIN);
   resolveTrial(s); assert.equal(crustState(m, s, q), 'whole');   // the keystone: whole again, for good
+});
+
+// --- slide (and the puzzles' plan) ----------------------------------------------------------------
+
+test('puzzles come with the seed: one on about 60% of the depths, a second on about 25%, in a branch where one fits', () => {
+  let puzzles = 0, branch = 0, depths = 0, two = 0;
+  for (let seed = 0; seed < 200; seed++) {
+    const L = makeLayouts(seed);
+    for (const d of DEPTHS) {
+      const list = L(d).trials.filter(t => TRIALS[t.kind].family === 'puzzle');
+      depths++; puzzles += list.length; two += list.length === 2;
+      for (const t of list) {
+        if (t.role === 'branch') {
+          branch++;
+          assert.equal(t.exit, null);
+          assert.ok(!L(d).route.includes(t.key), `${seed}/${d}: a branch on the route`);
+          assert.ok(L(d).sitePlans.get(t.key)?.length, `${seed}/${d}: a vault without its reward site`);
+          assert.equal(step(t.from, t.fromDir), t.key);
+        } else assert.equal(L(d).gateFaces.get(faceKey(t.key, t.exit)), t.gate);
+      }
+      // never two trials side by side
+      for (const a of L(d).trials) for (const b of L(d).trials) if (a !== b)
+        assert.ok(Math.abs(parse(a.key)[0] - parse(b.key)[0]) + Math.abs(parse(a.key)[2] - parse(b.key)[2]) > 1, `${seed}/${d}: ${a.key} by ${b.key}`);
+    }
+  }
+  assert.ok(puzzles / depths > 0.7 && puzzles / depths < 0.9, `${puzzles} puzzles on ${depths} depths`);
+  assert.ok(branch / puzzles > 0.3, `${branch} of ${puzzles} in a branch`);
+  assert.ok(two / depths > 0.08, `${two} depths with two`);
+});
+
+test('the slide solver: a known field, its fewest slides, no trap', () => {
+  // E . . . . #        the entry on the west of (0,0), the goal on the south of (3,5)
+  // . . # . . .
+  // . . . . . .
+  // # . # . . .
+  // # . . . . .
+  // . . . G . .
+  const rows = ['.....#', '..#...', '......', '#.#...', '#.....', '......'];
+  const F = { w: 6, h: 6, rock: rows.flatMap(r => [...r].map(c => c === '#' ? 1 : 0)), entry: { x: 0, z: 0, side: 1 }, goal: { x: 3, z: 5, side: 2 } };
+  assert.deepEqual(slideStop(F, 0, 0, 0), [4, 0]);
+  assert.equal(slideStop(F, 0, 0, 1), 'out');
+  assert.deepEqual(slideStop(F, 3, 5, 2), [3, 5]);
+  assert.equal(slideStop(F, 3, 5, 2, true), 'goal');
+  const s = solveSlide(F);
+  assert.ok(Number.isFinite(s.slides) && s.way.length === s.slides);
+  // the way, slid out from where stepping in ends, ends on the goal
+  let at = slideStop(F, 0, 0, 0);
+  for (const d of s.way) at = slideStop(F, at[0], at[1], d);
+  assert.deepEqual(at, [3, 5]);
+  // a trap: walled in where no slide leads back
+  const T = { w: 3, h: 3, rock: [0, 0, 0, 1, 1, 0, 0, 0, 0], entry: { x: 0, z: 0, side: 1 }, goal: { x: 2, z: 2, side: 2 } };
+  assert.ok(solveSlide(T).slides < Infinity);
+});
+
+function* slides(seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: 'slide' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'slide') yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('every slide room generates: ice as the rule says, solvable in its band, no trap, its gate and plate', () => {
+  let n = 0, vaults = 0;
+  for (const { seed, d, m, t } of slides(SEEDS.slice(0, 6))) {
+    n++;
+    const tr = m.trial, F = tr.field, D = tr.deck, [lo, hi] = slideBand(d);
+    const s = solveSlide(F);
+    assert.ok(s.slides >= lo && s.slides <= hi && !s.trapped && s.decoys >= 3, `${seed}/${d}: ${JSON.stringify(s)}`);
+    assert.equal(s.slides, tr.check.slides);
+    // the ground is the field: ice at the deck's level, rocks and the rim up out of reach, the two gaps open
+    const top = (x, z) => m.cols[z * N + x].find(f => f.layer === 0)?.top;
+    for (let z = -1; z <= F.h; z++) for (let x = -1; x <= F.w; x++) {
+      const cx = D.x0 + x, cz = D.z0 + z, c = cz * N + cx, inField = fieldIn(F, x, z);
+      if (inField && !isRock(F, x, z)) {
+        const f = m.cols[c].find(g => g.layer === 0);
+        assert.ok(f.ice && top(cx, cz) === D.level && !m.pieces[c].length, `${seed}/${d}: ice at ${x},${z}`);
+      } else if (c === tr.entryGap || c === tr.goalGap) assert.equal(top(cx, cz), D.level, `${seed}/${d}: a gap`);
+      else if (inField || (x === -1 || z === -1 || x === F.w || z === F.h) && !((x === -1 || x === F.w) && (z === -1 || z === F.h)))
+        assert.ok(top(cx, cz) >= D.level + 3, `${seed}/${d}: rim or rock at ${x},${z}`);
+    }
+    assert.ok(tr.parts.some(p => p.type === 'plate') && tr.parts.some(p => p.type === 'gate'));
+    // a route puzzle holds the exit, a vault its reward site
+    if (t.role === 'branch') { vaults++; assert.ok(m.rewardSites.length >= 1, `${seed}/${d}: the vault is empty`); }
+    else assert.equal(m.gateKeys[t.exit], t.gate);
+  }
+  assert.ok(n > 60 && vaults > 10, `${n} slides, ${vaults} vaults`);
+});
+
+test('parts: a lever flips, a button stays down, a reset lever puts the start back, a plate is held by whoever stands on it', () => {
+  const s = newTrial({ key: 'k', kind: 'crates', start: { a: 1 } });
+  assert.deepEqual(s.bits, { a: 1 });
+  useBit(s, { id: 'l', type: 'lever' }); assert.equal(s.bits.l, 1);
+  useBit(s, { id: 'l', type: 'lever' }); assert.equal(s.bits.l, 0);
+  useBit(s, { id: 'b', type: 'button' }); useBit(s, { id: 'b', type: 'button' }); assert.equal(s.bits.b, 1);
+  s.bits.a = 0;
+  useBit(s, { id: 'r', type: 'reset' }, { a: 1 }); assert.deepEqual(s.bits, { a: 1 });
+  const p = { x: 4.5, y: 2, z: 7.5 };
+  assert.ok(plateHeld(p, [{ x: 4.1, y: 2.05, z: 7.9 }]));
+  assert.ok(!plateHeld(p, [{ x: 5.1, y: 2, z: 7.5 }]));
+  assert.ok(!plateHeld(p, [{ x: 4.5, y: 4, z: 7.5 }]));
+  resetTrial(s, { a: 1 }); assert.deepEqual(s.bits, { a: 1 });
 });

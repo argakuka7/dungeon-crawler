@@ -1,9 +1,9 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 and 2 are done: the framework, `flood` and `collapse` are planned, built,
-checked, playable (alone and together) and on in every world (an event on 45% of the depths from
-1 to 19). The rest is the list of what to build, kind by kind, until done (see "Implementation
-order" at the end).
+Status: steps 1 to 3 are done: the framework, `flood`, `collapse`, the puzzle parts and `slide`
+are planned, built, checked, playable (alone and together) and on in every world (an event on 45%
+of the depths from 1 to 19, a puzzle on 60%, a second on 25%). The rest is the list of what to
+build, kind by kind, until done (see "Implementation order" at the end).
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -175,6 +175,11 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 
 - The action key (`game/action.js`) gets a new kind, `part`, beside `chest`, `talk` and
   `collect`.
+- As built: `core/trials.js` holds the parts' rules (`useBit`, `plateHeld`; a puzzle's bits in
+  `state.trial.bits`, its start in `map.trial.start`), `game/trials.js` runs them (plates held by
+  any player standing on them, a kind's rule in `RULES` solving it), `render/trials.js` draws them
+  (made in code: the parts' assets are still to come). A shut gate is a box in the way
+  (`physics/collide.js setPartBlockers`).
 - The state is a few bits and small integers per part (`map.trial.state`), easy to roll
   back, save and send.
 - **No soft-locks:** every puzzle has a reset lever, or is proven to have no dead state.
@@ -412,6 +417,13 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   nowhere useful, and from every reachable stop the entry can be reached again (no traps).
 - **Themes:** frozen, peaks (ice), salt flats (salt crust), mines (polished stone), any as
   dressing.
+- **As built** (`cubegen/trials/slide.js`, `deck.js`, `solve.js`; `game/trials.js iceStep`): the
+  field is 6x6 (7x7 from depth 10) on a deck: a rim three levels up round it, a walkway two
+  cells wide round that. Walking in through the entry gap you push inwards, so you slide straight
+  on: the puzzle starts where that slide stops (`solve.js slideStart`), and the game always slides
+  you in. Sliding back out through the entry gap takes you off the ice; the goal's gate (a
+  portcullis in the rim beside the goal plate) opens once solved. A vault's reward site is an
+  uncommon one (a rare one's footprint finds no room beside the deck), caged until solved.
 
 ### `mirror`: Mirror beam
 
@@ -559,7 +571,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
    `from`, the trial fluid level (physics and render), the timing check (deadlines),
    `/trial`, playing together. In phases: "Step 1 in phases" below.
 2. [x] **`collapse`:** crust, wave, keystone; shares the deadlines.
-3. [ ] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
+3. [x] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
    first solver.
 4. [ ] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
 5. [ ] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).

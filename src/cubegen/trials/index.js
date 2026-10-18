@@ -13,12 +13,15 @@ import { search, take } from '../route.js';
 import { reachFrom, reachTo, graph } from '../reach.js';
 import { shapeFlood, floodGoal, floodRoute } from './flood.js';
 import { shapeCollapse, collapseGoal, collapseRoute } from './collapse.js';
+import { shapeSlide, slideGoal, slideRoute } from './slide.js';
+import { RIM } from './deck.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
+  slide: { shape: shapeSlide, goal: slideGoal, costs: slideRoute, finish: finishSlide },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -74,14 +77,14 @@ export function finishTrial(ctx, pathPoints) {
   // no props on the trial's own ground, nor any in the way of the checked path
   const reservations = t.keep.map(c => ({ c, layer: 0 }));
   for (const p of out.check?.path || []) {
-    const f = ctx.cols[Math.floor(p.z) * N + Math.floor(p.x)].find(g => Math.abs(g.top * LH - p.y) < 0.01);
+    const f = ctx.cols[Math.floor(p.z) * N + Math.floor(p.x)].find(g => Math.abs((g.cs ? floorY(g, 0.5, 0.5) : g.top * LH) - p.y) < 0.01);
     if (f) reservations.push({ c: f.c, layer: f.layer });
   }
   return { trial: out, reservations };
 }
 
 // the checked path as plain points: where, when a slow player arrives, when it is lost (null: never)
-const checkPath = (path, arr, deadline) => path.map(n => ({ x: n.x + 0.5, y: n.top * LH, z: n.z + 0.5,
+const checkPath = (path, arr, deadline) => path.map(n => ({ x: n.x + 0.5, y: n.landing ? n.top * LH : floorY(n, 0.5, 0.5), z: n.z + 0.5,
   t: Math.round(arr.time.get(n.id) * 100) / 100, dl: deadline(n) }));
 
 // --- flood -------------------------------------------------------------------------------------------
@@ -176,4 +179,33 @@ function finishCollapse(ctx, t, out) {
   return { wave, crust: cells, entryApron: t.entryApron, exitApron: t.exitApron, gaps: t.gaps.length, branches: t.branches,
     keystone: { x: centre.x + 0.5, y: floorY(centre, 0.5, 0.5), z: centre.z + 0.5 },
     check: { slack: Math.round(check.slack * 100) / 100, path: checkPath(path, arr, deadline) } };
+}
+
+// --- puzzles -----------------------------------------------------------------------------------------
+
+// the deck as plain data (game/trials.js, render/trials.js)
+const deckOf = d => ({ x0: d.x0, z0: d.z0, w: d.w, h: d.h, level: d.level });
+// a gate across a gap in the rim beside field cell (x, z) on side `side`: in the middle of the gap
+// cell, across the way through
+function gateAt(deck, x, z, side, id) {
+  const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][side];
+  return { id, type: 'gate', x: deck.x0 + x + dx + 0.5, z: deck.z0 + z + dz + 0.5, y: deck.level * LH, side, w: 1 };
+}
+
+// The ice: flat, every field cell at the deck's level but the rocks (up at the rim's), nothing built
+// over it; the goal plate at its cell, the gate in the rim's gap beside it
+function finishSlide(ctx, t, out) {
+  const { deck, field: F } = t;
+  for (let z = 0; z < F.h; z++) for (let x = 0; x < F.w; x++) {
+    const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
+    if (ctx.pieces[c].length) return null;
+    if (F.rock[z * F.w + x]) { if (!f || f.top !== deck.level + RIM) return null; continue; }
+    if (!f || f.fluid || f.top !== deck.level || Math.max(...f.cs) - Math.min(...f.cs) > 0.2) return null;
+    f.ice = true; f.noSpawn = true;
+  }
+  for (const c of [...deck.walk, ...deck.rim]) for (const f of ctx.cols[c]) f.noSpawn = true;
+  const g = deck.cell(F.goal.x, F.goal.z), y = deck.level * LH;
+  return { deck: deckOf(deck), field: F, entryGap: t.entryGap, goalGap: t.goalGap,
+    parts: [{ id: 'goal', type: 'plate', x: g % N + 0.5, y, z: Math.floor(g / N) + 0.5 }, gateAt(deck, F.goal.x, F.goal.z, F.goal.side, 'gate')],
+    check: { solution: t.solution.way, slides: t.solution.slides, decoys: t.solution.decoys, stops: t.solution.stops } };
 }

@@ -37,7 +37,7 @@ function roomFits(kind, seed, k, entry, exit) {
 
 // the chances of the slots (docs/trials.md "Planning"); 0 until the kinds are on (step by step)
 export const EVENT_CHANCE = 0.45;
-export const PUZZLE_CHANCES = [0, 0];
+export const PUZZLE_CHANCES = [0.6, 0.25];
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const direction = (a, b) => AXES.findIndex(([x, z]) => a[0] + x === b[0] && a[1] + z === b[1]);
@@ -81,7 +81,7 @@ export const trialLayers = kind => kind === 'sunken' || kind === 'miasma' ? 2 : 
 //          blocked(cell) (no trial there: guardians, hordes, spans, heights, the area),
 //          pinned(cell) (the WFC pins it: no trial room may touch it) }
 // Returns the plan, to be finished by planPuzzles once the branches are in.
-export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned }) {
+export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned, guarded }) {
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x7a1a15) ^ 0x7e1a)), force = parseForce(f);
   const plan = { R, force, list: [], cells: new Map(), d, theme, seed };
   if (d < 1 || d >= MAX_DEPTH) return plan;
@@ -89,7 +89,7 @@ export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned
   const events = kindsFor('event', d, theme, force);
   if (!events.length || !(force ? isEvent(force.kind) : roll < EVENT_CHANCE)) return plan;
   const kind = weighted(events, kindRoll);
-  const rooms = routeRooms(plan, spine, K, blocked, pinned).filter(i => roomFits(kind, seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1])));
+  const rooms = routeRooms(plan, spine, K, blocked, pinned, guarded).filter(i => roomFits(kind, seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1])));
   if (!rooms.length) return plan;
   const i = rooms[Math.floor(roomRoll * rooms.length)];
   add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),
@@ -98,12 +98,13 @@ export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned
 }
 
 // the route rooms (indices) a trial may take: index 2 to length - 2, the room and the one before
-// it ordinary, nothing pinned beside it, no trial next to it
-function routeRooms(plan, spine, K, blocked, pinned) {
+// it ordinary, the one after it no guardian's (the trial's gate would shut its way in too), nothing
+// pinned beside it, no trial next to it
+function routeRooms(plan, spine, K, blocked, pinned, guarded = () => false) {
   const out = [];
   for (let i = 2; i <= spine.length - 2; i++) {
     const c = spine[i];
-    if (blocked(c) || blocked(spine[i - 1]) || nb(c).some(pinned) || pinned(c)) continue;
+    if (blocked(c) || blocked(spine[i - 1]) || guarded(spine[i + 1]) || nb(c).some(pinned) || pinned(c)) continue;
     if ([c, ...nb(c)].some(n => plan.cells.has(K(n)))) continue;
     out.push(i);
   }
@@ -120,7 +121,7 @@ function add(plan, t, cell, d, theme) {
 // Part two (after the branches and the annex): the puzzle slots.
 //   ctx: { spine, K, blocked, pinned, branches: [{ cell, parent }] (one-room branches, not
 //          islands nor the annex), busy(key) (a room no puzzle may take: the annex's parent) }
-export function planPuzzles(plan, { spine, K, blocked, pinned, branches, busy = () => false }) {
+export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches, busy = () => false }) {
   const { R, force, d, theme } = plan;
   if (d < 1 || d >= MAX_DEPTH) return plan;
   const puzzles = kindsFor('puzzle', d, theme, force);
@@ -137,7 +138,7 @@ export function planPuzzles(plan, { spine, K, blocked, pinned, branches, busy = 
       add(plan, { kind, role: 'branch', key: K(b.cell), from: K(b.parent), fromDir: direction(b.parent, b.cell), exit: null }, b.cell, d, theme);
       continue;
     }
-    const rooms = routeRooms(plan, spine, K, c => blocked(c) || busy(K(c)), pinned);
+    const rooms = routeRooms(plan, spine, K, c => blocked(c) || busy(K(c)), pinned, guarded);
     if (!rooms.length) continue;
     const i = rooms[Math.floor(roomRoll * rooms.length)];
     add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),

@@ -16,6 +16,10 @@ const pieceBottom = (p, top) => p.kind === 'bridge' ? top - 0.2 : p.base;
 let gone = null;
 export const setGoneFloors = fn => { gone = fn; };
 const here = (f, map = state.map) => !(gone && f.crust && map === state.map && gone(f));
+// ... and its parts that stand in the way (a gate while shut, a crate): per cell, like map.blockers
+let parts = null;
+export const setPartBlockers = cells => { parts = cells; };
+const blockersAt = i => parts?.[i]?.length ? [...(state.map.blockers?.[i] || []), ...parts[i].filter(b => !b.off)] : state.map.blockers?.[i] || [];
 const inPillar = (p, fx, fz) => fx >= p.x0 && fx <= p.x1 && fz >= p.z0 && fz <= p.z1;
 const local = (x, z) => [x - Math.floor(x), z - Math.floor(z)];
 
@@ -43,7 +47,7 @@ export function blockedAt(x, z, y, step, piecesOnly = false, h = player.h) {
   if (i < 0) return true;
   const [fx, fz] = local(x, z), head = y + h;
   // Trees use trunk circles; town buildings use their rotated footprint boxes.
-  for (const b of state.map.blockers?.[i] || []) if (containsXZ(b, x, z) && b.bottom < head && b.top > y + step) return true;
+  for (const b of blockersAt(i)) if (containsXZ(b, x, z) && b.bottom < head && b.top > y + step) return true;
   if (!piecesOnly) for (const f of state.map.cols[i]) if (here(f) && floorY(f, fx, fz) > y + step && f.bottom * LH < head) return true;
   for (const p of state.map.pieces[i]) {
     if (p.kind === 'pillar') {
@@ -62,7 +66,7 @@ export function ceilingAt(x, z, y) {
   if (i < 0) return Infinity;
   const [fx, fz] = local(x, z);
   let c = Infinity;
-  for (const b of state.map.blockers?.[i] || []) if (b.bottom > y && containsXZ(b, x, z)) c = Math.min(c, b.bottom);
+  for (const b of blockersAt(i)) if (b.bottom > y && containsXZ(b, x, z)) c = Math.min(c, b.bottom);
   for (const f of state.map.cols[i]) if (here(f) && f.bottom * LH > y) c = Math.min(c, f.bottom * LH);
   for (const p of state.map.pieces[i]) {
     const b = p.kind === 'pillar' ? (inPillar(p, fx, fz) ? p.bottom : Infinity) : pieceBottom(p, runY(p, fx, fz));
@@ -75,7 +79,7 @@ export function ceilingAt(x, z, y) {
 export function insideSolid(x, z, y) {
   const i = cellAt(x, z);
   if (i < 0) return true;
-  for (const b of state.map.blockers?.[i] || []) if (y > b.bottom && y < b.top && containsXZ(b, x, z)) return true;
+  for (const b of blockersAt(i)) if (y > b.bottom && y < b.top && containsXZ(b, x, z)) return true;
   const [fx, fz] = local(x, z);
   for (const f of state.map.cols[i]) if (here(f) && floorY(f, fx, fz) > y && f.bottom * LH < y) return true;
   for (const p of state.map.pieces[i]) {

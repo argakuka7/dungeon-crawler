@@ -246,7 +246,7 @@ export async function goArena(type, depth = state.map?.depth ?? 0) {
 // you from walking straight in. A world without one: the page comes again with ?trial=<kind>
 // (same seed, dev on) and goes there.
 const lastTrial = {};
-export async function goTrial(kind, from) {
+export async function goTrial(kind, from, key = null) {
   if (state.transitioning || state.inventoryOpen) return;
   const cubes = state.cubes, here = from ?? Math.max(1, state.map?.depth ?? 1), all = [];
   for (let d = 1; d < 20; d++) all.push(...cubes.layout(d).trials.filter(t => !kind || t.kind === kind));
@@ -258,7 +258,7 @@ export async function goTrial(kind, from) {
     return;
   }
   const ahead = all.filter(t => t.depth >= here), list = ahead.length ? ahead : all;
-  const i = (list.findIndex(t => t.key === lastTrial[kind]) + 1) % list.length, t = list[i];
+  const i = (list.findIndex(t => t.key === lastTrial[kind]) + 1) % list.length, t = key ? all.find(x => x.key === key) ?? list[i] : list[i];
   lastTrial[kind] = t.key;
   clearMouseInput(); state.transitioning = true;
   try {

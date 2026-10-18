@@ -24,6 +24,53 @@ async function until(test, what, ms = 8000) {
 }
 const seals = () => state.world.portalFx.filter(f => f.obj.userData.portal.kind === 'side').map(f => f.obj.children.at(-1).visible);
 
+// A slide puzzle (in a vault where one is: ?trial=slide puts one in a branch and one on the
+// route of every depth): onto the ice through its gap, slid along its own solution with the keys,
+// solved; a vault's chest opens only then.
+export async function runSlideChecks(role = 'branch') {
+  const { slideStop } = await import('../../src/core/trials.js');
+  const { chestInReach } = await import('../../src/game/chests.js');
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'slide' && t.role === role));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=slide');
+  const t = all[0];
+  await goTrial('slide', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
+  const m = state.map.trial, F = m.field, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  check(state.trial.phase === 'idle' && !sealedIn(), 'a puzzle never seals');
+  const site = state.map.rewardSites[0];
+  if (role === 'branch') {
+    Object.assign(player, { x: site.approach.x, y: site.approach.y, z: site.approach.z, vx: 0, vz: 0 });
+    await delay(200);
+    check(!chestInReach(), 'the vault\'s chest is shut until it is solved');
+  }
+  // in through the gap, then the solution, one push each
+  const g = m.entryGap;
+  Object.assign(player, { x: g % 16 + 0.5, y: m.deck.level * 0.5, z: Math.floor(g / 16) + 0.5, vx: 0, vz: 0 });
+  const now = () => [Math.floor(player.x) - m.deck.x0, Math.floor(player.z) - m.deck.z0];
+  let at = slideStop(F, F.entry.x, F.entry.z, F.entry.side ^ 1);   // stepping in slides straight on
+  player.autoDir = SD[F.entry.side ^ 1];
+  await until(() => `${now()}` === `${at}` && Math.hypot(player.vx, player.vz) < 0.1, 'onto the ice', 3000);
+  player.autoDir = null;
+  await delay(300);
+  for (const d of m.check.solution) {
+    player.autoDir = SD[d]; await delay(120); player.autoDir = null;
+    at = slideStop(F, at[0], at[1], d);
+    await until(() => `${now()}` === `${at}` && Math.hypot(player.vx, player.vz) < 0.1, `a slide to ${at}`, 3000);
+    await delay(200);
+  }
+  await until(() => state.trial.phase === 'resolved', 'solved on the goal plate', 3000);
+  check(state.run.unlockedGates.has(t.gate), 'its gate into the run');
+  if (role === 'branch') {
+    Object.assign(player, { x: site.approach.x, y: site.approach.y, z: site.approach.z, vx: 0, vz: 0 });
+    await delay(300);
+    check(chestInReach(), 'the vault\'s chest opens now');
+  } else check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return ['solved', role];
+}
+
 export async function runTrialChecks(kind = 'flood') {
   const results = [];
   const all = [];
@@ -31,7 +78,7 @@ export async function runTrialChecks(kind = 'flood') {
   check(state.dev && all.length, `load the game with ?dev=1&trial=${kind}`);
   const t = all[0];
   // the room before, facing the portal into the trial room
-  await goTrial(kind, t.depth);
+  await goTrial(kind, t.depth, t.key);
   await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
   const q = state.map.portals.find(p => p.dir === t.fromDir);
   check(state.map.trialFaces[t.fromDir] === kind, 'the room before knows the trial behind its portal');

@@ -61,7 +61,7 @@ export function planSites(seed, layout, distance) {
   }
   // a puzzle in a branch (world/trials.js) guards the branch's reward site: a vault of its own
   for (const t of layout.trials || []) if (t.role === 'branch') {
-    plans.set(t.key, [siteIntent(seed, t.key, biome, 'rare', 0)]);
+    plans.set(t.key, [siteIntent(seed, t.key, biome, 'uncommon', 0)]);   // (a rare one's footprint finds no room beside the deck)
     roles.set(t.key, 'vault');
   }
   return { plans, roles };

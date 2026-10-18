@@ -189,7 +189,8 @@ function build(seed, d, above, theme, opts = {}) {
   // trials (world/trials.js): the event slot on the route, before the branches (none attach to it)
   const pinnedCell = c => spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c)) || inArea(c);
   const trialBlocked = c => guardians.has(K(c)) || hordes.has(K(c)) || pinnedCell(c) || nearArea(c) || nearSpan(c);
-  const trialPlan = planTrials({ seed, d, theme, force: opts.trial, spine, K, blocked: trialBlocked, pinned: pinnedCell });
+  const guarded = c => guardians.has(K(c));
+  const trialPlan = planTrials({ seed, d, theme, force: opts.trial, spine, K, blocked: trialBlocked, pinned: pinnedCell, guarded });
   for (const span of spanPlan.spans) if (span.island) {
     const line = span.keys.map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
     for (let j = 1; j < line.length; j++) {
@@ -229,7 +230,7 @@ function build(seed, d, above, theme, opts = {}) {
   // the puzzle slots: in a branch room where one fits (not an island's, nor the annex), else on the route
   const branches = cells.filter(c => distance.get(K(c)) === 1 && !spanPlan.cells.has(K(c)) && K(c) !== annex?.key)
     .map(c => ({ cell: c, parent: nb(c).find(n => routeIndex.has(K(n)) && distance.get(K(n)) === 0 && portals.has(faceKey(K(n), direction(n, c)))) })).filter(b => b.parent);
-  planPuzzles(trialPlan, { spine, K, blocked: trialBlocked, pinned: pinnedCell, branches, busy: k => k === annex?.parent || k === annex?.key });
+  planPuzzles(trialPlan, { spine, K, blocked: trialBlocked, pinned: pinnedCell, guarded, branches, busy: k => k === annex?.parent || k === annex?.key });
   // a trial on the route holds its exit shut until it is resolved (like a side guardian's gate)
   for (const t of trialPlan.list) if (t.exit != null) gateFaces.set(faceKey(t.key, t.exit), t.gate);
   const layout = { depth: d, theme, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex, annex,

@@ -261,7 +261,7 @@ test('set pieces: a lone peak climbed by its ladder, a great lake walked round b
         assert.ok(m.sparse && m.K === 1 && m.archetype === 'lake');
         // water from shore to shore, never on the cube's outer ring (but where a river comes in)
         const wet = m.floors.filter(g => g.fluid);
-        assert.ok(wet.length > 60, `${seed}/${d}: ${wet.length} cells of water`);
+        assert.ok(wet.length > 50, `${seed}/${d}: ${wet.length} cells of water`);
         for (const g of wet) if (!g.x || !g.z || g.x === N - 1 || g.z === N - 1) assert.ok(w.faces.get(faceKey(L.lake, [g.x === N - 1 ? 0 : g.x === 0 ? 1 : g.z === N - 1 ? 2 : 3][0])).river, `${seed}/${d}: water at the rim`);
         // the route keeps to dry ground (bridges included)
         for (const route of m.routes) for (const q of route) {

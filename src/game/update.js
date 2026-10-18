@@ -17,6 +17,7 @@ import { landFall } from './fall.js';
 import { tickCast, cancelCast } from './townportal.js';
 import { tickEffects, effectMod } from '../core/potions.js';
 import { absent } from '../core/enemies.js';
+import { iceStep } from './trials.js';
 
 // during the wind-up, step in towards an enemy that is just out of reach
 // learn: combat.html#chain (see learn/README.md)
@@ -53,6 +54,7 @@ export function updatePlayer(dt) {
   const jump = takeJump();
   tickCast(dt, len > 0 || jump);   // reading the town portal scroll: moving interrupts it
   if (climb(dt, dx, dz, jump)) { cancelSword(); clearOrder(); return; }   // on a ladder
+  if (iceStep(dt, dx, dz)) { cancelSword(); return; }   // on a slide puzzle's ice (game/trials.js)
   // Attacks plant you: no walking until the blade went through (the shot left), then moving
   // cuts the rest short
   const s = player.sword;

@@ -35,6 +35,63 @@ function button(p, color) {
   return { obj: g, knob, halo, light };
 }
 
+const IRON = () => new THREE.MeshStandardMaterial({ color: 0x4a4d55, roughness: 0.55, metalness: 0.6, flatShading: true });
+const STONE = () => new THREE.MeshStandardMaterial({ color: 0x8c8f99, roughness: 0.85, flatShading: true });
+
+// a pressure plate: a stone slab, its rune glowing once it holds
+function plate(p, color) {
+  const g = new THREE.Group();
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.8), STONE());
+  slab.position.y = 0.04; slab.receiveShadow = true;
+  const rune = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.26, 4), glow(color, 0.5));
+  rune.rotation.x = -Math.PI / 2; rune.rotation.z = Math.PI / 4; rune.position.y = 0.085;
+  g.add(slab, rune);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, rune, color: new THREE.Color(color) };
+}
+// a portcullis across a gap (across the way through, side: the way), w cells wide; it rises open
+function portcullis(p) {
+  const g = new THREE.Group(), w = p.w ?? 1, bars = new THREE.Group(), iron = IRON();
+  for (let i = 0; i <= 4 * w; i++) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.2, 0.06), iron);
+    b.position.set(-w / 2 + 0.06 + i * (w - 0.12) / (4 * w), 1.1, 0); b.castShadow = true; bars.add(b);
+  }
+  for (const y of [0.5, 1.3, 2.05]) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 0.07, 0.08), iron); r.position.y = y; bars.add(r); }
+  const stone = STONE();
+  for (const x of [-w / 2 - 0.08, w / 2 + 0.08]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 0.3), stone); post.position.set(x, 1.3, 0); post.castShadow = true; g.add(post); }
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(w + 0.32, 0.2, 0.32), stone); lintel.position.y = 2.65; g.add(lintel);
+  g.add(bars);
+  g.position.set(p.x, p.y, p.z);
+  if (p.side >= 2) g.rotation.y = 0; else g.rotation.y = Math.PI / 2;
+  return { obj: g, bars, open: 0, want: 0 };
+}
+// a lever on a stone block: its handle leans one way or the other (the reset lever: red knob)
+function lever(p, color) {
+  const g = new THREE.Group(), base = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.3), STONE());
+  base.position.y = 0.175; base.castShadow = true;
+  const arm = new THREE.Group(), stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.7, 6), IRON());
+  stick.position.y = 0.35;
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshStandardMaterial({ color: p.type === 'reset' ? 0xd04030 : color, roughness: 0.5 }));
+  knob.position.y = 0.72;
+  arm.add(stick, knob); arm.position.y = 0.32;
+  g.add(base, arm);
+  g.position.set(p.x, p.y, p.z);
+  g.rotation.y = p.yaw ?? 0;
+  return { obj: g, arm, angle: -0.6, want: -0.6 };
+}
+// a cage round a vault's chest: bars on all four sides; it sinks into the ground open
+function cage(a) {
+  const g = new THREE.Group(), bars = new THREE.Group(), iron = IRON();
+  for (let s = 0; s < 4; s++) for (let i = 0; i < 5; i++) {
+    const t = -0.5 + i * 0.25, [x, z] = [[t, -0.55], [t, 0.55], [-0.55, t], [0.55, t]][s];
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.3, 0.05), iron); b.position.set(x, 0.65, z); bars.add(b);
+  }
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.06, 1.16), iron); top.position.y = 1.32; bars.add(top);
+  g.add(bars);
+  g.position.set(a.x, a.y, a.z);
+  return { obj: g, bars, open: 0, want: 0 };
+}
+
 // tide lines: marks on the glass all round, every few levels up to where the water will stop
 function tideLines(tl) {
   const pts = [], e = 0.03;
@@ -87,7 +144,8 @@ export function buildTrialView(m, group) {
   const t = m.trial;
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
-  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null };
+  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
+    plates: new Map(), gates: new Map(), levers: new Map(), cage: null };
   if (t.crust) {
     const theme = themeOf(m);
     view.crust = new Map(t.crust.map(q => {
@@ -99,7 +157,13 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
+    if (p.type === 'plate') { const b = plate(p, color); group.add(b.obj); view.plates.set(p.id, b); }
+    if (p.type === 'gate') { const b = portcullis(p); group.add(b.obj); view.gates.set(p.id, b); }
+    if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
   }
+  // a vault (a puzzle in a branch room): a cage round its reward site's chest
+  const site = t.role === 'branch' && (m.rewardSites || [])[0];
+  if (site) { view.cage = cage(site.anchor); group.add(view.cage.obj); }
   if (t.kind === 'flood') {
     const fluid = t.fluid, water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), fluidMaterial(fluid, 'full'));
     water.material.side = THREE.DoubleSide;
@@ -171,10 +235,16 @@ export function setTrialBarriers(world, dirs, open) {
   for (const [dir, b] of v.barriers) b.visible = dirs.includes(dir) && !!open[dir];
 }
 
-// the parts as the trial's state says (a pressed button sinks and goes green)
-export function setTrialParts(world, s) {
+// the parts as the trial's state says (a pressed button sinks and goes green; a solved puzzle's
+// plate glows, its gates rise, its cage sinks)
+export function setTrialParts(world, s, immediate = false) {
   const v = world?.trialView;
   if (!v || !s) return;
+  const solved = s.phase === 'resolved';
+  for (const [, pl] of v.plates) pl.rune.material.color.set(solved ? 0x6cff8a : pl.color);
+  for (const [, g] of v.gates) { g.want = solved ? 1 : 0; if (immediate) g.open = g.want; }
+  for (const [id, l] of v.levers) { l.want = s.bits?.[id] ? 0.6 : -0.6; if (immediate) l.angle = l.want; }
+  if (v.cage) { v.cage.want = solved ? 1 : 0; if (immediate) v.cage.open = v.cage.want; }
   for (const [, b] of v.parts) {
     const done = s.phase === 'resolved';
     if (b.done === done) continue;
@@ -188,6 +258,10 @@ export function setTrialParts(world, s) {
 export function tickTrialView(world, time) {
   const v = world?.trialView;
   if (!v) return;
+  for (const [, g] of v.gates) { g.open += (g.want - g.open) * 0.06; g.bars.position.y = g.open * 2.1; }
+  for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
+  if (v.cage) { v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98; }
+  for (const [, pl] of v.plates) pl.rune.material.opacity = 0.45 + Math.sin(time * 2.6) * 0.2;
   for (const [, b] of v.parts) {
     const pulse = b.done ? 0.2 : 0.5 + Math.sin(time * 3.2) * 0.25;
     b.halo.material.opacity = pulse; b.light.intensity = b.done ? 1 : 2 + Math.sin(time * 3.2) * 0.8;

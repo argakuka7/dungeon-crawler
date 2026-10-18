@@ -5,12 +5,14 @@ import { C, gradient, TOP_STOPS, UNDERSIDE, SOFT, fluidBed, fluidBank } from './
 import { cliffWall } from './walls.js';
 import { buildInteriorFloors } from './interior.js';
 
+const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
 
 function topColor(m, f) {
   const cs = f.cs;
   if (f.fluid) return fluidBed(f.fluid);
   if (f.soft) return SOFT.clone().multiplyScalar(shade(f.x, f.z));   // a plunge's landing
+  if (f.ice) return ICE_TOP.clone().multiplyScalar(shade(f.x, f.z));   // a slide puzzle's ice (cubegen/trials/slide.js)
   const top = gradient(TOP_STOPS, (cs[0] + cs[1] + cs[2] + cs[3]) / 4 / LH).multiplyScalar(shade(f.x, f.z));
   // sandy / scorched banks next to fluids
   for (const g of f.link) if (g && g.fluid) top.lerp(fluidBank(g.fluid), 0.4);

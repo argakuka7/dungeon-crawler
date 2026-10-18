@@ -187,11 +187,12 @@ export function shapePinnacle(ctx) {
   ctx.stats.mode = spec.kind + ' / pinnacle';
 }
 
-// the way up a pinnacle winds round it: stairs, ladders, bridges and jumps onto the needle cost more
+// the way up a pinnacle winds round it: stairs, ladders, bridges and jumps onto the needle cost a lot
+// more (more than walking down off high ground beside it and round the ramp)
 export function pinnacleRoute(ctx) {
   if (!ctx.pinnacle?.size) return;
   const movesFrom = ctx.movesFrom, on = f => ctx.pinnacle.has(f.c);
-  ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).map(m => m.kind === 'walk' || m.kind === 'drop' || !on(m.to) || (on(f) && !f.landing && m.to.top < f.top) ? m : { ...m, cost: m.cost + 40 });
+  ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).map(m => m.kind === 'walk' || m.kind === 'drop' || !on(m.to) || (on(f) && !f.landing && m.to.top < f.top) ? m : { ...m, cost: m.cost + 200 });
 }
 
 // under a great shaft (in the depth below): a flat, dry basin where it comes down
