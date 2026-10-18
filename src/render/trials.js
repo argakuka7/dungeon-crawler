@@ -41,11 +41,30 @@ function tideLines(tl) {
   return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.45, depthWrite: false }));
 }
 
+// a seal across an open face (its portal's gate is gone, the face open): a red curtain with a
+// cross, where the portal was
+function barrier(p) {
+  const g = new THREE.Group(), red = 0xff3547;
+  const curtain = new THREE.Mesh(new THREE.PlaneGeometry(3, 2.2), glow(red, 0.28));
+  curtain.material.side = THREE.DoubleSide; curtain.position.y = 1.1;
+  g.add(curtain);
+  for (const yaw of [-0.6, 0.6]) {
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.1), glow(red, 0.9));
+    bar.material.side = THREE.DoubleSide; bar.rotation.z = yaw; bar.position.set(0, 1.1, 0.01); g.add(bar);
+  }
+  const out = 0.06, pos = [[N - out, p.z + 0.5], [out, p.z + 0.5], [p.x + 0.5, N - out], [p.x + 0.5, out]][p.dir];
+  g.position.set(pos[0], p.y, pos[1]);
+  if (p.dir < 2) g.rotation.y = Math.PI / 2;
+  g.visible = false;
+  return g;
+}
+
 export function buildTrialView(m, group) {
   const t = m.trial;
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
-  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null };
+  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map() };
+  for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
   }
@@ -73,6 +92,13 @@ export function setTrialWater(world, y, phase) {
   if (!v.water.visible) return;
   const h = y + BASE;
   v.water.scale.y = h; v.water.position.y = -BASE + h / 2;
+}
+
+// the seals across open faces (open: which faces are open, by dir): shown on the sealed ones
+export function setTrialBarriers(world, dirs, open) {
+  const v = world?.trialView;
+  if (!v) return;
+  for (const [dir, b] of v.barriers) b.visible = dirs.includes(dir) && !!open[dir];
 }
 
 // the parts as the trial's state says (a pressed button sinks and goes green)

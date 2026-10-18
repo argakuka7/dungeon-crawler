@@ -13,6 +13,8 @@ import { respawnPoint } from '../physics/respawn.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { player, state, setStatus } from './state.js';
+import { sealedIn } from './trials.js';
+import { SEALED_MESSAGE } from '../core/trials.js';
 import { fadeOut, fadeIn } from './hud.js';
 import { spawnAt } from './flow.js';
 import { startCast, cancelCast } from './townportal.js';
@@ -34,6 +36,7 @@ function castBlocked() {
   const p = player;
   if (!state.map || state.transitioning || !state.arrival) return 'Not now';
   if (state.fallFrom) return 'Not while falling';
+  if (sealedIn()) return SEALED_MESSAGE;   // a trial room while its event runs (game/trials.js)
   if (p.hp <= 0 || p.ragdoll || p.getUp || p.down) return 'Get up first';
   if (p.stun > 0 || p.sword.active) return 'Finish your current action first';
   return null;

@@ -11,6 +11,7 @@ import { isInterior } from '../world/town.js';
 import { depthOf } from '../themes/depth.js';
 import { player, state, setStatus } from './state.js';
 import { newWorld, visitedKeys } from './flow.js';
+import { sealedIn, beforeTrialSpot } from './trials.js';
 import { savedLoot } from './loot.js';
 import { knowDepths } from './log.js';
 import { packQuestLog } from '../core/quests.js';
@@ -148,6 +149,7 @@ function heroNow() {
 // null while it is on the way somewhere (the spot it had stays)
 function spotNow() {
   if (state.transitioning || !state.map) return null;
+  if (sealedIn()) return beforeTrialSpot();   // in a sealed trial room: the room before (game/trials.js)
   const f = state.fallFrom, cube = f ? f.key : state.cubeKey, a = f ? f.arrival : state.arrival;
   return a && cube ? { cube, arrival: { x: a.x, y: a.y, z: a.z } } : null;
 }

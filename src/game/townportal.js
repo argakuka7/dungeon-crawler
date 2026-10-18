@@ -14,6 +14,8 @@ import { setTownPortal } from '../render/world.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { player, state, setStatus } from './state.js';
+import { sealedIn } from './trials.js';
+import { SEALED_MESSAGE } from '../core/trials.js';
 import { whenReady, fadeOut, fadeIn } from './hud.js';
 import { enterCube } from './flow.js';
 import { cancelSword } from './sword.js';
@@ -32,6 +34,7 @@ function castBlocked() {
   const p = player;
   if (!state.map || state.transitioning) return 'Not now';
   if (isTown(state.cubeKey) || isInterior(state.cubeKey)) return 'You are already in town';
+  if (sealedIn()) return SEALED_MESSAGE;   // a trial room while its event runs (game/trials.js)
   if (state.fallFrom || p.hp <= 0 || p.ragdoll || p.getUp || p.climb || p.swimming || !p.grounded) return 'You need firm ground to open a portal';
   if (p.stun > 0 || p.sword.active) return 'Finish your current action first';
   return null;

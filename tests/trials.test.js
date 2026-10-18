@@ -6,7 +6,10 @@ import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
-  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel } from '../src/core/trials.js';
+  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed } from '../src/core/trials.js';
+import { portalLocked } from '../src/core/guardians.js';
+import { createRun } from '../src/core/progression.js';
+import { discoveredFaces } from '../src/core/boundaries.js';
 import { state } from './fixtures.js';
 import { player } from '../src/game/state.js';
 import { movePlayer } from '../src/physics/move.js';
@@ -296,5 +299,40 @@ test('the flood\'s summit is climbed by its ramp: no stair, ladder or bridge lea
     for (const r of m.runs) if (r.kind !== 'landing') assert.ok(!needle.has(r.from.c) && !needle.has(r.to.c), `${seed}/${d}: a ${r.kind} onto the summit`);
     for (const l of m.ladders) assert.ok(!needle.has(l.hi) && !needle.has(l.lo), `${seed}/${d}: a ladder onto the summit`);
     void keep;
+  }
+});
+
+test('sealed while an event is armed or running; the exit locked by its gate until resolved', () => {
+  const { m, t } = floods([3]).next().value, s = newTrial(m.trial), run = createRun();
+  assert.equal(trialSealed(s), false);
+  assert.ok(portalLocked(m, run, { dir: t.exit }), 'the exit is locked');
+  assert.ok(!portalLocked(m, run, { dir: t.fromDir ^ 1 }), 'the way back is not');
+  stepTrial(s, 0, { away: true });
+  assert.ok(trialSealed(s));
+  stepTrial(s, ARM_TIME + 1);
+  assert.equal(s.phase, 'running'); assert.ok(trialSealed(s));
+  resolveTrial(s); run.unlockedGates.add(m.trial.gate);
+  assert.equal(trialSealed(s), false);
+  assert.ok(!portalLocked(m, run, { dir: t.exit }), 'resolved: the exit opens');
+  resetTrial(s); assert.equal(trialSealed(s), false);
+  // puzzles and unsealed kinds never seal
+  const p = newTrial({ key: 'p', kind: 'slide' }); p.phase = 'running';
+  assert.equal(trialSealed(p), false);
+});
+
+test('discovery joins a trial room only through its portals; its gate keeps the way on shut', () => {
+  for (let seed = 0; seed < 30; seed++) {
+    const L = forced(seed, 'flood');
+    for (const d of DEPTHS) for (const t of L(d).trials) {
+      const rooms = new Map([...L(d).exists].map(k => [k, { key: k, visits: 1, map: { key: k, exit: L(d).exit.get(k), routeIndex: L(d).routeIndex.get(k),
+        route: L(d).route, trialRoom: L(d).trialCells.has(k), gateKeys: [0, 1, 2, 3].map(d4 => L(d).gateFaces.get(faceKey(k, d4))),
+        portals: [0, 1, 2, 3].filter(d4 => L(d).portals.has(faceKey(k, d4)) || L(d).portals.has(faceKey(step(k, d4), d4 ^ 1))).map(dir => ({ dir, kind: 'side' })) } }]));
+      const run = createRun(), c = rooms.get(t.key);
+      const open = discoveredFaces(rooms, c, run);
+      assert.ok(!open.includes(faceKey(t.key, t.exit)), `${seed}/${d}: the exit opens before it is resolved`);
+      for (const fk of open) assert.ok(c.map.portals.some(p => faceKey(t.key, p.dir) === fk), `${seed}/${d}: ${fk} is not a portal`);
+      run.unlockedGates.add(t.gate);
+      assert.ok(discoveredFaces(rooms, c, run).includes(faceKey(t.key, t.exit)), `${seed}/${d}: resolved, the exit opens`);
+    }
   }
 });

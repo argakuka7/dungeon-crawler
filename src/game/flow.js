@@ -37,7 +37,7 @@ import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
 import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
-import { enterTrial, restartTrial, refreshTrialView } from './trials.js';
+import { enterTrial, restartTrial, refreshTrialView, sealedIn } from './trials.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -101,6 +101,8 @@ export function die() {
 }
 function backAfterDeath() {
   if (state.fallFrom) { returnFromFall(true); return; }
+  // dying in a sealed trial room ends the attempt: back in the room before (game/trials.js)
+  if (sealedIn()) { backBeforeTrial(null); return; }
   // playing together the cube stays as it is while a friend fights on in it (and the enemies
   // we are shown are another player's anyway, src/net/foes.js)
   if (mirroring() || online.buddies.some(b => b.here && !b.out && b.hp > 0)) { spawnEntry(); return; }
@@ -137,6 +139,43 @@ function returnFromFall(dead) {
     if (state.cubes !== cubes) return;
     state.transitioning = false;
     if (dead) backAfterDeath(); else recover();   // stay in this cube
+  }), 380);
+}
+
+// Where a failed event puts you (docs/trials.md "Failing and dying"): in the room before, beside
+// its portal into the trial room (not on it), facing it; the trial room as it was, at full health,
+// the potions worn off. A death has said what it was already; another fail says `message`.
+export function besidePortal(map, dir) {
+  const p = map.portals.find(q => q.kind === 'side' && q.dir === dir);
+  if (!p) return null;
+  const [dx, dz] = DIRS[dir];
+  for (const back of [2.2, 1.6, 1]) {
+    const x = p.x + 0.5 - dx * back, z = p.z + 0.5 - dz * back, g = groundAt(x, z, p.y + 1.5, 0, map);
+    if (g.s && !g.s.fluid && Math.abs(g.h - p.y) < 1.2) return { x, y: g.h, z };
+  }
+  return arrivalPoint(p);
+}
+export function backBeforeTrial(message) {
+  const t = state.map.trial, cubes = state.cubes;
+  restoreVisit(state.visit);   // the trial room as it was
+  restartTrial();
+  state.transitioning = true;
+  cancelSword(true); cancelCast();
+  fadeOut();
+  const done = () => { state.transitioning = false; if (message) setStatus(message); };
+  setTimeout(() => whenReady(cubes.get(t.from)).then(c => {
+    if (state.cubes !== cubes) return;
+    enterCube(c, t.fromDir);
+    const p = c.map.portals.find(q => q.kind === 'side' && q.dir === t.fromDir), at = respawnPoint(besidePortal(c.map, t.fromDir));
+    state.arrival = at;
+    spawnAt(at.x, at.y, at.z);
+    player.yaw = Math.atan2(DIRS[t.fromDir][0], DIRS[t.fromDir][1]);
+    player.hp = player.maxHp; clearEffects(player);
+    if (p) state.portalLock = p.id;
+    done();
+  }, () => {   // the room before does not come: back where this one was entered
+    if (state.cubes !== cubes) return;
+    resetEnemies(); spawnEntry(); done();
   }), 380);
 }
 

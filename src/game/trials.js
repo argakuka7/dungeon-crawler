@@ -4,18 +4,20 @@
 //   state.trial: { key, kind, phase, t, done, at } (core/trials.js newTrial) or null
 import { LH } from '../core/constants.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
-  nextPulse, floodEnd } from '../core/trials.js';
+  nextPulse, floodEnd, trialSealed } from '../core/trials.js';
 import { setTrialFluid } from '../physics/fluid.js';
-import { setTrialWater, setTrialParts } from '../render/trials.js';
+import { setTrialWater, setTrialParts, setTrialBarriers } from '../render/trials.js';
+import { openedSides } from '../core/boundaries.js';
 import { setPortalSeals } from '../render/world.js';
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { log } from './log.js';
 import { allEnemies } from './enemies.js';
-import { refreshOpenFaces, spawnEntry } from './flow.js';
+import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal } from './flow.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
+const SEALED = 'The portals are sealed.';
 export const trialHere = () => state.trial;
 const mapTrial = () => state.map?.trial ?? null;
 const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial.gate);
@@ -26,11 +28,25 @@ export function enterTrial(map) {
   showTrial(true);
 }
 
-// the faces whose portals are sealed: the exit until the trial is resolved
+// is the room we are in sealed? (game/portals.js, the scrolls, the teleports)
+export const sealedIn = () => trialSealed(state.trial);
+
+// the faces whose portals are sealed: every one while an event runs, else the exit until the
+// trial is resolved
 export function sealedDirs() {
   const s = state.trial, m = mapTrial();
-  if (!s || !m || s.phase === 'resolved' || m.exit == null) return [];
-  return [m.exit];
+  if (!s || !m || s.phase === 'resolved') return [];
+  if (trialSealed(s)) return state.map.portals.filter(p => p.kind === 'side').map(p => p.dir);
+  return m.exit == null ? [] : [m.exit];
+}
+
+// where a save made while sealed comes back in: the room before, beside its portal into the trial
+// room (null: that room's map is not here)
+export function beforeTrialSpot() {
+  const m = mapTrial();
+  if (!sealedIn() || !m) return null;
+  const c = state.cubes?.cubes.get(m.from);
+  return c ? { cube: m.from, arrival: besidePortal(c.map, m.fromDir) } : null;
 }
 
 // the trial room put back as it was (a death in it, game/flow.js; /trial reset)
@@ -44,7 +60,11 @@ export function restartTrial() {
 export const refreshTrialView = () => showTrial(true);
 function showTrial(immediate = false) {
   const m = mapTrial(), s = state.trial, level = trialFluidLevel(m, s);
-  if (m) setPortalSeals(state.world, sealedDirs(), immediate);
+  if (m) {
+    const dirs = sealedDirs();
+    setPortalSeals(state.world, dirs, immediate);
+    setTrialBarriers(state.world, trialSealed(s) ? dirs : [], openedSides(state.openedFaces, state.cubeKey));
+  }
   setTrialFluid(level == null ? null : { y: level * LH, fluid: m.fluid });
   setTrialWater(state.world, level == null ? null : level * LH, s?.phase ?? null);
   setTrialParts(state.world, s);
@@ -58,7 +78,7 @@ export function updateTrial(dt) {
   const away = player.hp > 0 && !!state.arrival && Math.hypot(player.x - state.arrival.x, player.z - state.arrival.z) > ARM_DISTANCE;
   const happened = stepTrial(s, dt, { away });
   if (happened === 'armed') {
-    setStatus(`${TRIALS[s.kind].name}!`);
+    setStatus(`${TRIALS[s.kind].name}! ${SEALED}`);
     banner(TRIALS[s.kind].name, 'The water is coming. Climb to the summit and press the button.');
     sfx('rumble'); sfx('gate', { delay: 0.4 });
   }
@@ -163,8 +183,9 @@ export function devTrial(what) {
 export function failTrial(reason) {
   const s = state.trial, m = mapTrial();
   if (!s || !m || s.phase === 'resolved') return;
-  setStatus(reason);
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'failed' });
+  if (sealedIn()) { backBeforeTrial(reason); return; }
+  setStatus(reason);
   restartTrial();
   spawnEntry();
 }

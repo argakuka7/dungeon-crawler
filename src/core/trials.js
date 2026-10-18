@@ -149,6 +149,11 @@ export function stepTrial(s, dt, input = {}) {
   return null;
 }
 
+// Sealed (docs/trials.md "Sealing"): while an event of a sealed kind is armed or running, no
+// portal, open face, scroll or teleport takes anyone out of its room
+export const trialSealed = s => !!s && !!TRIALS[s.kind]?.sealed && (s.phase === 'armed' || s.phase === 'running');
+export const SEALED_MESSAGE = 'The way out is sealed';
+
 // the goal is met (level: the water's level then, for it to drain back from)
 export function resolveTrial(s, level = null) {
   if (s.phase === 'resolved') return false;
