@@ -178,7 +178,7 @@ function showPace() {
   if (!badge) {
     badge = document.createElement('div');
     badge.id = 'teach-pace';
-    Object.assign(badge.style, { position: 'fixed', top: '12px', left: '50%', transform: 'translateX(-50%)', zIndex: 20, pointerEvents: 'none',
+    Object.assign(badge.style, { position: 'fixed', top: 'calc(12px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 20, pointerEvents: 'none',
       padding: '4px 14px', borderRadius: '8px', background: '#1b1710dd', color: '#ffe4ae', border: '1px solid #ffcf7a',
       font: 'bold 15px ui-rounded, system-ui, sans-serif', letterSpacing: '0.04em' });
     document.body.append(badge);

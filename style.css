@@ -1,10 +1,16 @@
+/* the safe area: a home screen web app runs under the status bar (index.html), a phone has its notch and home bar;
+   --pad is 16px clear of all of them, --pad-y what that takes off the height */
+:root { --safe-t: env(safe-area-inset-top, 0px); --safe-r: env(safe-area-inset-right, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --pad: calc(16px + var(--safe-t)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));
+  --pad-y: calc(32px + var(--safe-t) + var(--safe-b)); }
 html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #2a3140 0%, #12151c 70%, #0b0d12 100%); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d8dde6; }
 canvas { display: block; }
 /* the game's view fills the window and never more (render/scene.js) */
 #view { position: fixed; inset: 0; width: 100%; height: 100%; }
 #fade { position: absolute; inset: 0; background: #0b0d12; opacity: 1; pointer-events: none; transition: opacity .35s; }
 #flash { position: absolute; inset: 0; background: #ff3b1f; opacity: 0; pointer-events: none; transition: opacity .4s; }
-#minimap { position: absolute; top: 14px; right: 16px; pointer-events: none; image-rendering: pixelated; }
+#minimap { position: absolute; top: calc(14px + var(--safe-t)); right: calc(16px + var(--safe-r)); pointer-events: none; image-rendering: pixelated; }
 #loading { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
   color: #e6e9ef; font-size: 12px; letter-spacing: 1px; background: #0b0d12cc; border: 1px solid #444c5c; border-radius: 4px;
   padding: 6px 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 10; }
@@ -20,7 +26,7 @@ input, textarea, [contenteditable] { -webkit-user-select: text; user-select: tex
 img { -webkit-user-drag: none; }
 kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 3px; padding: 0 4px; color: #e6e9ef; font: inherit; }
 
-#dev { position: absolute; top: 8px; left: 8px; z-index: 5; max-width: min(640px, calc(100vw - 260px)); padding: 4px 7px;
+#dev { position: absolute; top: calc(8px + var(--safe-t)); left: calc(8px + var(--safe-l)); z-index: 5; max-width: min(640px, calc(100vw - 260px)); padding: 4px 7px;
   font-size: 10px; line-height: 1.45; color: #aab3c2; background: #0b0d1299; border-radius: 3px; user-select: text; }
 #dev b { color: #fff; font-weight: normal; }
 #dev .pick { user-select: all; cursor: text; }
@@ -81,8 +87,8 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #chat-popup .label { flex: none; }
 #chat-popup .hint { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #8a96a8; font-size: 11px; }
 
-#help-overlay { position: fixed; inset: 0; z-index: 26; display: grid; place-items: center; padding: 16px; pointer-events: none; }
-#help-panel { pointer-events: auto; box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+#help-overlay { position: fixed; inset: 0; z-index: 26; display: grid; place-items: center; padding: var(--pad); pointer-events: none; }
+#help-panel { pointer-events: auto; box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
   padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
 #help-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #8a96a8; font-size: 11px; }
 #help-panel h1 { margin: 0 0 10px; color: #fff; font-size: 15px; letter-spacing: 3px; }
@@ -92,8 +98,8 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #help-panel kbd { white-space: nowrap; margin-bottom: 2px; }
 #help-panel dd { margin: 0; color: #aab3c2; }
 /* the Esc menu (game/escmenu.js): over the game, dimmed; alone the game waits meanwhile */
-#menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: 16px; background: #080c1399; }
-#menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+#menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
+#menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
   padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
 #menu-panel header { display: flex; align-items: baseline; gap: 12px; }
 #menu-panel h1 { margin: 0 0 12px; color: #fff; font-size: 15px; letter-spacing: 3px; }
@@ -122,8 +128,8 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #help-panel .help-note { margin: 10px 0 0; color: #6f7a8c; font-size: 11px; }
 #help-panel dt i { color: #6f7a8c; }
 /* the settings (game/settingsmenu.js): over the Esc menu or the main menu */
-#settings-overlay { position: fixed; inset: 0; z-index: 27; display: grid; place-items: center; padding: 16px; background: #080c1399; }
-#settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+#settings-overlay { position: fixed; inset: 0; z-index: 27; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
+#settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
   padding: 16px 20px; background: #12161ef5; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
 #settings-panel header { display: flex; align-items: baseline; gap: 12px; }
 #settings-panel h1 { margin: 0 0 4px; color: #fff; font-size: 15px; letter-spacing: 3px; }
@@ -359,7 +365,7 @@ body.touch #effects { top: calc(72px + env(safe-area-inset-top)); bottom: auto; 
 body.touch #minimap { width: 120px; height: auto; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); }
 body.touch #loading { bottom: auto; top: 110px; }
 body.touch #inventory-overlay { padding: calc(70px + env(safe-area-inset-top)) 12px 12px; }
-body.touch #inventory-panel { max-height: calc(100dvh - 84px); }
+body.touch #inventory-panel { max-height: calc(100dvh - 84px - var(--safe-t)); }
 @media (max-width: 640px) { body.touch #minimap { top: calc(70px + env(safe-area-inset-top)); width: 96px; } }
 body.touch #chat { width: min(420px, 44vw); min-width: 0; }
 /* a tablet (not a phone): the quick bar back at the bottom, centred but always left of the jump button (the touch bar is
@@ -371,26 +377,27 @@ body.touch #chat { width: min(420px, 44vw); min-width: 0; }
   body.touch #loading { top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
   body.touch #chat { bottom: calc(82px + env(safe-area-inset-bottom)); }
   body.touch #inventory-overlay { padding: calc(12px + env(safe-area-inset-top)) 12px calc(84px + env(safe-area-inset-bottom)); }
+  body.touch #inventory-panel { max-height: calc(100dvh - 96px - var(--safe-t) - var(--safe-b)); }
 }
 
 /* the main menu (game/menu.js): the heroes, the worlds, joining a friend */
 body.in-menu :is(#quickbar, #chat, #minimap, #effects, #touch, #loot-labels, #dev, #teach-pace) { display: none !important; }
-#title-overlay { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: 16px; overflow: auto; }
+#title-overlay { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: var(--pad); overflow: auto; }
 /* wide: the menu on the left, the living cube right of it (game/showcase.js moves the picture) */
 @media (min-width: 901px) {
-  #title-overlay { place-items: center start; padding-left: max(24px, 5vw);
+  #title-overlay { place-items: center start; padding-left: max(24px + var(--safe-l), 5vw);
     background: linear-gradient(90deg, #080c13cc 0%, #080c1366 32%, transparent 55%); }
 }
 /* a phone held upright: the menu at the bottom, the cube above it */
 @media (max-width: 900px) and (max-aspect-ratio: 5/6) {
-  #title-overlay { place-items: end center; padding-bottom: max(16px, 4vh);
+  #title-overlay { place-items: end center; padding-bottom: max(16px + var(--safe-b), 4vh);
     background: linear-gradient(0deg, #080c13cc 0%, #080c1366 35%, transparent 60%); }
 }
 #title-box { box-sizing: border-box; width: min(360px, 100%); }
 #title-logo { margin: 0 0 18px; text-align: center; color: #ffe4ae; font-size: 30px; font-weight: normal; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 0 #8a5a2a, 0 0 24px #ffb45a55; }
 #title-panel { padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px;
-  max-height: calc(100dvh - 120px); overflow: auto; }
+  max-height: calc(100dvh - 120px - var(--safe-t) - var(--safe-b)); overflow: auto; }
 #title-panel h2 { margin: 0 0 10px; color: #fff; font-size: 14px; letter-spacing: 1px; }
 #title-panel h2 small { color: #8a96a8; font-size: 11px; letter-spacing: 0; margin-left: 6px; }
 #title-panel h3 { margin: 16px 0 6px; color: #c5cdbc; font-size: 12px; font-weight: normal; }
