@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK } from '../src/core/trials.js';
 import { solveSlide, slideBand } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -546,7 +546,7 @@ test('every slide room generates: ice as the rule says, solvable in its band, no
   let n = 0, vaults = 0;
   for (const { seed, d, m, t } of slides(SEEDS.slice(0, 6))) {
     n++;
-    const tr = m.trial, F = tr.field, D = tr.deck, [lo, hi] = slideBand(d);
+    const tr = m.trial.puzzles[0], F = tr.field, D = tr.deck, [lo, hi] = slideBand(d);
     const s = solveSlide(F);
     assert.ok(s.slides >= lo && s.slides <= hi && !s.trapped && s.decoys >= 3, `${seed}/${d}: ${JSON.stringify(s)}`);
     assert.equal(s.slides, tr.check.slides);
@@ -562,6 +562,7 @@ test('every slide room generates: ice as the rule says, solvable in its band, no
         assert.ok(top(cx, cz) >= D.level + 3, `${seed}/${d}: rim or rock at ${x},${z}`);
     }
     assert.ok(tr.parts.some(p => p.type === 'plate') && tr.parts.some(p => p.type === 'gate'));
+    assert.ok(m.trial.parts.length === tr.parts.length && m.trial.parts.every(p => p.puzzle === 0));
     // a route puzzle holds the exit, a vault its reward site
     if (t.role === 'branch') { vaults++; assert.ok(m.rewardSites.length >= 1, `${seed}/${d}: the vault is empty`); }
     else assert.equal(m.gateKeys[t.exit], t.gate);
@@ -582,4 +583,45 @@ test('parts: a lever flips, a button stays down, a reset lever puts the start ba
   assert.ok(!plateHeld(p, [{ x: 5.1, y: 2, z: 7.5 }]));
   assert.ok(!plateHeld(p, [{ x: 4.5, y: 4, z: 7.5 }]));
   resetTrial(s, { a: 1 }); assert.deepEqual(s.bits, { a: 1 });
+});
+
+// --- sunken -----------------------------------------------------------------------------------------
+
+function* sunkens(seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: 'sunken' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'sunken') yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('every sunken room generates: in from up high, out on the ground, a platform a stage, each dry only once the one before drains', () => {
+  let n = 0;
+  for (const { seed, d, m, t } of sunkens(SEEDS.slice(0, 5))) {
+    n++;
+    const tr = m.trial, W = tr.water, entry = m.portals.find(p => p.dir === tr.entry), exit = m.portals.find(p => p.dir === t.exit);
+    assert.equal(m.K, 3); assert.equal(entry.layer, 2); assert.equal(exit.layer, 0);
+    assert.equal(tr.puzzles.length, tr.stages); assert.equal(W.length, tr.stages + 1);
+    assert.deepEqual(tr.puzzles.map(p => p.kind), t.stages);
+    for (let i = 1; i < W.length; i++) assert.ok(W[i] < W[i - 1], `${seed}/${d}: the water sinks`);
+    assert.ok(entry.y > W[0] * LH && exit.y < W[tr.stages - 1] * LH, `${seed}/${d}: in over the water, out under it until the end`);
+    tr.puzzles.forEach((pz, i) => {
+      assert.ok(pz.deck.level > W[i], `${seed}/${d}: platform ${i} dry at its stage`);
+      if (i) assert.ok(pz.deck.level < W[i - 1], `${seed}/${d}: platform ${i} under water before`);
+      assert.ok(solveSlide(pz.field).slides < Infinity);
+    });
+  }
+  assert.ok(n > 40, `${n} sunken rooms`);
+});
+
+test('the sunken water: a stage at a time, sinking over SINK s, gone once resolved', () => {
+  const m = { kind: 'sunken', water: [15, 7, 2], stages: 2 }, s = newTrial({ key: 'k', kind: 'sunken' });
+  assert.equal(trialFluidLevel(m, s), 15);
+  stepTrial(s, 1, { away: true }); assert.equal(s.phase, 'idle', 'it never arms: not timed, not sealed');
+  assert.equal(sinkStage(m, s, 1), false, 'only the stage it is at');
+  assert.ok(sinkStage(m, s, 0)); assert.equal(s.stage, 1);
+  assert.equal(trialFluidLevel(m, s), 15);
+  s.sink.t = SINK / 2; assert.equal(trialFluidLevel(m, s), 11);
+  s.sink.t = SINK; assert.equal(trialFluidLevel(m, s), 7);
+  assert.ok(sinkStage(m, s, 1)); s.sink.t = SINK; resolveTrial(s);
+  assert.equal(trialFluidLevel(m, s), null);
 });

@@ -11,6 +11,7 @@ import { spanFace } from './spans.js';
 import { areaPad, isInnerFace } from './areas.js';
 import { isTown, isMerchantCamp, townExitPosition } from './town.js';
 import { MAX_DEPTH } from '../themes/depth.js';
+import { trialPortalLayer } from './trials.js';
 
 export const LAYER_BASE = [0, 10, 16, 22];   // the levels of the world-wide layers
 
@@ -45,7 +46,7 @@ function sideFace(world, k, d, withPortal) {
   pos = areaPad(world, fk)?.pos ?? pos;   // where a large area's ramp or ridge meets the face
   // the portal's layer: any layer both cubes have, mostly the highest one (sky routes)
   const maxL = Math.min(world.wfc.tiles.get(k).K, world.wfc.tiles.get(step(k, d)).K) - 1;
-  const layer = guardian ? 0 : maxL > 0 && R() < 0.5 ? maxL : Math.floor(R() * (maxL + 1));
+  const layer = guardian ? 0 : trialPortalLayer(world, fk, maxL) ?? (maxL > 0 && R() < 0.5 ? maxL : Math.floor(R() * (maxL + 1)));
   let level = LAYER_BASE[layer];
   if (!layer) {   // a flat pad of three cells at the highest ground level around it
     level = guardian ? 4 : Math.max(4, f.profile[pos - 1], f.profile[pos], f.profile[pos + 1]);   // never void

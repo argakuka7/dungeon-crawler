@@ -18,7 +18,8 @@ const ACTS = new Set(['away', 'part']);
 export function trialMessage(m) {
   if (!m || typeof m.key !== 'string' || !PHASES.has(m.phase) || !Number.isFinite(m.time) || m.time < 0 || !Number.isFinite(m.seed)) return null;
   if (m.gate != null && (typeof m.gate !== 'string' || !m.gate.startsWith('trial:'))) return null;
-  return { key: m.key, seed: m.seed, phase: m.phase, time: m.time, gate: m.gate ?? null };
+  if (m.stage != null && (!Number.isInteger(m.stage) || m.stage < 0 || m.stage > 9)) return null;
+  return { key: m.key, seed: m.seed, phase: m.phase, time: m.time, gate: m.gate ?? null, ...m.stage != null && { stage: m.stage } };
 }
 // a `trialAct` message as it may be used, or null
 export function trialAct(m) {

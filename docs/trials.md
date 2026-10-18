@@ -1,9 +1,9 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 3 are done: the framework, `flood`, `collapse`, the puzzle parts and `slide`
-are planned, built, checked, playable (alone and together) and on in every world (an event on 45%
-of the depths from 1 to 19, a puzzle on 60%, a second on 25%). The rest is the list of what to
-build, kind by kind, until done (see "Implementation order" at the end).
+Status: steps 1 to 4 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide` and
+`sunken` are planned, built, checked, playable (alone and together) and on in every world (an event
+on 45% of the depths from 1 to 19, a puzzle on 60%, a second on 25%). The rest is the list of what
+to build, kind by kind, until done (see "Implementation order" at the end).
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -262,6 +262,18 @@ exit come out of the water.
   Once fully drained, the exit is reachable from the entry both ways (stairs or ladders lead
   back up to the entry layer). Each stage puzzle passes its own check.
 - **Population:** a few on the platforms; more on the ground, waiting for the water to go.
+- **As built** (`cubegen/trials/sunken.js`): three layers (you come in at level 16; the room before
+  gets as many, `world/wfc.js`, and its portal stands on the top layer, `world/faces.js`). The
+  room's four quadrants make a ring: the entry's a terrace at the entry's height, the stage
+  platforms round the ring the long way, the exit's last; anything left is the river's water. The
+  water stands at `W_i` (`core/trials.js sunkenLevel`, sinking over `SINK` s), one level under
+  platform i (a level over the water it is dry at); the platforms are joined by what the route
+  search builds over the water. A stage puzzle's field is 4x4 (its deck, field and rim, 6x6:
+  `TRIALS[kind].deck`). A 6x6 deck finds no room in the exit's quadrant beside its pad, so while
+  only such puzzles are built a sunken room has two stages and the planner wants the exit's
+  quadrant beside the entry's (`world/trials.js roomFits`); once a 5x5 puzzle is built
+  (`smallStages`), three from depth 10, the last one by the exit. The stages drained are kept in
+  `run.trials` (saved, and shared when playing together).
 
 ### `collapse`: The crumbling floor
 
@@ -573,7 +585,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 2. [x] **`collapse`:** crust, wave, keystone; shares the deadlines.
 3. [x] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
    first solver.
-4. [ ] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
+4. [x] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
 5. [ ] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
 6. [ ] **`crates`, `plates`** (crates, Sokoban solver).
 7. [ ] **`stones`, `sluices`, `timedgate`.**

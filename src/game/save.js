@@ -161,7 +161,7 @@ function worldNow() {
   const deepest = Math.max(w.deepest, ...visited.filter(k => !isInterior(k)).map(depthOf));
   return { ...w, updated: Date.now(), deepest,
     run: { defeated: [...r.defeated], gates: [...r.unlockedGates], chests: [...r.chests], dropped: [...r.dropped], loot: savedLoot(),
-      quests: packQuestLog(r.quests), clock: r.clock, kills: packKills(r.kills),
+      quests: packQuestLog(r.quests), clock: r.clock, kills: packKills(r.kills), trials: [...r.trials],
       townPortal: tp ? { key: tp.key, depth: tp.depth, pad: { x: tp.pad.x, y: tp.pad.y, z: tp.pad.z }, back: { x: tp.back.x, y: tp.back.y, z: tp.back.z } } : null },
     faces: [...state.openedFaces], visited,
     spots: spot && current.hero ? { ...w.spots, [current.hero.id]: spot } : w.spots };

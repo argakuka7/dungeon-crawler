@@ -157,22 +157,21 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
-    if (p.type === 'plate') { const b = plate(p, color); group.add(b.obj); view.plates.set(p.id, b); }
-    if (p.type === 'gate') { const b = portcullis(p); group.add(b.obj); view.gates.set(p.id, b); }
+    if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.plates.set(p.id, b); }
+    if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
   }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
   if (site) { view.cage = cage(site.anchor); group.add(view.cage.obj); }
-  if (t.kind === 'flood') {
+  if (t.kind === 'flood' || t.kind === 'sunken') {
     const fluid = t.fluid, water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), fluidMaterial(fluid, 'full'));
     water.material.side = THREE.DoubleSide;
     water.userData.fluid = fluid; water.visible = false; water.renderOrder = 5;
     water.position.set(N / 2, 0, N / 2);
     group.add(water);
     view.water = water;
-    view.tide = tideLines(t.timeline);
-    group.add(view.tide);
+    if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }
   }
   return view;
 }
@@ -240,9 +239,9 @@ export function setTrialBarriers(world, dirs, open) {
 export function setTrialParts(world, s, immediate = false) {
   const v = world?.trialView;
   if (!v || !s) return;
-  const solved = s.phase === 'resolved';
-  for (const [, pl] of v.plates) pl.rune.material.color.set(solved ? 0x6cff8a : pl.color);
-  for (const [, g] of v.gates) { g.want = solved ? 1 : 0; if (immediate) g.open = g.want; }
+  const solved = s.phase === 'resolved', done = i => solved || (s.stage ?? 0) > i;   // (game/trials.js puzzleSolved)
+  for (const [, pl] of v.plates) pl.rune.material.color.set(done(pl.puzzle) ? 0x6cff8a : pl.color);
+  for (const [, g] of v.gates) { g.want = done(g.puzzle) ? 1 : 0; if (immediate) g.open = g.want; }
   for (const [id, l] of v.levers) { l.want = s.bits?.[id] ? 0.6 : -0.6; if (immediate) l.angle = l.want; }
   if (v.cage) { v.cage.want = solved ? 1 : 0; if (immediate) v.cage.open = v.cage.want; }
   for (const [, b] of v.parts) {

@@ -12,7 +12,8 @@
 export const TRIALS = {
   flood: { name: 'Rising water', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#3fa8ff', built: true,
     population: 0.5 },
-  sunken: { name: 'The sunken room', family: 'event', sealed: false, timed: false, depths: [2, 19], themes: null, weight: 1, color: '#3fd0c0' },
+  sunken: { name: 'The sunken room', family: 'event', sealed: false, timed: false, depths: [2, 19], themes: null, weight: 1, color: '#3fd0c0', built: true,
+    population: 0.3 },
   collapse: { name: 'Crumbling floor', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050', built: true,
     population: 0.3 },
   cold: { name: 'Cold snap', family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff' },
@@ -36,7 +37,14 @@ export const TRIALS = {
   runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff' },
   plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0' },
 };
-for (const [id, t] of Object.entries(TRIALS)) t.id = id;
+for (const [id, t] of Object.entries(TRIALS)) {
+  t.id = id;
+  // a puzzle's deck in a sunken room (field and rim): 6 x 6 for the slide and the crates, else 5 x 5
+  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : 5;
+}
+// may a sunken room have small stage puzzles (a 5 x 5 deck): any built? (then it has three stages
+// from depth 10, and its last may share the exit's quadrant: cubegen/trials/sunken.js)
+export const smallStages = () => TRIAL_KINDS.some(k => TRIALS[k].built && TRIALS[k].deck === 5 && k !== 'runes' && k !== 'timedgate');
 export const TRIAL_KINDS = Object.keys(TRIALS);
 
 // a trial resolved is its gate in run.unlockedGates (core/guardians.js portalLocked)
@@ -144,7 +152,7 @@ export const newTrial = (trial, resolved = false) => ({ key: trial.key, kind: tr
 // 'armed', 'running' (the phase it came into), or nothing.
 export function stepTrial(s, dt, input = {}) {
   if (s.phase === 'idle') {
-    if (isEvent(s.kind) && input.away) { s.phase = 'armed'; s.t = 0; return 'armed'; }
+    if (isEvent(s.kind) && TRIALS[s.kind].timed && input.away) { s.phase = 'armed'; s.t = 0; return 'armed'; }
     return null;
   }
   if (s.phase === 'resolved') { s.done += dt; return null; }
@@ -182,6 +190,7 @@ export const plateHeld = (p, bodies) => bodies.some(b => Math.floor(b.x) === Mat
 export const BASIN = 2;   // the collapse's basin: its fluid's surface (cubegen/river.js RIVER_SURF)
 export function trialFluidLevel(m, s) {
   if (!m || !s) return null;
+  if (m.kind === 'sunken') return sunkenLevel(m, s);
   // the collapse: what falls through the crust is in the basin's fluid (its surface over every hole)
   if (m.kind === 'collapse') return s.phase === 'armed' || s.phase === 'running' ? BASIN : null;
   if (m.kind !== 'flood') return null;
@@ -195,7 +204,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -244,4 +253,21 @@ export function slideStop(F, x, z, d, open = false) {
     if (isRock(F, nx, nz)) return [x, z];
     x = nx; z = nz;
   }
+}
+
+// --- sunken (docs/trials.md, `sunken`) -----------------------------------------------------------
+// The room's water stands at W[stage] (m.water: one level a stage, the last the rivers'); a stage
+// solved, it sinks to the next over SINK s (s.sink: { from, t }). Drained for good once resolved.
+export const SINK = 4;
+export function sunkenLevel(m, s) {
+  const W = m.water, at = Math.min(s.stage ?? 0, W.length - 1), to = W[at];
+  if (s.sink && s.sink.t < SINK) return s.sink.from + (to - s.sink.from) * s.sink.t / SINK;
+  return s.phase === 'resolved' || at >= W.length - 1 ? null : to;
+}
+// a stage solved (i: its puzzle; only the stage the room is at counts): true when it was
+export function sinkStage(m, s, i) {
+  if (i !== (s.stage ?? 0) || s.phase === 'resolved') return false;
+  s.sink = { from: sunkenLevel(m, s) ?? m.water[i], t: 0 };
+  s.stage = i + 1;
+  return true;
 }

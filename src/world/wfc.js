@@ -65,6 +65,9 @@ export class WFC {
     this.collapse([...region].sort());
     // a great lake (cubegen/setpieces.js) keeps the sockets it got, but no layers over the water
     if (L.lake) this.tiles.set(L.lake, { ...this.tiles.get(L.lake), K: 1 });
+    // a trial room entered from above (world/trials.js): the room before has its layers too, for the
+    // portal up there
+    for (const t of L.trials || []) if (t.K > 1) { const f = this.tiles.get(t.from); if (f && f.K < t.K) this.tiles.set(t.from, { ...f, K: t.K }); }
   }
 
   // learn: world.html#wfc #wfc-code (see learn/README.md)

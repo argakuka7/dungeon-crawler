@@ -72,8 +72,9 @@ export function createPlayerStats(dev = false) {
 // (game/townportal.js); quests: the world's quest log (core/quests.js); clock: the world's play time
 // (s, main.js); kills: the ordinary kills, for them to come back (core/respawn.js)
 // loot: the pickups on the floor per cube (game/loot.js); dropped: the drops (their sources) that came
+// trials: what a trial room keeps that its gate cannot (a sunken room's stages drained: key -> count)
 // learn: memory.html#notes (see learn/README.md)
-export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), dropped: new Set(), chests: new Set(), townPortal: null,
+export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), dropped: new Set(), chests: new Set(), townPortal: null, trials: new Map(),
   quests: createQuestLog(), clock: 0, kills: new Map() });
 // learn: stronger.html#xp-code (see learn/README.md)
 export function awardXP(p, amount) {

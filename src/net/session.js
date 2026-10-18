@@ -75,12 +75,13 @@ import { shareChest } from '../game/chests.js';
 import { validPickup } from '../core/loot.js';
 import { sourceEnemy, shareKill, packKills, unpackKills } from '../core/respawn.js';
 import { cleanText, cleanNews } from '../core/chronicle.js';
+import { checkTrials } from '../core/save.js';
 import { log } from '../game/log.js';
 import { speech } from '../game/console.js';
 import { detachWorld } from '../game/save.js';
 import { takeQuestLog, guestQuestAct, questRewarded, questLogPacked } from '../game/quests.js';
 import { TrialOwner, trialMessage, trialAct } from './trials.js';
-import { takeTrialWord, trialActFrom, shareTrialResolved, sealedIn } from '../game/trials.js';
+import { takeTrialWord, trialActFrom, shareTrialResolved, shareTrialStage, sealedIn } from '../game/trials.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -285,7 +286,7 @@ function apart() {
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
   relay.drop = relay.take = relay.forget = relay.chat = relay.news = null;
-  relay.trialAct = relay.trialDone = null;
+  relay.trialAct = relay.trialDone = relay.trialStage = null;
   relay.quests = relay.questAct = relay.questReward = null;
   settleClaims();   // what we reached for is ours: nobody else is left to have it
   setOthers([]);
@@ -324,7 +325,7 @@ function welcome(l, slot, name, id, again) {
   announced = state.cubes?.seed ?? null;
   const players = [{ slot: 0, name: myName }, ...[...peers.values()].filter(o => o !== p).map(o => ({ slot: o.slot, name: o.name }))];
   l.send({ t: 'welcome', v: PROTOCOL, slot, players, seed: announced,
-    defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces],
+    defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces], trials: [...state.run.trials],
     loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests], quests: questLogPacked(),
     clock: state.run.clock, kills: packKills(state.run.kills) });
   facesSent = state.openedFaces.size;
@@ -400,7 +401,7 @@ function welcomed(m) {
   const list = x => Array.isArray(x) ? x.filter(k => typeof k === 'string') : [];
   const loot = (Array.isArray(m.loot) ? m.loot : []).filter(c => Array.isArray(c) && typeof c[0] === 'string' && Array.isArray(c[1]))
     .map(([k, items]) => [k, items.filter(p => typeof p?.source === 'string' && validPickup(p))]);
-  const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces),
+  const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces), trials: checkTrials(m.trials),
     loot, dropped: list(m.dropped), chests: list(m.chests), quests: m.quests ?? null,
     clock: Number.isFinite(m.clock) && m.clock >= 0 ? m.clock : null, kills: unpackKills(m.kills) };
   if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
@@ -510,6 +511,7 @@ function together() {
   // a trial room: shown another's, what we do there goes to its owner; resolved, to everyone
   relay.trialAct = a => { if (foes instanceof Viewer) post({ t: 'trialAct', ...a }, foes.runner); };
   relay.trialDone = d => post({ t: 'trial', key: d.key, seed: state.cubes?.seed, phase: 'resolved', time: d.time, gate: d.gate });
+  relay.trialStage = d => post({ t: 'trial', key: d.key, seed: state.cubes?.seed, phase: 'idle', time: 0, stage: d.stage });
 }
 const hereSlots = () => [...peers.values()].filter(p => p.here).map(p => p.slot);
 
@@ -550,7 +552,8 @@ function shared(m, p) {
   // a trial room (net/trials.js): resolved, by anyone; its owner's word, to those shown it; an act on ours
   else if (m.t === 'trial') {
     const tm = trialMessage(m);
-    if (tm?.phase === 'resolved' && tm.gate && tm.seed === state.cubes?.seed) shareTrialResolved(tm);
+    if (tm?.stage != null && tm.seed === state.cubes?.seed) shareTrialStage(tm);
+    else if (tm?.phase === 'resolved' && tm.gate && tm.seed === state.cubes?.seed) shareTrialResolved(tm);
     else if (tm && foes instanceof Viewer && m.from === foes.runner) takeTrialWord(tm);
   } else if (m.t === 'trialAct') {
     const a = trialAct(m);
@@ -713,6 +716,7 @@ function takeRun(run) {
   if (run.clock !== null) state.run.clock = run.clock;
   for (const [id, k] of run.kills) state.run.kills.set(id, k);
   for (const k of run.gates) state.run.unlockedGates.add(k);
+  for (const [k, n] of run.trials) state.run.trials.set(k, Math.max(n, state.run.trials.get(k) ?? 0));
   // the floor loot is the host's (also after getting back in: what we dropped meanwhile went)
   takeLoot(run.loot);
   state.run.dropped = new Set(run.dropped);

@@ -88,7 +88,7 @@ test('a world is named after its seed; a second copy of a seed is "... II"', () 
 test('a world comes back as it was saved; what does not make sense is left out', () => {
   const w = createWorld(123, { id: 'w-1', now: 9 });
   Object.assign(w, { deepest: 3, faces: ['0,0,0/0'], visited: ['0,0,0', '1,0,0', 'interior:inn'] });
-  Object.assign(w.run, { defeated: ['e1'], gates: ['g'], chests: ['c'], dropped: ['e:e1'],
+  Object.assign(w.run, { defeated: ['e1'], gates: ['g'], chests: ['c'], dropped: ['e:e1'], trials: [['2,-3,1', 1]],
     townPortal: { key: '1,-1,0', depth: 1, pad: { x: 1, y: 2, z: 3 }, back: { x: 4, y: 5, z: 6 } },
     loot: [['1,0,0', [{ id: 'e:e1#0', source: 'e:e1', itemId: 'item_coin_copper', count: 3, x: 1, y: 0, z: 2, from: [1, 0.4, 2], toss: 1 }]]] });
   w.spots['h-1'] = { cube: '1,0,0', arrival: { x: 8.5, y: 0, z: 2.5 } };

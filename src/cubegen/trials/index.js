@@ -13,7 +13,8 @@ import { search, take } from '../route.js';
 import { reachFrom, reachTo, graph } from '../reach.js';
 import { shapeFlood, floodGoal, floodRoute } from './flood.js';
 import { shapeCollapse, collapseGoal, collapseRoute } from './collapse.js';
-import { shapeSlide, slideGoal, slideRoute } from './slide.js';
+import { shapeSlide, puzzleGoal, slideRoute } from './slide.js';
+import { shapeSunken, sunkenGoal } from './sunken.js';
 import { RIM } from './deck.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '../../core/trials.js';
@@ -21,7 +22,8 @@ import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
-  slide: { shape: shapeSlide, goal: slideGoal, costs: slideRoute, finish: finishSlide },
+  slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -192,10 +194,26 @@ function gateAt(deck, x, z, side, id) {
   return { id, type: 'gate', x: deck.x0 + x + dx + 0.5, z: deck.z0 + z + dz + 0.5, y: deck.level * LH, side, w: 1 };
 }
 
+// Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
+// map.trial.parts), checked against the built ground
+const FINISH = { slide: finishSlide };
+function finishPuzzles(ctx, t) {
+  const puzzles = [], parts = [];
+  for (const [i, pz] of t.puzzles.entries()) {
+    const rec = FINISH[pz.kind](ctx, pz, `p${i}`);
+    if (!rec) return null;
+    rec.index = i;
+    for (const part of rec.parts) { part.puzzle = i; parts.push(part); }
+    puzzles.push(rec);
+  }
+  for (const c of t.keep) for (const f of ctx.cols[c]) f.noSpawn = true;
+  return { puzzles, parts };
+}
+
 // The ice: flat, every field cell at the deck's level but the rocks (up at the rim's), nothing built
 // over it; the goal plate at its cell, the gate in the rim's gap beside it
-function finishSlide(ctx, t, out) {
-  const { deck, field: F } = t;
+function finishSlide(ctx, pz, id) {
+  const { deck, field: F } = pz;
   for (let z = 0; z < F.h; z++) for (let x = 0; x < F.w; x++) {
     const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
     if (ctx.pieces[c].length) return null;
@@ -203,9 +221,34 @@ function finishSlide(ctx, t, out) {
     if (!f || f.fluid || f.top !== deck.level || Math.max(...f.cs) - Math.min(...f.cs) > 0.2) return null;
     f.ice = true; f.noSpawn = true;
   }
-  for (const c of [...deck.walk, ...deck.rim]) for (const f of ctx.cols[c]) f.noSpawn = true;
-  const g = deck.cell(F.goal.x, F.goal.z), y = deck.level * LH;
-  return { deck: deckOf(deck), field: F, entryGap: t.entryGap, goalGap: t.goalGap,
-    parts: [{ id: 'goal', type: 'plate', x: g % N + 0.5, y, z: Math.floor(g / N) + 0.5 }, gateAt(deck, F.goal.x, F.goal.z, F.goal.side, 'gate')],
-    check: { solution: t.solution.way, slides: t.solution.slides, decoys: t.solution.decoys, stops: t.solution.stops } };
+  const g = pz.goalCell, y = deck.level * LH;
+  return { id, kind: 'slide', deck: deckOf(deck), field: F, entryGap: pz.entryGap, goalGap: pz.goalGap,
+    parts: [{ id: `${id}:goal`, type: 'plate', x: g % N + 0.5, y, z: Math.floor(g / N) + 0.5 }, gateAt(deck, F.goal.x, F.goal.z, F.goal.side, `${id}:gate`)],
+    check: { solution: pz.solution.way, slides: pz.solution.slides, decoys: pz.solution.decoys, stops: pz.solution.stops } };
+}
+
+// --- sunken ------------------------------------------------------------------------------------------
+
+// The stage puzzles as any puzzle room's, and the water's levels; checked as the room drains: at
+// every level W_i the next platform (the ground beyond its puzzle's entry gap) is dry and reached
+// from the entry, the one after it not yet; drained, the exit and the entry reach each other.
+function finishSunken(ctx, t, out) {
+  const own = finishPuzzles(ctx, t);
+  if (!own) return null;
+  const adj = graph(ctx, true), W = t.water, n = t.puzzles.length;
+  const dry = (f, w) => (f.landing ? f.top * LH : f.fluid ? -1 : Math.min(...f.cs)) >= w * LH - 0.01 && !f.fluid;
+  const reach = (from, w) => {
+    const seen = new Set([from.id]), stack = [from];
+    while (stack.length) for (const g of adj.get(stack.pop().id) || []) if (!seen.has(g.id) && dry(g, w)) { seen.add(g.id); stack.push(g); }
+    return seen;
+  };
+  const beyond = pz => { const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][pz.field.entry.side], c = pz.entryGap + dx + dz * N; return ctx.layerFloor(c, 0); };
+  for (let i = 0; i < n; i++) {
+    const seen = reach(t.entry, W[i]), here = beyond(t.puzzles[i]), later = t.puzzles[i + 1] && beyond(t.puzzles[i + 1]);
+    if (!here || !seen.has(here.id) || (later && seen.has(later.id))) return null;
+  }
+  const exit = ctx.portalFloors[ctx.portals.findIndex(p => p.dir === ctx.spec.trial.exit)];
+  if (!exit || !reach(t.entry, W[n]).has(exit.id) || !reach(exit, W[n]).has(t.entry.id)) return null;
+  for (const f of ctx.floors) if (!dry(f, W[0])) f.noSpawn = true;   // (nobody waits under the water)
+  return { ...own, water: W, levels: t.levels, stages: n };
 }

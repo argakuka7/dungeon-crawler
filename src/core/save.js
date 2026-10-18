@@ -115,7 +115,7 @@ export function checkHero(h) {
 export function createWorld(seed, { copy = 1, id = newId('w'), now = Date.now() } = {}) {
   seed >>>= 0;
   return { v: SAVE_VERSION, id, seed, copy, name: savedWorldName(seed, copy), created: now, updated: now, deepest: 0,
-    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog(), clock: 0, kills: [] },
+    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog(), clock: 0, kills: [], trials: [] },
     faces: [], visited: [], spots: {} };
 }
 
@@ -145,9 +145,12 @@ export function checkWorld(w) {
     created: time(w.created), updated: time(w.updated), deepest: Number.isInteger(w.deepest) && w.deepest > 0 ? w.deepest : 0,
     run: { defeated: strings(run.defeated), gates: strings(run.gates), chests: strings(run.chests), dropped: strings(run.dropped),
       loot: checkLoot(run.loot), townPortal: checkTownPortal(run.townPortal), quests: checkQuestLog(run.quests),
-      clock: time(run.clock), kills: packKills(unpackKills(run.kills)) },
+      clock: time(run.clock), kills: packKills(unpackKills(run.kills)), trials: checkTrials(run.trials) },
     faces: strings(w.faces), visited: strings(w.visited), spots };
 }
+// a sunken room's stages drained (core/progression.js createRun trials): [[key, count], ...]
+export const checkTrials = t => Array.isArray(t) ? t.filter(e => Array.isArray(e) && typeof e[0] === 'string' && Number.isInteger(e[1]) && e[1] > 0 && e[1] < 10) : [];
+
 // what the menu lists of a world, without reading all of it (the heroes: those that were there)
 export const worldEntry = w => ({ id: w.id, seed: w.seed, copy: w.copy, updated: w.updated, deepest: w.deepest, heroes: Object.keys(w.spots) });
 function checkEntry(e) {

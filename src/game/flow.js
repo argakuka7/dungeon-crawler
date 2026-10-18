@@ -368,6 +368,7 @@ function restoreRun({ run, faces, visited, deepest = 0 }) {
   for (const id of run.chests) r.chests.add(id);
   for (const s of run.dropped) r.dropped.add(s);
   r.clock = run.clock; r.kills = unpackKills(run.kills);
+  for (const [k, n] of run.trials || []) r.trials.set(k, n);
   r.townPortal = run.townPortal;
   r.quests = checkQuestLog(run.quests);
   r.quests.deepest = Math.max(r.quests.deepest, deepest);

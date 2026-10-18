@@ -52,11 +52,12 @@ export function solveSlide(F) {
 // the band of slides a depth's slide puzzle asks for
 export const slideBand = depth => depth >= 10 ? [6, 9] : [4, 6];
 
-// Make a slide field of w x h for a depth: rocks at random (12-20%), the entry on side `entrySide`
-// at a random place, the goal on another side; kept when its fewest slides are in the depth's
-// band, at least three stops lead nowhere useful and nothing traps you. null: none found in `tries`.
-export function makeSlide(R, w, h, depth, entrySide, goalSides, tries = 600) {
-  const [lo, hi] = slideBand(depth);
+// Make a slide field of w x h: rocks at random (12-20%), the entry on side `entrySide` at a random
+// place, the goal on another side; kept when its fewest slides are in `band` ([lo, hi]; a number:
+// the depth's band), at least `decoys` stops lead nowhere useful and nothing traps you. null: none
+// found in `tries`.
+export function makeSlide(R, w, h, band, entrySide, goalSides, tries = 600, decoys = 3) {
+  const [lo, hi] = Array.isArray(band) ? band : slideBand(band);
   const along = side => side < 2 ? h : w;
   const edgeCell = (side, t) => [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side];
   for (let n = 0; n < tries; n++) {
@@ -69,7 +70,7 @@ export function makeSlide(R, w, h, depth, entrySide, goalSides, tries = 600) {
     const F = { w, h, rock, entry: { x: ex, z: ez, side: entrySide }, goal: { x: gx, z: gz, side: goalSide } };
     if (`${slideStart(F)}` === `${ex},${ez}`) continue;   // (a rock right inside the gap: no way in)
     const s = solveSlide(F);
-    if (s.slides < lo || s.slides > hi || s.trapped || s.decoys < 3) continue;
+    if (s.slides < lo || s.slides > hi || s.trapped || s.decoys < decoys) continue;
     return { field: F, solution: s };
   }
   return null;

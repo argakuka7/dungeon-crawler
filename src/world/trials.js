@@ -18,9 +18,10 @@
 //            gate ('trial:<key>'), stages (sunken: its stage puzzles), K (layers) }
 import { mulberry32, hash32 } from '../core/util.js';
 import { MAX_DEPTH } from '../themes/depth.js';
-import { TRIALS, TRIAL_KINDS, trialGate, trialFits, trialWeight, parseForce, isEvent, isPuzzle } from '../core/trials.js';
-import { faceKey, hashKey } from './coords.js';
+import { TRIALS, TRIAL_KINDS, trialGate, trialFits, trialWeight, parseForce, isEvent, isPuzzle, smallStages } from '../core/trials.js';
+import { faceKey, hashKey, step, parse } from './coords.js';
 import { N } from '../core/constants.js';
+import { sunkenPath } from '../cubegen/trials/sunken.js';
 
 // Where the portal on side face d of trial room k stands along the face: a trial room's faces are
 // flat (LLLL, no river) and nothing else moves their portals, so it is the face's own first draw
@@ -28,12 +29,20 @@ import { N } from '../core/constants.js';
 export const portalPos = (seed, k, d) => 3 + Math.floor(mulberry32(hash32(seed ^ hashKey(faceKey(k, d)) ^ 0x51de))() * 10);
 // a kind's room needs room between its two portals: the collapse's aprons in front of them
 // (cubegen/trials/collapse.js) must stand well apart where the way turns
-function roomFits(kind, seed, k, entry, exit) {
+// (a sunken room: its stages round the room's quadrants the long way from the entry's to the exit's,
+// cubegen/trials/sunken.js sunkenPath)
+function roomFits(kind, seed, k, entry, exit, depth) {
+  const at = (d, j) => { const t = portalPos(seed, k, d); return [[N - 1 - j, t], [j, t], [t, N - 1 - j], [t, j]][d]; };
+  if (kind === 'sunken') {
+    const q = ([x, z]) => [x >= 8 ? 1 : 0, z >= 8 ? 1 : 0];
+    return exit != null && !!sunkenPath(q(at(entry, 1)), q(at(exit, 1)), sunkenCount(depth), smallStages());
+  }
   if (kind !== 'collapse' || exit == null || (entry ^ 1) === exit || entry === (exit ^ 1)) return true;
-  const at = d => { const t = portalPos(seed, k, d); return [[N - 4, t], [3, t], [t, N - 4], [t, 3]][d]; };
-  const [a, b] = [at(entry), at(exit)];
+  const [a, b] = [at(entry, 3), at(exit, 3)];
   return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) >= 7;
 }
+// how many stages a sunken room at depth d has (three from depth 10, once small puzzles fit it)
+export const sunkenCount = d => d >= 10 && smallStages() ? 3 : 2;
 
 // the chances of the slots (docs/trials.md "Planning"); 0 until the kinds are on (step by step)
 export const EVENT_CHANCE = 0.45;
@@ -59,7 +68,7 @@ function kindsFor(family, d, theme, force) {
 // sunken's stage puzzles: 2 (depths 2-9) or 3 (10-19), any built puzzle kind but runes and
 // timedgate, by the theme's weights, no kind twice
 export function sunkenStages(d, theme, R, force = null) {
-  const n = d >= 10 ? 3 : 2;
+  const n = sunkenCount(d);
   if (force?.stages?.length) return force.stages.slice(0, 3);
   const pool = TRIAL_KINDS.filter(k => isPuzzle(k) && TRIALS[k].built && k !== 'runes' && k !== 'timedgate');
   let list = pool.filter(k => trialFits(k, d, theme)).map(k => [k, trialWeight(k, theme)]);
@@ -73,8 +82,24 @@ export function sunkenStages(d, theme, R, force = null) {
   return out;
 }
 
-// how many layers a trial room has (the WFC pins it): sunken and miasma two, the rest one
-export const trialLayers = kind => kind === 'sunken' || kind === 'miasma' ? 2 : 1;
+// how many layers a trial room has (the WFC pins it, and the room before gets as many): sunken
+// three (you come in from up high, level 16), miasma two, the rest one
+export const trialLayers = kind => kind === 'sunken' ? 3 : kind === 'miasma' ? 2 : 1;
+
+// The layer of the portal on side face fk where it is a trial room's (world/faces.js), or null:
+// a room entered from above (sunken, miasma) on the highest layer both have, out on the ground
+export function trialPortalLayer(world, fk, maxL) {
+  const [k, ds] = fk.split('/'), d = +ds, other = step(k, d);
+  for (const [room, dir] of [[k, d], [other, d ^ 1]]) {
+    const depth = -parse(room)[1];
+    if (depth < 1 || depth >= MAX_DEPTH) continue;
+    const t = world.layout(depth).trialCells?.get(room);
+    if (!t || t.K < 2) continue;
+    if (dir === (t.fromDir ^ 1)) return maxL;
+    return 0;
+  }
+  return null;
+}
 
 // The plan of depth d, part one (before the branches): the event slot on the route.
 //   ctx: { seed, d, theme, force (?trial=), spine (the route's cells), K (cell -> key),
@@ -89,7 +114,7 @@ export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned
   const events = kindsFor('event', d, theme, force);
   if (!events.length || !(force ? isEvent(force.kind) : roll < EVENT_CHANCE)) return plan;
   const kind = weighted(events, kindRoll);
-  const rooms = routeRooms(plan, spine, K, blocked, pinned, guarded).filter(i => roomFits(kind, seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1])));
+  const rooms = routeRooms(plan, spine, K, blocked, pinned, guarded).filter(i => roomFits(kind, seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1]), d));
   if (!rooms.length) return plan;
   const i = rooms[Math.floor(roomRoll * rooms.length)];
   add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),

@@ -38,7 +38,7 @@ export async function runSlideChecks(role = 'branch') {
   await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
   takePortal(state.map.portals.find(p => p.dir === t.fromDir));
   await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
-  const m = state.map.trial, F = m.field, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const m = state.map.trial.puzzles[0], F = m.field, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   check(state.trial.phase === 'idle' && !sealedIn(), 'a puzzle never seals');
   const site = state.map.rewardSites[0];
   if (role === 'branch') {
@@ -71,6 +71,46 @@ export async function runSlideChecks(role = 'branch') {
   return ['solved', role];
 }
 
+// A sunken room (?trial=sunken): in from up high, every stage's slide solved in turn along its
+// solution, the water sinking a stage each time, the next platform dry; drained, the way on open.
+export async function runSunkenChecks() {
+  const { slideStop } = await import('../../src/core/trials.js');
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'sunken'));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=sunken');
+  const t = all[0];
+  await goTrial('sunken', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the sunken room');
+  const m = state.map.trial, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]], out = [];
+  check(Math.abs(player.y - 8) < 0.6, 'in from up high');
+  for (const [i, pz] of m.puzzles.entries()) {
+    check(state.trial.stage === i, `at stage ${i}`);
+    const level = trialFluid()?.y;
+    check(level != null && level < pz.deck.level * 0.5 && level > (m.puzzles[i + 1]?.deck.level ?? 0) * 0.5, `the water between platform ${i} and the next`);
+    const F = pz.field, g = pz.entryGap, now = () => [Math.floor(player.x) - pz.deck.x0, Math.floor(player.z) - pz.deck.z0];
+    Object.assign(player, { x: g % 16 + 0.5 + SD[F.entry.side][0], y: pz.deck.level * 0.5, z: Math.floor(g / 16) + 0.5 + SD[F.entry.side][1], vx: 0, vz: 0 });
+    let at = slideStop(F, F.entry.x, F.entry.z, F.entry.side ^ 1);
+    player.autoDir = SD[F.entry.side ^ 1];
+    await until(() => `${now()}` === `${at}` && Math.hypot(player.vx, player.vz) < 0.1, `onto the ice of stage ${i}`, 4000);
+    player.autoDir = null;
+    await delay(300);
+    for (const d of pz.check.solution) {
+      player.autoDir = SD[d]; await delay(120); player.autoDir = null;
+      at = slideStop(F, at[0], at[1], d);
+      await until(() => `${now()}` === `${at}` && Math.hypot(player.vx, player.vz) < 0.1, `a slide to ${at}`, 3000);
+      await delay(200);
+    }
+    await until(() => state.trial.stage === i + 1 || state.trial.phase === 'resolved', `stage ${i} solved`, 3000);
+    await delay(4500);   // the water sinks
+    out.push(`stage ${i}`);
+  }
+  check(state.trial.phase === 'resolved' && state.run.unlockedGates.has(t.gate) && !trialFluid(), 'drained, resolved');
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return [...out, 'drained'];
+}
+
 export async function runTrialChecks(kind = 'flood') {
   const results = [];
   const all = [];
@@ -97,7 +137,7 @@ export async function runTrialChecks(kind = 'flood') {
   await delay(300);
   check(seals().every(Boolean), 'every portal shows its seal');
   // nothing takes you out: the entry portal, the scrolls
-  const entry = state.map.portals.find(p => p.dir === t.fromDir ^ 1);
+  const entry = state.map.portals.find(p => p.dir === (t.fromDir ^ 1));
   Object.assign(player, { x: entry.x + 0.5, z: entry.z + 0.5, y: entry.y, vx: DIRS[entry.dir][0], vz: DIRS[entry.dir][1] });
   state.portalLock = 0; state.boundaryLock = -1;
   checkPortals(DIRS[entry.dir][0], DIRS[entry.dir][1], 0.1);
