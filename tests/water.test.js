@@ -47,14 +47,35 @@ test('jumping and airborne movement can cross the guarded edge', () => {
   assert.ok(player.x > 6);
 });
 
-test('dry drops and voids remain unguarded; every fluid is guarded', () => {
+test('dry drops remain unguarded; every fluid and every void is guarded', () => {
   for (const fluid of [WATER, LAVA, ACID]) {
     bank(1, 0, fluid);
     assert.equal(canMove(5.85, 5.5, 'x', 1), false);
   }
   const dry = bank(); dry.fluid = 0;
   assert.equal(canMove(5.85, 5.5, 'x', 1), true);
-  const water = bank(); state.map.cols[water.c] = [];
+  const hole = bank(); state.map.cols[hole.c] = [];
+  assert.equal(canMove(5.85, 5.5, 'x', 1), false);
+  // a floor overhead is nothing to stand on either
+  state.map.cols[hole.c] = [{ ...hole, fluid: 0, top: 8, bottom: 6, cs: [4, 4, 4, 4] }];
+  assert.equal(canMove(5.85, 5.5, 'x', 1), false);
+});
+
+test('walking and running stop before a hole through the cube in every direction', () => {
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const run of [false, true]) {
+    const hole = bank(dx, dz); state.map.cols[hole.c] = [];
+    for (let i = 0; i < 120; i++) movePlayer(1 / 60, dx, dz, run, false);
+    assert.equal(Math.floor(player.x), 5);
+    assert.equal(Math.floor(player.z), 5);
+    assert.equal(player.y, 0);
+    assert.equal(player.grounded, true);
+  }
+  // a jump still goes out over it, and a bridge across it is walkable
+  const hole = bank(); state.map.cols[hole.c] = [];
+  movePlayer(1 / 60, 1, 0, false, true);
+  assert.equal(canMove(5.85, 5.5, 'x', 1), true);
+  bank(); state.map.cols[hole.c] = [];
+  state.map.pieces[hole.c].push({ c: hole.c, kind: 'bridge', dx: 1, dz: 0, j: 0, run: { kind: 'landing', y0: 0 } });
   assert.equal(canMove(5.85, 5.5, 'x', 1), true);
 });
 

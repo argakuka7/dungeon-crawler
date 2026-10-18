@@ -61,12 +61,13 @@ export function canMove(nx, nz, axis, sign) {
     const si = cellAt(sx, sz);
     if (si < 0) return false;
     const [rx, rz] = k ? [nx, nz] : [player.x, player.z];
-    // Stop at a fluid-facing ledge (water, lava, acid) while walking, but never act
-    // as an invisible wall for jumps/falls. Query the landing surface so bridges and
-    // stacked dry floors above fluids remain walkable. Rim probes keep the body off the edge.
+    // Stop at a ledge over a fluid (water, lava, acid) or a hole through the cube (nothing
+    // to land on below) while walking, but never act as an invisible wall for jumps/falls.
+    // Query the landing surface so bridges and stacked dry floors above fluids or voids
+    // remain walkable. Rim probes keep the body off the edge.
     if (player.grounded && !player.swimming) {
       const gr = groundAt(sx, sz, y, step);
-      if (gr.s && !gr.s.kind && gr.s.fluid) return false;
+      if (!gr.s || !gr.s.kind && gr.s.fluid) return false;
     }
     if (hopBlocked(rx, rz, sx, sz, y, step)) return false;
     if (fenceBlocks(ci, si, y)) return false;

@@ -11,7 +11,8 @@ import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
 
 // returns false when the player got respawned. Entering any fluid is fatal; walking
-// is kept off fluid edges by canMove, so only jumps, falls and knockbacks get here.
+// is kept off fluid edges (and holes into the void) by canMove, so only jumps, falls and
+// knockbacks get here.
 function fluids(gr) {
   player.swimming = false; player.fluid = 0;
   const fluid = inFluid(gr, player.y);
