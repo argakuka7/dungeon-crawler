@@ -8,8 +8,8 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK } from '../src/core/trials.js';
-import { solveSlide, slideBand } from '../src/cubegen/trials/solve.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow } from '../src/core/trials.js';
+import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -596,6 +596,7 @@ function* sunkens(seeds) {
 
 test('every sunken room generates: in from up high, out on the ground, a platform a stage, each dry only once the one before drains', () => {
   let n = 0;
+  const stages = {};
   for (const { seed, d, m, t } of sunkens(SEEDS.slice(0, 5))) {
     n++;
     const tr = m.trial, W = tr.water, entry = m.portals.find(p => p.dir === tr.entry), exit = m.portals.find(p => p.dir === t.exit);
@@ -607,10 +608,11 @@ test('every sunken room generates: in from up high, out on the ground, a platfor
     tr.puzzles.forEach((pz, i) => {
       assert.ok(pz.deck.level > W[i], `${seed}/${d}: platform ${i} dry at its stage`);
       if (i) assert.ok(pz.deck.level < W[i - 1], `${seed}/${d}: platform ${i} under water before`);
-      assert.ok(solveSlide(pz.field).slides < Infinity);
+      if (pz.kind === 'slide') assert.ok(solveSlide(pz.field).slides < Infinity);
     });
+    stages[tr.stages] = (stages[tr.stages] ?? 0) + 1;
   }
-  assert.ok(n > 40, `${n} sunken rooms`);
+  assert.ok(n > 40 && stages[3] > 10, `${n} sunken rooms, by stages ${JSON.stringify(stages)}`);
 });
 
 test('the sunken water: a stage at a time, sinking over SINK s, gone once resolved', () => {
@@ -624,4 +626,75 @@ test('the sunken water: a stage at a time, sinking over SINK s, gone once resolv
   s.sink.t = SINK; assert.equal(trialFluidLevel(m, s), 7);
   assert.ok(sinkStage(m, s, 1)); s.sink.t = SINK; resolveTrial(s);
   assert.equal(trialFluidLevel(m, s), null);
+});
+
+// --- mirror, braziers, channels ---------------------------------------------------------------------
+
+test('the beam: straight on, turned by each mirror the way its bit says, stopped by a rock or a body', () => {
+  // emitter on the west of row 1 heading +x; a mirror at (2, 1); the receiver north of (2, 0)
+  const F = { w: 4, h: 3, mirrors: [[2, 1]], blockers: [[3, 2]], emitter: { x: 0, z: 1, dir: 0 }, receiver: { x: 2, z: 0, side: 3 } };
+  assert.ok(traceBeam(F, [0]).lit, "'/' turns +x into -z");
+  assert.ok(!traceBeam(F, [1]).lit, "'\\' turns it into +z");
+  assert.deepEqual(traceBeam(F, [1]).end, [2, 3]);   // (the first place off the field)
+  assert.ok(!traceBeam(F, [0], (x, z) => x === 1 && z === 1).lit, 'a body in the way');
+  assert.deepEqual(solveMirror(F, [1]), { flips: 1, solution: [0] });
+});
+
+test('lights out: pressing toggles a brazier and its links; the solver finds the fewest presses', () => {
+  for (const kind of ['grid', 'ring', 'star']) for (const size of [3, 5]) {
+    const { at, links } = brazierPattern(kind, size);
+    assert.ok(at.length >= 5 && at.length <= 9);
+    // every way to press up to three braziers: the solver finds no more than that
+    for (let a = 0; a < at.length; a++) for (let b = a; b < at.length; b++) {
+      const bits = at.map(() => 1);
+      pressBrazier(bits, links, a); if (b !== a) pressBrazier(bits, links, b);
+      const s = solveBraziers(links, bits);
+      assert.ok(s.presses <= (a === b ? 1 : 2), `${kind}: ${a},${b}: ${s.presses}`);
+      for (const i of s.which) pressBrazier(bits, links, i);
+      assert.ok(allLit(bits));
+    }
+  }
+});
+
+test('channels: tiles open where their shape and turn say; the water runs through what joins up', () => {
+  assert.deepEqual(tileOpen('I', 0).sort(), [0, 1]); assert.deepEqual(tileOpen('I', 1).sort(), [2, 3]);
+  assert.deepEqual(tileOpen('L', 1).sort(), [1, 2]); assert.deepEqual(tileOpen('T', 2).sort(), [0, 1, 3]);
+  assert.equal(turnsTo('L', 0, [1, 3]), 2);
+  // spout west of (0,0) -> (0,0) I -> (1,0) L down -> (1,1) I down... wheel south of (1,1)
+  const F = { w: 2, h: 2, tiles: [{ x: 0, z: 0, shape: 'I' }, { x: 1, z: 0, shape: 'L' }, { x: 0, z: 1, shape: 'T' }, { x: 1, z: 1, shape: 'I' }],
+    spout: { x: 0, z: 0, side: 1 }, wheel: { x: 1, z: 1, side: 2 } };
+  // (1,0): L open -x and +z: turn 1 (0,2 -> 2,1)
+  assert.ok(channelFlow(F, [0, 1, 0, 1]).wheel);
+  assert.ok(!channelFlow(F, [1, 1, 0, 1]).wheel);
+});
+
+function* puzzlesOf(kind, seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: kind });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === kind) yield { t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('every mirror, braziers and channels room generates, unsolved, with its fewest moves in its band', () => {
+  const n = {};
+  for (const kind of ['mirror', 'braziers', 'channels']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1, 2])) {
+    n[kind] = (n[kind] ?? 0) + 1;
+    const pz = m.trial.puzzles[0], bits = type => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
+    const deep = d >= 10;
+    if (kind === 'mirror') {
+      assert.ok(!traceBeam(pz.field, bits('mirror')).lit, `${seed}/${d}: lit at the start`);
+      const s = solveMirror(pz.field, bits('mirror'));
+      assert.ok(s.flips >= (deep ? 4 : 3) && pz.field.mirrors.length <= 10, `${seed}/${d}: ${s.flips} flips`);
+    } else if (kind === 'braziers') {
+      assert.ok(!allLit(bits('brazier')));
+      assert.ok(solveBraziers(pz.field.links, bits('brazier')).presses >= 3, `${seed}/${d}`);
+    } else {
+      const start = bits('tile');
+      assert.ok(!channelFlow(pz.field, start).wheel, `${seed}/${d}: the wheel turns at the start`);
+      assert.ok(channelFlow(pz.field, start.map((r, i) => r + pz.check.solution[i])).wheel, `${seed}/${d}: the solution does not drive it`);
+      assert.ok(pz.check.turns >= 4);
+    }
+    assert.ok(pz.parts.every(p => p.puzzle === 0));
+  }
+  assert.ok(n.mirror > 30 && n.braziers > 30 && n.channels > 30, JSON.stringify(n));
 });

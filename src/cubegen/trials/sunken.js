@@ -13,6 +13,7 @@ import { N } from '../../core/constants.js';
 import { idx } from '../../core/util.js';
 import { edgeCell } from '../portals.js';
 import { buildSlide } from './slide.js';
+import { buildGrid, gridSize, gridGoal } from './grid.js';
 import { BASIN, smallStages } from '../../core/trials.js';
 
 const RING = [[0, 0], [1, 0], [1, 1], [0, 1]];   // the quadrants round the room
@@ -76,11 +77,15 @@ export function shapeSunken(ctx) {
     const centre = r => [r[0] * 7 + 4.5, r[1] * 7 + 4.5], towards = centre(prev).map((v, k) => (v + centre(q)[k]) / 2);
     const sideTo = r => r[0] > q[0] ? 0 : r[0] < q[0] ? 1 : r[1] > q[1] ? 2 : 3;
     const next = path[i + 2] ?? null, entrySide = sideTo(prev), goalSide = next ? sideTo(next) : exit.dir;
-    const kind = stages[i];
-    if (kind !== 'slide') return;   // (only the slide is built so far)
-    const pz = buildSlide(ctx, { size: SIZE.slide, band: [3, 5], decoys: 2, towards, entrySide, goalSides: [goalSide],
-      within: { ...rect, level, walk: 0, free: [entrySide, goalSide].filter(s => !(shared && i === n - 1 && s === exit.dir)) } });
+    const kind = stages[i], within = { ...rect, level, walk: 0, free: [entrySide, goalSide].filter(s => !(shared && i === n - 1 && s === exit.dir)) };
+    const pz = kind === 'slide' ? buildSlide(ctx, { size: SIZE.slide, band: [3, 5], decoys: 2, towards, entrySide, goalSides: [goalSide], within })
+      : buildGrid(ctx, kind, { ...gridSize(kind, spec.depth, true), towards, within });
     if (!pz) return;
+    if (kind !== 'slide') pz.goalCell = gridGoal(pz);
+    // where you stand to begin it: beyond a slide's entry gap; beside a grid puzzle's field, on the side the way comes in
+    const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][kind === 'slide' ? pz.field.entry.side : entrySide];
+    pz.approach = kind === 'slide' ? pz.entryGap + dx + dz * N
+      : idx(Math.min(N - 2, Math.max(1, pz.deck.x0 + (pz.deck.w >> 1) + dx * ((pz.deck.w >> 1) + 1))), Math.min(N - 2, Math.max(1, pz.deck.z0 + (pz.deck.h >> 1) + dz * ((pz.deck.h >> 1) + 1))));
     pz.stage = i; pz.level = level; pz.rect = rect;
     built.push(pz);
   }

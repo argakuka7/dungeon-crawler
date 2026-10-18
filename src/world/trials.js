@@ -79,6 +79,14 @@ export function sunkenStages(d, theme, R, force = null) {
     out.push(k); list = list.filter(([x]) => x !== k);
   }
   while (out.length < n) out.push(out[out.length % Math.max(1, out.length)] ?? 'slide');
+  // the last stage shares the exit's quadrant where the room's shape wants it (cubegen/trials/sunken.js):
+  // a small one there, when any is built
+  const small = k => TRIALS[k].deck === 5;
+  if (smallStages() && !small(out.at(-1))) {
+    const j = out.findIndex(small);
+    if (j >= 0) [out[j], out[n - 1]] = [out[n - 1], out[j]];
+    else out[n - 1] = pool.filter(k => small(k) && !out.includes(k))[0] ?? pool.find(small);
+  }
   return out;
 }
 

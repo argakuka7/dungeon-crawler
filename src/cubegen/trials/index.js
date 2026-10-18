@@ -15,6 +15,7 @@ import { shapeFlood, floodGoal, floodRoute } from './flood.js';
 import { shapeCollapse, collapseGoal, collapseRoute } from './collapse.js';
 import { shapeSlide, puzzleGoal, slideRoute } from './slide.js';
 import { shapeSunken, sunkenGoal } from './sunken.js';
+import { shapeGrid, gridRecord } from './grid.js';
 import { RIM } from './deck.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '../../core/trials.js';
@@ -24,6 +25,9 @@ const KINDS = {
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
+  mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  braziers: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  channels: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -196,18 +200,34 @@ function gateAt(deck, x, z, side, id) {
 
 // Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
 // map.trial.parts), checked against the built ground
-const FINISH = { slide: finishSlide };
+const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid };
 function finishPuzzles(ctx, t) {
-  const puzzles = [], parts = [];
+  const puzzles = [], parts = [], start = {};
   for (const [i, pz] of t.puzzles.entries()) {
     const rec = FINISH[pz.kind](ctx, pz, `p${i}`);
     if (!rec) return null;
     rec.index = i;
     for (const part of rec.parts) { part.puzzle = i; parts.push(part); }
+    Object.assign(start, rec.start || {});
     puzzles.push(rec);
   }
   for (const c of t.keep) for (const f of ctx.cols[c]) f.noSpawn = true;
-  return { puzzles, parts };
+  return { puzzles, parts, start };
+}
+
+// A grid puzzle (cubegen/trials/grid.js): its field flat at the deck's level (but a mirror field's
+// rocks), nothing built over it; its parts and start
+function finishGrid(ctx, pz, id) {
+  const { deck } = pz, rocks = new Set((pz.made.field?.blockers || []).map(b => `${b}`));
+  for (let z = 0; z < deck.h; z++) for (let x = 0; x < deck.w; x++) {
+    const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
+    if (ctx.pieces[c].length) return null;
+    if (rocks.has(`${x},${z}`)) { if (!f || f.top !== deck.level + RIM) return null; continue; }
+    if (!f || f.fluid || f.top !== deck.level || Math.max(...f.cs) - Math.min(...f.cs) > 0.2) return null;
+    f.noSpawn = true;
+  }
+  const rec = gridRecord(pz, id);
+  return { id, kind: pz.kind, deck: deckOf(deck), ...rec };
 }
 
 // The ice: flat, every field cell at the deck's level but the rocks (up at the rim's), nothing built
@@ -242,7 +262,7 @@ function finishSunken(ctx, t, out) {
     while (stack.length) for (const g of adj.get(stack.pop().id) || []) if (!seen.has(g.id) && dry(g, w)) { seen.add(g.id); stack.push(g); }
     return seen;
   };
-  const beyond = pz => { const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][pz.field.entry.side], c = pz.entryGap + dx + dz * N; return ctx.layerFloor(c, 0); };
+  const beyond = pz => ctx.layerFloor(pz.approach, 0);
   for (let i = 0; i < n; i++) {
     const seen = reach(t.entry, W[i]), here = beyond(t.puzzles[i]), later = t.puzzles[i + 1] && beyond(t.puzzles[i + 1]);
     if (!here || !seen.has(here.id) || (later && seen.has(later.id))) return null;

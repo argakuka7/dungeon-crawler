@@ -18,6 +18,8 @@ export function buildSlide(ctx, { size, band, decoys = 3, towards, within = null
   const F = made.field;
   F.rock.forEach((r, i) => { if (r) ctx.lvl0[deck.cell(i % size, (i / size) | 0)] = deck.level + RIM; });
   const entryGap = openGap(ctx, deck, F.entry.x, F.entry.z, F.entry.side), goalGap = openGap(ctx, deck, F.goal.x, F.goal.z, F.goal.side);
+  // nothing built across the ground in front of the gaps either (a stair's rail would shut them)
+  for (const [gap, side] of [[entryGap, F.entry.side], [goalGap, F.goal.side]]) ctx.noBuild.add(gap + [1, -1, 0, 0][side] + [0, 0, N, -N][side]);
   return { kind: 'slide', deck, field: F, solution: made.solution, entryGap, goalGap, goalCell: deck.cell(F.goal.x, F.goal.z) };
 }
 

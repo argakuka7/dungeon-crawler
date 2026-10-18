@@ -92,6 +92,91 @@ function cage(a) {
   return { obj: g, bars, open: 0, want: 0 };
 }
 
+// --- the grid puzzles' parts (mirror, braziers, channels) ---------------------------------------
+const BEAM_Y = 0.75;   // how high over the field the beam runs
+// a mirror on a turntable: a pane at 45 degrees, turned the other way by its bit
+function mirrorPart(p) {
+  const g = new THREE.Group(), stand = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.18, 10), STONE());
+  stand.position.y = 0.09;
+  const turn = new THREE.Group(), pane = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0xd8e6f0, roughness: 0.08, metalness: 0.9 }));
+  pane.position.y = BEAM_Y; pane.castShadow = true;
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.08, 0.08), IRON()); frame.position.y = BEAM_Y - 0.34;
+  turn.add(pane, frame);
+  g.add(stand, turn);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, turn, angle: 0 };
+}
+// the emitter (a crystal that shines its beam) and the receiver (a crystal that lights when hit)
+function crystal(p, color) {
+  const g = new THREE.Group(), base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.5, 6), STONE());
+  base.position.y = 0.25;
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.8 }));
+  gem.position.y = BEAM_Y;
+  const light = new THREE.PointLight(color, 1, 3, 2); light.position.y = BEAM_Y;
+  g.add(base, gem, light);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, gem, light };
+}
+// a brazier: a bowl on a stand, its flame when lit
+function brazierPart(p) {
+  const g = new THREE.Group(), iron = IRON();
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.6, 6), iron); leg.position.y = 0.3;
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.16, 0.2, 10, 1, true), iron); bowl.position.y = 0.66; bowl.material.side = THREE.DoubleSide;
+  const coals = new THREE.Mesh(new THREE.CircleGeometry(0.27, 10), new THREE.MeshStandardMaterial({ color: 0x2a1a14, emissive: 0x401000 }));
+  coals.rotation.x = -Math.PI / 2; coals.position.y = 0.7;
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 8), new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85 }));
+  flame.position.y = 0.98;
+  const light = new THREE.PointLight(0xff9040, 2.2, 4, 2); light.position.y = 1.1;
+  g.add(leg, bowl, coals, flame, light);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, flame, light, lit: null };
+}
+// a channel tile: a stone slab with its grooves (unturned: I along x, L to +x and +z, T to +x, -x
+// and +z), the water in them when wet; turned a quarter clockwise per bit
+function tilePart(p) {
+  const g = new THREE.Group(), turn = new THREE.Group(), slab = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.1, 0.96), STONE());
+  slab.position.y = 0.05; slab.receiveShadow = true;
+  const water = new THREE.MeshStandardMaterial({ color: 0x2e86de, emissive: 0x0a2a4a, transparent: true, opacity: 0.85 });
+  const groove = new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 1 });
+  const arms = { I: [0, 1], L: [0, 2], T: [0, 1, 2] }[p.shape], wet = [];
+  for (const d of [...arms, 'c']) {
+    const [w, l, x, z] = d === 'c' ? [0.26, 0.26, 0, 0] : d < 2 ? [0.5, 0.26, d ? -0.24 : 0.24, 0] : [0.26, 0.5, 0, 0.24];
+    const gr = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, l), groove); gr.position.set(x, 0.105, z); turn.add(gr);
+    const wa = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.02, l * 0.8), water); wa.position.set(x, 0.12, z); wa.visible = false; turn.add(wa); wet.push(wa);
+  }
+  g.add(slab, turn);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, turn, wet, angle: 0 };
+}
+// the spout (a pipe pouring onto the field) and the wheel (it turns while the water drives it)
+function spoutPart(p, lava) {
+  const g = new THREE.Group(), pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.7, 8), IRON());
+  pipe.rotation.z = Math.PI / 2; pipe.position.y = 0.35;
+  const stream = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.14), new THREE.MeshStandardMaterial({ color: lava ? 0xff6a00 : 0x3f8fe0, emissive: lava ? 0xff3a00 : 0x0a2a4a }));
+  stream.position.set(0.35, 0.18, 0);
+  g.add(pipe, stream);
+  g.position.set(p.x, p.y, p.z); g.rotation.y = [Math.PI, 0, Math.PI / 2, -Math.PI / 2][p.side];
+  return { obj: g };
+}
+function wheelPart(p) {
+  const g = new THREE.Group(), wheel = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.8 });
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 6, 16), wood); wheel.add(rim);
+  for (let i = 0; i < 6; i++) { const paddle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 0.2), wood); paddle.position.set(Math.cos(i * Math.PI / 3) * 0.42, Math.sin(i * Math.PI / 3) * 0.42, 0); paddle.rotation.z = i * Math.PI / 3; wheel.add(paddle); }
+  wheel.position.y = 0.5;
+  g.add(wheel);
+  g.position.set(p.x, p.y, p.z); g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
+  return { obj: g, wheel, spin: 0 };
+}
+// the carved lines between linked braziers
+function linkLines(pz) {
+  const pts = [], at = new Map(pz.parts.filter(p => p.type === 'brazier').map(p => [p.i, p]));
+  pz.field.links.forEach((list, i) => { for (const j of list) if (j > i) { const a = at.get(i), b = at.get(j); pts.push(a.x, a.y + 0.03, a.z, b.x, b.y + 0.03, b.z); } });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x3a2a1a, transparent: true, opacity: 0.8 }));
+}
+
 // tide lines: marks on the glass all round, every few levels up to where the water will stop
 function tideLines(tl) {
   const pts = [], e = 0.03;
@@ -145,7 +230,7 @@ export function buildTrialView(m, group) {
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
-    plates: new Map(), gates: new Map(), levers: new Map(), cage: null };
+    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), driven: new Set() };
   if (t.crust) {
     const theme = themeOf(m);
     view.crust = new Map(t.crust.map(q => {
@@ -160,6 +245,13 @@ export function buildTrialView(m, group) {
     if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
+    const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
+      : p.type === 'brazier' ? brazierPart(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p) : null;
+    if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
+  }
+  for (const pz of t.puzzles || []) {
+    if (pz.kind === 'braziers') group.add(linkLines(pz));
+    if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '' }); }
   }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
@@ -227,6 +319,43 @@ function dust(mesh, n) {
     { v: [0, 0.4, 0], spread: 0.6, life: 1.1, size: 0.22, grow: 1.5, color: '#b8a888', alpha: 0.55, gravity: -0.2, drag: 1 });
 }
 
+// The grid puzzles as their bits say (game/trials.js): mirrors turned, braziers lit, tiles turned and
+// wet, the beam along its way (shown: puzzle index -> { beam: { cells, lit } } | { wet, wheel })
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0.85, depthWrite: false });
+export function setGridParts(world, m, s, shown) {
+  const v = world?.trialView;
+  if (!v || !s) return;
+  for (const [id, g] of v.grid) {
+    const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
+    if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
+    else if (p.type === 'brazier' && g.lit !== !!bit) { g.lit = !!bit; g.flame.visible = g.lit; g.light.visible = g.lit; }
+    else if (p.type === 'tile') {
+      g.angle += (-bit * Math.PI / 2 - g.angle) * 0.3; g.turn.rotation.y = g.angle;
+      const wet = !!info?.wet?.has(p.i);
+      for (const w of g.wet) w.visible = wet;
+    } else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
+    else if (p.type === 'wheel') g.driven = !!info?.wheel;
+  }
+  for (const [i, b] of v.beams) {
+    const beam = shown.get(i)?.beam, pz = m.puzzles[i];
+    if (!beam || !pz) continue;
+    const key = beam.cells.map(c => c.join(',')).join(' ') + beam.lit;
+    if (key === b.key) continue;
+    b.key = key;
+    for (const c of [...b.group.children]) { c.geometry.dispose(); b.group.remove(c); }
+    const D = pz.deck, y = D.level * 0.5 + BEAM_Y, em = pz.parts.find(p => p.type === 'emitter');
+    const pts = [[em.x, em.z], ...beam.cells.map(([x, z]) => [D.x0 + x + 0.5, D.z0 + z + 0.5])];
+    if (!beam.stopped) { const [ex, ez] = beam.end; pts.push([D.x0 + ex + 0.5, D.z0 + ez + 0.5]); }
+    for (let k = 1; k < pts.length; k++) {
+      const [ax, az] = pts[k - 1], [bx, bz] = pts[k], len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.01) continue;
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 6), beamMat);
+      seg.position.set((ax + bx) / 2, y, (az + bz) / 2); seg.rotation.z = Math.PI / 2; seg.rotation.y = -Math.atan2(bz - az, bx - ax);
+      b.group.add(seg);
+    }
+  }
+}
+
 // the seals across open faces (open: which faces are open, by dir): shown on the sealed ones
 export function setTrialBarriers(world, dirs, open) {
   const v = world?.trialView;
@@ -259,6 +388,11 @@ export function tickTrialView(world, time) {
   if (!v) return;
   for (const [, g] of v.gates) { g.open += (g.want - g.open) * 0.06; g.bars.position.y = g.open * 2.1; }
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
+  for (const [, g] of v.grid) {
+    if (g.part.type === 'wheel' && g.driven) g.wheel.rotation.z -= 0.04;
+    if (g.part.type === 'brazier' && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + g.part.i) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + g.part.i) * 0.4; }
+    if (g.part.type === 'emitter') g.gem.rotation.y = time;
+  }
   if (v.cage) { v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98; }
   for (const [, pl] of v.plates) pl.rune.material.opacity = 0.45 + Math.sin(time * 2.6) * 0.2;
   for (const [, b] of v.parts) {

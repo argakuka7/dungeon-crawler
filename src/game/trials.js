@@ -8,10 +8,11 @@ import { step } from '../world/coords.js';
 import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
-  nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage } from '../core/trials.js';
+  nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage,
+  traceBeam, allLit, channelFlow, pressBrazier } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
-import { setTrialWater, setTrialParts, setTrialBarriers, setCrust } from '../render/trials.js';
+import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts } from '../render/trials.js';
 import { setGoneFloors, setPartBlockers } from '../physics/collide.js';
 import { openedSides } from '../core/boundaries.js';
 import { setPortalSeals } from '../render/world.js';
@@ -21,6 +22,7 @@ import { log } from './log.js';
 import { allEnemies, mirroring } from './enemies.js';
 import { relay, online } from '../net/online.js';
 import { followTrial } from '../net/trials.js';
+import { solveMirror, solveBraziers } from '../cubegen/trials/solve.js';
 import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld } from './flow.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
@@ -29,6 +31,9 @@ const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // what the HUD says while a puzzle waits to be solved
 const PUZZLE_HINT = {
   slide: 'Slide across the ice onto the plate by the closed gate',
+  mirror: 'Turn the mirrors till the beam lights the receiver',
+  braziers: 'Light every brazier: each one lights or puts out those it is linked to',
+  channels: 'Turn the channels till the water drives the wheel',
 };
 // what the banner says as an event arms
 const HOW = {
@@ -207,15 +212,18 @@ function drown(m, s) {
 export function partInReach() {
   const m = mapTrial(), s = state.trial;
   if (!m?.parts || !s || s.phase === 'resolved') return null;
+  // (a channel tile: the one in front of you, the field being all tiles; else the nearest part)
+  const fx = player.x + Math.sin(player.yaw) * 0.8, fz = player.z + Math.cos(player.yaw) * 0.8;
   let best = null, bestD = PART_REACH;
   for (const p of m.parts) {
-    if (!PART_LABELS[p.type]) continue;   // (plates, gates: nothing to use)
-    const d = Math.hypot(p.x - player.x, p.z - player.z);
-    if (d < bestD && Math.abs(p.y - player.y) < 1.2) { best = p; bestD = d; }
+    if (!PART_LABELS[p.type] || (p.puzzle != null && puzzleSolved(s, p.puzzle))) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
+    const reach = Math.hypot(p.x - player.x, p.z - player.z), d = p.type === 'tile' ? Math.hypot(p.x - fx, p.z - fz) + 0.01 : reach;
+    if (reach < PART_REACH + 0.4 && d < bestD && Math.abs(p.y - player.y) < 1.2) { best = p; bestD = d; }
   }
   return best && { ...best, label: partLabel(best) };
 }
-const partLabel = p => PART_LABELS[p.type] ?? 'Use it';
+const partLabel = p => p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
+  : PART_LABELS[p.type] ?? 'Use it';
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's
 // trial, the press goes to its owner.
@@ -224,8 +232,15 @@ export function usePart(p, fromOther = false) {
   if (!s || !m) return false;
   if (!fromOther && mirroring()) { sfx('clink'); relay.trialAct?.({ key: s.key, act: 'part', id: p.id }); return true; }
   if (p.type === 'button' && m.kind === 'flood') { if (!fromOther) sfx('clink'); resolve(); return true; }
-  if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' ? 'door' : 'clink');
-  useBit(s, p, m.start);
+  if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' || p.type === 'tile' ? 'door' : p.type === 'brazier' ? 'fireball' : 'clink');
+  const pz = m.puzzles?.[p.puzzle ?? 0];
+  if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
+  else if (p.type === 'tile') s.bits[p.id] = ((s.bits[p.id] ?? 0) + 1) & 3;
+  else if (p.type === 'brazier') {   // it and every one linked to it
+    const lit = bitsOf(pz, s, 'brazier');
+    pressBrazier(lit, pz.field.links, p.i);
+    for (const q of pz.parts) if (q.type === 'brazier') s.bits[q.id] = lit[q.i];
+  } else useBit(s, p, m.start);
   if (p.type === 'reset') { ice = null; setStatus('Back to the start'); }
   showTrial();
   return true;
@@ -293,15 +308,34 @@ function hud() {
 
 // --- parts and their rules ------------------------------------------------------------------------
 
-// Every frame: the plates (held by a player standing on them: ours, a friend's here), then the
-// puzzle's rule on its bits; met, it is solved. (rule(m, s, plates): true when solved)
-const RULES = {};
+// Every frame: the plates (held by a player standing on them: ours, a friend's here), then each
+// puzzle's rule on its bits; met, it is solved. What the rules see (the beam's way, the wet
+// channels) is kept for the drawing (render/trials.js setGridParts). (rule(pz, s, bodies): solved?)
+const bitsOf = (pz, s, type) => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i).map(p => s.bits[p.id] ?? 0);
+const shown = new Map();   // puzzle index -> { beam: { cells, lit } } | { wet: Set } | {}
+const RULES = {
+  mirror(pz, s, bodies) {
+    const D = pz.deck, y = D.level * LH;
+    const blocked = (x, z) => bodies.some(b => Math.floor(b.x) === D.x0 + x && Math.floor(b.z) === D.z0 + z && Math.abs(b.y - y) < 1);
+    const beam = traceBeam(pz.field, bitsOf(pz, s, 'mirror'), blocked);
+    shown.set(pz.index, { beam });
+    return beam.lit;
+  },
+  braziers: (pz, s) => allLit(bitsOf(pz, s, 'brazier')),
+  channels(pz, s) {
+    const flow = channelFlow(pz.field, bitsOf(pz, s, 'tile'));
+    shown.set(pz.index, { wet: flow.wet, wheel: flow.wheel });
+    return flow.wheel;
+  },
+};
 function stepParts(m, s) {
-  if (!m.parts?.length || s.phase === 'resolved' || !isPuzzle(m.kind)) return;
+  if (!m.puzzles) return;
   const bodies = [player, ...online.buddies.filter(b => b.here && b.hp > 0)];
-  const plates = {};
-  for (const p of m.parts) if (p.type === 'plate') plates[p.id] = plateHeld(p, bodies) ? 1 : 0;
-  if (RULES[m.kind]?.(m, s, plates)) solvePuzzle();
+  for (const pz of m.puzzles) {
+    const met = RULES[pz.kind]?.(pz, s, bodies);
+    if (met && !puzzleSolved(s, pz.index) && s.phase !== 'resolved') solvePuzzle(pz.index);
+  }
+  setGridParts(state.world, m, s, shown);
 }
 export function devTrial(what) {
   const s = state.trial, m = mapTrial();
@@ -344,6 +378,13 @@ function solveLens() {
         cur = next;
       });
       said.push(`${pz.check.slides} slides (${pz.check.decoys} stops lead nowhere)`);
+    }
+    // the grid puzzles: from where they are now, which part to use how often
+    for (const pz of m.puzzles) {
+      const moves = puzzleMoves(pz, state.trial);
+      if (!moves) continue;
+      for (const [p, n] of moves) teachLabel({ x: p.x, y: p.y + 1.5, z: p.z }, n > 1 ? `×${n}` : '✓', { id: `trial-solve-${p.id}`, size: 0.22, ttl: 60, color: TRIALS[pz.kind].color });
+      said.push(`${pz.kind}: ${moves.reduce((a, [, n]) => a + n, 0)} to go`);
     }
     return `${said.join('; ')}: shown for a minute`;
   }
@@ -428,6 +469,24 @@ export function vaultLocked(site) {
   return !!m && m.role === 'branch' && (state.map.rewardSites || []).includes(site) && !state.run.unlockedGates.has(m.gate);
 }
 
+// What solves grid puzzle pz from its state now: [[part, how many uses], ...] (null: not a grid one)
+export function puzzleMoves(pz, s) {
+  const of = type => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i);
+  if (pz.kind === 'mirror') {
+    const ms = of('mirror'), bits = ms.map(p => s.bits[p.id] ?? 0), sol = solveMirror(pz.field, bits).solution;
+    return sol ? ms.filter((p, i) => sol[i] !== bits[i]).map(p => [p, 1]) : [];
+  }
+  if (pz.kind === 'braziers') {
+    const bs = of('brazier'), sol = solveBraziers(pz.field.links, bs.map(p => s.bits[p.id] ?? 0));
+    return (sol.which || []).map(i => [bs[i], 1]);
+  }
+  if (pz.kind === 'channels') {
+    const ts = of('tile'), start = ts.map(p => pz.start?.[p.id] ?? 0);
+    return ts.map((p, i) => [p, ((start[i] + pz.check.solution[i] - (s.bits[p.id] ?? 0)) % 4 + 4) % 4]).filter(([p, n], i) => pz.check.solution[i] || n);
+  }
+  return null;
+}
+
 // --- the ice slide --------------------------------------------------------------------------------
 // On the field's ice you slide the way you set off until a rock or the rim stops you (core/trials.js
 // slideStop); no steering meanwhile. Stopping on the goal plate solves it; sliding back out through
@@ -439,7 +498,7 @@ let ice = null;   // a slide under way: { pz, from: [x, z], to: [x, z], end ('st
 export function onIce(m = mapTrial()) {
   if (!m?.puzzles || !player.grounded) return null;
   for (const pz of m.puzzles) {
-    if (!pz.field || Math.abs(player.y - pz.deck.level * LH) > 0.6) continue;
+    if (pz.kind !== 'slide' || Math.abs(player.y - pz.deck.level * LH) > 0.6) continue;
     const fx = Math.floor(player.x) - pz.deck.x0, fz = Math.floor(player.z) - pz.deck.z0;
     if (fieldIn(pz.field, fx, fz) && !isRock(pz.field, fx, fz)) return { pz, at: [fx, fz] };
   }

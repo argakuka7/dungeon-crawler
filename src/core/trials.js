@@ -25,11 +25,13 @@ export const TRIALS = {
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50' },
   slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
     population: 0.5 },
-  mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060' },
+  mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
+    population: 0.5 },
   channels: { name: 'Rotating channels', family: 'puzzle', sealed: false, timed: false, depths: [1, 19],
-    themes: ['grotto', 'cenote', 'lagoon', 'swamp', 'mines', 'forge', 'volcanic', 'meadow', 'karst', 'clouds', 'peaks', 'highlands', 'canyon', 'roots', 'frozen', 'hive', 'abyss'], weight: 1, color: '#50b0ff' },
-  braziers: { name: 'Lights out', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040',
-    lean: { ossuary: 2.5, ruins: 2.5 } },
+    themes: ['grotto', 'cenote', 'lagoon', 'swamp', 'mines', 'forge', 'volcanic', 'meadow', 'karst', 'clouds', 'peaks', 'highlands', 'canyon', 'roots', 'frozen', 'hive', 'abyss'], weight: 1, color: '#50b0ff', built: true,
+    population: 0.5 },
+  braziers: { name: 'Lights out', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040', built: true,
+    lean: { ossuary: 2.5, ruins: 2.5 }, population: 0.5 },
   crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060' },
   stones: { name: 'Sinking stones', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['lagoon', 'grotto', 'cenote', 'swamp', 'volcanic', 'abyss'], weight: 1.5, color: '#60e0b0' },
   sluices: { name: 'Sluices', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['grotto', 'cenote', 'lagoon', 'hive', 'mines'], weight: 1.5, color: '#40c8e0' },
@@ -204,7 +206,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -227,7 +229,8 @@ export function crustState(m, s, q) {
 //   gate     a portcullis across a gap (a box in the way while shut)
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
-export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again' };
+export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
+  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------
@@ -270,4 +273,61 @@ export function sinkStage(m, s, i) {
   s.sink = { from: sunkenLevel(m, s) ?? m.water[i], t: 0 };
   s.stage = i + 1;
   return true;
+}
+
+// --- mirror (docs/trials.md, `mirror`) -----------------------------------------------------------
+// A field of w x h cells; an emitter beside it shoots a beam into cell `from` heading `dir`; mirrors
+// stand on some cells ('/' or '\', bit 0 or 1 of their state), blockers (rocks) on others. The beam
+// runs on until it leaves the field: where it leaves says whether it reached the receiver.
+//   field: { w, h, mirrors: [[x, z], ...], blockers: [[x, z], ...], emitter: { x, z, dir }, receiver: { x, z, side } }
+// (a mirror's bit: 0 '/' (turns +x into -z), 1 '\' (turns +x into +z); sides and directions as DIRS)
+const SLASH = [3, 2, 1, 0], BACK = [2, 3, 0, 1];   // the new heading after a '/' or a '\' mirror
+export function traceBeam(F, bits, blocked = () => false) {
+  let [x, z] = [F.emitter.x, F.emitter.z], d = F.emitter.dir;
+  const cells = [], seen = new Set();
+  const mirrorAt = new Map(F.mirrors.map(([mx, mz], i) => [`${mx},${mz}`, i])), rock = new Set(F.blockers.map(b => `${b[0]},${b[1]}`));
+  while (x >= 0 && z >= 0 && x < F.w && z < F.h) {
+    const k = `${x},${z}`;
+    if (seen.has(k + d) || rock.has(k) || blocked(x, z)) return { cells: [...cells, [x, z]], lit: false, end: [x, z], stopped: true };
+    seen.add(k + d); cells.push([x, z]);
+    const m = mirrorAt.get(k);
+    if (m !== undefined) d = bits[m] ? BACK[d] : SLASH[d];
+    x += SD[d][0]; z += SD[d][1];
+  }
+  // it leaves the field through side `d` beside (x - dx, z - dz)
+  const [ex, ez] = [x - SD[d][0], z - SD[d][1]];
+  return { cells, lit: d === F.receiver.side && ex === F.receiver.x && ez === F.receiver.z, end: [x, z], stopped: false };
+}
+
+// --- braziers: lights out (docs/trials.md, `braziers`) --------------------------------------------
+// links[i]: the braziers lit or put out with brazier i (and i itself). bits[i]: lit.
+export const pressBrazier = (bits, links, i) => { for (const j of [i, ...links[i]]) bits[j] = bits[j] ? 0 : 1; return bits; };
+export const allLit = bits => bits.every(Boolean);
+
+// --- channels (docs/trials.md, `channels`) --------------------------------------------------------
+// A grid of channel tiles: shape 'I' (straight), 'L' (bend), 'T' (tee), each turned r quarters. A
+// tile's openings (DIRS) unturned: I +x,-x; L +x,+z; T +x,-x,+z. Water comes in at the spout (beside
+// cell `spout` on side spout.side) and runs through every tile it can (both ends open); it drives the
+// wheel when it reaches the cell beside it, open towards it.
+//   field: { w, h, tiles: [{ x, z, shape }], spout: { x, z, side }, wheel: { x, z, side } }, turns: [r, ...]
+const OPEN = { I: [0, 1], L: [0, 2], T: [0, 1, 2] };
+const CW = [2, 3, 1, 0];   // a quarter turn clockwise (seen from above): +x -> +z -> -x -> -z
+export const tileOpen = (shape, r) => OPEN[shape].map(d => { for (let i = 0; i < (r & 3); i++) d = CW[d]; return d; });
+export function channelFlow(F, turns) {
+  const at = new Map(F.tiles.map((t, i) => [`${t.x},${t.z}`, i])), wet = new Set(), queue = [];
+  const enter = (x, z, from) => {   // water arrives at (x, z) through its side `from`
+    const i = at.get(`${x},${z}`);
+    if (i === undefined || wet.has(i) || !tileOpen(F.tiles[i].shape, turns[i]).includes(from)) return;
+    wet.add(i); queue.push(i);
+  };
+  enter(F.spout.x, F.spout.z, F.spout.side);
+  let wheel = false;
+  for (let q = 0; q < queue.length; q++) {
+    const t = F.tiles[queue[q]];
+    for (const d of tileOpen(t.shape, turns[queue[q]])) {
+      if (t.x === F.wheel.x && t.z === F.wheel.z && d === F.wheel.side) wheel = true;
+      enter(t.x + SD[d][0], t.z + SD[d][1], d ^ 1);
+    }
+  }
+  return { wet, wheel };
 }

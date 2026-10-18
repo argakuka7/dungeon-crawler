@@ -21,7 +21,8 @@ export const edgeOf = (d, side, t) => [[d.w - 1, t], [0, t], [t, d.h - 1], [t, 0
 //           walkway of its own, a strip of the platform left free on those sides
 //   default: anywhere in the room as far from the portals' pads as it fits, the walkway two wide
 // null: none fits.
-export function placeDeck(ctx, w, h, towards, within = null) {
+// rim: false: no rim, the ring round the field is walkway at the deck's level (a puzzle you walk onto)
+export function placeDeck(ctx, w, h, towards, within = null, rim = true) {
   const { lvl0, void0, R } = ctx, margin = within ? within.walk ?? 0 : 2;
   const pads = ctx.spec.portals.filter(p => p.dir < 4).map(p => [[N - 2, p.pos], [1, p.pos], [p.pos, N - 2], [p.pos, 1]][p.dir]);
   const [lx, lz, hx, hz] = within ? [within.x0, within.z0, within.x1, within.z1] : [2, 2, 13, 13];
@@ -31,7 +32,7 @@ export function placeDeck(ctx, w, h, towards, within = null) {
     // (within: the sides that must keep a strip of the platform free beside the rim)
     if (within?.free?.some(side => [rx + w + 1 >= hx, rx <= lx, rz + h + 1 >= hz, rz <= lz][side])) continue;
     const near = pads.length ? Math.min(...pads.map(([px, pz]) => Math.max(Math.abs(px - cx) - (w + 2) / 2, Math.abs(pz - cz) - (h + 2) / 2))) : 9;
-    if (near < (within ? 0.5 : 2)) continue;   // (on a platform it only keeps off the pads)
+    if (near < (within ? 0 : 2)) continue;   // (on a platform it only keeps off the pads)
     // in a platform: away from where the way comes in (`towards`), leaving room there
     const score = within ? Math.hypot(cx - towards[0], cz - towards[1]) + R() : near + R() * 2;
     options.push({ rx, rz, score });
@@ -39,24 +40,24 @@ export function placeDeck(ctx, w, h, towards, within = null) {
   if (!options.length) return null;
   options.sort((a, b) => b.score - a.score);
   const { rx, rz } = options[0], x0 = rx + 1, z0 = rz + 1;
-  const field = [], rim = [], walk = [];
+  const field = [], ring = [], walk = [];
   for (let z = rz - margin; z <= rz + h + 1 + margin; z++) for (let x = rx - margin; x <= rx + w + 1 + margin; x++) {
     if (x < 1 || z < 1 || x > N - 2 || z > N - 2) continue;
     const inField = x >= x0 && z >= z0 && x < x0 + w && z < z0 + h, inRim = x >= rx && z >= rz && x <= rx + w + 1 && z <= rz + h + 1;
-    (inField ? field : inRim ? rim : walk).push(idx(x, z));
+    (inField ? field : inRim ? ring : walk).push(idx(x, z));
   }
-  const all = [...field, ...rim, ...walk];
+  const all = [...field, ...ring, ...walk];
   const level = within ? within.level : clamp(Math.round(all.reduce((s, c) => s + lvl0[c], 0) / all.length), 3, 10);
   // (the walkway is flat ground like any other: a vault's reward site may stand on it)
-  for (const c of all) { void0[c] = 0; lvl0[c] = level; if (!walk.includes(c)) ctx.keep.add(c); }
-  for (const c of rim) lvl0[c] = level + RIM;
-  const deck = { x0, z0, w, h, level, field, rim, walk, cell: (x, z) => idx(x0 + x, z0 + z) };
+  for (const c of all) { void0[c] = 0; lvl0[c] = level; if (!walk.includes(c) && (rim || !ring.includes(c))) ctx.keep.add(c); }
+  if (rim) for (const c of ring) lvl0[c] = level + RIM;
+  const deck = { x0, z0, w, h, level, field, rim: rim ? ring : [], walk: rim ? walk : [...ring, ...walk], cell: (x, z) => idx(x0 + x, z0 + z) };
   // the side of the field facing a point
   deck.side = ([px, pz]) => {
     const cx = x0 + w / 2, cz = z0 + h / 2, dx = px - cx, dz = pz - cz;
     return Math.abs(dx) / w > Math.abs(dz) / h ? (dx > 0 ? 0 : 1) : (dz > 0 ? 2 : 3);
   };
-  for (const [name, list] of [['trialKeep', all], ['noBuild', [...field, ...rim]], ['noFence', [...field, ...rim]]]) {
+  for (const [name, list] of [['trialKeep', all], ['noBuild', [...field, ...deck.rim]], ['noFence', [...field, ...ring]]]) {
     ctx[name] ??= new Set();
     for (const c of list) ctx[name].add(c);
   }

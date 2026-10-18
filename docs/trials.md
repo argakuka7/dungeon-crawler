@@ -1,9 +1,10 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 4 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide` and
-`sunken` are planned, built, checked, playable (alone and together) and on in every world (an event
-on 45% of the depths from 1 to 19, a puzzle on 60%, a second on 25%). The rest is the list of what
-to build, kind by kind, until done (see "Implementation order" at the end).
+Status: steps 1 to 5 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
+`sunken`, `mirror`, `braziers` and `channels` are planned, built, checked, playable (alone and
+together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
+second on 25%). The rest is the list of what to build, kind by kind, until done (see
+"Implementation order" at the end).
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -271,8 +272,8 @@ exit come out of the water.
   search builds over the water. A stage puzzle's field is 4x4 (its deck, field and rim, 6x6:
   `TRIALS[kind].deck`). A 6x6 deck finds no room in the exit's quadrant beside its pad, so while
   only such puzzles are built a sunken room has two stages and the planner wants the exit's
-  quadrant beside the entry's (`world/trials.js roomFits`); once a 5x5 puzzle is built
-  (`smallStages`), three from depth 10, the last one by the exit. The stages drained are kept in
+  quadrant beside the entry's (`world/trials.js roomFits`); with the 5x5 ones built (`smallStages`:
+  mirror, braziers, channels on a 3x3 field) it has three from depth 10, a small one last, by the exit. The stages drained are kept in
   `run.trials` (saved, and shared when playing together).
 
 ### `collapse`: The crumbling floor
@@ -448,6 +449,12 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   turns, 2–4 decoy mirrors off the path, all orientations scrambled. BFS over the `2^M`
   orientations (M ≤ 10): it must be solvable, unsolved at the start, minimal flips ≥ 3.
 - **Themes:** mines, forge, ruins, abyss, highlands (sun mirrors).
+- **As built** (`cubegen/trials/grid.js`, `solve.js makeMirror`, `core/trials.js traceBeam`): the
+  field is 6x6 (7x7 from depth 10; 3x3 on a sunken platform), on a deck without a rim (you walk
+  among the mirrors: a mirror's stand is in the way, its cell is not). The way is laid first (3
+  turns, 5 from depth 10), then 2-4 decoys and 1-3 rocks (stone columns) off it, then the start
+  scrambled till its fewest flips are 3-4 (4-6 from depth 10). The emitter and the receiver stand
+  on the ring round the field.
 
 ### `channels`: Rotating channels
 
@@ -460,6 +467,10 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   shape; then scramble every rotation (at least half the tiles changed). A tile turns on its
   own, so the solution is known by construction. Accept if at least 4 turns are needed.
 - **Themes:** grotto, cenote, lagoon, swamp, mines (water), forge, volcanic (lava).
+- **As built** (`grid.js`, `solve.js makeChannels`, `core/trials.js channelFlow`): 5x5 (6x6 from
+  depth 10, 3x3 on a sunken platform). The tiles are flat and walked on (not a raised bed you reach
+  into): F turns the tile in front of you. The way is a random walk that avoids itself, now and then
+  a tee on it; its turns needed are 4-8 (6-12 from depth 10).
 
 ### `braziers`: Lights out
 
@@ -470,6 +481,9 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   (depth band). Gaussian elimination over GF(2) for the minimal solution: at least 3
   presses, not solved at the start.
 - **Themes:** any; ossuary and ruins get it more often.
+- **As built** (`grid.js`, `solve.js makeBraziers`, `solveBraziers`): the braziers stand two
+  cells apart on a 5x5 field (a ring of eight round a 3x3 on a sunken platform, so every one is in
+  reach from round it). Lines on the floor join the linked ones.
 
 ### `crates`: Crates on plates
 
@@ -586,7 +600,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 3. [x] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
    first solver.
 4. [x] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
-5. [ ] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
+5. [x] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
 6. [ ] **`crates`, `plates`** (crates, Sokoban solver).
 7. [ ] **`stones`, `sluices`, `timedgate`.**
 8. [ ] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
