@@ -83,7 +83,7 @@ export function guestQuestAct(m) {
   if (m.act === 'event' && m.ev && typeof m.ev === 'object') {
     const { kind, depth, key } = m.ev;
     if (['visit', 'horde', 'landmark'].includes(kind)) questEvent({ kind, depth: Number.isInteger(depth) ? depth : undefined, key: typeof key === 'string' ? key : undefined });
-    if (['found', 'rescued'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
+    if (['found', 'rescued', 'talked'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
   } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet'].includes(m.act)) { doAct(m.act, m.id); share(); }
 }
 
@@ -194,6 +194,20 @@ export const questLogPacked = () => state.run?.quests ? packQuestLog(state.run.q
 
 // --- talking to a giver ---------------------------------------------------------------------------
 
+// talking to somebody a quest sends us to (a letter for them, a question; game/questworld.js puts
+// the ones waiting on a hiding place there): what they say, or null
+export function questTalk(v) {
+  if (!live()) return null;
+  const giver = giverOf(v);
+  for (const q of questLog().list) {
+    const s = q.stages[q.stage];
+    if (q.state !== 'active' || q.archived || !['deliver', 'talk'].includes(s?.goal)) continue;
+    if (!(giver && s.to.resident === giver || v.helper === q.id)) continue;
+    questEvent({ kind: 'talked', quest: q.id });
+    return s.reply || `${s.to.name}: Thank you!`;
+  }
+  return null;
+}
 // talking to somebody a quest is looking for (game/questworld.js): found! They thank you
 export function rescue(v) {
   if (!v?.lost || !live()) return false;

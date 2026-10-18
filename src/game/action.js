@@ -16,7 +16,7 @@ import { peopleHere } from './npcs.js';
 import { ITEMS } from '../core/items.js';
 
 // a villager with something to say: quests to give, or wares
-export const talkative = v => !!(shopOf(v) || giverOf(v) || v?.lost);
+export const talkative = v => !!(shopOf(v) || giverOf(v) || v?.lost || v?.helper);
 const titleOf = v => v.title ?? `the ${GIVERS[v.name]?.title ?? shopOf(v)?.title ?? v.name}`;
 // the villager the player stands next to who has something to say (the nearest one), if any
 function villagerInReach() {

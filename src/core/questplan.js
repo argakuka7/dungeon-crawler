@@ -17,7 +17,7 @@ export const perDepth = d => d === 0 ? 4 : d <= 3 ? 7 : d <= 11 ? 5 : d <= 19 ? 
 export const MIX = { find: 13, treasure: 5, rescue: 10, bounty: 15, delivery: 14, gather: 10, scout: 10, defense: 9, pieces: 8, prisoners: 6 };
 export const SCOUTS = ['reach', 'landmark', 'guardian', 'horde'];
 // the kinds there are so far; a planned kind that is not yet stands in as one of these
-export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout', 'bounty']);
+export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout', 'bounty', 'delivery', 'relay']);
 const STAND_IN = [['find', 6], ['treasure', 1], ['scout', 3]];
 // how many of a depth's quests the villagers give (the rest: the people out in the world)
 const townShare = d => d <= 3 ? 0.7 : d <= 7 ? 0.45 : d <= 11 ? 0.3 : 0.1;
@@ -42,6 +42,7 @@ export function questPlan(seed, layout) {
     const camps = [d, d - 1, d - 2].filter(x => x >= 0).flatMap(x => layout(x).spotList).filter(s => s.kind === 'camp');
     for (let i = 0; i < perDepth(d); i++) {
       let kind = weighted(R, Object.entries(MIX));
+      if (kind === 'delivery' && R() < 0.4) kind = 'relay';   // (now and then: ask somebody, then find it)
       if (!BUILT.has(kind)) kind = weighted(R, STAND_IN);
       let giver;
       // somebody lost: asked for by whoever waits at a camp near above (they wait there together)

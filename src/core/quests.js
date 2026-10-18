@@ -273,6 +273,68 @@ KINDS.bounty = {
     };
   },
 };
+// take a letter or a parcel to somebody further down: somebody living at a seat or a camp there,
+// else somebody waiting on a hiding place; they end it and pay
+KINDS.delivery = {
+  payout: 'spot',
+  targets: (ctx, log, depths, giver) => recipients(ctx, log, depths, giver),
+  quest(t, ctx, R, { giver }) {
+    const item = pick(R, ['quest_letter', 'quest_parcel']), what = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
+    const at = t.to.resident ? t.to.where : `on ${where}, ${clueOf(ctx.layout, t.plan, landmarkName)}`;
+    return {
+      title: `A ${what} for ${t.to.name}`,
+      text: pick(R, [
+        `Could you take this ${what} to ${t.to.title}, ${at}? ${t.to.name} has been waiting for it for a long time.`,
+        `This ${what} must get to ${t.to.title}, ${at}. Nobody else dares to go that far down. ${t.to.name} will thank you for it.`,
+      ]),
+      target: { recipient: t.id },
+      stages: [{ goal: 'deliver', depth: t.depth, key: t.key, to: t.to, item, reply: pick(R, [
+        `${t.to.name}: At last! Thank you so much. Here, this is for your trouble.`,
+        `${t.to.name}: For me? I hoped it would come. Take this, you have earned it.`]),
+        text: `Bring the ${what} to ${t.to.title} on ${where}` }],
+    };
+  },
+};
+// ask somebody further down where a lost thing is, then find it there and bring it back
+KINDS.relay = {
+  payout: 'return',
+  targets: (ctx, log, depths, giver) => recipients(ctx, log, depths, giver).flatMap(r => {
+    const near = hidingPlaces(ctx, log, [r.depth]).filter(h => h.spot !== r.to.spot);
+    return near.length ? [{ ...r, id: `${r.id}|${near[0].id}`, find: near[0] }] : [];
+  }),
+  quest(t, ctx, R, { giver }) {
+    const item = pick(R, LOST_ITEMS[giver] ?? LOST_ITEMS.npc), name = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
+    const at = t.to.resident ? t.to.where : `on ${where}, ${clueOf(ctx.layout, t.plan, landmarkName)}`;
+    const clue = clueOf(ctx.layout, t.find.plan, landmarkName);
+    return {
+      title: `Ask ${t.to.name}`,
+      text: pick(R, [
+        `My ${name} is gone, and ${t.to.title} (${at}) saw where it went. Ask ${t.to.name}, find it, and bring it back to me.`,
+        `${t.to.title} found my ${name} once before! Go and ask, ${at}. Then bring it back to me, please.`,
+      ]),
+      target: { recipient: t.id, spot: t.find.spot, item },
+      stages: [
+        { goal: 'talk', depth: t.depth, key: t.key, to: t.to, reply: `${t.to.name}: Your ${name}? I saw it on ${where}, ${clue}.`,
+          text: `Ask ${t.to.title} on ${where}` },
+        { goal: 'find', depth: t.depth, key: t.find.key, spot: t.find.spot, item, clue, text: `Find the ${name} on ${where}, ${clue}` },
+      ],
+    };
+  },
+};
+// who a letter may go to, or who may be asked, at these depths: those living at the seats and
+// camps (but whoever asks), else somebody waiting on a hiding place
+function recipients(ctx, log, depths, giver) {
+  return depths.flatMap(depth => {
+    const living = ctx.layout(depth).spotList.filter(s => s.kind !== 'hide').map(residentOf).filter(n => n && n.giver !== giver)
+      .map(n => ({ id: `to:${n.giver}`, depth, key: keyOfSpot(n.spot),
+        to: { resident: n.giver, name: n.name, title: n.title, where: n.camp ? `at the camp on ${depthName(depth)}` : `on ${depthName(depth)}` } }));
+    if (living.length) return living;
+    return hidingPlaces(ctx, log, [depth]).map(h => {
+      const p = lostPerson(hash32(ctx.seed ^ hashString(h.spot) ^ 0x4e1)), title = `${p.name} the messenger`;
+      return { ...h, id: `to:${h.spot}`, to: { spot: h.spot, name: p.name, title, person: { ...p, relation: 'messenger' } } };
+    });
+  });
+}
 // the things a giver may have lost (core/items.js QUEST_ITEMS)
 const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], groom: ['quest_compass', 'quest_map_scrap'],
   smith: ['quest_ring', 'quest_journal'], keeper: ['quest_toy_rabbit'], alchemist: ['quest_journal', 'quest_locket'],
@@ -280,12 +342,13 @@ const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], 
 // the hiding places at these depths no quest going on is about
 function hidingPlaces(ctx, log, depths) {
   // (a treasure's spot stays its: its chest stays there, open)
-  const busy = new Set(log.list.filter(q => (q.state !== 'done' || q.kind === 'treasure') && q.target?.spot).map(q => q.target.spot));
+  const busy = new Set(log.list.filter(q => q.state !== 'done' || q.kind === 'treasure')
+    .flatMap(q => q.stages.flatMap(s => [s.spot, s.to?.spot])).filter(Boolean));
   return depths.flatMap(depth => ctx.layout(depth).spotList.filter(s => s.kind === 'hide' && !busy.has(s.id))
     .map(plan => ({ id: `spot:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: plan.tier, plan })));
 }
 // what a goal is, by name (the kinds' stages)
-export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty'];
+export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty', 'deliver', 'talk'];
 export const QUEST_KINDS = Object.keys(KINDS);
 
 const range = (a, b) => Array.from({ length: Math.max(0, Math.min(b, MAX_DEPTH) - a + 1) }, (_, i) => a + i);
@@ -336,7 +399,8 @@ const weighted = (R, list, weight) => {
 // again once its quest is done)
 const takenTargets = log => new Set(log.list.filter(q => q.state !== 'done' || !q.target?.spot).map(q => q.target?.id).filter(Boolean));
 // the kinds to try for a slot of the plan: its own (a scout as the giver leans), then the others
-const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'], bounty: ['find'] };
+const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'], bounty: ['find'],
+  delivery: ['relay', 'find'], relay: ['delivery', 'find'] };
 function kindsFor(slot, g, R) {
   const scouts = () => {
     const left = SCOUTS.map(k => [k, g.kinds[k] ?? 0.3]), out = [];
@@ -473,6 +537,8 @@ function settled(log, q) {
 //   { kind: 'gate', key }         a guardian's gate opened (run.unlockedGates has it already)
 //   { kind: 'found', quest }      somebody picked up the thing quest `quest` is looking for
 //   { kind: 'rescued', quest }    somebody found the person quest `quest` is looking for
+//   { kind: 'talked', quest }     somebody talked to who quest `quest` sends them to (a letter
+//                                 delivered, somebody asked)
 // The log takes note, and the quests move on (settle). The quests paid on the spot.
 export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'visit' && Number.isInteger(ev.depth) && ev.depth > log.deepest) { log.deepest = Math.min(MAX_DEPTH, ev.depth); log.version++; }
@@ -481,9 +547,10 @@ export function questEvent(log, ev, gates = new Set(), now = 0) {
     const s = q.stages[q.stage];
     if (q.state === 'active' && !q.archived && s?.goal === 'landmark' && s.key === ev.key && !s.done) { s.done = true; log.version++; }
   }
-  if ((ev.kind === 'found' || ev.kind === 'rescued') && typeof ev.quest === 'string') {
+  if (['found', 'rescued', 'talked'].includes(ev.kind) && typeof ev.quest === 'string') {
     const q = find(log, ev.quest), s = q?.stages[q.stage];
-    if (q?.state === 'active' && !q.archived && s?.goal === (ev.kind === 'found' ? 'find' : 'rescue') && !s.done) { s.done = true; log.version++; }
+    const goals = { found: ['find'], rescued: ['rescue'], talked: ['deliver', 'talk'] }[ev.kind];
+    if (q?.state === 'active' && !q.archived && goals.includes(s?.goal) && !s.done) { s.done = true; log.version++; }
   }
   return settle(log, gates, now);
 }
@@ -520,9 +587,10 @@ export const questGoalsIn = (log, key) => log.list.filter(q => q.state === 'acti
 export const livingAt = (log, campId) => log.living.filter(p => p.camp === campId);
 // what a quest carries (core/items.js QUEST_ITEMS): the things found for it, a treasure's map
 export function carried(q) {
-  if (q.state === 'done') return [];
+  if (q.state === 'done' || q.state === 'offered') return [];
   const out = q.stages.filter(s => s.goal === 'find' && s.done).map(s => s.item);
-  if (q.kind === 'treasure' && q.state !== 'offered') out.push('quest_map_scrap');
+  out.push(...q.stages.filter(s => s.goal === 'deliver' && !s.done).map(s => s.item));
+  if (q.kind === 'treasure') out.push('quest_map_scrap');
   return out;
 }
 
@@ -533,7 +601,9 @@ export const giverQuests = (log, giver) => log.list.filter(q => q.giver === give
 // the mark over a giver's head: '?' a quest to hand in, '!' an offer, '' nothing new
 export function giverMark(log, giver) {
   const mine = log.list.filter(q => q.giver === giver);
-  return mine.some(q => q.state === 'ready' && !q.archived) ? '?' : mine.some(q => q.state === 'offered') ? '!' : '';
+  const awaited = log.list.some(q => q.state === 'active' && !q.archived && ['deliver', 'talk'].includes(q.stages[q.stage]?.goal)
+    && q.stages[q.stage].to.resident === giver);   // a letter for them, a question for them
+  return awaited || mine.some(q => q.state === 'ready' && !q.archived) ? '?' : mine.some(q => q.state === 'offered') ? '!' : '';
 }
 // the panel's lists: going on (active, ready, failed), done, archived; newest first
 export function questLists(log) {
@@ -574,6 +644,17 @@ function checkStage(s) {
     if (!ENEMY_KINDS[s.enemy] || typeof s.name !== 'string' || typeof s.enemyId !== 'string') return null;
     Object.assign(out, { enemy: s.enemy, name: text(s.name, 30), enemyId: s.enemyId.slice(0, 90) });
   }
+  if (s.goal === 'deliver' && ITEMS[s.item]?.category !== 'quest') return null;
+  if (s.goal === 'deliver') out.item = s.item;
+  if (s.goal === 'deliver' || s.goal === 'talk') {
+    const t = isObj(s.to) ? s.to : {};
+    out.to = { name: text(t.name, 30), title: text(t.title, 60) };
+    if (isNpcGiver(t.resident)) Object.assign(out.to, { resident: t.resident.slice(0, 60), where: text(t.where, 80) });
+    else if (typeof t.spot === 'string' && checkPerson(t.person)) Object.assign(out.to, { spot: t.spot.slice(0, 60), person: checkPerson(t.person) });
+    else return null;
+    out.reply = text(s.reply, 200);
+  }
+  if (typeof s.clue === 'string') out.clue = text(s.clue, 120);
   if (['find', 'rescue', 'open', 'bounty'].includes(s.goal) && !out.spot) return null;
   return out;
 }

@@ -27,8 +27,14 @@ function overlay(map, log) {
   const people = [], chests = [], placements = [];
   if (!log || map.interior) return { people, chests, placements, sig: '' };
   for (const { quest, stage } of questGoalsIn(log, map.key)) {
-    const s = spotOf(map, stage.spot);
+    const s = spotOf(map, stage.spot ?? stage.to?.spot);
     if (!s) continue;
+    if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to.spot) {
+      const s2 = spotOf(map, stage.to.spot), p = stage.to.person;
+      if (s2) people.push({ id: `${quest.id}:helper`, helper: quest.id, name: stage.to.name, title: stage.to.title, tint: p.tint, outfit: p.outfit,
+        x: s2.anchor.x, y: s2.anchor.y, z: s2.anchor.z, yaw: s2.approach ? Math.atan2(s2.approach.x - s2.anchor.x, s2.approach.z - s2.anchor.z) : 0 });
+      continue;
+    }
     if (stage.goal === 'rescue') {
       const p = stage.person;
       people.push({ id: `${quest.id}:lost`, lost: quest.id, name: p.name, title: p.name, tint: p.tint, outfit: p.outfit,

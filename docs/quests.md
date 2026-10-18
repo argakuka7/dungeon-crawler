@@ -18,7 +18,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   in as built ones (`BUILT`, `STAND_IN`). Somebody lost is always asked for by whoever lives at a
   camp at or up to two above the depth (they will wait there together); the rest by the villagers
   (a share falling with depth) or the people of the depth and the one above.
-- **Eight kinds:**
+- **Ten kinds:**
   - the scouting kinds, about what the world has anyway: `reach` (get down to a depth nobody has
     been to, one or two below the deepest), `landmark` (stand beside a depth's landmark, within
     `LANDMARK_REACH` cells of its chest), `guardian` (beat a side or descent guardian: done once
@@ -36,6 +36,14 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     death is remembered like any other (`run.defeated`, and it comes back with a death in its
     cube); the quest is done once it is defeated, paid back at the giver. Whoever runs the
     cube's enemies puts it there (`game/questworld.js bountiesHere`, `game/quests.js`).
+  - `delivery`: a letter or a parcel (carried by the quest from the start) for somebody at the
+    slot's depth: whoever lives at a seat or camp there (marked `?` while they wait for it), else
+    a messenger waiting on a hiding place (there only while the quest wants them). Talking to
+    them ends it; they pay (`spot`). Each of them is sent one letter in a world.
+  - `relay` (four in ten delivery slots, the plan says which): ask somebody (`talk`, like a
+    delivery's recipient), who tells where the lost thing is: a hiding place on the same depth
+    (the clue is in the goal), then it is a `find`, back to the giver. Quests with more than one
+    stage run them in order.
 
   The scouting kinds and `find` are paid back at the giver (`return`).
 - **Givers** (the villagers, and the people out in the world once met) each have one offer at a
@@ -79,7 +87,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
 - **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
   and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
   villagers, about their own depth and the one below.
-- **Not yet:** the other kinds (delivery, gather, scattered pieces, prisoners, defense),
+- **Not yet:** the other kinds (gather, scattered pieces, prisoners, defense),
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want

@@ -44,7 +44,7 @@ const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + 
 const traders = () => peopleHere().filter(talkative);
 // what a villager's label says: the quest mark, their name, their trade
 function villagerText(v) {
-  const shop = shopOf(v), mark = v.lost ? '!' : giverOf(v) && state.run?.quests ? giverMark(state.run.quests, giverOf(v)) : '';
+  const shop = shopOf(v), mark = v.lost || v.helper ? '!' : giverOf(v) && state.run?.quests ? giverMark(state.run.quests, giverOf(v)) : '';
   const name = v.title ?? GIVERS[v.name]?.title ?? shop?.title ?? v.name;
   return `${mark ? `${mark} ` : ''}${name}${shop ? ` · ${shop.trade}` : ''}`;
 }

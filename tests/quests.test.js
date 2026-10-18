@@ -278,3 +278,30 @@ test('a bounty: a named, stronger enemy of the depth waits on a hiding place; be
   assert.equal(q.state, 'ready', 'beaten');
   assert.deepEqual(checkQuestLog(roundTrip(packQuestLog(log))).list[0].stages, q.stages);
 });
+
+test('a letter goes to somebody further down, who ends it and pays', () => {
+  const { log, q } = questOf(18, 'delivery', 4);
+  const s = q.stages[0];
+  assert.ok(s.to.resident || s.to.spot, 'to somebody living there, or waiting on a hiding place');
+  accept(log, q.id);
+  assert.deepEqual(carried(q), [s.item], 'carried from the start');
+  if (s.to.resident) assert.equal(giverMark(log, s.to.resident), '?', 'they are waiting for it');
+  const paid = questEvent(log, { kind: 'talked', quest: q.id });
+  assert.deepEqual(paid, [q]);
+  assert.equal(q.state, 'done');
+  assert.deepEqual(carried(q), []);
+});
+
+test('a relay: ask somebody, then find it where they say, then bring it back', () => {
+  const { log, q } = questOf(19, 'relay', 5);
+  assert.deepEqual(q.stages.map(s => s.goal), ['talk', 'find']);
+  accept(log, q.id);
+  questEvent(log, { kind: 'found', quest: q.id });
+  assert.equal(q.stage, 0, 'nothing to find before asking');
+  questEvent(log, { kind: 'talked', quest: q.id });
+  assert.equal(q.stage, 1);
+  assert.deepEqual(questGoalsIn(log, q.stages[1].key).map(g => g.stage), [q.stages[1]]);
+  questEvent(log, { kind: 'found', quest: q.id });
+  assert.equal(q.state, 'ready');
+  assert.deepEqual(carried(q), [q.stages[1].item]);
+});
