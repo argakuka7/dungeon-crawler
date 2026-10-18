@@ -271,7 +271,7 @@ export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIAN
 // breathes in from `inhale` on (only the look).
 const GUSTO_GRAB = {
   name: 'grab', clip: 'grab', weight: 2, reach: 1.6, hitAt: 22 / 30, trackUntil: 0.6, attackTime: 66 / 30, hitReach: 1.8,
-  arc: 0.35, power: 1.4, knock: 0, knockDown: true, hop: 2.5, reason: 'Thrown by Gusto!',
+  arc: 0.35, power: 1.4, knock: 0, knockDown: true, hop: 2.5, reason: 'Thrown by Gusto!', miss: 'stuck',
   grab: { throwAt: 46 / 30, step: 2 / 30, hold: 0.55, throw: 4.5,
     grip: [[0, 0.973, 1.378], [0, 0.948, 1.378], [0, 0.923, 1.376], [0, 1.06, 1.295], [0, 1.389, 1.143], [0, 1.801, 0.969],
       [0, 2.107, 0.831], [0, 2.182, 0.796], [0, 2.182, 0.796], [0, 2.182, 0.796], [0.002, 2.18, 0.793], [0, 1.836, 0.944],
@@ -288,13 +288,32 @@ const GUSTO_VORTEX = {
   gust: { kind: 'vortex', time: 18 / 30, range: 5, width: 0.45, spread: 0.4, push: 10, pushTime: 0.7,
     muzzle: [0, 1.36, 1], thunder: [], inhale: 9 / 30 },
 };
+// Breathing in (clip GustoInhale): from the hit frame for `pull.time` it sucks in whoever is in
+// the cone before its mouth (the gust's shape, core/gusts.js inGust), with a clear line to it:
+// pulled towards it at `pull.speed`, keeping only `pull.hold` of their steering away from it
+// (they can still step aside), up to `pull.stop` cells from it. No harm in itself: it brings the
+// player into reach of a grab, and recovers fast for one (`recover`). It only breathes in at
+// a player who keeps away (game/gusto.js); it stops turning at trackUntil.
+const GUSTO_INHALE = {
+  name: 'inhale', clip: 'inhale', weight: 1, reach: 9, minReach: 2, hitAt: 15 / 30, trackUntil: 1.0, attackTime: 72 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto', recover: 0.2,
+  pull: { kind: 'inhale', time: 39 / 30, range: 9, width: 0.7, spread: 0.5, speed: 4, hold: 0.25, stop: 1.5, muzzle: [0.023, 1.164, 0.856] },
+};
+// A grab that caught nothing (its `miss`, game/enemyai.js): it face-plants and lies there
+// (clip GustoStuck), helpless until `exposed.until`: every blow does `exposed.damage` times
+// as much (core/combat.js weaponHit) and none staggers it out of this. Never started otherwise
+// (no reach).
+const GUSTO_STUCK = {
+  name: 'stuck', clip: 'stuck', weight: 0, reach: 0, hitAt: 60 / 30, trackUntil: 0, attackTime: 60 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto', exposed: { until: 48 / 30, damage: 1.5 },
+};
 export const GUSTO = {
   type: 'gusto', species: 'gusto', label: 'Gusto', hp: 1000, damage: 24, knock: 4,
   xp: 650, coins: [120, 220],
   radius: 0.62, height: 2.3, bodyHeight: 2.1, mass: 8, hover: true, flail: 1,
   aggro: 7, giveUp: 14, chase: 1.45, wander: 0.4, homeSpeed: 0.9,
   ...GUSTO_GRAB, reach: GUSTO_SUMMON.reach, cooldown: 1.2, ichor: ['#f2f3f6', '#8a8f99'], pitch: 0.7,
-  attacks: [GUSTO_GRAB, GUSTO_SUMMON], phase: 1,
+  attacks: [GUSTO_GRAB, GUSTO_SUMMON, GUSTO_INHALE, GUSTO_STUCK], phase: 1,
   poise: 2, hitStun: 0.25, deathTime: 2.2, corpseTime: 5,
   parts: { body: ['GustoBody', 'GustoLimbs', 'GustoTentacles'], eyes: ['GustoEyes_glow'] },
   light: '#ff3020', sparks: ['#ff8070', '#ffffff'],
@@ -302,7 +321,7 @@ export const GUSTO = {
   seedSalt: 0x6057a0, spacing: 6,
 };
 // from half his health on: the three of him blow vortexes too
-export const GUSTO_SPLIT = { ...GUSTO, attacks: [GUSTO_GRAB, GUSTO_VORTEX, GUSTO_SUMMON], phase: 2 };
+export const GUSTO_SPLIT = { ...GUSTO, attacks: [GUSTO_GRAB, GUSTO_VORTEX, GUSTO_SUMMON, GUSTO_INHALE, GUSTO_STUCK], phase: 2 };
 export const BOSS_PROFILES = [GUSTO];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
@@ -523,6 +542,11 @@ export const absent = e => e.mode === 'dead' || e.mode === 'gone';
 
 // the attack e is performing (or about to perform): one of profile.attacks, else the profile
 export const attackOf = e => e.profile.attacks?.[e.attack] ?? e.profile;
+// how much more blows hurt e now: lying helpless after a missed grab (an attack's `exposed`), else 1
+export function exposedBy(e) {
+  const x = e.mode === 'attack' ? attackOf(e).exposed : null;
+  return x && e.t < x.until ? x.damage : 1;
+}
 // the index of an attack, picked by weight among `allowed` (indices; default: all of them)
 export function pickAttack(profile, r = Math.random(), allowed = null) {
   const list = profile.attacks;

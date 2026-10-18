@@ -6,6 +6,11 @@
 // hurts him while he shudders, then three of him appear, apart, away from the players. Two are
 // his proxies: they look the same, fight the same (grab, vortex, summon) and show his health,
 // but any hit, however small, makes one go up in a cloud.
+// In both phases he (or a proxy) breathes in at a player who keeps away: once the nearest player
+// has been more than `far` cells from it for `wait` s, it does nothing else but breathe in
+// (core/enemies.js GUSTO_INHALE: it pulls them in), at most one of the three at a time and
+// every `breathCool` s; for `follow` s after a breath only a grab may start. A grab that
+// catches nothing leaves it face down, helpless (GUSTO_STUCK).
 // Phase 2: he summons up to two triangles at a time. Once both proxies are gone he can still be
 // hit for `window` seconds, then he vanishes, and `gone` seconds later he and two new proxies
 // appear somewhere else. Only he can die, and his death takes his proxies and triangles along.
@@ -20,6 +25,10 @@ export const GUSTO_FIGHT = Object.freeze({
   gone: 1.3,              // s he is away
   appear: 0.5,            // s nothing hurts the three after they appear
   apart: 3,               // cells: the least between the three and from the players, where the arena allows
+  far: 4,                 // cells: a player keeping further than this from him...
+  wait: 3,                // ...for this long (s) is breathed in
+  breathCool: 8,          // s from one breath (of any of the three) to the next
+  follow: 1.5,            // s after a breath only a grab may start
   leave: 0.5,             // s a proxy or a triangle he takes along lingers, gone, before it is let go
 });
 

@@ -28,6 +28,13 @@ Clips, 30 fps, in place (the game supplies root motion):
     GustoBlow    2.1 s: brings both hands up in front of its mouth, breathes in (swelling,
                  from extras.inhale_frame), and at frame 30 (extras.hit_frame) blows a vortex
                  through its hands (extras.muzzle) until extras.gust_end.
+    GustoInhale  2.4 s: flings its arms wide and leans back (the tell), then lunges its face
+                 forward with its arms out to scoop, and from frame 15 (extras.hit_frame) sucks
+                 the air in through its mouth (extras.muzzle), swelling and fluttering, until
+                 extras.pull_end; then it gulps and settles.
+    GustoStuck   2.0 s: a grab that caught nothing: from the grab's catch pose it overshoots and
+                 face-plants, arms splayed on the floor and tentacles flopping, struggles, and
+                 heaves itself back up; helpless until extras.exposed_end.
     GustoDeath   2.2 s: shudders, the tentacles go limp, it sinks to the floor and flattens,
                  the tentacles splayed round it and the arms flopped beside it. Held.
 
@@ -58,7 +65,7 @@ SCENE, COLLECTION, STAGE = "Gusto", "GustoAsset", "GustoStage"
 FPS, D, TAU = K.FPS, K.D, K.TAU
 V = Vector
 SIDES = (("L", 1), ("R", -1))
-CLIPS = ("GustoFloat", "GustoGrab", "GustoSummon", "GustoBlow", "GustoDeath")
+CLIPS = ("GustoFloat", "GustoGrab", "GustoSummon", "GustoBlow", "GustoInhale", "GustoStuck", "GustoDeath")
 
 BODY_HEX, LIMB_HEX, TENTACLE_HEX = "#c9cdd5", "#aeb3bd", "#bcc1ca"
 CLAW_HEX, EYE_HEX, PUPIL_HEX = "#474b54", "#ff2418", "#1a0606"
@@ -74,6 +81,8 @@ FLOAT_FRAMES, FLOAT_SPEED = 48, 0.6
 GRAB_FRAMES, GRAB_HIT, GRAB_THROW = 66, 22, 46
 SUMMON_FRAMES, SUMMON_HIT = 48, 27
 BLOW_FRAMES, BLOW_HIT, GUST_END, INHALE = 63, 30, 48, 9
+INHALE_FRAMES, PULL_START, PULL_END = 72, 15, 54
+STUCK_FRAMES, EXPOSED_END = 60, 48
 DEATH_FRAMES = 66
 LOOP_T = FLOAT_FRAMES / FPS
 
@@ -538,6 +547,63 @@ def blow(f):
     return {**p, "t": t, "roll": p["roll"] + D(1.5) * flutter, "wave": (t, 1.0 + (0.8 if hit <= t < end else 0))}
 
 
+def inhale_keys():
+    start, end = PULL_START / FPS, PULL_END / FPS
+    # the tell: unlike the grab's (arms flung wide and up), it sweeps its arms back behind it,
+    # tips its face up and empties itself
+    wind = pose(REST, pos=V((0, 0.18, 0.12)), pitch=D(-24), squash=(0.9, 0.93),
+                hands=per_side(lambda s, sign: (sign * 0.95, 0.78, 1.05)),
+                dirs=per_side(lambda s, sign: (sign * 0.3, 0.9, -0.3)),
+                elbows=per_side(lambda s, sign: (sign * 1, -0.3, 0.4)))
+    scoop = dict(dirs=per_side(lambda s, sign: (sign * 0.35, -1, 0.15)),
+                 elbows=per_side(lambda s, sign: (sign * 1, 0.2, -0.2)))
+    lunge = pose(REST, pos=V((0, -0.2, -0.04)), pitch=D(15), squash=(1.02, 1.0),
+                 hands=per_side(lambda s, sign: (sign * 1.2, -0.95, 1.2)), **scoop)
+    sucking = pose(lunge, pitch=D(12), squash=(1.12, 1.09),
+                   hands=per_side(lambda s, sign: (sign * 1.08, -0.86, 1.18)))
+    full = pose(lunge, pos=V((0, -0.14, 0.02)), pitch=D(10), squash=(1.24, 1.18),
+                hands=per_side(lambda s, sign: (sign * 0.98, -0.8, 1.16)))
+    gulp = pose(full, pos=V((0, 0.04, 0.08)), pitch=D(-6), squash=(1.27, 1.2))
+    bounce = pose(REST, pos=V((0, 0.02, 0.02)), squash=(0.97, 1.03))
+    return [(0, REST), (start - 0.1, wind), (start, lunge), (1.15, sucking), (end - 0.06, full), (end, gulp),
+            (end + 0.16, bounce), (INHALE_FRAMES / FPS - 0.06, REST), (INHALE_FRAMES / FPS, REST)]
+
+
+INHALE_KEYS = None
+
+
+def inhale(f):
+    t = f / FPS
+    p = keyed(t, INHALE_KEYS)
+    on = PULL_START / FPS <= t < PULL_END / FPS
+    flutter = math.sin(TAU * 11 * t) if on else 0.0
+    return {**p, "t": t, "roll": p["roll"] + D(1.8) * flutter, "wave": (t, 1.0 + (0.9 if on else 0))}
+
+
+def stuck_keys():
+    exposed = EXPOSED_END / FPS
+    catch = keyed(GRAB_HIT / FPS, GRAB_KEYS)        # where the grab left it
+    planted = pose(REST, pos=V((0, -0.62, -0.8)), pitch=D(38), squash=(1.1, 0.88), limp=0.7,
+                   hands=per_side(lambda s, sign: (sign * 0.8, -1.45, 0.12)),
+                   dirs=per_side(lambda s, sign: (sign * 0.5, -0.6, -0.6)),
+                   elbows=per_side(lambda s, sign: (sign * 1, 0.1, 0.7)))
+    squirm = pose(planted, roll=D(6), pos=V((0.05, -0.6, -0.76)))
+    squirm2 = pose(planted, roll=D(-6), pos=V((-0.05, -0.6, -0.76)))
+    heave = pose(planted, pos=V((0, -0.42, -0.44)), pitch=D(22), squash=(0.96, 1.05), limp=0.3,
+                 hands=per_side(lambda s, sign: (sign * 0.95, -1.2, 0.14)))
+    return [(0, catch), (0.22, planted), (0.4, planted), (0.62, squirm), (0.86, squirm2), (1.1, squirm),
+            (1.3, planted), (exposed - 0.05, heave), (exposed + 0.2, pose(REST, pitch=D(-4))), (STUCK_FRAMES / FPS, REST)]
+
+
+STUCK_KEYS = None
+
+
+def stuck(f):
+    t = f / FPS
+    p = keyed(t, STUCK_KEYS)
+    return {**p, "t": t, "wave": (t, 1.6)}
+
+
 def death(f):
     k, t = C.keyframes, f / FPS
     shudder = math.sin(TAU * 10 * t) * (1 - C.smoothstep(0.15, 0.5, t))
@@ -592,8 +658,9 @@ def mouth_point(rig, action, frame):
 
 
 def animate(rig, obj):
-    global GRAB_KEYS, SUMMON_KEYS, BLOW_KEYS
+    global GRAB_KEYS, SUMMON_KEYS, BLOW_KEYS, INHALE_KEYS, STUCK_KEYS
     GRAB_KEYS, SUMMON_KEYS, BLOW_KEYS = grab_keys(), summon_keys(), blow_keys()
+    INHALE_KEYS, STUCK_KEYS = inhale_keys(), stuck_keys()
     rig.animation_data_create()
     K.ground_clip(rig, obj, "GustoFloat", solver(rig, hover), FLOAT_FRAMES, cyclic=True, extras={"speed": FLOAT_SPEED})
     g = K.ground_clip(rig, obj, "GustoGrab", solver(rig, grab), GRAB_FRAMES,
@@ -610,6 +677,14 @@ def animate(rig, obj):
     b.pose_markers.new("Inhale").frame = INHALE
     b.pose_markers.new("Blow").frame = BLOW_HIT
     b.pose_markers.new("Calm").frame = GUST_END
+    i = K.ground_clip(rig, obj, "GustoInhale", solver(rig, inhale), INHALE_FRAMES,
+                      extras={"attack_style": "inhale", "hit_frame": PULL_START, "hit_time": PULL_START / FPS,
+                              "pull_end": PULL_END})
+    i.pose_markers.new("Pull").frame = PULL_START
+    i.pose_markers.new("Gulp").frame = PULL_END
+    st = K.ground_clip(rig, obj, "GustoStuck", solver(rig, stuck), STUCK_FRAMES,
+                       extras={"attack_style": "stuck", "exposed_end": EXPOSED_END})
+    st.pose_markers.new("Up").frame = EXPOSED_END
     K.ground_clip(rig, obj, "GustoDeath", solver(rig, death), DEATH_FRAMES,
                   extras={"hold_last_frame": True, "hold_from": 1.9}, settle_from=round(1.6 * FPS))
     K.register(rig, CLIPS)
@@ -617,7 +692,9 @@ def animate(rig, obj):
     g["grip"] = [game(grip_point(rig, f)) for f in range(GRAB_HIT, GRAB_THROW + 1, 2)]
     s["muzzle"] = game(mouth_point(rig, "GustoSummon", SUMMON_HIT))
     b["muzzle"] = game(between_hands(rig, "GustoBlow", BLOW_HIT + 2, 0.12))
-    return {"grip": [list(v) for v in g["grip"]], "summon": list(s["muzzle"]), "blow": list(b["muzzle"])}
+    i["muzzle"] = game(mouth_point(rig, "GustoInhale", (PULL_START + PULL_END) // 2))
+    return {"grip": [list(v) for v in g["grip"]], "summon": list(s["muzzle"]), "blow": list(b["muzzle"]),
+            "inhale": list(i["muzzle"])}
 
 
 # --- previews ----------------------------------------------------------------
@@ -626,7 +703,9 @@ def preview(scene, rig, path):
     shots = [("GustoFloat", 0, (2.6, -6.0, 2.8)), ("GustoFloat", 16, (-5.4, -3.0, 2.4)),
              ("GustoGrab", 14, (4.0, -5.0, 2.4)), ("GustoGrab", GRAB_HIT, (5.5, -1.5, 2.0)),
              ("GustoGrab", 38, (5.0, -3.0, 2.2)), ("GustoSummon", SUMMON_HIT, (3.0, -5.4, 2.2)),
-             ("GustoBlow", BLOW_HIT + 3, (3.5, -5.2, 2.0)), ("GustoDeath", DEATH_FRAMES, (3.4, -4.6, 3.6))]
+             ("GustoBlow", BLOW_HIT + 3, (3.5, -5.2, 2.0)), ("GustoInhale", PULL_START - 3, (4.4, -4.4, 2.2)),
+             ("GustoInhale", PULL_END - 4, (2.4, -5.6, 2.0)), ("GustoStuck", 14, (4.6, -3.6, 2.2)),
+             ("GustoStuck", EXPOSED_END - 6, (4.6, -3.6, 2.2)), ("GustoDeath", DEATH_FRAMES, (3.4, -4.6, 3.6))]
     K.contact_sheet(scene, rig, shots, path, (0, 0, 1.15), size=360, cols=4)
     return [path]
 

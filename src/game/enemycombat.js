@@ -15,7 +15,7 @@ import { immuneTo } from '../core/potions.js';
 import { absent } from '../core/enemies.js';
 import { grabPlayer } from './grab.js';
 
-export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.shocked = 0; player.held = null; };
+export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.pull = null; player.shocked = 0; player.held = null; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
 export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
@@ -62,12 +62,14 @@ export function hitBody(p, blow, fx, fz, nx, nz) {
   if (p.remote) p.hurt(blow, fx, fz, nx, nz);
   else hitPlayer(blow, fx, fz, nx, nz);
 }
+// e's blow lands on its target if it is in reach and in front of it; true: it did
 export function strikePlayer(e) {
   const p = e.target?.here ? e.target : player, a = attackOf(e), dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
-  if (p.ragdoll || p.held || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return;
-  if (d > 0.01 && Math.cos(Math.atan2(dx, dz) - e.yaw) < a.arc) return;
+  if (p.ragdoll || p.held || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return false;
+  if (d > 0.01 && Math.cos(Math.atan2(dx, dz) - e.yaw) < a.arc) return false;
   const blow = { ...blowOf(e.profile, a), by: attacker(e), ...a.grab && { grab: e.id } };   // a grab catches (game/grab.js)
   hitBody(p, blow, e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
+  return true;
 }
 // On fire: the burn ticks away (also while knocked down); water puts it out. A lethal
 // tick knocks the player down for good.

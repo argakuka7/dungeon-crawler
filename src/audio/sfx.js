@@ -340,6 +340,11 @@ const SOUNDS = {
     sweep(t + 0.05, 0.7, 1200 * p, 2800 * p, 700 * p, 7, 0.1, out, 0.1);   // the howl
     noise(t, 0.7, filter('lowpass', 160 * p, 1, amp(t, 0.05, 0.7, 0.65, out)));
   },
+  inhale(t, out, p) {    // Gusto breathing in: a long suck rising as the air rushes in, and a deep gulp
+    sweep(t, 1.3, 260 * p, 700 * p, 1700 * p, 2.5, 0.5, out, 0.9);
+    noise(t, 1.3, filter('lowpass', 220 * p, 1, amp(t, 0.8, 0.6, 0.5, out)));
+    tone('sine', 90 * p, 55 * p, t + 1.3, 0.2, amp(t + 1.3, 0.01, 0.7, 0.19, out));
+  },
   summon(t, out, p) {    // Gusto spitting his triangles: a wet hork, then a glassy sparkle
     noise(t, 0.12, filter('bandpass', 700 * p, 2, amp(t, 0.01, 0.6, 0.11, out)));
     tone('sine', 320 * p, 120 * p, t, 0.14, amp(t, 0.005, 0.4, 0.14, out));

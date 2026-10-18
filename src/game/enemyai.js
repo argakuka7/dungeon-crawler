@@ -343,11 +343,12 @@ function act(e, dt) {
     if (a.retreat) backOff(e, a.retreat, t0);
     if (!e.bit && e.t >= fireAt(a)) {
       e.bit = true;
-      // (a gust blows on from here by itself: game/gusts.js; a summon is its boss's, game/gusto.js)
+      // (a gust blows and a breath pulls on from here by themselves: game/gusts.js; a summon is
+      // its boss's, game/gusto.js)
       if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a);
-      else if (a.summon) e.summon?.(a); else if (!a.gust) strikePlayer(e);
+      else if (a.summon) e.summon?.(a); else if (!a.gust && !a.pull && !strikePlayer(e) && a.miss) whiff(e, a);
     }
-    if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = cfg.cooldown * (0.8 + Math.random() * 0.4); e.side = side(); }
+    if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = (a.recover ?? cfg.cooldown) * (0.8 + Math.random() * 0.4); e.side = side(); }
     return;
   }
   if (e.mode === 'alert') {   // noticed: turns to look, then gives chase
@@ -392,6 +393,13 @@ function act(e, dt) {
   const spots = around(e.home, 2, cfg.height);
   e.path = findPath(e.f, spots[Math.floor(Math.random() * spots.length)], 6, cfg.height);
   e.mode = e.path ? 'walk' : 'idle'; e.t = 2;
+}
+// A blow that caught nothing and has a `miss` (Gusto's grab): it goes on into that attack (his
+// face-plant), from its start, as a new attack (it is shown as one: render, net/foes.js).
+function whiff(e, a) {
+  const i = (e.profile.attacks ?? []).findIndex(x => x.name === a.miss);
+  if (i < 0) return;
+  e.attack = i; e.t = 0; e.attacks++; e.bit = true;
 }
 // a blow's push, sliding along the floor graph and dying away quickly
 function knockback(e, dt) {

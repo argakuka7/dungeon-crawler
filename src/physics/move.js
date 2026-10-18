@@ -72,14 +72,32 @@ function blown(dt) {
   if (p.gust.t <= 0) p.gust = null;
 }
 
+// Gusto breathing in (game/gusts.js, player.pull, set anew every frame it lasts): it draws the
+// body towards him on top of its own moving, axis by axis like a gust, and takes most of the
+// steering away from him (not sideways: stepping out of his breath still works). Used up here.
+function steerPulled(dx, dz) {
+  const u = player.pull, away = -(dx * u.ux + dz * u.uz);
+  if (away <= 0) return [dx, dz];
+  const k = away * (1 - u.hold);
+  return [dx + u.ux * k, dz + u.uz * k];
+}
+function pulled(dt) {
+  const p = player, u = p.pull, d = Math.min(u.speed * dt, u.room), mx = u.ux * d, mz = u.uz * d;
+  if (Math.abs(mx) > 1e-6 && canMove(p.x + mx, p.z, 'x', Math.sign(mx))) p.x += mx;
+  if (Math.abs(mz) > 1e-6 && canMove(p.x, p.z + mz, 'z', Math.sign(mz))) p.z += mz;
+  p.pull = null;
+}
+
 // returns the ground info plus `landed` (impact speed of a landing this step, else 0)
 // learn: physics.html#walls (see learn/README.md)
 export function movePlayer(dt, dx, dz, run, jump) {
   const p = player;
   if (p.stun > 0) { p.stun -= dt; dx = dz = 0; jump = false; }
   if (p.gust) { const k = pushControl(p.gust); dx *= k; dz *= k; }
+  if (p.pull) [dx, dz] = steerPulled(dx, dz);
   horizontal(dt, dx, dz, run);
   if (p.gust) blown(dt);
+  if (p.pull) pulled(dt);
   jumping(dt, jump);
 
   const gr = groundAt(p.x, p.z, p.y, p.swimming ? SWIM_STEP : STEP);

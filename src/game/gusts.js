@@ -6,21 +6,29 @@
 // enemies, the storm is seen and heard here all the same, from the clock the runner sends.
 // A stagger or death ends the attack and with it the storm. Gusto's vortex is a gust too (kind
 // 'vortex'): no storm cloud, but it breathes in from the gust's `inhale` time to the blow.
-import { player } from './state.js';
+//
+// Gusto breathing in (an attack with a `pull`, core/enemies.js GUSTO_INHALE) is read off the
+// clock the same way, and every game pulls its own player (player.pull, physics/move.js): it
+// harms nobody, so nothing needs sending. And when he lies helpless after a grab that caught
+// nothing (an attack with `exposed`), every game shows him crashing down and says so.
+import { player, setStatus } from './state.js';
 import { party, alive } from './party.js';
 import { attackOf, blowOf } from '../core/enemies.js';
 import { muzzleAt } from '../core/beams.js';
 import { inGust, gustDir } from '../core/gusts.js';
 import { hitBody, attacker } from './enemycombat.js';
 import { clearLine } from '../physics/enemynav.js';
-import { stormFx } from './juice.js';
+import { stormFx, felledFx } from './juice.js';
 
 export function updateGusts(list, dt, hurt = true) {
+  player.pull = null;
   for (const e of list) {
-    const a = e.mode === 'attack' ? attackOf(e) : null, g = a?.gust;
+    const a = e.mode === 'attack' ? attackOf(e) : null, g = a?.gust ?? a?.pull;
+    if (a?.exposed && e.felled !== e.attacks) { e.felled = e.attacks; felled(e); }
     if (!g) { e.storm = null; continue; }
     if (e.storm?.attacks !== e.attacks) e.storm = { attacks: e.attacks, t: e.t - dt, hit: new Set() };
     const s = e.storm, t0 = s.t, t = s.t = e.t;
+    if (a.pull) { breathe(e, a, g, t0, t, dt); continue; }
     g.thunder.forEach((at, i) => { if (t0 < at && t >= at) stormFx(e, g, 'thunder', i); });
     if (g.inhale !== undefined && t >= g.inhale && t < a.hitAt) stormFx(e, g, 'inhale', dt);
     if (t0 < a.hitAt && t >= a.hitAt) stormFx(e, g, 'blow');
@@ -38,4 +46,23 @@ function blow(e, a, g, hit) {
     const [nx, nz] = gustDir(e, g, p);
     hitBody(p, { ...blowOf(e.profile, a), by: attacker(e) }, o.x, o.z, nx, nz);
   }
+}
+
+// e breathing in, pull spec g: from the hit frame for g.time, our player is pulled while in the
+// cone before its mouth with a clear line to it, up to g.stop cells from it
+function breathe(e, a, g, t0, t, dt) {
+  if (t0 < a.hitAt && t >= a.hitAt) stormFx(e, g, 'suck');
+  if (t < a.hitAt || t >= a.hitAt + g.time) return;
+  stormFx(e, g, 'pull', dt);
+  const p = player;
+  if (p.hp <= 0 || p.ragdoll || p.held || p.climb || p.swimming || !inGust(e, g, p)) return;
+  const o = muzzleAt(e, g.muzzle), dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz);
+  if (d <= g.stop || !clearLine(o.x, o.y, o.z, p.x, p.y + p.h * 0.55, p.z)) return;
+  p.pull = { ux: dx / d, uz: dz / d, speed: g.speed, hold: g.hold, room: d - g.stop };
+}
+
+// a grab that caught nothing: down he goes
+function felled(e) {
+  felledFx(e);
+  if (Math.hypot(e.x - player.x, e.z - player.z) < 14) setStatus(`${e.profile.label} missed! Hit him while he is down`);
 }

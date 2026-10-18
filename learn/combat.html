@@ -205,6 +205,8 @@
       <p lang="de"><code>hurtT = 0.22</code>: Das Monster blinkt 0,22 Sekunden lang (der Malcode schaut darauf).</p>
       <p lang="en"><code>stagger = false</code>: for fire and poison from a thrown flask. Their little ticks hurt, but they never stop the monster.</p>
       <p lang="de"><code>stagger = false</code>: für Feuer und Gift aus einer geworfenen Flasche. Ihre kleinen Treffer tun weh, halten das Monster aber nie auf.</p>
+      <p lang="en"><code>exposedBy(enemy) &gt; 1</code>: Gusto lying face down after a grab that caught nothing. Your hits hurt him more, and none of them gets him back up: that's your chance!</p>
+      <p lang="de"><code>exposedBy(enemy) &gt; 1</code>: Gusto liegt mit dem Gesicht am Boden, weil sein Griff ins Leere ging. Deine Treffer tun ihm mehr weh, und keiner bringt ihn wieder hoch: Das ist deine Chance!</p>
       <p lang="en">The <code>staggered</code> line reads: staggered if it died, <b>or</b> it is not poised, <b>or</b> the hit was heavy (<code>||</code> means "or", <code>!</code> means "not").</p>
       <p lang="de">Die <code>staggered</code>-Zeile liest sich so: taumelt, wenn es gestorben ist, <b>oder</b> wenn es nicht standfest ist, <b>oder</b> wenn der Treffer schwer war (<code>||</code> heißt "oder", <code>!</code> heißt "nicht").</p>
       <p lang="en">A stagger stuns it (<code>stun</code>), delays its next attack (<code>cool</code>), makes it think again right away (<code>think = 0</code>) and starts its poise timer.</p>

@@ -1,17 +1,19 @@
 // In devtools: await (await import('./tests/browser/gusto.js')).runGustoChecks()
 // Gusto's whole fight in his real arena (the first descent): his summons, the grab and throw,
-// the split at half health, the proxies, the window, vanishing and coming back, and his death.
+// a grab that misses (face down, helpless), breathing in at a player keeping away, the split at
+// half health, the proxies, the window, vanishing and coming back, and his death.
 import { paused } from './combat.js';
 import { state, player } from '../../src/game/state.js';
 import { makeLayouts } from '../../src/world/layout.js';
 import { createRun } from '../../src/core/progression.js';
-import { damageEnemy } from '../../src/core/combat.js';
+import { damageEnemy, weaponHit } from '../../src/core/combat.js';
+import { attackOf } from '../../src/core/enemies.js';
 import { gateLocked } from '../../src/core/guardians.js';
 import { GUSTO_FIGHT } from '../../src/core/gusto.js';
 import { allEnemies, updateEnemies, drawEnemies } from '../../src/game/enemies.js';
 import { updatePlayer } from '../../src/game/update.js';
 import { enterCube, spawnAt } from '../../src/game/flow.js';
-import { groundY, walkable } from '../../src/physics/enemynav.js';
+import { groundY, walkable, clearLine } from '../../src/physics/enemynav.js';
 import { loadSpecies } from '../../src/render/enemies.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
@@ -63,6 +65,41 @@ export async function runGustoChecks() {
       run(grab.grab.throwAt - gusto.t + 0.05, 1 / 30, dt => updatePlayer(dt));
       check(!player.held && player.ragdoll && player.hp < hp, 'thrown down, and that hurts');
       player.ragdoll = null; player.hp = player.maxHp;
+      run(grab.attackTime);
+
+      // a grab that catches nothing: face down, helpless, every blow hurts more and none gets him up
+      stand(3); gusto.yaw = Math.atan2(player.x - gusto.x, player.z - gusto.z);
+      strike(gusto, 'grab'); run(0.1);
+      const stuck = attackOf(gusto);
+      check(gusto.mode === 'attack' && stuck.exposed && !player.held, 'missed: face down');
+      const hp1 = gusto.hp, blow = weaponHit(player, { damage: 20, crit: 0 }, gusto, 1);
+      check(blow.damage === Math.round(20 * stuck.exposed.damage) && gusto.hp === hp1 - blow.damage, 'his blows hurt more');
+      check(gusto.mode === 'attack' && attackOf(gusto) === stuck, 'and do not get him up');
+      run(stuck.attackTime);
+      check(gusto.mode !== 'attack' || attackOf(gusto) !== stuck, 'up again');
+
+      // keeping away: after a while he breathes in, pulls the player close, and a grab follows
+      run(1);
+      const dist = f => Math.hypot(f.x + .5 - gusto.x, f.z + .5 - gusto.z);
+      const off = map.floors.filter(f => f.encounter && walkable(f, 2) && dist(f) > 5.5 && dist(f) < 8.5
+        && Math.abs(groundY(f, f.x + .5, f.z + .5) - gusto.y) < 0.3 && clearLine(gusto.x, gusto.y + 1.2, gusto.z, f.x + .5, gusto.y + 1, f.z + .5))
+        .sort((a, b) => dist(b) - dist(a))[0];
+      check(off, 'a floor well away from him in the arena');
+      spawnAt(off.x + .5, groundY(off, off.x + .5, off.z + .5), off.z + .5); player.vx = player.vz = 0;
+      Object.assign(gusto, { mode: 'chase', cool: 0, think: 0, target: player, stun: 0 });
+      let waited = 0;
+      while (!(gusto.mode === 'attack' && attackOf(gusto).pull) && waited < 6) { run(0.1, 1 / 30, dt => updatePlayer(dt)); waited += 0.1; }
+      const breath = attackOf(gusto);
+      check(breath.pull && waited >= GUSTO_FIGHT.wait - 0.2, 'he breathes in at one keeping away, after a while: ' + waited.toFixed(1));
+      const far = Math.hypot(player.x - gusto.x, player.z - gusto.z);
+      run(breath.hitAt + breath.pull.time - gusto.t + 0.05, 1 / 30, dt => updatePlayer(dt));
+      const near = Math.hypot(player.x - gusto.x, player.z - gusto.z);
+      check(near < far - 1.5 && near < breath.pull.stop + 0.5 && player.hp === player.maxHp, `pulled in, unhurt: ${far.toFixed(1)} -> ${near.toFixed(1)}`);
+      let grabbed = false;
+      for (let t = 0; t < 2.5 && !grabbed; t += 1 / 30) { run(1 / 30, 1 / 30, dt => updatePlayer(dt)); grabbed = !!player.held; }
+      check(grabbed, 'and grabbed');
+      run(3, 1 / 30, dt => updatePlayer(dt));
+      player.ragdoll = null; player.getUp = null; player.hp = player.maxHp;
 
       // half his health: no further, then the split
       damageEnemy(gusto, gusto.hp * 10);

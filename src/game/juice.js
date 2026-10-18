@@ -194,6 +194,7 @@ const WIND = ['#ffffff', '#e2f1ff', '#c4e2ff'];
 const BOLTS = [[0.25, 1.0, 0.04], [-0.23, 1.0, 0.04]];   // where they end (blender/wolla.py)
 export function stormFx(e, g, what, arg = 0) {
   if (g.kind === 'vortex') { vortexFx(e, g, what, arg); return; }
+  if (g.kind === 'inhale') { inhaleFx(e, g, what, arg); return; }
   const size = e.profile.size ?? 1, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), dt = arg;
   if (what === 'thunder') {
     const at = muzzleAt(e, BOLTS[arg % 2].map(v => v * size));
@@ -235,6 +236,45 @@ export function stormFx(e, g, what, arg = 0) {
     emit(soft, o.x + sx * w, o.y + rand(-0.1, 0.3), o.z + sz * w, { v: [(fx + sx * s) * v, rand(-0.1, 0.2), (fz + sz * s) * v],
       life: rand(0.5, 0.75), size: rand(0.22, 0.36), grow: 1.6, color: n % 2 ? '#7d8698' : '#9aa3b4', alpha: 0.42, drag: 0.7 });
   }
+}
+
+// Gusto breathing in (a pull, game/gusts.js): the suck starting ('suck'), and while it pulls
+// ('pull', for a frame of dt) streaks of air and dust rushing out of its cone into his mouth,
+// whirling round it at the last (like the vortex's breath).
+const DRAFT = ['#ffffff', '#e8eef8', '#d2dcea'];
+function inhaleFx(e, g, what, dt) {
+  const o = muzzleAt(e, g.muzzle), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), sx = fz, sz = -fx;
+  if (what === 'suck') {
+    sfx('inhale', { at: o });
+    if (Math.hypot(o.x - player.x, o.z - player.z) < g.range) cameraKick(-fx, -fz, 0.04);
+    return;
+  }
+  vortexFx(e, g, 'inhale', dt * 1.5);
+  for (let n = Math.floor(130 * dt + Math.random()); n > 0; n--) {
+    const ahead = rand(0.8, g.range), side = rand(-1, 1) * (g.width + g.spread * ahead) * 0.9, life = rand(0.35, 0.6);
+    const x = o.x + fx * ahead + sx * side, z = o.z + fz * ahead + sz * side, y = o.y + rand(-0.9, 0.5);
+    const v = [(o.x - x) / life, (o.y - y) / life, (o.z - z) / life];
+    for (let k = 0; k < 3; k++)   // a streak: three motes in a row, flying together
+      emit(soft, x - v[0] * k * 0.02, y - v[1] * k * 0.02, z - v[2] * k * 0.02,
+        { v, life, size: 0.09 - k * 0.02, color: DRAFT[n % 3], alpha: 0.85 - k * 0.22 });
+  }
+  for (let n = Math.floor(26 * dt + Math.random()); n > 0; n--) {   // dust swept off the floor
+    const ahead = rand(1, g.range * 0.8), side = rand(-1, 1) * (g.width + g.spread * ahead) * 0.8, life = rand(0.6, 0.9);
+    const x = o.x + fx * ahead + sx * side, z = o.z + fz * ahead + sz * side, y = e.y + 0.1;
+    emit(soft, x, y, z, { v: [(o.x - x) / life, (o.y - y) / life * 0.6, (o.z - z) / life], life,
+      size: rand(0.2, 0.34), grow: 0.6, color: '#b5a98f', alpha: 0.5, drag: 0.3 });
+  }
+}
+// Gusto crashing face down after a grab that caught nothing (game/gusts.js): a thump and dust
+export function felledFx(e) {
+  const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), x = e.x + fx * 0.9, z = e.z + fz * 0.9;
+  sfx('thud', { at: e, pitch: 0.55 });
+  for (let i = 0; i < 14; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(1, 2.4);
+    emit(soft, x, e.y + 0.15, z, { v: [Math.cos(a) * s, rand(0.2, 0.9), Math.sin(a) * s], life: rand(0.5, 0.9),
+      size: rand(0.2, 0.35), grow: 1.2, color: '#c9c0ae', alpha: 0.45, drag: 2.5 });
+  }
+  if (Math.hypot(e.x - player.x, e.z - player.z) < 6) cameraKick(0, 0, 0, 0.06);
 }
 
 // Gusto's vortex (a gust of kind 'vortex', game/gusts.js), blown through his hands: he breathes

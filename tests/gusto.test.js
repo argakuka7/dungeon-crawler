@@ -4,9 +4,9 @@ import { state } from './fixtures.js';
 import { World } from '../src/world/world.js';
 import { BOSSES, bossAt } from '../src/core/bosses.js';
 import { GUSTO, GUSTO_SPLIT, CUSTO_TRIANGLE, TRIANGLE, ENEMY_KINDS, GUARDIAN_TIERS, makeEnemy, enemyProfile, guardianLevel,
-  attackOf, attacksInReach, blowOf, absent } from '../src/core/enemies.js';
+  attackOf, attacksInReach, blowOf, absent, exposedBy } from '../src/core/enemies.js';
 import { GUSTO_FIGHT, splitHp, summonCount, gripAt } from '../src/core/gusto.js';
-import { damageEnemy } from '../src/core/combat.js';
+import { damageEnemy, weaponHit } from '../src/core/combat.js';
 import { awardKill, createRun, createPlayerStats } from '../src/core/progression.js';
 import { guardianId, gateLocked, guardianTitle, guardianLockMessage } from '../src/core/guardians.js';
 import { weaponDrops, potionDrops } from '../src/core/gear/drops.js';
@@ -60,8 +60,8 @@ test('he is as strong as a descent guardian, and his attacks are telegraphed', (
   assert.ok(GUSTO.hp >= t.hp); assert.equal(GUSTO.xp, t.xp); assert.ok(GUSTO.poise >= t.poise);
   assert.equal(ENEMY_KINDS.gusto, GUSTO); assert.equal(ENEMY_KINDS.custotriangle, CUSTO_TRIANGLE);
   assert.equal(GUSTO.guardianRole, 'descent'); assert.equal(guardianTitle('descent', GUSTO.label), '♛ Gusto');
-  assert.deepEqual(GUSTO.attacks.map(a => a.name), ['grab', 'summon']);
-  assert.deepEqual(GUSTO_SPLIT.attacks.map(a => a.name).sort(), ['grab', 'summon', 'vortex']);
+  assert.deepEqual(GUSTO.attacks.map(a => a.name), ['grab', 'summon', 'inhale', 'stuck']);
+  assert.deepEqual(GUSTO_SPLIT.attacks.map(a => a.name).sort(), ['grab', 'inhale', 'stuck', 'summon', 'vortex']);
   assert.equal(GUSTO_SPLIT.hp, GUSTO.hp);
   const grab = GUSTO.attacks[0], vortex = GUSTO_SPLIT.attacks.find(a => a.gust);
   // a wind-up to dodge, the catch, then the throw
@@ -70,10 +70,52 @@ test('he is as strong as a descent guardian, and his attacks are telegraphed', (
   assert.equal(vortex.gust.kind, 'vortex'); assert.ok(vortex.hitAt >= 0.9, 'he breathes in first');
   assert.ok(vortex.gust.push * vortex.gust.pushTime / 2 >= 3, 'a powerful push');
   assert.ok(!blowOf(GUSTO_SPLIT, vortex).knockDown);
-  // up close he grabs; further off he can only summon (or, split, blow)
+  // up close he grabs; further off he can only summon or breathe in (or, split, blow); he never
+  // starts lying face down (only a missed grab gets him there)
   assert.deepEqual(attacksInReach(GUSTO, 1, 0), [0, 1]);
-  assert.deepEqual(attacksInReach(GUSTO, 3, 0), [1]);
+  assert.deepEqual(attacksInReach(GUSTO, 3, 0), [1, 2]);
+  assert.deepEqual(attacksInReach(GUSTO, 8.5, 0), [2]);
   assert.ok(attacksInReach(GUSTO_SPLIT, 3, 0).includes(GUSTO_SPLIT.attacks.indexOf(vortex)));
+  for (const d of [0, 0.5, 1, 5]) assert.ok(!attacksInReach(GUSTO_SPLIT, d, 0).includes(GUSTO_SPLIT.attacks.findIndex(a => a.exposed)));
+});
+
+test('he breathes in a player who keeps away: a tell, a pull they can step out of, no harm', () => {
+  const inhale = GUSTO.attacks.find(a => a.pull), p = inhale.pull;
+  assert.equal(GUSTO_SPLIT.attacks.find(a => a.pull), inhale, 'split too');
+  assert.ok(inhale.hitAt >= 0.45, 'a wind-up to see it coming');
+  assert.ok(inhale.trackUntil < inhale.hitAt + p.time, 'he stops turning while it pulls: stepping aside escapes');
+  assert.equal(blowOf(GUSTO, inhale).damage, 0);
+  assert.ok(p.range > GUSTO_FIGHT.far + 3 && inhale.reach <= p.range, 'it reaches those keeping away');
+  assert.ok(p.speed > 2.8 * p.hold, 'running away does not outrun it');
+  assert.ok(p.speed * p.time > 4, 'it pulls a long way');
+  assert.ok(p.stop > GUSTO.radius && p.stop < GUSTO.attacks[0].reach, 'into reach of a grab, not into him');
+  assert.ok(inhale.recover < GUSTO.cooldown, 'a grab can follow quickly');
+  assert.ok(GUSTO_FIGHT.breathCool > inhale.attackTime && GUSTO_FIGHT.wait >= 2);
+  // standing in the cone before his mouth, the pull holds; beside him, not
+  const e = { x: 0, y: 0, z: 0, yaw: 0, profile: GUSTO };
+  assert.ok(inGust(e, p, { x: 0, y: 0, z: 6, r: 0.3, h: 1.7 }));
+  assert.ok(!inGust(e, p, { x: 6, y: 0, z: 1, r: 0.3, h: 1.7 }));
+  assert.ok(!inGust(e, p, { x: 0, y: 0, z: -4, r: 0.3, h: 1.7 }));
+});
+
+test('a grab that catches nothing leaves him face down: blows hurt more and do not get him up', () => {
+  const grab = GUSTO.attacks[0], i = GUSTO.attacks.findIndex(a => a.name === grab.miss), stuck = GUSTO.attacks[i];
+  assert.ok(stuck.exposed.until >= 1.2 && stuck.exposed.until <= stuck.attackTime, 'long enough to punish');
+  assert.ok(stuck.exposed.damage > 1);
+  assert.equal(stuck.trackUntil, 0);
+  const e = makeEnemy({ id: 'g', level: 1, coinDrop: 0, kind: GUSTO, x: 0, y: 0, z: 0, guardian: true }, GUSTO);
+  Object.assign(e, { mode: 'attack', attack: i, t: 0.5, attacks: 1, poised: 0 });
+  assert.equal(exposedBy(e), stuck.exposed.damage);
+  const hero = createPlayerStats(), stats = { damage: 40, crit: 0 };
+  const hit = weaponHit(hero, stats, e, 1);
+  assert.equal(hit.damage, Math.round(40 * stuck.exposed.damage));
+  assert.equal(e.mode, 'attack', 'not staggered out of it'); assert.equal(e.attack, i);
+  assert.ok(!e.staggered);
+  e.t = stuck.exposed.until;
+  assert.equal(exposedBy(e), 1, 'up again');
+  assert.equal(weaponHit(hero, stats, e, 1).damage, 40);
+  Object.assign(e, { mode: 'attack', attack: 0, t: 0.1 });
+  assert.equal(exposedBy(e), 1, 'not while grabbing');
 });
 
 test('his grip carries the caught player up in front of him and down again', () => {

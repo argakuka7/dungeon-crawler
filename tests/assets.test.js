@@ -340,15 +340,19 @@ test('standalone sword is a small untextured, unskinned prop', () => {
 
 test('Gusto: his clips match his attacks, the grip and the muzzles come from them, and he flails eight tentacles', () => {
   const { json: j, duration } = glb('gusto'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
-  assert.deepEqual(Object.keys(a).sort(), ['GustoBlow', 'GustoDeath', 'GustoFloat', 'GustoGrab', 'GustoSummon']);
+  assert.deepEqual(Object.keys(a).sort(), ['GustoBlow', 'GustoDeath', 'GustoFloat', 'GustoGrab', 'GustoInhale', 'GustoStuck', 'GustoSummon']);
   assert.equal(a.GustoFloat.extras.loop, true);
   assert.ok(Math.abs(duration(a.GustoDeath) - GUSTO.deathTime) < 1e-5); assert.equal(a.GustoDeath.extras.hold_last_frame, true);
-  const clip = { grab: 'GustoGrab', summon: 'GustoSummon', blow: 'GustoBlow' };
+  const clip = { grab: 'GustoGrab', summon: 'GustoSummon', blow: 'GustoBlow', inhale: 'GustoInhale', stuck: 'GustoStuck' };
   for (const at of GUSTO_SPLIT.attacks) {
     const x = a[clip[at.clip]].extras;
-    assert.equal(x.hit_frame / 30, at.hitAt, at.name);
+    if (at.exposed) assert.equal(x.exposed_end / 30, at.exposed.until, at.name);   // (no blow of its own)
+    else assert.equal(x.hit_frame / 30, at.hitAt, at.name);
     assert.ok(Math.abs(duration(a[clip[at.clip]]) - at.attackTime) < 1e-5, at.name);
   }
+  const pull = GUSTO.attacks.find(t => t.pull).pull, i = a.GustoInhale.extras;
+  assert.deepEqual(i.muzzle, pull.muzzle);
+  assert.ok(Math.abs((i.pull_end - i.hit_frame) / 30 - pull.time) < 1e-9);
   const grab = GUSTO.attacks.find(t => t.grab).grab, g = a.GustoGrab.extras;
   assert.equal(g.throw_frame / 30, grab.throwAt);
   assert.deepEqual(g.grip.map(p => p.map(v => Math.abs(v) < 1e-9 ? 0 : v)), grab.grip.map(p => p.map(v => v || 0)));

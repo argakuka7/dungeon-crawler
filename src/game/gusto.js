@@ -6,12 +6,14 @@
 // last proxy went, null before) }. A dev spawn (game/devspawn.js) gets one too.
 //
 // Movement and attacks are the shared enemy AI's (game/enemyai.js): the fight only says when a
-// summon may start (`barred`), carries one out (`summon`, at its hit frame), and moves him
-// between the phases. While he splits or is away (modes 'split' and 'gone') the AI leaves him be.
+// summon or a breath may start (`barred`: the attacks not to start now), carries a summon out
+// (`summon`, at its hit frame), and moves him between the phases. Each body counts how long the
+// nearest player has kept away from it (`far`) and how long only a grab may follow its breath
+// (`follow`). While he splits or is away (modes 'split' and 'gone') the AI leaves him be.
 // Only the game that runs the enemies runs the fight; the others see its result (net/foes.js).
 import { player, state, setStatus } from './state.js';
 import { party, alive } from './party.js';
-import { GUSTO, GUSTO_SPLIT, ENEMY_KINDS, enemyProfile, makeEnemy } from '../core/enemies.js';
+import { GUSTO, GUSTO_SPLIT, ENEMY_KINDS, enemyProfile, makeEnemy, attackOf } from '../core/enemies.js';
 import { GUSTO_FIGHT as G, splitHp, summonCount } from '../core/gusto.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -23,7 +25,11 @@ import { summonFx } from './juice.js';
 
 export let gustos = [];
 let fights = [];
-const NONE = new Set(), NO_SUMMON = new Set(['summon']);
+const NONE = new Set();
+// what a body may not start: anything but a breath (keeping away), anything but a grab (after
+// one), else the breath and maybe the summon
+const BREATH_ONLY = new Set(['grab', 'summon', 'vortex']), GRAB_ONLY = new Set(['summon', 'vortex', 'inhale']);
+const NO_BREATH = new Set(['inhale']), NO_BREATH_OR_SUMMON = new Set(['inhale', 'summon']);
 
 export function resetGustos() {
   removeEnemyViews(gustos);
@@ -34,7 +40,7 @@ export function resetGustos() {
 export function addGustos(list) {
   for (const e of list) {
     e.hpFloor = splitHp(e.profile.hp);
-    const f = { e, phase: 1, t: 0, cool: G.firstSummon, proxies: [], minions: [], window: null, n: 0,
+    const f = { e, phase: 1, t: 0, cool: G.firstSummon, breath: 0, proxies: [], minions: [], window: null, n: 0,
       nonce: Math.random().toString(36).slice(2, 7), over: false };
     hook(f, e);
     fights.push(f); gustos.push(e);
@@ -71,9 +77,14 @@ function run(f, dt) {
     if (!f.over) { f.over = true; [...f.proxies, ...f.minions].forEach(leave); f.proxies = []; f.minions = []; }
     return;
   }
-  if (e.mode === 'chase' || e.mode === 'attack') f.cool -= dt;   // (in the fight)
-  const barred = f.cool > 0 || !summonCount(phaseOf(f), f.minions.length) ? NO_SUMMON : NONE;
-  for (const b of [e, ...f.proxies]) b.barred = barred;
+  if (e.mode === 'chase' || e.mode === 'attack') { f.cool -= dt; f.breath -= dt; }   // (in the fight)
+  const summon = f.cool <= 0 && summonCount(phaseOf(f), f.minions.length) > 0, bodies = [e, ...f.proxies];
+  for (const b of bodies) keepingAway(f, b, dt);
+  const breathing = bodies.some(b => b.mode === 'attack' && attackOf(b).pull);
+  for (const b of bodies) {
+    b.barred = !breathing && f.breath <= 0 && b.far >= G.wait ? BREATH_ONLY
+      : b.follow > 0 ? GRAB_ONLY : summon ? NO_BREATH : NO_BREATH_OR_SUMMON;
+  }
   for (const p of f.proxies) { p.hp = e.hp; p.hurtT = Math.max(p.hurtT, e.hurtT); }   // they show his health
   if (f.phase === 1) {
     if (e.hp <= e.hpFloor) split(f);
@@ -84,6 +95,17 @@ function run(f, dt) {
     else if (f.window === null) f.window = G.window;
     else if ((f.window -= dt) <= 0 && e.mode !== 'attack') vanish(f);   // (a grab is seen through)
   } else if ((f.t -= dt) <= 0) appear(f);   // gone: back
+}
+
+// how long the nearest player has kept away from body b (in the fight), and whether only a
+// grab may follow its breath; a breath starting holds the others' back for breathCool
+function keepingAway(f, b, dt) {
+  const p = nearest(b), fighting = b.mode === 'chase' || b.mode === 'attack';
+  b.far = fighting && Math.hypot(p.x - b.x, p.z - b.z) > G.far ? (b.far ?? 0) + dt : 0;
+  if (b.mode === 'attack' && attackOf(b).pull) {
+    if (b.breathAt !== b.attacks) { b.breathAt = b.attacks; f.breath = G.breathCool; }
+    b.far = 0; b.follow = G.follow;
+  } else b.follow = Math.max(0, (b.follow ?? 0) - dt);
 }
 
 // at half his health: he stops and shudders, nothing hurts him, then the three of him appear
