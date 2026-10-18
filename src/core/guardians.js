@@ -1,4 +1,6 @@
 // Run-persistent guardian gates. Terrain/encounter identity never depends on unlock state.
+import { DIRS } from './constants.js';
+
 export const GUARDIAN_COLOR = '#ff3fa8';
 export const DESCENT_GUARDIAN_COLOR = '#ff9b35';
 export const guardianColor = role => role === 'descent' ? DESCENT_GUARDIAN_COLOR : GUARDIAN_COLOR;
@@ -15,6 +17,18 @@ export const portalLocked = (map, run, portal) => {
   if (gate && !run.unlockedGates.has(gate)) return true;
   return portal.dir === map?.exit && gateLocked(map, run);
 };
+
+// Leaving a guardian's arena while the guardian lives (game/leavefight.js): any open side face
+// out of it asks first, and only when the player steers out themselves (dx, dz: keys or a mouse
+// order). A push (a blow, a gust, a throw) or a body that cannot act just presses against the
+// face, so the fight stays in the arena.
+export const leavingFight = (map, run, dir) => dir < 4 && gateLocked(map, run);
+export const guardianName = map => map.guardian?.boss ? bossName(map.guardian.boss)
+  : map.guardian?.role === 'descent' ? 'The descent guardian' : 'The side guardian';
+export function steersOut(p, dir, dx, dz) {
+  const [nx, nz] = DIRS[dir];
+  return !p.ragdoll && !p.held && !p.getUp && !p.down && !(p.stun > 0) && p.hp > 0 && dx * nx + dz * nz > 0;
+}
 
 // Ordinary kills made during this visit roll back on death; an opened gate never does.
 // learn: memory.html#death (see learn/README.md)

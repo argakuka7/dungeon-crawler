@@ -139,9 +139,9 @@ test('a proxy goes at the first touch, pays nothing; his minions pay once and ar
   assert.ok(!run.defeated.has(m.id));
 });
 
-test('the fight rules: summons fill up to five, then two; the vortex catches what is ahead', () => {
-  assert.deepEqual(GUSTO_FIGHT.minions, [5, 2]);
-  assert.equal(summonCount(1, 0), 5); assert.equal(summonCount(1, 3), 2); assert.equal(summonCount(1, 7), 0);
+test('the fight rules: summons fill up to three, then two; the vortex catches what is ahead', () => {
+  assert.deepEqual(GUSTO_FIGHT.minions, [3, 2]);
+  assert.equal(summonCount(1, 0), 3); assert.equal(summonCount(1, 2), 1); assert.equal(summonCount(1, 5), 0);
   assert.equal(summonCount(2, 0), 2); assert.equal(summonCount(2, 2), 0);
   assert.equal(GUSTO_FIGHT.proxies, 2); assert.ok(GUSTO_FIGHT.window >= 0.8 && GUSTO_FIGHT.window <= 1.5);
   const e = makeEnemy({ id: 'g', level: 1, f: null, x: 8, y: 0, z: 8, yaw: 0 }, GUSTO_SPLIT);

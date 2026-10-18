@@ -49,6 +49,7 @@ export function updatePlayer(dt) {
   let [dx, dz] = order ? [order.dx, order.dz] : keys;
   const len = Math.hypot(dx, dz);
   if (len > 1) { dx /= len; dz /= len; }
+  const steer = [dx, dz];   // where we go ourselves (a lunge does not count for leaving a fight)
   const jump = takeJump();
   tickCast(dt, len > 0 || jump);   // reading the town portal scroll: moving interrupts it
   if (climb(dt, dx, dz, jump)) { cancelSword(); clearOrder(); return; }   // on a ladder
@@ -78,5 +79,5 @@ export function updatePlayer(dt) {
   }
   if (landed > SIT_IMPACT) { player.stun = 1.5; sfx('dizzy'); }
 
-  checkPortals(dx, dz, dt, charge);
+  checkPortals(dx, dz, dt, charge, steer);
 }

@@ -37,6 +37,7 @@ export const state = {
   mode: skipMenu ? 'play' : 'menu',   // 'menu': the main menu (game/menu.js); 'play': in a world
   showPath: false, transitioning: false, inventoryOpen: false, equipping: false,
   menuOpen: false,   // the Esc menu (game/escmenu.js)
+  leaveAsk: null,   // "Leave the fight?" asked: { key, dir } (game/leavefight.js)
   showLabels: false,   // X: name labels over every item on the floor (game/lootlabels.js)
   run: createRun(),
   statusMsg: '', statusUntil: 0,
@@ -56,9 +57,9 @@ export const state = {
 // camera orientation and zoom (eased towards the targets)
 export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_ZOOM, zoomTarget: DEFAULT_ZOOM };
 
-// The inventory and the Esc menu stop the world, except when playing together: the friend plays
-// on, and so do the enemies (only your own input stops)
-export const worldPaused = () => (state.inventoryOpen || state.menuOpen) && !together();
+// The inventory, the Esc menu and "Leave the fight?" stop the world, except when playing
+// together: the friend plays on, and so do the enemies (only your own input stops)
+export const worldPaused = () => (state.inventoryOpen || state.menuOpen || !!state.leaveAsk) && !together();
 
 // what the game just said: a short line in the chat box (game/console.js), not kept (the
 // chronicle, game/log.js, keeps what matters)

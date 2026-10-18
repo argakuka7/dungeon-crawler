@@ -30,6 +30,7 @@ import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
 import { updateQuickbar } from './game/quickbar.js';
 import { updateTeleportMenu } from './game/teleportmenu.js';
+import { updateLeave } from './game/leavefight.js';
 import { updateTouch } from './game/touch.js';
 import './game/nozoom.js';   // the page never zooms, only the game's view
 import { updateLoot } from './game/loot.js';
@@ -108,6 +109,7 @@ function frame(now = performance.now()) {
   if (tooEarly(now)) { requestAnimationFrame(frame); return; }
   const start = performance.now();
   const elapsed = Math.min(clock.getDelta(), MAX_STEP);
+  updateLeave();   // "Leave the fight?" goes away once it cannot be answered (game/leavefight.js)
   if (state.mode === 'menu') { menuFrame(elapsed, start); return; }
   if (character.ready) character.group.visible = true;
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);

@@ -65,6 +65,14 @@ Rewards scale with level.
   advances, rally when it is hurt, and cannot all be lured towards the entrance.
 - The locked exit glows red with a crossed seal, on side gates as well as wells.
   The minimap also marks locked exits red. Killing ordinary enemies is insufficient.
+- While the guardian lives, walking back out of its arena (any open side face, in practice
+  the entrance) asks first: a modal **Leave the fight?** (`game/leavefight.js`; Enter or Y
+  leaves, Esc, N or a click beside it stays). Alone the world waits meanwhile, playing together
+  it goes on. Staying does not ask again until you step away from the face. Only steering out
+  yourself (keys or a mouse order, not a sword's lunge) asks; a push (a blow, a gust, a throw)
+  or a body that cannot act (knocked over, getting up, stunned, held, downed) just presses
+  against the face, and you stay in the arena (`core/guardians.js` `leavingFight`,
+  `steersOut`). Steering out while being pushed asks too. The town portal scroll is unaffected.
 - Guardian death alone removes the seal and unlocks the gate for the current run.
   Death rollback, revisits, returns from below and late asset rebuilds never restore
   it. Ordinary kills retain visit/death rollback behaviour; a new run resets both.
@@ -149,4 +157,5 @@ Browser checks exercise workers, assets, shaders, seals, charging and real trave
 ```js
 await (await import('./tests/browser/guardians.js')).runGuardianChecks();
 await (await import('./tests/browser/guardians.js')).runSideGuardianChecks();
+await (await import('./tests/browser/leavefight.js')).runLeaveFightChecks();   // Leave the fight?
 ```

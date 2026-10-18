@@ -35,6 +35,7 @@ import { actionsFor, isChar, isModifier, BAR_ACTIONS, MOVE_ACTIONS } from '../co
 import { barKey } from './quickbar.js';
 import { teleportMenuOpen, closeTeleportMenu, pickTeleport } from './teleportmenu.js';
 import { setMenuOpen, toggleMenu } from './escmenu.js';
+import { answerLeave } from './leavefight.js';
 import { useAction } from './action.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
@@ -84,6 +85,13 @@ addEventListener('keydown', e => {
   if (state.menuOpen) {
     if ((e.code === 'Escape' || is('menu')) && !e.repeat) setMenuOpen(false);
     if (!['Tab', 'Enter', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab, Enter and Space)
+    return;
+  }
+  // "Leave the fight?" (game/leavefight.js): Enter or Y leaves, Esc, N or the menu key stays
+  if (state.leaveAsk) {
+    if (!e.repeat && ['Enter', 'NumpadEnter', 'KeyY'].includes(e.code)) answerLeave(true);
+    else if (!e.repeat && (['Escape', 'KeyN'].includes(e.code) || is('menu'))) answerLeave(false);
+    if (!['Tab', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab and Space)
     return;
   }
   if (!isModifier(e.code) && foreign(e)) {
@@ -197,7 +205,7 @@ addEventListener('wheel', e => {
 
 // desired direction in world space (WASD or the touch stick, relative to the camera)
 export function inputDir() {
-  if (state.inventoryOpen) return [0, 0];
+  if (state.inventoryOpen || state.leaveAsk) return [0, 0];
   if (player.autoDir) return player.autoDir;
   let ix = 0, iy = 0;
   if (held('moveUp')) iy += 1;

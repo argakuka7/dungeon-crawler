@@ -11,7 +11,7 @@ import { guardianColor, guardianTitle } from '../src/core/guardians.js';
 import { bossAt } from '../src/core/bosses.js';
 import { parseColor } from '../src/core/oklch.js';
 import { ENEMY_PROFILES, ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, GUARDIAN_TIERS, enemyProfile, makeEnemy, threat, guardianLevel, depthLevel } from '../src/core/enemies.js';
-import { guardianId, gateLocked, portalLocked, restoreDefeated } from '../src/core/guardians.js';
+import { guardianId, gateLocked, portalLocked, restoreDefeated, leavingFight, steersOut, guardianName } from '../src/core/guardians.js';
 import { createRun, createPlayerStats, awardKill } from '../src/core/progression.js';
 import { population } from '../src/core/spawns.js';
 import { damageEnemy } from '../src/core/combat.js';
@@ -178,6 +178,26 @@ test('guardians are pink and amber, except where a species dresses them otherwis
     assert.ok(parseColor(k.gloom.color).l < parseColor(k.colors.body).l, 'still darkens to strike');
     assert.ok(k.hp > wolk.hp * 3 && k.guardian, k.type);
   }
+});
+test('leaving an arena while its guardian lives asks, and only when steered out', () => {
+  const w = new World(3), run = createRun();
+  for (const depth of [0, 1]) for (const [key, g] of w.layout(depth).guardians) {
+    const map = w.cube(key).map, entry = map.portals[0];
+    assert.equal(leavingFight(map, run, entry.dir), true, `${g.role} arena entrance asks`);
+    assert.equal(leavingFight(map, run, 4), false, 'wells are not faces');
+    assert.match(guardianName(map), depth === 0 && g.role === 'descent' ? /^Gusto$/ : /guardian$/);
+    run.unlockedGates.add(map.key);
+    assert.equal(leavingFight(map, run, entry.dir), false, 'not once it is dead');
+  }
+  const ordinary = w.cube(w.layout(0).route[1]).map;
+  assert.equal(leavingFight(ordinary, run, 0), false, 'ordinary rooms never ask');
+  const p = { ...createPlayerStats(), hp: 10, stun: 0 };
+  assert.equal(steersOut(p, 0, 1, 0), true);
+  assert.equal(steersOut(p, 0, 0, 0), false, 'a push alone does not ask');
+  assert.equal(steersOut(p, 0, -1, 0), false, 'steering away does not ask');
+  assert.equal(steersOut(p, 2, 0, 0.5), true);
+  for (const state of [{ ragdoll: {} }, { held: {} }, { getUp: {} }, { stun: 0.4 }, { down: true }, { hp: 0 }])
+    assert.equal(steersOut({ ...p, ...state }, 0, 1, 0), false, JSON.stringify(state));
 });
 test('side gates lock full-face and debug travel, preserve retreat, and stay unlocked after death', () => {
   for (const seed of [0, 1, 7, 42]) for (const depth of [0, 1, 12, 19]) {

@@ -11,7 +11,9 @@ defenders, it brings its own (`game/enemyspawn.js` `bossSpot`). It is a guardian
 way: the descent guardian's level, id, gate, seal, amber HP bar and drops; its death alone opens
 the well, for good. Its label shows its name (`♛ Gusto · Lv 1`), the locked well says
 "Defeat Gusto to unlock this descent", and the music turns to the boss mood like for any
-guardian. Once hurt it no longer keeps to its post (`game/defence.js`).
+guardian. Once hurt it no longer keeps to its post (`game/defence.js`). Like every guardian's
+arena, leaving it while the boss lives asks first, and being pushed against the entrance never
+takes you out ([guardians.md](guardians.md#encounter-and-persistence)).
 
 ## Gusto
 
@@ -46,7 +48,7 @@ Profiles: `GUSTO` and `GUSTO_SPLIT` (phase 2) in `src/core/enemies.js`; the figh
   ragdoll and get up as after any knock-down. A stagger (a heavy blow, a friend's) or its death
   makes it let go: the player drops unhurt.
 - **Summon** (within 8 cells, clip `GustoSummon`): it rears back with its arms up and spits Custo
-  triangles from its mouth at 0.9 s, onto free floors around it: as many as fill up to **five**.
+  triangles from its mouth at 0.9 s, onto free floors around it: as many as fill up to **three**.
   It summons again only while fewer are about, at most every 7 s (the first after 1.5 s of
   fighting).
 - No blow takes it below half its health (`hpFloor`, `core/combat.js` `damageEnemy`).

@@ -43,10 +43,10 @@ export async function runGustoChecks() {
       const stand = d => { const [x, z] = ahead(d); spawnAt(x, gusto.y, z); player.vx = player.vz = 0; };
       stand(1.3);
 
-      // phase 1: a summon brings five Custo triangles
+      // phase 1: a summon brings three Custo triangles
       strike(gusto, 'summon'); run(0.1);
       let minions = allEnemies().filter(e => e.summoned);
-      check(minions.length === 5 && minions.every(e => e.type === 'custotriangle' && e.mode === 'chase'), 'five Custo triangles: ' + minions.length);
+      check(minions.length === 3 && minions.every(e => e.type === 'custotriangle' && e.mode === 'chase'), 'three Custo triangles: ' + minions.length);
       drawEnemies(0);
       check(minions.every(e => e.view && e.view.size === 0.5), 'half-size triangles');
       for (const m of minions) { m.mode = 'idle'; m.stun = 99; }   // (out of the way for now)
@@ -113,7 +113,7 @@ export async function runGustoChecks() {
       check(!gateLocked(map, state.run), 'his death opens the descent');
       run(GUSTO_FIGHT.leave + 0.1);
       check(!allEnemies().some(e => (e.proxy || e.summoned) && e.mode !== 'dead'), 'his proxies and triangles go with him');
-      return { summoned: 5, grabbed: true, split: true, reshuffled: true, gate: true };
+      return { summoned: 3, grabbed: true, split: true, reshuffled: true, gate: true };
     } finally {
       player.held = null;
       state.run = saved.run; state.openedFaces = opened; c.visits = visits;

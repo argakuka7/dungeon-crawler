@@ -6,7 +6,8 @@ import { isFaceOpen, approachingFace, faceDistance, boundaryArrival } from '../c
 import { step, OPP6 } from '../world/coords.js';
 import { railedFace } from '../physics/canmove.js';
 import { player, state, setStatus } from './state.js';
-import { portalLocked, guardianLockMessage } from '../core/guardians.js';
+import { portalLocked, guardianLockMessage, leavingFight, steersOut } from '../core/guardians.js';
+import { askLeave } from './leavefight.js';
 import { startTravel } from './travel.js';
 import { townPadIn, onPad, TOWN_PORTAL_CHARGE } from '../core/townportal.js';
 import { takeTownPortal } from './townportal.js';
@@ -40,9 +41,18 @@ export function lockPortalsHere() {
   state.portalCharge = null;
 }
 
+// Out of a guardian's arena while it lives: asks first, if we steer out ourselves; pushed there,
+// we stay (core/guardians.js leavingFight, game/leavefight.js). True: the fight holds us.
+function fightHolds(d, steer) {
+  if (!leavingFight(state.map, state.run, d)) return false;
+  if (steersOut(player, d, steer[0], steer[1])) askLeave(d);
+  return true;
+}
+
 // dt: time spent this step (charges vertical portals); charge: carried over from the last
 // step. state.portalCharge only survives while we keep standing in the same portal.
-export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge) {
+// steer: where we steer ourselves (game/update.js: the keys or a mouse order, not a lunge)
+export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge, steer = [dx, dz]) {
   state.portalCharge = null;
   if (state.boundaryLock >= 0 && faceDistance(player, state.boundaryLock) > player.r + 0.25) state.boundaryLock = -1;
   // open side faces take you across anywhere along them, whether they ever had a gate or not
@@ -50,6 +60,7 @@ export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge
     if (!isFaceOpen(state.openedFaces, state.cubeKey, d) || state.boundaryLock === d || !approachingFace(player, d, dx, dz)) continue;
     if (railedAcross(d)) continue;
     if (portalLocked(state.map, state.run, { dir: d })) { setStatus(guardianLockMessage(state.map)); continue; }
+    if (fightHolds(d, steer)) continue;
     startTravel(state.map.portals.find(q => q.kind === 'side' && q.dir === d) || { kind: 'side', dir: d });
     return true;
   }
@@ -60,6 +71,7 @@ export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge
     if (state.portalLock === q.id) { if (!at) state.portalLock = 0; continue; }
     if (!at) continue;
     if (portalLocked(state.map, state.run, q)) { setStatus(guardianLockMessage(state.map)); continue; }
+    if (q.kind === 'side' && fightHolds(q.dir, steer)) continue;
     if (q.kind === 'up' || q.kind === 'down') {
       const c = charge?.key === state.cubeKey && charge.id === q.id ? charge : { key: state.cubeKey, id: q.id, t: 0 };
       c.t += dt;

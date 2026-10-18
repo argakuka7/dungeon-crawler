@@ -1,7 +1,7 @@
 // Gusto's fight as rules (game/gusto.js runs it; his profiles are in core/enemies.js, GUSTO
 // and GUSTO_SPLIT). docs/bosses.md tells the whole fight.
 //
-// Phase 1: he grabs and throws, and spits Custo triangles: a summon fills up to five of them.
+// Phase 1: he grabs and throws, and spits Custo triangles: a summon fills up to three of them.
 // At half his health he stops (no blow takes him below it) and splits: for `splitTime` nothing
 // hurts him while he shudders, then three of him appear, apart, away from the players. Two are
 // his proxies: they look the same, fight the same (grab, vortex, summon) and show his health,
@@ -12,7 +12,7 @@
 export const GUSTO_FIGHT = Object.freeze({
   split: 0.5,             // the share of his health he splits at
   splitTime: 1.8,         // s he shudders before the three of him appear
-  minions: [5, 2],        // the most Custo triangles at once, phase 1 / 2: a summon fills up to that
+  minions: [3, 2],        // the most Custo triangles at once, phase 1 / 2: a summon fills up to that
   summonCool: [7, 8],     // s from one summon to the next, phase 1 / 2
   firstSummon: 1.5,       // s before his first summon
   proxies: 2,

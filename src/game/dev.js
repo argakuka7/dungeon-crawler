@@ -251,7 +251,7 @@ if (state.dev) {
   addEventListener('click', e => { const q = portalAt(e); if (q) takePortal(q); });
   addEventListener('mousemove', e => { document.body.style.cursor = portalAt(e) ? 'pointer' : ''; });
   addEventListener('keydown', e => {
-    if (e.repeat || state.inventoryOpen || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+    if (e.repeat || state.inventoryOpen || state.leaveAsk || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
     if (e.altKey && !e.ctrlKey && !e.metaKey && SCREEN[e.code]) { e.preventDefault(); goAdjacent(screenFace(SCREEN[e.code])); return; }
     if (e.code === 'KeyG') goTo('down', false);
     if (e.code === 'KeyH') goHorde().catch(err => setStatus(err.message));
