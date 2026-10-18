@@ -17,7 +17,8 @@ import { resetEnemies, mirroring, detachEnemies } from './enemies.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { cancelSword } from './sword.js';
 import { onPropSet } from '../render/props.js';
-import { cubeAssets } from '../render/cubeassets.js';
+import { cubeAssets, warmCube } from '../render/cubeassets.js';
+import { warmScene } from '../render/warmup.js';
 import { villagersReady } from '../render/villagers.js';
 import { createPlayerStats, createRun, takeDamage } from '../core/progression.js';
 import { clearEffects } from '../core/potions.js';
@@ -223,9 +224,19 @@ export function settleIn(neighbors = true) {
   noteDepth(c.map, state.cubes.seed);   // the first time this deep: into the chronicle
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
   if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
-  // get the cubes behind our portals (and doors) ready in the background
-  state.cubes.prefetch([...c.map.portals.filter(p => p.kind !== 'spawn').map(p => step(state.cubeKey, p.dir)),
-    ...(c.map.doors || []).map(d => d.to)]);
+  prefetchAround(c);
+}
+
+const beyond = (c, take) => (c.map.portals || []).filter(take).map(p => step(c.key, p.dir));
+// Get the cubes behind our portals (and doors) ready in the background, shaders and all
+// (world/client.js). One step further, what the cubes behind the ways down (and up) from those
+// show is loaded too: a new depth's models are in by the time you stand at its well.
+function prefetchAround(c) {
+  const cubes = state.cubes, near = [...beyond(c, p => p.kind !== 'spawn'), ...(c.map.doors || []).map(d => d.to)];
+  cubes.prefetch(near);
+  for (const k of near) cubes.map(k).then(n => {
+    if (state.cubes === cubes && state.cubeKey === c.key) cubes.prefetch(beyond(n, p => p.kind === 'down' || p.kind === 'up').filter(k => k !== c.key), { warm: false });
+  }, () => {});
 }
 
 // Visited cubes within the render budget, on the active stratum only, and nothing else: no
@@ -263,7 +274,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   const params = new URLSearchParams(location.search);
   // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths,
   // ?bridge=chain / ?ladder=vine one bridge / ladder style wherever it fits
-  state.cubes = new WorldClient(seed, { prepare: cubeAssets, arche: state.dev && params.get('arche'),
+  state.cubes = new WorldClient(seed, { load: cubeAssets, warm: warmCube, arche: state.dev && params.get('arche'),
     themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [],
     bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder') });
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
@@ -278,8 +289,9 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   const cubes = state.cubes, spot = restore?.spot;
   const first = spot ? cubes.get(spot.cube).catch(() => cubes.get(cubes.start)) : cubes.get(cubes.start);
   // the villagers are a nicety: a failure to load them (logged) does not hold the game up
+  // (and the shaders of what hides in the scene until used: particles, the portal cloud)
   return whenReady(Promise.all([first, syncEquippedWeapon(),
-    villagersReady.catch(() => null)]))
+    villagersReady.catch(() => null), warmScene()]))
     .then(([c]) => {
       if (state.cubes !== cubes) return;
       if (spot && c.key === spot.cube) enterCube(c, null, null, spot.arrival); else enterCube(c);

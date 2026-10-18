@@ -47,7 +47,7 @@ import { trackLight, untrackLight } from './lightpool.js';
 import { glow, soft, emit, rand } from './particles.js';
 import { wetTrail, removeTrail } from './trails.js';
 import { dressEnemy, paintParts } from './enemymodel.js';
-import { attackOf } from '../core/enemies.js';
+import { attackOf, makeEnemy, ENEMY_KINDS } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { player } from '../game/state.js';
@@ -379,6 +379,29 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }
+// An enemy of each of these kinds made once off-screen, for the shaders it is drawn with
+// (render/warmup.js, render/cubeassets.js): its body, silhouette, bar, label and the puddle a
+// wet one leaves. Each kind once (the programs stay), and only kinds whose model is in.
+// -> { objects to compile, dispose() }
+const warmed = new Set(), ORIGIN = { x: 0, y: 0, z: 0 };
+export function enemyWarmup(kinds) {
+  const list = [];
+  for (const k of kinds) {
+    const kind = ENEMY_KINDS[k], prefab = kind && prefabs[kind.species];
+    if (warmed.has(k) || !prefab?.ready) continue;
+    warmed.add(k);
+    const e = makeEnemy({ id: 'warm:' + k, x: 0, y: 0, z: 0, yaw: 0, level: 1,
+      ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, boss: kind.boss }) }, kind);
+    const v = e.view = makeView(e, prefab);
+    scene.remove(v.group);
+    if (v.light) untrackLight(v.light);   // (no light out of nowhere meanwhile)
+    e.mode = 'dead'; wetTrail(v, e, 0, ORIGIN);
+    for (const p of v.trail?.list ?? []) scene.remove(p.mesh);
+    list.push(e);
+  }
+  return { objects: list.flatMap(e => [e.view.group, ...(e.view.trail?.list ?? []).map(p => p.mesh)]), dispose: () => removeEnemyViews(list) };
+}
+
 export function removeEnemyViews(list) {
   for (const e of list) if (e.view) {
     const v = e.view;

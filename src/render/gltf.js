@@ -5,14 +5,23 @@
 // node transform only where it means something, e.g. the chest's lid hinge), so on load each
 // such mesh gets its node's transform baked back into float positions. Skinned meshes stay
 // quantized: their bind matrices carry the scale, nothing outside the skeleton sees it.
+// A file is fetched at once but parsed on its turn (render/turns.js): models fetched ahead
+// while you play come in one per frame, not all in the frame you arrive somewhere.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { turn } from './turns.js';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
+const fetchBuffer = url => fetch(url).then(r => {
+  if (!r.ok) throw new Error(`${url}: ${r.status} ${r.statusText}`);
+  return r.arrayBuffer();
+});
+
 // url -> Promise<gltf>: a fresh copy each time (callers change what they load)
-export const loadGLB = url => loader.loadAsync(url).then(gltf => { bakeQuantization(gltf); return gltf; });
+export const loadGLB = url => fetchBuffer(url).then(buffer => turn().then(() => loader.parseAsync(buffer, THREE.LoaderUtils.extractUrlBase(url))))
+  .then(gltf => { bakeQuantization(gltf); return gltf; });
 
 const quantized = a => a.normalized || !(a.array instanceof Float32Array);
 

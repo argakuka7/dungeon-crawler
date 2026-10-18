@@ -1,7 +1,10 @@
 // Web worker that owns the world: WFC, faces, cube generation and the cube geometry run here,
 // off the main thread.
-// Requests are answered in order; a cube comes back as its map (structured clone keeps the
-// object graph) plus what the minimap needs to know about its tile and faces.
+// Requests wait in a queue and are answered one at a time, in order, except that an urgent one
+// (someone waits in a portal for it, world/client.js) goes to the front: the cube you walk into
+// is not made after all the ones fetched ahead around it. Between two cubes the worker lets new
+// requests in. A cube comes back as its map (structured clone keeps the object graph) plus what
+// the minimap needs to know about its tile and faces.
 import { World } from './world.js';
 import { faceKey } from './coords.js';
 import { isInterior } from './town.js';
@@ -9,6 +12,8 @@ import { buildCubeParts } from '../render/cubegeo.js';
 import { partBuffers } from '../render/parts.js';
 
 let world = null;
+const queue = [];   // keys still to make, the next first
+let scheduled = false;
 
 function info(k) {
   if (isInterior(k)) return { kind: 'interior', sock: null, K: world.cube(k).map.K, faces: [null, null, null, null, null, null] };
@@ -20,15 +25,34 @@ function info(k) {
   return { kind: t.kind, sock: t.sock, K: t.K, faces };
 }
 
+function make(k) {
+  try {
+    const c = world.cube(k);
+    const geo = buildCubeParts(c.map);
+    postMessage({ type: 'cube', key: k, map: c.map, geo, info: info(k) }, partBuffers(geo));
+  } catch (e) {
+    postMessage({ type: 'error', key: k, message: String(e.message || e) });
+  }
+}
+
+function next() {
+  scheduled = false;
+  if (queue.length) make(queue.shift());
+  schedule();
+}
+function schedule() {
+  if (scheduled || !queue.length) return;
+  scheduled = true;
+  setTimeout(next, 0);   // (a request that came in meanwhile is queued first)
+}
+
 onmessage = ({ data }) => {
   if (data.type === 'init') { world = new World(data.seed, data.opts); return; }
   if (data.type === 'cube') {
-    try {
-      const c = world.cube(data.key);
-      const geo = buildCubeParts(c.map);
-      postMessage({ type: 'cube', key: data.key, map: c.map, geo, info: info(data.key) }, partBuffers(geo));
-    } catch (e) {
-      postMessage({ type: 'error', key: data.key, message: String(e.message || e) });
-    }
+    const i = queue.indexOf(data.key);
+    if (i >= 0 && !data.urgent) return;
+    if (i >= 0) queue.splice(i, 1);
+    if (data.urgent) queue.unshift(data.key); else queue.push(data.key);
+    schedule();
   }
 };

@@ -173,6 +173,8 @@
       <p lang="de">Die beiden können nicht in das Notizbuch des anderen schauen. Sie schicken sich <b>Nachrichten</b>, wie Briefe: Das Spiel schreibt "bitte bau Würfel <code>-3,-1,-3</code>", und etwas später kommt ein Brief mit der Karte darin zurück.</p>
       <p lang="en">The game doesn't wait at the mailbox. As soon as you enter a cube, it orders the cubes behind its portals. By the time you walk through, the letter is usually already there. Meanwhile the game also fetches what those cubes need to be drawn, like their decorations and their monsters' models: the game only loads those when a cube needs them.</p>
       <p lang="de">Das Spiel wartet nicht am Briefkasten. Sobald du einen Würfel betrittst, bestellt es die Würfel hinter seinen Portalen. Wenn du hindurchgehst, ist der Brief meistens schon da. Inzwischen holt das Spiel auch, was es braucht, um diese Würfel zu malen, wie ihre Dekorationen und die Modelle ihrer Monster: Die lädt das Spiel erst, wenn ein Würfel sie braucht.</p>
+      <p lang="en">Then it draws each of those cubes once where nobody can see it, and throws the drawing away. Why? The <a class="w" href="words.html#gpu">graphics card</a> has to learn a new <a class="w" href="words.html#shader">shader</a> before it can use it, and learning one can freeze the picture for a moment. This way it has learned them all before you walk in. And if you are faster than the letters, the cube you are walking into skips the line.</p>
+      <p lang="de">Dann malt es jeden dieser Würfel einmal dort, wo ihn niemand sieht, und wirft das Bild weg. Warum? Die <a class="w" href="words.html#gpu">Grafikkarte</a> muss einen neuen <a class="w" href="words.html#shader">Shader</a> erst lernen, bevor sie ihn benutzen kann, und das Lernen kann das Bild kurz einfrieren lassen. So hat sie alle schon gelernt, bevor du hineingehst. Und wenn du schneller bist als die Briefe, darf der Würfel, in den du gerade gehst, vordrängeln.</p>
       <p class="small muted" lang="en">That is why the rule book must not need a screen: the worker doesn't have one.</p>
       <p class="small muted" lang="de">Darum darf das Regelbuch keinen Bildschirm brauchen: Der Worker hat keinen.</p>
     </div>
@@ -200,6 +202,8 @@
       <li data-at="render" lang="de">Noch im Worker macht eine Datei des Malers (<code>render/cubegeo.js</code>) aus dem Würfel Dreiecke.</li>
       <li data-at="world" lang="en">The worker sends a letter back: the map and the triangles. <code>world/client.js</code> keeps them.</li>
       <li data-at="world" lang="de">Der Worker schickt einen Brief zurück: die Karte und die Dreiecke. <code>world/client.js</code> hebt sie auf.</li>
+      <li data-at="render" lang="en">The painter loads what the cube shows (decorations, monster models) and draws it once where nobody sees it, so the graphics card already knows its shaders.</li>
+      <li data-at="render" lang="de">Der Maler lädt, was der Würfel zeigt (Dekorationen, Monstermodelle), und malt ihn einmal dort, wo ihn niemand sieht, damit die Grafikkarte seine Shader schon kennt.</li>
       <li data-at="game" lang="en">You walk through the portal. The game puts the map into the notebook.</li>
       <li data-at="game" lang="de">Du gehst durch das Portal. Das Spiel legt die Karte ins Notizbuch.</li>
       <li data-at="render" lang="en">The painter builds the 3D scene: ground, water, trees, lights.</li>
@@ -345,8 +349,10 @@ frame();</code></pre>
         <li lang="de"><code>onmessage</code> ist der Briefkasten. Jeder Brief vom Spiel kommt hier an, als <code>data</code>.</li>
         <li lang="en">A letter of type <code>'init'</code> says: "here is the seed, start a new world".</li>
         <li lang="de">Ein Brief vom Typ <code>'init'</code> sagt: "Hier ist der Seed, fang eine neue Welt an."</li>
-        <li lang="en">A letter of type <code>'cube'</code> says: "make this cube". The worker builds it, turns it into triangles, and answers with <code>postMessage</code>: the letter back.</li>
-        <li lang="de">Ein Brief vom Typ <code>'cube'</code> sagt: "Bau diesen Würfel." Der Worker baut ihn, macht Dreiecke daraus und antwortet mit <code>postMessage</code>: dem Brief zurück.</li>
+        <li lang="en">A letter of type <code>'cube'</code> says: "make this cube". It goes into the <code>queue</code>, and the worker takes one cube at a time from the front: builds it, turns it into triangles (<code>make</code>), and answers with <code>postMessage</code>: the letter back.</li>
+        <li lang="de">Ein Brief vom Typ <code>'cube'</code> sagt: "Bau diesen Würfel." Er kommt in die Warteschlange (<code>queue</code>), und der Worker nimmt sich vorne immer einen Würfel nach dem anderen: Er baut ihn, macht Dreiecke daraus (<code>make</code>) und antwortet mit <code>postMessage</code>: dem Brief zurück.</li>
+        <li lang="en">An <code>urgent</code> letter (you are already standing in the portal) goes to the front of the queue. Between two cubes the worker checks its mailbox, so such a letter never waits behind the whole line.</li>
+        <li lang="de">Ein dringender Brief (<code>urgent</code>: du stehst schon im Portal) kommt ganz nach vorne in die Schlange. Zwischen zwei Würfeln schaut der Worker in seinen Briefkasten, damit so ein Brief nie hinter der ganzen Schlange wartet.</li>
         <li lang="en">If building fails, the answer is a letter of type <code>'error'</code> instead, so the game is never left waiting forever.</li>
         <li lang="de">Wenn das Bauen schiefgeht, ist die Antwort stattdessen ein Brief vom Typ <code>'error'</code>, damit das Spiel nie ewig wartet.</li>
       </ul>

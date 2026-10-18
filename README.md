@@ -51,7 +51,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   the guide uses: the game draws items from their models). The game loads assets only from here
   (and music from `music/`), each when it is first needed: the prop libraries are one file per
   prop set (`assets/props/`, `clutter/`, `themes/`), loaded with the enemy models a cube has
-  before it is entered (`src/render/cubeassets.js`). These files are generated; do not edit them by hand.
+  before it is entered, and its shaders compiled ahead (`src/render/cubeassets.js`,
+  `src/render/warmup.js`). These files are generated; do not edit them by hand.
 - `music/`: hand-written Scrimshaw scores the game plays (`docs/music.md`). Before writing
   or changing a song, read `music/README.md` for the style, the layers and the format.
 - `blender/`: authoring sources: Blender scripts and `.blend` files that export

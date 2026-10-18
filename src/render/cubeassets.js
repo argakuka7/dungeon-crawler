@@ -1,11 +1,39 @@
-// What a cube needs drawn before it is shown: the prop sets it shows and its enemies' models,
-// loaded on the way in (world/client.js `prepare`: travel waits for it like for the cube's
-// map). Asking for the cubes around (prefetch) loads theirs ahead too. A failed load does not
-// hold the cube up: what is missing is logged and tried again the next time.
+// What a cube needs before it is shown, in two steps (world/client.js: travel waits for both,
+// like for the cube's map; prefetch does them ahead for the cubes behind the portals):
+//   - cubeAssets: the prop sets it shows, its enemies' models and the coins they drop. A
+//     failed load does not hold the cube up: what is missing is logged and tried again the
+//     next time.
+//   - warmCube: the shaders of everything it shows, or may show (render/warmup.js): the cube
+//     built once off-screen and thrown away, the proxy batches it goes into later, an enemy of
+//     each kind it has and the loot they drop. Without this, the frame a new depth is entered
+//     in waited for the driver to compile a handful of programs (a second and more on a phone).
 import { propSetsOf } from './propplace.js';
 import { loadPropSets } from './props.js';
-import { loadSpecies } from './enemies.js';
-import { speciesIn } from '../core/spawns.js';
+import { loadSpecies, enemyWarmup } from './enemies.js';
+import { loadLoot, lootWarmup } from './loot.js';
+import { proxyWarmup } from './neighbors.js';
+import { buildWorld, disposeWorld } from './world.js';
+import { scene } from './scene.js';
+import { warm } from './warmup.js';
+import { turn } from './turns.js';
+import { speciesIn, kindsIn } from '../core/spawns.js';
+import { COINS } from '../core/items.js';
 import { themeOf } from '../themes/depth.js';
 
-export const cubeAssets = c => Promise.all([loadPropSets(propSetsOf(c.map, themeOf(c.map))), loadSpecies(speciesIn(c.map))]);
+const coins = COINS.map(c => c.id);
+
+export const cubeAssets = c => Promise.all([loadPropSets(propSetsOf(c.map, themeOf(c.map))), loadSpecies(speciesIn(c.map)),
+  c.map.enemyFree ? null : loadLoot(coins)]);
+
+export async function warmCube(c) {
+  await turn();   // (building it is the one heavy step here: one cube per frame)
+  const world = buildWorld(c.map, false, {}, c.geo);
+  scene.remove(world.group);   // never drawn
+  const enemies = enemyWarmup(kindsIn(c.map));
+  try {
+    await warm([world.group, ...proxyWarmup(c.geo, (c.map.rewardSites || []).map(s => s.landmark).filter(Boolean)), ...enemies.objects, ...lootWarmup(c.map.enemyFree ? [] : coins)]);
+  } finally {
+    disposeWorld(world);
+    enemies.dispose();
+  }
+}

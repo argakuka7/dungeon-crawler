@@ -80,7 +80,7 @@ import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
 import { updateShowcase } from './game/showcase.js';
 import { drawMinimap } from './game/minimap.js';
 import { N } from './core/constants.js';
-import { character } from './render/character.js';
+import { character, followHero } from './render/character.js';
 import { drawPortrait, portraitShown } from './render/portrait.js';
 
 // seconds since the last frame (THREE.Clock is deprecated; Timer measures the same)
@@ -147,6 +147,7 @@ function frame(now = performance.now()) {
   // the look follows the depth smoothly (also while sliding down / up)
   if (state.cubeKey) state.lookDepth += (depthOf(state.cubeKey) - state.lookDepth) * Math.min(1, dt * 2.5);
   applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes);
+  followHero();   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   cullNeighbors(player.x, player.z, !state.transitioning, state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));
   updatePlayerBar();
@@ -186,6 +187,7 @@ function menuFrame(dt, start) {
   if (state.world) animateWorld(state.world, dt, state.time);
   updateCamera(dt);
   applyLook(state.lookDepth, camera.position.distanceTo(menuFocus), state.cubes?.layout.themes);
+  followHero();   // (off: the hero is not in the world here)
   updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
   fitView();

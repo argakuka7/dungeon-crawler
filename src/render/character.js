@@ -14,6 +14,21 @@ const FPS = 30;
 const STAND_HIPS = 0.69;   // hips height of the standing pose (rig units)
 
 export const character = { ready: false };
+
+// The hero's own light (render/look.js says how strong). It is in the world's scene from the
+// start and stays there, hero shown or not (followHero puts it at the figure, or turns it off):
+// a point light coming or going makes three.js compile every lit shader again
+// (render/lightpool.js). With the light on the figure, that happened going from the main menu
+// into the game, and the shaders compiled before the hero loaded (render/warmup.js) were not
+// the ones it took to draw the world.
+const light = new THREE.PointLight(0xffd9a0, 1.2, 3.5, 2);
+scene.add(light);
+// every frame, once the figure stands where it stands (main.js)
+export function followHero() {
+  const g = character.group;
+  if (character.ready && g.visible && g.parent === scene) light.position.set(g.position.x, g.position.y + 0.9, g.position.z);
+  else light.intensity = 0;
+}
 const weapons = new Map();
 let loadRequest = 0;
 
@@ -89,9 +104,6 @@ function setup(gltf) {
   mesh.material.transparent = true;
   mesh.material.forceSinglePass = true;   // a solid body: one pass, not back faces and then front ones
   mesh.renderOrder = 1000;
-  const light = new THREE.PointLight(0xffd9a0, 1.2, 3.5, 2);
-  light.position.y = 0.9;
-  group.add(light);
 
   // bones by their Blender names ("upper_arm.L", ...)
   const bones = {};

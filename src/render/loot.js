@@ -17,6 +17,7 @@ import { trackLight, untrackLight } from './lightpool.js';
 import { emit, glow as glowLayer, rand } from './particles.js';
 
 const protos = new Map();   // itemId -> prototype (null while loading)
+const loads = new Map();    // itemId -> Promise (resolves once loaded or failed)
 const views = new Map();                               // pickup id -> { o, model, fx, light }
 let viewsWorld = null;
 const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72;
@@ -25,7 +26,7 @@ function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
   protos.set(itemId, null);
   const def = ITEMS[itemId], weapon = !!def.weapon;
-  loadGLB(def.model).then(g => {
+  loads.set(itemId, loadGLB(def.model).then(g => {
     const root = g.scene;
     root.traverse(o => {
       if (!o.isMesh) return;
@@ -49,8 +50,30 @@ function proto(itemId) {
     wrap.userData.half = (box.max.y - box.min.y) / 2 * scale;
     wrap.userData.scale = scale;
     protos.set(itemId, wrap);
-  }).catch(e => console.error('item model failed to load', itemId, e));
+  }).catch(e => console.error('item model failed to load', itemId, e)));
   return null;
+}
+
+// Models fetched ahead (render/cubeassets.js: the coins every enemy drops), so the first one
+// dropped shows at once, not a moment later. -> Promise
+export const loadLoot = ids => Promise.all(ids.map(id => { proto(id); return loads.get(id); }));
+
+// What loot is drawn with, for its shaders (render/warmup.js): these items' models (once
+// loaded) and every rarity's glow; each once.
+const warmedLoot = new Set();
+export function lootWarmup(ids) {
+  const out = [];
+  for (const id of ids) if (!warmedLoot.has(id) && protos.get(id)) { warmedLoot.add(id); out.push(protos.get(id)); }
+  if (!warmedLoot.has('')) {
+    warmedLoot.add('');
+    for (const r of RARITIES) {
+      const fx = makeFx(r);
+      if (!fx) continue;
+      if (fx.userData.light) untrackLight(fx.userData.light);
+      out.push(fx);   // (its materials and geometry are the rarity's, kept: nothing to dispose)
+    }
+  }
+  return out;
 }
 
 // the shared glow pieces of each rarity, made on first use

@@ -15,7 +15,9 @@ portrait.fog = scene.fog;   // the same fog (far away): the figure's materials n
 const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
 const hemi = new THREE.HemisphereLight(0xdfe8ff, 0x3a3326, 1.1);
 const key = new THREE.DirectionalLight(0xfff0d8, 2), rim = new THREE.DirectionalLight(0x9fc4ff, 1.8);
-portrait.add(hemi, key, key.target, rim, rim.target);
+// (the hero's own light stays in the world, render/character.js: one of its own here)
+const own = new THREE.PointLight(0xffd9a0, 1.2, 3.5, 2);
+portrait.add(hemi, key, key.target, rim, rim.target, own);
 const centre = new THREE.Vector3(), size = new THREE.Vector2();
 
 // wanted: the menu shows a hero; on: the figure is here (once it is loaded)
@@ -43,6 +45,7 @@ export function drawPortrait(box) {
   cam.lookAt(centre);
   key.position.set(centre.x + 2, centre.y + 3, centre.z + 3); key.target.position.copy(centre);
   rim.position.set(centre.x - 2.5, centre.y + 1.5, centre.z - 3); rim.target.position.copy(centre);
+  own.position.set(g.x, g.y + 0.9, g.z);
 
   renderer.getSize(size);
   const y = size.y - box.top - box.height, auto = renderer.autoClear;

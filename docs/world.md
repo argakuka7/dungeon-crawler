@@ -753,7 +753,7 @@ are built, seeded by the cube. It draws from the catalog (`core/propcatalog.js`)
 every prop from its metadata, so placement and colliders never wait for a download; the
 geometry is one file per library and prop set, loaded with the cube's enemy models before the
 cube is entered (`render/cubeassets.js`, `WorldClient.get`; the cubes behind the portals are
-asked for early, and theirs come along). One factor, `CLUTTER` in `core/propcatalog.js` (0.75), scales
+asked for early, and theirs come along, see "Off the main thread" below). One factor, `CLUTTER` in `core/propcatalog.js` (0.75), scales
 every scatter pass below, the guardian arenas' cover and loose things and the town's ground
 cover; authored set pieces keep their count.
 
@@ -1094,12 +1094,34 @@ parts). The main thread receives each map by structured clone (the object graph 
 the parts as transferred buffers, and only wraps them into meshes; the proxies' batches copy
 them once per cached cube.
 
-After entering a cube, the cubes behind its portals are prefetched, so travel usually
-starts at once. If a cube is not ready, the player waits in the portal and a
-"generating" spinner shows.
+After entering a cube, the cubes behind its portals (and doors) are prefetched, so travel
+usually starts at once: their maps, what they show (`render/cubeassets.js` `cubeAssets`: prop
+sets, enemy models, the coins they drop) and their shaders (`warmCube`). One step further, the
+cubes behind those cubes' wells and rings get their maps and models too (`game/flow.js`
+`prefetchAround`), so a new depth's downloads are in before you stand at its well. If a cube is
+not ready, the player waits in the portal and a spinner shows (`game/hud.js` `whenReady`).
+
+The worker makes cubes one at a time from a queue; a cube someone waits for (`WorldClient.get`,
+urgent) goes to its front, so the cube you walk into is not made after all the ones fetched
+ahead. Models are fetched at once but parsed one per frame, right after a frame went out
+(`render/turns.js`), and so is the one heavy step of warming a cube.
+
+Shaders are compiled before they are drawn (`render/warmup.js`). three.js compiles a material's
+program the first time it draws it, and that frame waits for the driver: a new depth brought
+a handful, which stalled its first frame by a second and more on a phone. Warming a cube builds
+it once off-screen (`buildWorld`), puts its parts into the proxy batches it will be drawn in
+later (a batch's shader depends on its geometry's attributes), makes an enemy of each kind it
+can have (`render/enemies.js` `enemyWarmup`: body, silhouette, bar, label, a wet one's puddle)
+and the loot they drop (`render/loot.js` `lootWarmup`), compiles all of it with
+`renderer.compile` and throws it away; the programs stay (`render/programs.js`). With
+KHR_parallel_shader_compile the driver compiles in the background and travel waits until it is
+done. At the start of a world everything that hides in the scene until used (the particle
+layers, the portal cloud) is compiled as well.
 
 Point lights come from a fixed pool (`render/lightpool.js`). A changing light count made
-three.js recompile every lit shader on each cube change, which was the biggest stutter.
+three.js recompile every lit shader on each cube change, which was the biggest stutter. The
+hero's own light (`render/character.js`) stays in the scene too, hero shown or not: it used to
+ride on the figure, and going from the main menu into the game changed the count.
 
 ## Results
 

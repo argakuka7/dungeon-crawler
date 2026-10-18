@@ -95,8 +95,8 @@ class Batch {
   // only while the ghosts' layer is on: a stand-in with nothing of its own to draw does it, just
   // before it would draw (a BatchedMesh has one material).
   glassDraw(key) {
-    const glass = batchMaterial(glassLook(), this.data, key + '-glass', sh => { sh.fragmentShader = glassRim(sh.fragmentShader); }, GLASS);
-    const standIn = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, colorWrite: false }));
+    const glass = this.glass = batchMaterial(glassLook(), this.data, key + '-glass', sh => { sh.fragmentShader = glassRim(sh.fragmentShader); }, GLASS);
+    const standIn = this.standIn = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, colorWrite: false }));
     Object.assign(standIn, { frustumCulled: false, renderOrder: 60 });
     standIn.layers.set(GHOSTS);
     standIn.onBeforeRender = (renderer, scene, camera) => {
@@ -183,6 +183,28 @@ const glassFor = () => {
   return glass;
 };
 const landmarkGeometry = new Map();   // prop name -> geometry id in the landmark batch (kept)
+
+// A cube as it will be a proxy, ahead, for its shaders to be compiled (render/cubeassets.js):
+// its parts go into their batches now (cached like a proxy's that went, render/warmup.js entries
+// for each batch and its second draw as glass), its landmarks into theirs, and the glass. A
+// batch's shader depends on its geometry's attributes, which an empty batch does not have yet.
+export function proxyWarmup(geo, landmarks = []) {
+  geometryFor(geo).refs--;
+  trimCache();
+  const out = [];
+  for (const part of PARTS) if (geo.parts[part.name]) {
+    const b = batchFor(part);
+    out.push(b.mesh);
+    if (b.glass) out.push({ object: b.mesh, material: b.glass }, b.standIn);
+  }
+  for (const L of landmarks) {
+    const p = props.byName.get(L.name);
+    if (!p?.parts || landmarkGeometry.has(L.name)) continue;
+    landmarkGeometry.set(L.name, landmarkBatch().addGeometry(propBatchGeometry(p, PROXY.glow)));
+  }
+  if (landmarkGeometry.size) out.push(landmarkBatch().mesh);
+  return [...out, ...glassFor().objects];
+}
 
 function trimCache() {
   for (const [source, entry] of cache) {
