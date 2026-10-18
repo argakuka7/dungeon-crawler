@@ -58,8 +58,9 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     the depth (else a villager) and opens the annex's sealed portal when taken (`opens`).
 
   The scouting kinds and `find` are paid back at the giver (`return`).
-- **Givers** (the villagers, and the people out in the world once met) each have one offer at a
-  time (`MAX_OFFERS`): their next slot of the plan down to two below the deepest anyone got,
+- **Givers** (the villagers, and the people out in the world once met) each have one quest out at
+  a time (`MAX_OFFERS`): offered, or taken and not done yet (going on, to hand in, failed, also
+  archived); the next comes only once that one is done. It is their next slot of the plan down to two below the deepest anyone got,
   filled in from `hash(seed, giver, slot)` with a target of the slot's depth that no quest going
   on is about and that is not done yet; a slot that nothing fits tries the other kinds
   (`FALLBACK`) and is otherwise passed over (`log.used`). An offer whose goal got done meanwhile
@@ -463,7 +464,8 @@ The town's surface buffer stays enemy-free: no outposts, bounties or quest spawn
 - A world NPC offers its quests once someone has come to it; a villager offers a quest once
   `deepest` is at most two above the quest's depth (hard quests are those one or two further
   down), so the town never sends a level 3 hero to depth 15.
-- An NPC shows at most two offers at a time; the rest of its quests wait in the plan.
+- An NPC has one quest out at a time (offered, or taken and not done); the rest of its quests
+  wait in the plan.
 - Some quests are **repeatable** (below); the others are done once.
 
 ### Repeatable quests

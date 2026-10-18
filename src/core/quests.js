@@ -46,7 +46,8 @@ import { pickBounty, bountyKind } from './bounties.js';
 const MAX_DEPTH = 20;   // themes/depth.js MAX_DEPTH
 export const STATES = ['offered', 'active', 'ready', 'done', 'failed'];
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
-// offers a giver shows at a time
+// quests a giver has out at a time: offered or not done yet (going on, to hand in, failed; also
+// archived), so nobody hands out a second quest before the first is done
 export const MAX_OFFERS = 1;
 // how close (cells) to a landmark's chest counts as standing beside it
 export const LANDMARK_REACH = 3.5;
@@ -493,8 +494,11 @@ function makeRepeat(log, ctx, r) {
 // an offer that can no longer be done (its goal is done already): it goes
 const stale = (q, log, facts) => q.state === 'offered' && q.stages.some(s => goalDone(s, log, facts));
 
+// a giver's quests out: offered, or taken and not done yet
+const outFrom = (log, giver) => log.list.filter(q => q.giver === giver && q.state !== 'done').length;
+
 // Every giver's offers brought up to date: those that went stale go, and each giver with fewer
-// than MAX_OFFERS offers its next slots of the plan, as far down as two below the deepest anyone
+// than MAX_OFFERS quests out (outFrom) offers its next slots of the plan, as far down as two below the deepest anyone
 // got (a slot nothing fits is passed over). true: something changed.
 export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log.met]) {
   const before = log.list.length, plan = questPlan(ctx.seed, ctx.layout);
@@ -503,7 +507,7 @@ export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log
   for (const giver of givers) {
     const slots = plan.byGiver.get(giver) ?? [];
     for (const slot of slots) {
-      if (log.list.filter(q => q.giver === giver && q.state === 'offered').length >= MAX_OFFERS) break;
+      if (outFrom(log, giver) >= MAX_OFFERS) break;
       if (log.used.includes(slot.id)) continue;
       if (slot.depth > log.deepest + 2) break;
       const q = makeQuest(log, ctx, giver, slot);
@@ -512,7 +516,7 @@ export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log
       if (q) log.list.push(q);
     }
     // nothing of the plan to offer: a repeatable quest come back
-    const r = log.list.some(q => q.giver === giver && q.state === 'offered') ? null : log.repeats.find(x => x.giver === giver && x.ready);
+    const r = outFrom(log, giver) >= MAX_OFFERS ? null : log.repeats.find(x => x.giver === giver && x.ready);
     if (r) {
       const q = makeRepeat(log, ctx, r);
       log.repeats.splice(log.repeats.indexOf(r), 1);

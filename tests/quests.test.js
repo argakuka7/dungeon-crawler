@@ -89,6 +89,27 @@ test('offers follow the plan and are about what the world has, never two about o
   }
 });
 
+test('a giver has one quest out at a time: the next only once the one taken is done', () => {
+  const ctx = ctxOf(7), log = createQuestLog();
+  log.deepest = 20;
+  const offers = () => log.list.filter(q => q.giver === 'innkeeper' && q.state === 'offered');
+  refreshOffers(log, ctx, ['innkeeper']);
+  const [q] = offers();
+  assert.ok(q, 'an offer');
+  accept(log, q.id);
+  for (const state of ['active', 'ready', 'failed']) {
+    q.state = state;
+    refreshOffers(log, ctx, ['innkeeper']);
+    assert.equal(offers().length, 0, `nothing new while one is ${state}`);
+  }
+  q.state = 'active'; q.archived = true;
+  refreshOffers(log, ctx, ['innkeeper']);
+  assert.equal(offers().length, 0, 'nor while one is archived');
+  q.archived = false; q.state = 'done';
+  refreshOffers(log, ctx, ['innkeeper']);
+  assert.equal(offers().length, 1, 'the next once it is done');
+});
+
 test('a clue about a place says what the layout knows of it, never where it is on a map', () => {
   const ctx = ctxOf(123);
   for (let d = 0; d <= 20; d++) for (const s of ctx.layout(d).spotList) {
