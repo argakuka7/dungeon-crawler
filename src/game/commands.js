@@ -18,7 +18,8 @@ export const commands = createRegistry();
 // --- what arguments can be ----------------------------------------------------------------------
 
 const once = make => { let list = null; return () => list ??= make(); };
-const items = once(() => Object.values(ITEMS).map(d => ({ value: d.id, label: d.name, hint: d.weapon ? d.weapon.kind : d.category, picture: d.id })));
+// (not the quests' things: a quest carries them, not a bag)
+const items = once(() => Object.values(ITEMS).filter(d => d.category !== 'quest').map(d => ({ value: d.id, label: d.name, hint: d.weapon ? d.weapon.kind : d.category, picture: d.id })));
 addType(commands, { name: 'item', values: items });
 addType(commands, { name: 'weapon', values: once(() => items().filter(i => ITEMS[i.value].weapon)) });
 // what the hero can wear (only headwear for now: game/equipment.js devWear), or 'off'

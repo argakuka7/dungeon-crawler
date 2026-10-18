@@ -1,6 +1,6 @@
-# Loot and player equipment
+# Loot, equipment, worn things and quest items
 
-![59-asset overview](../../blender/previews/items-preview.png)
+![71-asset overview](../../blender/previews/items-preview.png)
 
 Built and inspected through Blender MCP. Matches the existing flat-faceted,
 texture-free clay style: warm timber, leather wraps, muted brass and steel,
@@ -25,8 +25,10 @@ one animated asset.
 | Tools | `item_town_portal` (parchment scroll on two rollers, violet portal sigil, wax seal), `item_room_portal` (the same scroll with a teal sigil and seal) |
 | Headwear | `wear_headscarf` (plum kerchief with golden dots, knotted at the nape), `wear_welding_mask` (flat olive shield, dark green window, headband and crown strap), `wear_wizard_hat` (indigo, drooping brim, gold band and stars, bent tip) |
 | Held | `held_towel` (striped, folded over a forearm), `held_crystal_ball` (faceted, three shards circling it), `held_rope` (a coil with a loose, frayed end), `held_hammer`, `held_pliers` (holding a glowing billet), `held_feed_bag` (burlap, grain and a carrot) |
+| Headwear of the people out in the world | `wear_hood` (a pilgrim's rough brown hood, open round the face, its point falling back), `wear_miner_helmet` (hard yellow dome, ridge, short brim, a lamp in front that glows), `wear_explorer_hat` (felt, wide brim turned up at one side, dented crown, red feather), `wear_straw_hat` (wide woven brim, low crown, cord band) |
+| Quest items | `quest_locket` (gold heart, ruby, its chain beside it), `quest_toy_rabbit` (a sitting plush rabbit, one ear flopped, blue ribbon), `quest_letter` (sealed envelope, red wax), `quest_parcel` (brown paper, twine and a bow, a label), `quest_map_scrap` (torn parchment, an inked way, hills, a red cross), `quest_ring` (gold, on its edge, a blue stone), `quest_compass` (brass, lid open, glass over the needle), `quest_journal` (leather, strap and buckle, a ribbon marker); category `quest`, lying on the ground like loot |
 
-**59 assets / 23,642 triangles total.** Sticks vary in length and branching; gemstones have
+**71 assets / 28,369 triangles total.** Sticks vary in length and branching; gemstones have
 distinct cuts; swords vary in blade length, width, guard and grip, not just scale; bows in
 length, bend and recurve; crossbows in stock, prod and fittings; staffs in their heads.
 
@@ -51,7 +53,7 @@ The game never puts tools on the floor: the portal scrolls' models only show the
 
 - `blender/items.py`: deterministic source; uses sibling `props.py` and `town.py` helpers.
 - `blender/items.blend`: editable, labelled showroom with camera and lighting.
-- `assets/items.glb`: complete library, all 47 named roots at the origin.
+- `assets/items.glb`: complete library, all 71 named roots at the origin.
 - `assets/items/<name>.glb` and `<name>.png`: standalone exports and individual previews
   (the kids' guide uses some of the PNGs as pictures; the game draws every item from its model,
   `src/render/itemviews.js`).

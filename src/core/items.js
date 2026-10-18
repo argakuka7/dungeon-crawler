@@ -147,6 +147,26 @@ export const WEARABLES = [
   wearable('held_hammer', 'Hammer', 'right', 'A smith\'s hammer.'),
   wearable('held_pliers', 'Pliers', 'left', 'A smith\'s pliers, holding a glowing billet.', { glow: '#ff7a2a' }),
   wearable('held_feed_bag', 'Feed bag', 'left', 'Grain for the animals, and a carrot.'),
+  // the people out in the world wear these (core/npcs.js)
+  wearable('wear_hood', 'Hood', 'head', 'A pilgrim\'s hood of rough brown cloth.'),
+  wearable('wear_miner_helmet', 'Miner\'s helmet', 'head', 'A hard yellow helmet with a lamp on the front.', { glow: '#ffe9a0' }),
+  wearable('wear_explorer_hat', 'Explorer\'s hat', 'head', 'A felt hat with a wide brim and a red feather.'),
+  wearable('wear_straw_hat', 'Straw hat', 'head', 'A wide straw hat to keep off the sun.'),
+];
+// Things the quests have you find, carry and bring back (core/quests.js). A quest carries them,
+// not a bag: they lie on the ground until somebody picks them up for the quest, and are never
+// dropped, sold or put on the quick bar.
+const questItem = (id, name, description) => ({ id, name, category: 'quest', stackLimit: 1, bound: true,
+  model: model(id), description });
+export const QUEST_ITEMS = [
+  questItem('quest_locket', 'Locket', 'A heart-shaped gold locket with a little ruby on its lid.'),
+  questItem('quest_toy_rabbit', 'Toy rabbit', 'A soft, well-loved toy rabbit with a blue ribbon.'),
+  questItem('quest_letter', 'Letter', 'A sealed letter. It is not for you to open.'),
+  questItem('quest_parcel', 'Parcel', 'A parcel wrapped in brown paper and tied with string.'),
+  questItem('quest_map_scrap', 'Map scrap', 'A torn piece of an old map, with a red cross on it.'),
+  questItem('quest_ring', 'Ring', 'A gold ring with a blue stone.'),
+  questItem('quest_compass', 'Compass', 'A brass pocket compass. Its needle still points north.'),
+  questItem('quest_journal', 'Journal', 'A small leather journal, full of notes and drawings.'),
 ];
 // what a list of worn and held item ids puts in each slot: { head, right, left } (missing: empty)
 export function outfitOf(ids) {
@@ -159,5 +179,5 @@ export function outfitOf(ids) {
   }
   return out;
 }
-export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, ...TOOLS, ...WEARABLES].map(i => [i.id, i]));
+export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, ...TOOLS, ...WEARABLES, ...QUEST_ITEMS].map(i => [i.id, i]));
 export const OLD_SWORD = WEAPONS[0];

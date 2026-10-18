@@ -1535,6 +1535,318 @@
       "units": "character_rig",
       "game_scale": 0.55,
       "glb": "items/held_feed_bag.glb"
+    },
+    {
+      "name": "wear_hood",
+      "triangles": 982,
+      "size": [
+        0.6433,
+        0.6534,
+        0.6568
+      ],
+      "bounds_blender": [
+        [
+          -0.3216640055179596,
+          -0.27295824885368347,
+          -0.3373991847038269
+        ],
+        [
+          0.3216640055179596,
+          0.38048499822616577,
+          0.31942418217658997
+        ]
+      ],
+      "attach": "head",
+      "category": "wearable",
+      "units": "character_rig",
+      "game_scale": 0.55,
+      "glb": "items/wear_hood.glb"
+    },
+    {
+      "name": "wear_miner_helmet",
+      "triangles": 388,
+      "size": [
+        0.7,
+        0.7,
+        0.3478
+      ],
+      "bounds_blender": [
+        [
+          -0.3499999940395355,
+          -0.3499999940395355,
+          0.004999999888241291
+        ],
+        [
+          0.3499999940395355,
+          0.3499999940395355,
+          0.3528253734111786
+        ]
+      ],
+      "attach": "head",
+      "category": "wearable",
+      "units": "character_rig",
+      "game_scale": 0.55,
+      "glb": "items/wear_miner_helmet.glb"
+    },
+    {
+      "name": "wear_explorer_hat",
+      "triangles": 310,
+      "size": [
+        0.9,
+        0.8863,
+        0.255
+      ],
+      "bounds_blender": [
+        [
+          -0.44999998807907104,
+          -0.4431634843349457,
+          0.10499999672174454
+        ],
+        [
+          0.44999998807907104,
+          0.4431634843349457,
+          0.35999998450279236
+        ]
+      ],
+      "attach": "head",
+      "category": "wearable",
+      "units": "character_rig",
+      "game_scale": 0.55,
+      "glb": "items/wear_explorer_hat.glb"
+    },
+    {
+      "name": "wear_straw_hat",
+      "triangles": 558,
+      "size": [
+        0.9988,
+        1.0014,
+        0.212
+      ],
+      "bounds_blender": [
+        [
+          -0.49890339374542236,
+          -0.5048211812973022,
+          0.11799999326467514
+        ],
+        [
+          0.49993497133255005,
+          0.496609091758728,
+          0.33000001311302185
+        ]
+      ],
+      "attach": "head",
+      "category": "wearable",
+      "units": "character_rig",
+      "game_scale": 0.55,
+      "glb": "items/wear_straw_hat.glb"
+    },
+    {
+      "name": "quest_locket",
+      "triangles": 844,
+      "size": [
+        0.335,
+        0.431,
+        0.1084
+      ],
+      "bounds_blender": [
+        [
+          -0.19900000095367432,
+          -0.13449999690055847,
+          0.0
+        ],
+        [
+          0.13600000739097595,
+          0.2964544892311096,
+          0.10835448652505875
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_locket.glb"
+    },
+    {
+      "name": "quest_toy_rabbit",
+      "triangles": 470,
+      "size": [
+        0.2935,
+        0.3163,
+        0.56
+      ],
+      "bounds_blender": [
+        [
+          -0.13353437185287476,
+          -0.12999999523162842,
+          0.0
+        ],
+        [
+          0.1599999964237213,
+          0.18631762266159058,
+          0.5600000023841858
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_toy_rabbit.glb"
+    },
+    {
+      "name": "quest_letter",
+      "triangles": 93,
+      "size": [
+        0.34,
+        0.22,
+        0.042
+      ],
+      "bounds_blender": [
+        [
+          -0.17000000178813934,
+          -0.10999999940395355,
+          0.0
+        ],
+        [
+          0.17000000178813934,
+          0.10999999940395355,
+          0.041999999433755875
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_letter.glb"
+    },
+    {
+      "name": "quest_parcel",
+      "triangles": 184,
+      "size": [
+        0.312,
+        0.252,
+        0.235
+      ],
+      "bounds_blender": [
+        [
+          -0.15600000321865082,
+          -0.12600000202655792,
+          0.0
+        ],
+        [
+          0.15600000321865082,
+          0.12600000202655792,
+          0.23499999940395355
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_parcel.glb"
+    },
+    {
+      "name": "quest_map_scrap",
+      "triangles": 150,
+      "size": [
+        0.41,
+        0.3,
+        0.0155
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.15000000596046448,
+          0.0
+        ],
+        [
+          0.20999999344348907,
+          0.15000000596046448,
+          0.01549999974668026
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_map_scrap.glb"
+    },
+    {
+      "name": "quest_ring",
+      "triangles": 200,
+      "size": [
+        0.224,
+        0.0535,
+        0.294
+      ],
+      "bounds_blender": [
+        [
+          -0.1120000034570694,
+          -0.025980761274695396,
+          0.0
+        ],
+        [
+          0.1120000034570694,
+          0.027497243136167526,
+          0.29399192333221436
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_ring.glb"
+    },
+    {
+      "name": "quest_compass",
+      "triangles": 452,
+      "size": [
+        0.24,
+        0.338,
+        0.1945
+      ],
+      "bounds_blender": [
+        [
+          -0.11999999731779099,
+          -0.1680000126361847,
+          0.0
+        ],
+        [
+          0.11999999731779099,
+          0.16998860239982605,
+          0.19449958205223083
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_compass.glb"
+    },
+    {
+      "name": "quest_journal",
+      "triangles": 96,
+      "size": [
+        0.24,
+        0.3695,
+        0.076
+      ],
+      "bounds_blender": [
+        [
+          -0.11999999731779099,
+          -0.21648769080638885,
+          0.0
+        ],
+        [
+          0.11999999731779099,
+          0.15299999713897705,
+          0.07599999755620956
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_journal.glb"
     }
   ]
 }

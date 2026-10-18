@@ -93,6 +93,10 @@ WEARS = {
     'wear_headscarf': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
     'wear_welding_mask': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
     'wear_wizard_hat': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
+    'wear_hood': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
+    'wear_miner_helmet': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
+    'wear_explorer_hat': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
+    'wear_straw_hat': ('head', (0.0, 0.0, 0.0, 1.0), (0.0, 0.26, 0.0), None),
     'held_towel': ('hand.L', (0.6848, -0.1319, 0.1281, 0.7052), (0.0, -0.11, 0.0), 'towel'),
     'held_crystal_ball': ('hand.R', (-0.0873, -0.7346, -0.6202, 0.2609), (0.1537, 0.0733, 0.2943), 'orb'),
     'held_rope': ('hand.R', (-0.4136, -0.3007, -0.8559, 0.0775), (0.0, 0.0, 0.0), 'rope'),
@@ -1270,6 +1274,268 @@ def feed_bag(m, v=0):
     m.vertices[start:] = [(x * size, y * size, z * size) for x, y, z in m.vertices[start:]]
 
 
+# ----------------------------------------------------------------------------
+# Quest items (category 'quest'): the things the quests have you find, carry and bring back
+# (src/core/quests.js). They lie on the ground like loot; the quest carries them, not a bag.
+# ----------------------------------------------------------------------------
+PAPER = '#efe4c8'
+PAPER_EDGE = '#cdbb92'
+WAX = '#b33a3a'
+WAX_DARK = '#8a2a2c'
+BROWN_PAPER = '#b98d5a'
+BROWN_DARK = '#946c40'
+TWINE = '#e8d7a6'
+PLUSH = '#d9c2b4'
+PLUSH_DARK = '#b89e90'
+PLUSH_PINK = '#e6a3a8'
+BUTTON = '#2c2420'
+BRASS = '#c49a4c'
+BRASS_DARK = '#8e6c34'
+GLASS = '#cfe6ee'
+JOURNAL = '#7b3f2c'
+JOURNAL_DARK = '#5b2d20'
+RIBBON = '#3f6fa8'
+
+
+def slab(m, outline, z0, z1, top, side=None, bottom=None):
+    """A flat solid from a closed 2D outline (counter-clockwise, x y), between heights z0 and z1."""
+    lo = [m.vert((x, y, z0)) for x, y in outline]
+    hi = [m.vert((x, y, z1)) for x, y in outline]
+    # fanned from the middle, so an outline with dents (a heart, a torn edge) stays inside itself
+    cx, cy = sum(x for x, _ in outline) / len(outline), sum(y for _, y in outline) / len(outline)
+    mid_lo, mid_hi = m.vert((cx, cy, z0)), m.vert((cx, cy, z1))
+    for i in range(len(outline)):
+        j = (i + 1) % len(outline)
+        m.face((lo[j], lo[i], mid_lo), bottom or side or top, shade=.85)
+        m.face((hi[i], hi[j], mid_hi), top)
+    for i in range(len(outline)):
+        j = (i + 1) % len(outline)
+        m.face((lo[i], lo[j], hi[j], hi[i]), side or top, shade=.9)
+
+
+def locket(m, v=0):
+    """A heart-shaped gold locket lying on its back, a small ruby on its lid, its fine chain
+    curled beside it."""
+    heart = []
+    for i in range(24):
+        t = math.tau * i / 24
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        heart.append((x * .0085, y * .0085 + .01))
+    heart.reverse()
+    m.slot = 1
+    slab(m, heart, 0, .035, GOLD, GOLD)
+    slab(m, [(x * .78, y * .78 + .004) for x, y in heart], .035, .05, '#d2b26c', GOLD)   # the lid's raised face
+    m.lathe((0, .135, .02), [(-.01, .014), (.01, .014)], GOLD, n=6, jitter=0, axis=(0, 1, 0))   # the bail
+    # the chain: little links in a loose loop beside it
+    for k in range(16):
+        a = math.tau * k / 16
+        c = (math.cos(a) * .13 - .05, .21 + math.sin(a) * .07, .012)
+        m.ring(c, .014, .005, GOLD, n=6, section=3, vertical=k % 2 == 1, yaw=a)
+    m.slot = 2
+    gem(m, 0, center=(0, .02, .05), scale=.22)
+    m.slot = 0
+
+
+def toy_rabbit(m, v=0):
+    """A child's plush rabbit, sitting: a soft round body and head, long ears (one flopped),
+    button eyes, a pink nose and a fluffy tail."""
+    m.blob((0, .02, .12), (.13, .12, .13), PLUSH, n=9, jitter=.04)
+    m.blob((0, -.02, .3), (.1, .09, .09), PLUSH, n=9, jitter=.04)
+    for side in (-1, 1):
+        m.blob((side * .07, -.07, .05), (.045, .06, .04), PLUSH_DARK, n=7, jitter=.05)   # feet
+        m.blob((side * .1, -.04, .15), (.035, .04, .06), PLUSH_DARK, n=7, jitter=.05)    # arms
+        m.box((side * .04, -.1, .32), (.022, .012, .022), BUTTON)                       # button eyes
+    m.leaf((-.04, -.01, .37), (-.07, .02, .55), .035, PLUSH)          # the ear that stands up
+    m.leaf((-.04, -.015, .372), (-.065, .012, .53), .02, PLUSH_PINK)
+    m.leaf((.04, -.01, .37), (.16, .06, .42), .035, PLUSH)            # the one that flops
+    m.blob((0, -.105, .29), (.02, .015, .016), PLUSH_PINK, n=6, jitter=0)   # the nose
+    m.blob((0, .15, .09), (.045, .04, .045), '#f2ece4', n=7, jitter=.12)   # the tail
+    m.ring((0, -.05, .23), .07, .012, RIBBON, n=10, section=3)          # a ribbon round the neck
+    m.leaf((.03, -.11, .23), (.07, -.13, .17), .02, RIBBON)
+
+
+def letter(m, v=0):
+    """A sealed letter lying on the ground: an envelope with its flap folded down and a red wax
+    seal."""
+    w, h, t = .34, .22, .018
+    m.box((0, 0, t / 2), (w, h, t), PAPER)
+    flap = [m.vert(p) for p in ((-w / 2, h / 2, t + .002), (w / 2, h / 2, t + .002), (0, -.01, t + .004))]
+    m.face(tuple(flap), PAPER_EDGE)
+    for side in (-1, 1):   # the folds of the back
+        a, b, c = m.vert((side * w / 2, -h / 2, t + .001)), m.vert((side * w / 2, h / 2, t + .001)), m.vert((side * .02, 0, t + .002))
+        m.face((a, b, c) if side < 0 else (b, a, c), '#e4d6b4')
+    m.lathe((0, -.01, t), [(0, .04), (.012, .042), (.02, .034)], WAX, n=9, jitter=.08)
+    m.lathe((0, -.01, t + .02), [(0, .02), (.004, .02)], WAX_DARK, n=8, jitter=0)
+
+
+def parcel(m, v=0):
+    """A parcel wrapped in brown paper, tied crosswise with twine and a bow on top, a little
+    address label tucked under the string."""
+    w, d, h = .3, .24, .17
+    m.box((0, 0, h / 2), (w, d, h), BROWN_PAPER)
+    m.box((0, 0, h - .006), (w * .96, d * .96, .014), BROWN_DARK)   # the folded top
+    m.slot = 0
+    for along in (0, 1):   # the twine all round, both ways
+        if along:
+            m.box((0, 0, h / 2), (.018, d + .012, h + .012), TWINE)
+        else:
+            m.box((0, 0, h / 2), (w + .012, .018, h + .012), TWINE)
+    for side in (-1, 1):   # the bow
+        m.ring((side * .035, 0, h + .02), .03, .009, TWINE, n=8, section=3, vertical=True, yaw=0)
+        m.leaf((0, 0, h + .01), (side * .05, -.05, h + .002), .012, TWINE)
+    m.box((.07, -.07, h + .004), (.08, .05, .006), PAPER, tilt=.3)   # the label
+    m.box((.07, -.07, h + .008), (.05, .006, .002), INK, tilt=.3)
+
+
+def map_scrap(m, v=0):
+    """A torn scrap of an old map: rough parchment edges, a dotted way drawn in ink, a hill and
+    a red cross."""
+    outline = [(-.19, -.13), (-.07, -.15), (.03, -.12), (.12, -.15), (.2, -.1), (.17, -.02), (.21, .06),
+               (.16, .13), (.05, .11), (-.04, .15), (-.15, .12), (-.2, .03), (-.16, -.04)]
+    slab(m, outline, 0, .012, PARCHMENT, PARCHMENT_EDGE)
+    z = .013
+    for i, (x, y) in enumerate([(-.14, -.07), (-.09, -.04), (-.04, -.05), (.01, -.01), (.05, .03), (.09, .05)]):
+        m.box((x, y, z), (.022, .01, .002), INK, tilt=.4 + i * .1)
+    for (x, y) in ((-.11, .06), (-.06, .08)):   # hills
+        m.face((m.vert((x - .03, y - .02, z)), m.vert((x + .03, y - .02, z)), m.vert((x, y + .03, z))), INK)
+    for a in (math.pi / 4, -math.pi / 4):   # the cross
+        m.box((.12, .07, z + .001), (.06, .014, .003), WAX, tilt=a)
+
+
+def ring_item(m, v=0):
+    """A gold ring standing on its edge, a blue gem set in its top."""
+    r, t = .09, .022
+    m.slot = 1
+    m.ring((0, 0, r + t), r, t, GOLD, n=14, section=5, vertical=True, yaw=0)
+    m.lathe((0, 0, 2 * r + t), [(-.012, .03), (.012, .03), (.02, .022)], GOLD, n=6, jitter=0)
+    m.slot = 2
+    gem(m, 3, center=(0, 0, 2 * r + t + .02), scale=.22)
+    m.slot = 0
+
+
+def compass(m, v=0):
+    """A brass pocket compass, its lid open: a round case, a glass face over a red and silver
+    needle, a ring to hang it by."""
+    m.slot = 1
+    m.lathe((0, 0, 0), [(0, .1), (.005, .118), (.03, .12), (.045, .11)], BRASS, n=14, jitter=0)
+    m.slot = 0
+    m.lathe((0, 0, .046), [(0, .098), (.002, .098)], CREAM, n=14, jitter=0)   # the dial
+    for k in range(8):
+        a = math.tau * k / 8
+        m.box((math.cos(a) * .08, math.sin(a) * .08, .049), (.012 if k % 2 else .02, .004, .002), INK, tilt=a)
+    m.box((0, .035, .052), (.016, .07, .006), WAX)       # the needle's north
+    m.box((0, -.035, .052), (.016, .07, .006), SILVER)   # and its south
+    m.lathe((0, 0, .05), [(0, .012), (.008, .012)], BRASS_DARK, n=6, jitter=0)
+    m.slot = 2
+    m.lathe((0, 0, .047), [(0, .1), (.006, .1)], GLASS, n=14, jitter=0)
+    m.slot = 1
+    # the lid, open, standing up behind it, and the ring
+    m.lathe((0, .125, .03), [(0, .1), (.022, .1)], BRASS_DARK, n=14, jitter=0, axis=(0, 1, .25))
+    m.ring((0, -.135, .03), .025, .008, BRASS, n=8, section=3)
+    m.slot = 0
+
+
+def journal(m, v=0):
+    """A small leather journal, closed, its strap round it and a blue ribbon marker hanging out."""
+    w, d, h = .24, .3, .07
+    m.box((0, 0, .008), (w, d, .016), JOURNAL)              # the back cover
+    m.box((.004, 0, h / 2), (w - .016, d - .02, h - .03), CREAM)   # the pages
+    m.box((0, 0, h - .008), (w, d, .016), JOURNAL)           # the front cover
+    m.box((-w / 2 + .01, 0, h / 2), (.02, d, h), JOURNAL_DARK)   # the spine
+    m.box((.05, 0, h / 2), (.03, d + .006, h + .006), JOURNAL_DARK)   # the strap
+    m.slot = 1
+    m.box((.05, -d / 2 - .006, h / 2), (.04, .01, .03), BRASS)   # its buckle
+    m.slot = 0
+    m.box((-.03, -d / 2 - .03, .01), (.022, .07, .004), RIBBON, tilt=.2)
+    m.box((-.02, .02, h + .001), (.06, .08, .002), JOURNAL_DARK)   # a worn patch on the cover
+
+
+# Headwear for the people out in the world (src/core/npcs.js), around the head's centre like
+# the others (HEAD_R, the face towards -Y)
+HOOD = '#6b5a45'
+HOOD_DARK = '#54463a'
+HELMET = '#d8a93a'
+HELMET_DARK = '#a37d2a'
+LAMP = '#fff0b0'
+FELT = '#7a5b3e'
+FELT_DARK = '#5b4430'
+STRAW = '#d9bf78'
+STRAW_DARK = '#b89a55'
+
+
+def hood(m, v=0):
+    """A pilgrim's hood: rough cloth over the head down to the neck and shoulders, open round the
+    face, its point falling back over the nape."""
+    def edge(phi):   # how far down it reaches (from straight up) all round: low at the back, the face open
+        front = (1 + math.cos(phi)) / 2   # 1 at the face, 0 at the back
+        return math.radians(150 - 95 * front ** 1.5)
+    n, rows, r = 24, 8, HEAD_R + .03
+    grid = []
+    for j in range(rows + 1):
+        row = []
+        for i in range(n):
+            phi = math.tau * i / n
+            theta = max(.06, edge(phi) * j / rows)
+            flare = 1 + .25 * max(0, theta - math.radians(95))   # it widens over the shoulders
+            p = on_sphere((0, 0, 0), r * flare, phi, theta)
+            row.append((p, p.normalized()))
+        grid.append(row)
+    sheet(m, grid, .03, lambda i, j: HOOD_DARK if j == rows - 1 else HOOD, closed=True)
+    # the hem round the face, and the point falling back
+    hem = [on_sphere((0, 0, 0), r + .02, math.tau * i / n, edge(math.tau * i / n)) for i in range(-4, 5)]
+    m.tube(hem, .02, HOOD_DARK, n=5)
+    top = on_sphere((0, 0, 0), r + .02, math.pi, math.radians(40))
+    m.tube([top, top + Vector((0, .1, -.04)), top + Vector((0, .17, -.16))], [.07, .045, .015], HOOD, n=6)
+
+
+def miner_helmet(m, v=0):
+    """A miner's helmet: a hard yellow dome with a ridge over the top, a short brim, and a lamp
+    on the front."""
+    base = .02
+    m.lathe((0, 0, base), [(0, HEAD_R + .04), (.05, HEAD_R + .035), (.14, HEAD_R - .01), (.22, .16), (.28, .07), (.3, 0)],
+            HELMET, n=16, jitter=0, colors=[HELMET, HELMET, HELMET_DARK, HELMET])
+    m.lathe((0, 0, base - .015), [(0, HEAD_R + .09), (.025, HEAD_R + .085), (.035, HEAD_R + .03)], HELMET_DARK, n=16, jitter=0)
+    m.tube([(0, -.22, base + .17), (0, -.12, base + .27), (0, 0, base + .31), (0, .12, base + .27), (0, .22, base + .17)],
+           .024, HELMET_DARK, n=5)   # the ridge
+    m.slot = 1
+    lamp = Vector((0, -HEAD_R - .05, base + .12))
+    m.lathe(lamp + Vector((0, .04, 0)), [(0, .05), (.06, .05), (.07, .055)], IRON, n=10, jitter=0, axis=(0, -1, 0))
+    m.slot = 2
+    m.lathe(lamp + Vector((0, -.03, 0)), [(0, .045), (.008, .045)], LAMP, n=10, jitter=0, axis=(0, -1, 0))
+    m.slot = 0
+
+
+def explorer_hat(m, v=0):
+    """An explorer's felt hat: a wide brim turned up at one side, a dented crown, a band with a
+    feather."""
+    base = .12
+    m.lathe((0, 0, base), [(-.015, .44), (0, .45), (.012, .43), (.02, .25)], FELT_DARK, n=18, jitter=0)
+    start = len(m.vertices)
+    m.lathe((0, 0, base), [(.01, .25), (.12, .24), (.2, .2), (.24, .12), (.25, 0)], FELT, n=14, jitter=0)
+    for i in range(start, len(m.vertices)):   # the dent along the top
+        x, y, z = m.vertices[i]
+        if z > base + .2:
+            m.vertices[i] = (x, y, z - .04 * max(0, 1 - abs(x) / .08))
+    for i in range(start - 18 * 4, start):   # the brim turned up on the left
+        x, y, z = m.vertices[i]
+        if x < -.25:
+            m.vertices[i] = (x, y, z + (-.25 - x) * .7)
+    m.lathe((0, 0, base + .01), [(0, .255), (.05, .245)], '#3d2d22', n=14, jitter=0)
+    m.leaf(Vector((.2, .1, base + .04)), Vector((.3, .26, base + .2)), .035, '#c8553a')
+
+
+def straw_hat(m, v=0):
+    """A trapper's wide straw hat: a low crown, a broad flat brim woven in rings, a cord band."""
+    base = .13
+    m.lathe((0, 0, base), [(-.012, .5), (.004, .5), (.02, .45), (.03, .26)], STRAW, n=20, jitter=.01,
+            colors=[STRAW, STRAW_DARK, STRAW])
+    for rr in (.32, .41):   # the woven rings on the brim
+        m.ring((0, 0, base + .025 - (rr - .3) * .1), rr, .007, STRAW_DARK, n=20, section=3)
+    m.lathe((0, 0, base + .02), [(0, .26), (.1, .25), (.15, .2), (.17, .1), (.18, 0)], STRAW, n=14, jitter=.02)
+    m.lathe((0, 0, base + .03), [(0, .265), (.035, .26)], '#7a4a2a', n=14, jitter=0)
+
+
 # (name, builder, variant, category, attachment)
 SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
          for i, s in enumerate(('short', 'forked', 'long'))] + [
@@ -1296,7 +1562,14 @@ SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
     ('held_rope', rope, 0, 'held', 'hand'),
     ('held_hammer', hammer, 0, 'held', 'hand'),
     ('held_pliers', pliers, 0, 'held', 'hand'),
-    ('held_feed_bag', feed_bag, 0, 'held', 'hand')]
+    ('held_feed_bag', feed_bag, 0, 'held', 'hand'),
+    ('wear_hood', hood, 0, 'wearable', 'head'),
+    ('wear_miner_helmet', miner_helmet, 0, 'wearable', 'head'),
+    ('wear_explorer_hat', explorer_hat, 0, 'wearable', 'head'),
+    ('wear_straw_hat', straw_hat, 0, 'wearable', 'head')] + [
+    (f'quest_{q}', builder, 0, 'quest', 'ground') for q, builder in (
+        ('locket', locket), ('toy_rabbit', toy_rabbit), ('letter', letter), ('parcel', parcel),
+        ('map_scrap', map_scrap), ('ring', ring_item), ('compass', compass), ('journal', journal))]
 
 
 def build(scene=None):
@@ -1361,7 +1634,7 @@ def build(scene=None):
 
 
 def validate(objects):
-    assert len(objects) == len(SPECS) == 59
+    assert len(objects) == len(SPECS) == 71
     assert {o.name for o in objects} == {s[0] for s in SPECS}
     report = []
     for obj in objects:

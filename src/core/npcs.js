@@ -14,11 +14,11 @@ import { mulberry32, hash32 } from './util.js';
 // What they are, which kinds of quest they lean towards (core/quests.js), what they wear, and
 // the depths they are found at (light, the sky down to the canyon; caves; the deep)
 export const ROLES = {
-  hermit: { title: 'hermit', kinds: { landmark: 2, reach: 1 }, outfits: [['wear_headscarf'], ['wear_headscarf', 'held_crystal_ball']], depths: [0, 20] },
-  explorer: { title: 'explorer', kinds: { reach: 2, landmark: 2, guardian: 1 }, outfits: [['held_rope'], ['held_rope', 'held_feed_bag']], depths: [0, 20] },
-  miner: { title: 'miner', kinds: { guardian: 2, horde: 2 }, outfits: [['held_hammer'], ['wear_welding_mask', 'held_hammer']], depths: [5, 20] },
-  pilgrim: { title: 'pilgrim', kinds: { landmark: 3, reach: 1 }, outfits: [['wear_headscarf', 'held_towel'], ['held_towel']], depths: [0, 13] },
-  trapper: { title: 'trapper', kinds: { horde: 3, guardian: 1 }, outfits: [['held_rope', 'held_feed_bag'], ['held_feed_bag']], depths: [0, 16] },
+  hermit: { title: 'hermit', kinds: { landmark: 2, reach: 1 }, outfits: [['wear_hood'], ['wear_hood', 'held_crystal_ball']], depths: [0, 20] },
+  explorer: { title: 'explorer', kinds: { reach: 2, landmark: 2, guardian: 1 }, outfits: [['wear_explorer_hat', 'held_rope'], ['wear_explorer_hat']], depths: [0, 20] },
+  miner: { title: 'miner', kinds: { guardian: 2, horde: 2 }, outfits: [['wear_miner_helmet', 'held_hammer'], ['wear_miner_helmet', 'held_pliers']], depths: [5, 20] },
+  pilgrim: { title: 'pilgrim', kinds: { landmark: 3, reach: 1 }, outfits: [['wear_hood', 'held_towel'], ['wear_headscarf', 'held_towel']], depths: [0, 13] },
+  trapper: { title: 'trapper', kinds: { horde: 3, guardian: 1 }, outfits: [['wear_straw_hat', 'held_rope'], ['wear_straw_hat', 'held_feed_bag']], depths: [0, 16] },
   scholar: { title: 'scholar', kinds: { landmark: 2, reach: 2 }, outfits: [['wear_wizard_hat'], ['wear_wizard_hat', 'held_crystal_ball']], depths: [3, 20] },
 };
 export const NAMES = ['Ada', 'Alma', 'Bodo', 'Bram', 'Clara', 'Cora', 'Dov', 'Edda', 'Emil', 'Finn', 'Frida', 'Greta', 'Gus',
