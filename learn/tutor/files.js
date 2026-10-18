@@ -49,7 +49,9 @@ export async function idbVolume(name) {
     req.onerror = () => reject(req.error);
     req.onblocked = () => reject(new Error('the tutor storage is busy in another tab'));
   });
-  const token = crypto.randomUUID();
+  // randomUUID only exists in secure contexts (not on plain http over a LAN IP)
+  const token = crypto.randomUUID?.()
+    ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
   const done = tx => new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onabort = tx.onerror = () => reject(tx.error ?? new FileError('permission_denied', 'The tutor was opened in another tab'));
