@@ -56,7 +56,7 @@ function label(p) {
   const el = document.createElement('button');
   el.className = 'loot-label'; el.tabIndex = -1;
   const shop = shopOf(p);
-  el.textContent = isVillager(p) ? villagerText(p) : p.prestige ? 'Treasure chest' : p.questItem ? `${displayName(p)} · quest`
+  el.textContent = isVillager(p) ? villagerText(p) : p.prestige ? 'Treasure chest' : p.questItem ? `${p.label ? p.label[0].toUpperCase() + p.label.slice(1) : displayName(p)} · quest`
     : displayName(p) + (p.count > 1 ? ` (${p.count})` : '');
   el.style.color = isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
   if (p.gen) el.dataset.rarity = rarityOf(p).id;

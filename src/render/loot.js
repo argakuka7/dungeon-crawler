@@ -3,7 +3,8 @@
 // own colour; weapons lie flat, and their rarity shows in what glows around them (RARITIES
 // glow in core/gear/rarities.js): a ring on the floor, a soft pool of light, a beam, rising
 // sparks, a turning circle of runes and a real light, more of it the rarer the weapon.
-// Junk and common weapons do not glow at all.
+// Junk and common weapons do not glow at all. A quest's thing to find glows gold (QUEST_GLOW), so it
+// stands out from the clutter it may look like (core/items.js: made from the world's props).
 // Views hang in the cube's group, so they slide along with it during travel and go away with
 // it; their geometry and materials are shared between all copies (per item / per rarity), so
 // disposing a cube leaves them alone.
@@ -21,6 +22,9 @@ const loads = new Map();    // itemId -> Promise (resolves once loaded or failed
 const views = new Map();                               // pickup id -> { o, model, fx, light }
 let viewsWorld = null;
 const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72;
+// how a quest's thing glows: like a rarity, in gold
+const QUEST_GLOW = { id: 'quest', rank: 4, rgb: [1, 0.78, 0.32], glow: { ring: 0.9, halo: 0.9, beam: 1.6, sparks: 3, runes: false, light: 1.2 } };
+const glowOf = p => p.questItem ? QUEST_GLOW : p.gen ? rarityOf(p) : null;
 
 function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
@@ -35,7 +39,8 @@ function proto(itemId) {
       // weapons glow by rarity instead
       o.material = [].concat(o.material).map(m => {
         m = m.clone(); m.userData.keep = true;
-        if (m.emissive && !weapon) { m.emissive.copy(m.color); m.emissiveIntensity = 0.2; }
+        // (a quest thing's own glowing parts, '<name>_glow', keep their light)
+        if (m.emissive && !weapon && !m.name.endsWith('_glow')) { m.emissive.copy(m.color); m.emissiveIntensity = 0.2; }
         return m;
       });
       if (o.material.length === 1) o.material = o.material[0];
@@ -66,7 +71,7 @@ export function lootWarmup(ids) {
   for (const id of ids) if (!warmedLoot.has(id) && protos.get(id)) { warmedLoot.add(id); out.push(protos.get(id)); }
   if (!warmedLoot.has('')) {
     warmedLoot.add('');
-    for (const r of RARITIES) {
+    for (const r of [...RARITIES, QUEST_GLOW]) {
       const fx = makeFx(r);
       if (!fx) continue;
       if (fx.userData.light) untrackLight(fx.userData.light);
@@ -168,7 +173,7 @@ function makeFx(r) {
 // every rarity's shared materials pulse together; Ancient shimmers between gold and white-blue
 const SHIMMER = [new THREE.Color(), new THREE.Color().setRGB(0.75, 0.9, 1.15)];
 function pulse(time) {
-  for (const r of RARITIES) {
+  for (const r of [...RARITIES, QUEST_GLOW]) {
     const k = fxKit.get(r.id);
     if (!k) continue;
     const s = 0.78 + 0.22 * Math.sin(time * (2 + r.rank * 0.25));
@@ -212,7 +217,7 @@ export function drawLoot(list, world, time, dt = 0) {
     if (!view) {
       const pr = proto(p.itemId);
       if (!pr) continue;
-      const o = new THREE.Group(), model = pr.clone(), fx = p.gen ? makeFx(rarityOf(p)) : null;
+      const glow = glowOf(p), o = new THREE.Group(), model = pr.clone(), fx = glow?.glow ? makeFx(glow) : null;
       o.add(model); if (fx) o.add(fx);
       world.group.add(o);
       view = { o, model, fx };
@@ -241,9 +246,9 @@ export function drawLoot(list, world, time, dt = 0) {
     if (fx) {
       fx.visible = p.toss >= 1 && !p.fly;
       if (fx.userData.runes) fx.userData.runes.rotation.y = time * 0.6;
-      const sparks = rarityOf(p).glow.sparks;
+      const sparks = glowOf(p).glow.sparks;
       if (fx.visible && sparks && Math.random() < sparks * dt) {
-        const k = kit(rarityOf(p)), a = Math.random() * Math.PI * 2, d = Math.random() * 0.35;
+        const k = kit(glowOf(p)), a = Math.random() * Math.PI * 2, d = Math.random() * 0.35;
         emit(glowLayer, p.x + off.x + Math.cos(a) * d, p.y + off.y + 0.05, p.z + off.z + Math.sin(a) * d,
           { v: [0, rand(0.7, 1.5), 0], spread: 0.3, life: rand(0.7, 1.2), size: rand(0.05, 0.09), color: k.color, drag: 0.5 });
       }

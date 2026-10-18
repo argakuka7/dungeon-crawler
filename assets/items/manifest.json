@@ -1847,6 +1847,1150 @@
       "units": "cells",
       "game_scale": 1.0,
       "glb": "items/quest_journal.glb"
+    },
+    {
+      "name": "quest_backpack",
+      "triangles": 354,
+      "size": [
+        0.2998,
+        0.1815,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.1582501381635666,
+          -0.09074264764785767,
+          0.0
+        ],
+        [
+          0.1415252387523651,
+          0.09074264764785767,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_backpack.glb"
+    },
+    {
+      "name": "quest_shield",
+      "triangles": 330,
+      "size": [
+        0.4,
+        0.3633,
+        0.1307
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.18162643909454346,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.18162643909454346,
+          0.1307465136051178
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_shield.glb"
+    },
+    {
+      "name": "quest_lantern",
+      "triangles": 324,
+      "size": [
+        0.15,
+        0.1577,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.07500000298023224,
+          -0.08409183472394943,
+          0.0
+        ],
+        [
+          0.07500000298023224,
+          0.07361963391304016,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_lantern.glb"
+    },
+    {
+      "name": "quest_pickaxe",
+      "triangles": 248,
+      "size": [
+        0.4421,
+        0.4,
+        0.1389
+      ],
+      "bounds_blender": [
+        [
+          -0.19755280017852783,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.2445516437292099,
+          0.20000000298023224,
+          0.13889667391777039
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_pickaxe.glb"
+    },
+    {
+      "name": "quest_flour_sack",
+      "triangles": 394,
+      "size": [
+        0.3874,
+        0.2868,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.193715438246727,
+          -0.14338000118732452,
+          0.0
+        ],
+        [
+          0.193715438246727,
+          0.14338000118732452,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_flour_sack.glb"
+    },
+    {
+      "name": "quest_cider_barrel",
+      "triangles": 454,
+      "size": [
+        0.3334,
+        0.3151,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.16672147810459137,
+          -0.15753810107707977,
+          0.0
+        ],
+        [
+          0.16672147810459137,
+          0.15753810107707977,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_cider_barrel.glb"
+    },
+    {
+      "name": "quest_supply_crate",
+      "triangles": 306,
+      "size": [
+        0.4,
+        0.424,
+        0.4421
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.2316192239522934,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.19238094985485077,
+          0.4420619010925293
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_supply_crate.glb"
+    },
+    {
+      "name": "quest_fireworks",
+      "triangles": 402,
+      "size": [
+        0.4,
+        0.296,
+        0.2043
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.14798420667648315,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.14798420667648315,
+          0.20425531268119812
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_fireworks.glb"
+    },
+    {
+      "name": "quest_singing_crystal",
+      "triangles": 358,
+      "size": [
+        0.2707,
+        0.2595,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.13535507023334503,
+          -0.1297546923160553,
+          0.0
+        ],
+        [
+          0.13535507023334503,
+          0.1297546923160553,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_singing_crystal.glb"
+    },
+    {
+      "name": "quest_silver_bars",
+      "triangles": 282,
+      "size": [
+        0.475,
+        0.3713,
+        0.2368
+      ],
+      "bounds_blender": [
+        [
+          -0.2750000059604645,
+          -0.22768159210681915,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.14358974993228912,
+          0.23678718507289886
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_silver_bars.glb"
+    },
+    {
+      "name": "quest_gears",
+      "triangles": 522,
+      "size": [
+        0.3149,
+        0.4,
+        0.1687
+      ],
+      "bounds_blender": [
+        [
+          -0.15746256709098816,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.15746256709098816,
+          0.20000000298023224,
+          0.16869723796844482
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_gears.glb"
+    },
+    {
+      "name": "quest_crucible",
+      "triangles": 378,
+      "size": [
+        0.4,
+        0.2458,
+        0.3465
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.12290908396244049,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.12290908396244049,
+          0.3465307652950287
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_crucible.glb"
+    },
+    {
+      "name": "quest_toadstool",
+      "triangles": 354,
+      "size": [
+        0.3869,
+        0.3713,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.19343727827072144,
+          -0.18563847243785858,
+          0.0
+        ],
+        [
+          0.19343727827072144,
+          0.18563847243785858,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_toadstool.glb"
+    },
+    {
+      "name": "quest_thunder_jar",
+      "triangles": 424,
+      "size": [
+        0.2141,
+        0.2023,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.10704798996448517,
+          -0.10113686323165894,
+          0.0
+        ],
+        [
+          0.10704798996448517,
+          0.10113686323165894,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_thunder_jar.glb"
+    },
+    {
+      "name": "quest_bird_nest",
+      "triangles": 484,
+      "size": [
+        0.3849,
+        0.4,
+        0.2231
+      ],
+      "bounds_blender": [
+        [
+          -0.19245243072509766,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.19245243072509766,
+          0.20000000298023224,
+          0.22310517728328705
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_bird_nest.glb"
+    },
+    {
+      "name": "quest_rainbow_crystal",
+      "triangles": 448,
+      "size": [
+        0.2931,
+        0.2739,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.14652544260025024,
+          -0.13694317638874054,
+          0.0
+        ],
+        [
+          0.14652544260025024,
+          0.13694317638874054,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_rainbow_crystal.glb"
+    },
+    {
+      "name": "quest_crab",
+      "triangles": 410,
+      "size": [
+        0.3754,
+        0.4,
+        0.2377
+      ],
+      "bounds_blender": [
+        [
+          -0.1877172440290451,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.1877172440290451,
+          0.20000000298023224,
+          0.23773889243602753
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_crab.glb"
+    },
+    {
+      "name": "quest_ice_shard",
+      "triangles": 254,
+      "size": [
+        0.166,
+        0.1555,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.08297517895698547,
+          -0.07772735506296158,
+          0.0
+        ],
+        [
+          0.08297517895698547,
+          0.07772735506296158,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_ice_shard.glb"
+    },
+    {
+      "name": "quest_butter_lamps",
+      "triangles": 534,
+      "size": [
+        0.4,
+        0.2212,
+        0.2687
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.12409183382987976,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.09714286029338837,
+          0.2687285542488098
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_butter_lamps.glb"
+    },
+    {
+      "name": "quest_prayer_stone",
+      "triangles": 506,
+      "size": [
+        0.3781,
+        0.4,
+        0.2936
+      ],
+      "bounds_blender": [
+        [
+          -0.1890515685081482,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.1890515685081482,
+          0.20000000298023224,
+          0.2936176359653473
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_prayer_stone.glb"
+    },
+    {
+      "name": "quest_wagon_wheel",
+      "triangles": 374,
+      "size": [
+        0.4,
+        0.2033,
+        0.4475
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.10164255648851395,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.10164255648851395,
+          0.4475453495979309
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_wagon_wheel.glb"
+    },
+    {
+      "name": "quest_horned_skull",
+      "triangles": 377,
+      "size": [
+        0.4,
+        0.2338,
+        0.2423
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.11690598726272583,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.11690598726272583,
+          0.2422853410243988
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_horned_skull.glb"
+    },
+    {
+      "name": "quest_pink_salt",
+      "triangles": 246,
+      "size": [
+        0.3923,
+        0.4,
+        0.2635
+      ],
+      "bounds_blender": [
+        [
+          -0.19613006711006165,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.19613006711006165,
+          0.20000000298023224,
+          0.26347118616104126
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_pink_salt.glb"
+    },
+    {
+      "name": "quest_painted_pots",
+      "triangles": 318,
+      "size": [
+        0.4,
+        0.2863,
+        0.3269
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.14313142001628876,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.14313142001628876,
+          0.3269001245498657
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_painted_pots.glb"
+    },
+    {
+      "name": "quest_paper_lantern",
+      "triangles": 312,
+      "size": [
+        0.22,
+        0.4,
+        0.229
+      ],
+      "bounds_blender": [
+        [
+          -0.09730565547943115,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.1226922869682312,
+          0.20000000298023224,
+          0.22903859615325928
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_paper_lantern.glb"
+    },
+    {
+      "name": "quest_cave_mushrooms",
+      "triangles": 366,
+      "size": [
+        0.2759,
+        0.4,
+        0.3064
+      ],
+      "bounds_blender": [
+        [
+          -0.13797292113304138,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.13797292113304138,
+          0.20000000298023224,
+          0.3064097762107849
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_cave_mushrooms.glb"
+    },
+    {
+      "name": "quest_ice_heart",
+      "triangles": 322,
+      "size": [
+        0.2352,
+        0.2684,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.11758053302764893,
+          -0.13417910039424896,
+          0.0
+        ],
+        [
+          0.11758053302764893,
+          0.13417910039424896,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_ice_heart.glb"
+    },
+    {
+      "name": "quest_pearl_clam",
+      "triangles": 484,
+      "size": [
+        0.4,
+        0.3961,
+        0.2974
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.19806408882141113,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.19806408882141113,
+          0.2973594665527344
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_pearl_clam.glb"
+    },
+    {
+      "name": "quest_sea_glass",
+      "triangles": 292,
+      "size": [
+        0.3882,
+        0.4,
+        0.1147
+      ],
+      "bounds_blender": [
+        [
+          -0.1940760761499405,
+          -0.20000000298023224,
+          0.0
+        ],
+        [
+          0.1940760761499405,
+          0.20000000298023224,
+          0.11473605036735535
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_sea_glass.glb"
+    },
+    {
+      "name": "quest_spore_pod",
+      "triangles": 376,
+      "size": [
+        0.3181,
+        0.284,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.1590312421321869,
+          -0.14202499389648438,
+          0.0
+        ],
+        [
+          0.1590312421321869,
+          0.14202499389648438,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_spore_pod.glb"
+    },
+    {
+      "name": "quest_pitcher_plant",
+      "triangles": 398,
+      "size": [
+        0.2693,
+        0.2676,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.1346595138311386,
+          -0.1338050365447998,
+          0.0
+        ],
+        [
+          0.1346595138311386,
+          0.1338050365447998,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_pitcher_plant.glb"
+    },
+    {
+      "name": "quest_honey_pot",
+      "triangles": 404,
+      "size": [
+        0.258,
+        0.2508,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.12641651928424835,
+          -0.12538720667362213,
+          0.0
+        ],
+        [
+          0.13155023753643036,
+          0.12538720667362213,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_honey_pot.glb"
+    },
+    {
+      "name": "quest_candles",
+      "triangles": 410,
+      "size": [
+        0.4,
+        0.3945,
+        0.3784
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.19727344810962677,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.19727344810962677,
+          0.378389835357666
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_candles.glb"
+    },
+    {
+      "name": "quest_jade_idol",
+      "triangles": 378,
+      "size": [
+        0.2254,
+        0.2072,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.11944444477558136,
+          -0.13537389039993286,
+          0.0
+        ],
+        [
+          0.10598290711641312,
+          0.07179487496614456,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_jade_idol.glb"
+    },
+    {
+      "name": "quest_incense_bowl",
+      "triangles": 384,
+      "size": [
+        0.1962,
+        0.213,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.10027141124010086,
+          -0.1178966760635376,
+          0.0
+        ],
+        [
+          0.09588824212551117,
+          0.09511271864175797,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_incense_bowl.glb"
+    },
+    {
+      "name": "quest_spider_eggs",
+      "triangles": 402,
+      "size": [
+        0.4,
+        0.3217,
+        0.3069
+      ],
+      "bounds_blender": [
+        [
+          -0.20000000298023224,
+          -0.16084937751293182,
+          0.0
+        ],
+        [
+          0.20000000298023224,
+          0.16084937751293182,
+          0.30685997009277344
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_spider_eggs.glb"
+    },
+    {
+      "name": "quest_bone_lantern",
+      "triangles": 452,
+      "size": [
+        0.1901,
+        0.1732,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.09503038227558136,
+          -0.08657602220773697,
+          0.0
+        ],
+        [
+          0.09503038227558136,
+          0.08657602220773697,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_bone_lantern.glb"
+    },
+    {
+      "name": "quest_old_urn",
+      "triangles": 398,
+      "size": [
+        0.3275,
+        0.2505,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.16374999284744263,
+          -0.12523159384727478,
+          0.0
+        ],
+        [
+          0.16374999284744263,
+          0.12523159384727478,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_old_urn.glb"
+    },
+    {
+      "name": "quest_stone_tablet",
+      "triangles": 322,
+      "size": [
+        0.2209,
+        0.1621,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.1104726791381836,
+          -0.08102647960186005,
+          0.0
+        ],
+        [
+          0.1104726791381836,
+          0.08102647960186005,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_stone_tablet.glb"
+    },
+    {
+      "name": "quest_statue_head",
+      "triangles": 384,
+      "size": [
+        0.3518,
+        0.3161,
+        0.4556
+      ],
+      "bounds_blender": [
+        [
+          -0.175889790058136,
+          -0.15802757441997528,
+          0.0
+        ],
+        [
+          0.175889790058136,
+          0.15802757441997528,
+          0.4556010365486145
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_statue_head.glb"
+    },
+    {
+      "name": "quest_fire_crystal",
+      "triangles": 368,
+      "size": [
+        0.2647,
+        0.2753,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.1323583573102951,
+          -0.13765957951545715,
+          0.0
+        ],
+        [
+          0.1323583573102951,
+          0.13765957951545715,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_fire_crystal.glb"
+    },
+    {
+      "name": "quest_obsidian",
+      "triangles": 322,
+      "size": [
+        0.2279,
+        0.2627,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.11309950053691864,
+          -0.13134734332561493,
+          0.0
+        ],
+        [
+          0.11479400098323822,
+          0.13134734332561493,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_obsidian.glb"
+    },
+    {
+      "name": "quest_void_crystal",
+      "triangles": 368,
+      "size": [
+        0.2611,
+        0.2666,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.13057267665863037,
+          -0.13329780101776123,
+          0.0
+        ],
+        [
+          0.13057267665863037,
+          0.13329780101776123,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_void_crystal.glb"
+    },
+    {
+      "name": "quest_rune_stone",
+      "triangles": 290,
+      "size": [
+        0.2912,
+        0.2689,
+        0.4573
+      ],
+      "bounds_blender": [
+        [
+          -0.14557720720767975,
+          -0.1344418227672577,
+          0.0
+        ],
+        [
+          0.14557720720767975,
+          0.1344418227672577,
+          0.45730000734329224
+        ]
+      ],
+      "attach": "ground",
+      "category": "quest",
+      "units": "cells",
+      "game_scale": 1.0,
+      "glb": "items/quest_rune_stone.glb"
     }
   ]
 }

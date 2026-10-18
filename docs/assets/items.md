@@ -1,6 +1,6 @@
 # Loot, equipment, worn things and quest items
 
-![71-asset overview](../../blender/previews/items-preview.png)
+![115-asset overview](../../blender/previews/items-preview.png)
 
 Built and inspected through Blender MCP. Matches the existing flat-faceted,
 texture-free clay style: warm timber, leather wraps, muted brass and steel,
@@ -27,8 +27,9 @@ one animated asset.
 | Held | `held_towel` (striped, folded over a forearm), `held_crystal_ball` (faceted, three shards circling it), `held_rope` (a coil with a loose, frayed end), `held_hammer`, `held_pliers` (holding a glowing billet), `held_feed_bag` (burlap, grain and a carrot) |
 | Headwear of the people out in the world | `wear_hood` (a pilgrim's rough brown hood, open round the face, its point falling back), `wear_miner_helmet` (hard yellow dome, ridge, short brim, a lamp in front that glows), `wear_explorer_hat` (felt, wide brim turned up at one side, dented crown, red feather), `wear_straw_hat` (wide woven brim, low crown, cord band) |
 | Quest items | `quest_locket` (gold heart, ruby, its chain beside it), `quest_toy_rabbit` (a sitting plush rabbit, one ear flopped, blue ribbon), `quest_letter` (sealed envelope, red wax), `quest_parcel` (brown paper, twine and a bow, a label), `quest_map_scrap` (torn parchment, an inked way, hills, a red cross), `quest_ring` (gold, on its edge, a blue stone), `quest_compass` (brass, lid open, glass over the needle), `quest_journal` (leather, strap and buckle, a ribbon marker); category `quest`, lying on the ground like loot |
+| Quest things made from props | 44 (`QUEST_PROPS` in `blender/items.py`): each built by the same builder as a world prop (`props.py`, `clutter_*.py`, `themes_*.py`), scaled to a longest side of 0.4, its glowing faces on a fourth material `<name>_glow` in the prop's light colour, and a red bow with a paper tag tied on its top, so it never passes for the clutter it looks like (the game adds a gold glow, `src/render/loot.js`). Three have builders of their own where the prop is more than the thing: `quest_lantern` (off its post), `quest_pickaxe` (out of its rock), `quest_wagon_wheel` (out of the sand). From `quest_backpack` to `quest_rune_stone`; the names are in `src/core/items.js` |
 
-**71 assets / 28,369 triangles total.** Sticks vary in length and branching; gemstones have
+**115 assets / 44,882 triangles total.** Sticks vary in length and branching; gemstones have
 distinct cuts; swords vary in blade length, width, guard and grip, not just scale; bows in
 length, bend and recurve; crossbows in stock, prod and fittings; staffs in their heads.
 
@@ -53,8 +54,9 @@ The game never puts tools on the floor: the portal scrolls' models only show the
 
 - `blender/items.py`: deterministic source; uses sibling `props.py` and `town.py` helpers.
 - `blender/items.blend`: editable, labelled showroom with camera and lighting.
-- `assets/items.glb`: complete library, all 71 named roots at the origin.
-- `assets/items/<name>.glb` and `<name>.png`: standalone exports and individual previews
+- `assets/items.glb`: complete library, all 115 named roots at the origin.
+- `assets/items/<name>.glb` and `<name>.png`: standalone exports and individual previews (256 pixels;
+  the overview is 1600 by 1000, the quest things in a block of their own on the right)
   (the kids' guide uses some of the PNGs as pictures; the game draws every item from its model,
   `src/render/itemviews.js`).
 - `assets/items/manifest.json`: names, triangles, authoring bounds, sizes and unit/scale contract.

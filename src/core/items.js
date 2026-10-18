@@ -167,7 +167,58 @@ export const QUEST_ITEMS = [
   questItem('quest_ring', 'Ring', 'A gold ring with a blue stone.'),
   questItem('quest_compass', 'Compass', 'A brass pocket compass. Its needle still points north.'),
   questItem('quest_journal', 'Journal', 'A small leather journal, full of notes and drawings.'),
+  // made from the world's props (blender/items.py QUEST_PROPS), small, with a red bow and a tag:
+  // what lies about as clutter, but this one is somebody's
+  ...[
+    ['backpack', 'Backpack', 'A traveller\'s backpack with a bedroll strapped on top.'],
+    ['shield', 'Old shield', 'A battered round shield, its paint flaking.'],
+    ['lantern', 'Lantern', 'An iron lantern with a ring to carry it by.'],
+    ['pickaxe', 'Pickaxe', 'A miner\'s pickaxe, its handle worn smooth.'],
+    ['flour_sack', 'Flour sacks', 'Two sacks of flour, tied at the top.'],
+    ['cider_barrel', 'Cider barrel', 'A little barrel of apple cider.'],
+    ['supply_crate', 'Supply crate', 'A wooden crate of supplies, nailed shut.'],
+    ['fireworks', 'Fireworks', 'A box of red fireworks for a festival.'],
+    ['singing_crystal', 'Singing crystal', 'A pale blue crystal that hums when you hold it.'],
+    ['silver_bars', 'Silver bars', 'A stack of bars of silver.'],
+    ['gears', 'Clockwork gears', 'Brass and iron gears from a clock.'],
+    ['crucible', 'Crucible', 'A smith\'s crucible on its little stand.'],
+    ['toadstool', 'Toadstools', 'Two red toadstools, picked with their roots.'],
+    ['thunder_jar', 'Jar of thunder', 'A jar with a little storm cloud inside.'],
+    ['bird_nest', 'Bird\'s nest', 'A nest with an egg in it, still warm.'],
+    ['rainbow_crystal', 'Rainbow crystal', 'A cluster of crystals in every colour.'],
+    ['crab', 'Pet crab', 'A red crab with one big claw. It pinches.'],
+    ['ice_shard', 'Never-melting ice', 'Shards of ice that never melt.'],
+    ['butter_lamps', 'Butter lamps', 'A tray of little lamps that burn butter.'],
+    ['prayer_stone', 'Prayer stones', 'A pile of carved stones with little flags.'],
+    ['wagon_wheel', 'Wagon wheel', 'A wagon wheel with two spokes broken.'],
+    ['horned_skull', 'Horned skull', 'An old skull with long curved horns.'],
+    ['pink_salt', 'Pink salt', 'Lumps of pink salt from the salt flats.'],
+    ['painted_pots', 'Painted pots', 'Two clay pots painted with old patterns.'],
+    ['paper_lantern', 'Paper lanterns', 'Little paper bags with candles in them.'],
+    ['cave_mushrooms', 'Cave mushrooms', 'Pale mushrooms that only grow in the dark.'],
+    ['ice_heart', 'Heart of ice', 'A crystal of ice that glows a cold blue.'],
+    ['pearl_clam', 'Pearl clam', 'A big clam with a pearl inside.'],
+    ['sea_glass', 'Sea glass', 'Smooth pieces of glass from the sea.'],
+    ['spore_pod', 'Spore pod', 'A round pod full of glowing spores.'],
+    ['pitcher_plant', 'Pitcher plant', 'A plant that catches flies in its cups.'],
+    ['honey_pot', 'Honey pot', 'A pot of golden honey with a dipper in it.'],
+    ['candles', 'Beeswax candles', 'Candles made of beeswax, a little melted.'],
+    ['jade_idol', 'Jade idol', 'A small green idol with a feathered crown.'],
+    ['incense_bowl', 'Incense bowl', 'A stone bowl for burning sweet incense.'],
+    ['spider_eggs', 'Spider eggs', 'A clutch of big spider eggs. Careful!'],
+    ['bone_lantern', 'Bone lantern', 'A lantern built of old bones.'],
+    ['old_urn', 'Old urn', 'An old urn with two handles and a lid.'],
+    ['stone_tablet', 'Stone tablet', 'A stone tablet carved with old writing.'],
+    ['statue_head', 'Statue\'s head', 'The stone head of a statue, broken off.'],
+    ['fire_crystal', 'Fire crystal', 'A crystal that is warm to the touch.'],
+    ['obsidian', 'Obsidian', 'Black volcanic glass, sharp at the edges.'],
+    ['void_crystal', 'Void crystal', 'A purple crystal from the bottom of the world.'],
+    ['rune_stone', 'Rune stone', 'A black stone with a glowing red rune.'],
+  ].map(([id, name, description]) => questItem(`quest_${id}`, name, description)),
 ];
+// the quest things a quest may have you find, gather or carry (core/quests.js): all but the map
+// scrap (a treasure's) and the letter and the parcel (a delivery's own)
+export const QUEST_THINGS = QUEST_ITEMS.map(i => i.id).filter(id => !['quest_map_scrap', 'quest_letter', 'quest_parcel'].includes(id));
 // what a list of worn and held item ids puts in each slot: { head, right, left } (missing: empty)
 export function outfitOf(ids) {
   const out = {};

@@ -86,7 +86,8 @@ export function guestQuestAct(m) {
   if (m.act === 'event' && m.ev && typeof m.ev === 'object') {
     const { kind, depth, key } = m.ev;
     if (['visit', 'horde', 'landmark'].includes(kind)) questEvent({ kind, depth: Number.isInteger(depth) ? depth : undefined, key: typeof key === 'string' ? key : undefined });
-    if (['found', 'rescued', 'talked', 'defended'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
+    if (['found', 'rescued', 'talked', 'defended'].includes(kind) && typeof m.ev.quest === 'string')
+      questEvent({ kind, quest: m.ev.quest, ...(kind === 'found' && typeof m.ev.spot === 'string' ? { spot: m.ev.spot } : {}) });
   } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet', 'fail'].includes(m.act)) { doAct(m.act, m.id); share(); }
 }
 
@@ -211,12 +212,13 @@ export function devQuest(kind, depth) {
   const seat = layout.spotList.find(s => s.kind === 'seat');
   const giver = kind === 'rescue' ? camp && `npc:${camp.id}` : kind === 'defense' ? outpost && (outpost.annex ? (seat ? `npc:${seat.id}` : 'innkeeper') : `npc:${outpost.id}`) : 'innkeeper';
   if (!giver) return `Nobody near depth ${depth} could ask for that`;
-  const q = makeQuest(L, c, giver, { id: `dev:${++devSerial}`, depth, kind });
+  const q = makeQuest(L, c, giver, { id: `dev:${++devSerial}`, depth, kind, force: true });
   if (!q || q.kind !== kind) return `No ${kind} quest fits on depth ${depth} now`;
   L.list.push(q); L.version++;
   doAct('accept', q.id);
   share();
-  return `${q.title}: ${q.stages[0].text}${q.stages[0].key ? ` (cube ${q.stages[0].key})` : ''}`;
+  const key = q.stages[0].key ?? q.stages[0].keys?.join(', ');
+  return `${q.title}: ${q.stages[0].text}${key ? ` (cube ${key})` : ''}`;
 }
 
 // --- talking to a giver ---------------------------------------------------------------------------

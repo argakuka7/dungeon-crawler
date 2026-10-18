@@ -146,7 +146,9 @@ class Mesh(props.Mesh):
         self.parts = []
 
     def face(self, ids, color, glow=False, shade=1):
-        super().face(ids, color, False, shade)
+        # (the glow is kept for the quest things made from props, quest_prop; the other items
+        # leave it alone)
+        super().face(ids, color, glow, shade)
         self.slots.append(self.slot)
 
 
@@ -193,6 +195,8 @@ def make_mesh(m, name):
     for mat in (surface('Items_Clay', .88, 0), surface('Items_Metal', .56, .2),
                 surface('Items_Facets', .38, .05)):
         mesh.materials.append(mat)
+    if GLOW_SLOT in slots:   # a quest thing's glowing parts (quest_prop), lit in the prop's colour
+        mesh.materials.append(props.material(name + '_glow', glow=getattr(m, 'glow', None) or '#ffffff', strength=1.5))
     attr = mesh.color_attributes.new(name='Color', type='FLOAT_COLOR', domain='CORNER')
     mesh.color_attributes.active_color = attr
     for poly, color, slot in zip(mesh.polygons, colors, slots):
@@ -1451,6 +1455,125 @@ def journal(m, v=0):
     m.box((-.02, .02, h + .001), (.06, .08, .002), JOURNAL_DARK)   # a worn patch on the cover
 
 
+# Quest things made from the world's props (props.py, clutter_*.py, themes_*.py): the same
+# builder as the prop that lies about as clutter, made small enough to carry, with a red bow
+# and a paper tag tied on top, so a quest's thing never looks like the clutter round it (the
+# game adds a gold glow). Any of them can be lost, gathered or carried (src/core/quests.js).
+# (item id, the prop it is made from (or a builder of its own, where the prop is more than the
+# thing: a lantern on its post, a wheel half in the sand), its variant)
+QUEST_PROPS = [
+    ('backpack', 'abandoned_pack', 0), ('shield', 'broken_shield', 0), ('lantern', 'carried_lantern', 0),
+    ('pickaxe', 'loose_pickaxe', 0), ('flour_sack', 'sacks', 0), ('cider_barrel', 'barrel', 0),
+    ('supply_crate', 'crate', 0), ('fireworks', 'dynamite_crate', 0), ('singing_crystal', 'crystal_cluster', 0),
+    ('silver_bars', 'ingot_stack', 0), ('gears', 'gear_pile', 0), ('crucible', 'crucible', 0),
+    ('toadstool', 'mushroom_small', 0), ('thunder_jar', 'storm_jar', 0), ('bird_nest', 'sky_nest', 0),
+    ('rainbow_crystal', 'rainbow_crystal', 0), ('crab', 'crab', 0), ('ice_shard', 'ice_shard', 0),
+    ('butter_lamps', 'butter_lamps', 0), ('prayer_stone', 'mani_stones', 0), ('wagon_wheel', 'loose_wagon_wheel', 0),
+    ('horned_skull', 'bleached_skull', 0), ('pink_salt', 'pink_halite', 0), ('painted_pots', 'clay_pots', 0),
+    ('paper_lantern', 'luminaria', 0), ('cave_mushrooms', 'mushroom_cluster', 0), ('ice_heart', 'ice_crystal', 0),
+    ('pearl_clam', 'giant_clam', 0), ('sea_glass', 'sea_glass', 0), ('spore_pod', 'spore_pod', 0),
+    ('pitcher_plant', 'pitcher_plant', 0), ('honey_pot', 'honey_pot', 0), ('candles', 'wax_candles', 0),
+    ('jade_idol', 'jade_idol', 0), ('incense_bowl', 'copal_bowl', 0), ('spider_eggs', 'egg_sac', 0),
+    ('bone_lantern', 'bone_lantern', 0), ('old_urn', 'funeral_urn', 0), ('stone_tablet', 'stone_tablet', 0),
+    ('statue_head', 'statue_head', 0), ('fire_crystal', 'fire_crystal', 0), ('obsidian', 'obsidian_shard', 0),
+    ('void_crystal', 'void_crystal', 0), ('rune_stone', 'rune_stone', 0),
+]
+QUEST_SIZE = .4         # the longest side of a quest thing made from a prop (cells, before the game's loot scale)
+GLOW_SLOT = 3           # make_mesh: the faces that glow, in the prop's light colour
+BOW = '#c8322f'
+BOW_DARK = '#8e1f22'
+
+
+def carried_lantern(m, v=0):
+    """The mines' lantern (clutter_geo.lantern_body) off its post, with a ring to carry it by."""
+    import clutter_geo
+    clutter_geo.lantern_body(m, (0, 0, .2))
+    m.ring((0, 0, .44), .05, .01, IRON, n=8, section=3, vertical=True, yaw=0)
+
+
+def loose_pickaxe(m, v=0):
+    """A miner's pickaxe lying on the ground (the one in clutter_depths.build_pickaxe_in_rock, out of
+    its rock)."""
+    m.tube([(-.22, 0, .03), (.2, 0, .03)], [.026, .022], WOOD, n=5)
+    m.tube([(.2, -.24, .035), (.2, -.12, .05), (.2, 0, .055), (.2, .12, .05), (.2, .23, .03)],
+           [.012, .035, .048, .035, .014], IRON, n=5)
+
+
+def loose_wagon_wheel(m, v=0):
+    """A wagon wheel with two spokes broken, leaning (clutter_surface.build_broken_wagon_wheel, out
+    of the sand)."""
+    import clutter_geo
+    rim = .32
+    m.ring((0, 0, 0), rim, .03, WOOD, n=12, section=4)
+    m.lathe((0, 0, -.05), [(0, .06), (.1, .06)], BARK, n=6)
+    for i in range(8):
+        if i in (2, 3):
+            continue
+        a = math.tau * i / 8
+        m.tube([props.polar(.05, a), props.polar(rim - .02, a)], .018, BARK, n=4)
+    clutter_geo.xform(m, 0, rot=(1.2, 0, .3), offset=(0, 0, .12))
+
+
+OWN_LIGHTS = {'carried_lantern': '#ffcf8a'}
+
+
+def prop_builder(prop):
+    """The builder of a world prop (or one of its own, above), and the colour of its light (None:
+    it has none)."""
+    import clutter, clutter_depths, clutter_surface, themes   # (Blender's modules: only when needed)
+    if prop in OWN_LIGHTS or prop in ('loose_pickaxe', 'loose_wagon_wheel'):
+        return globals()[prop], OWN_LIGHTS.get(prop)
+    light = None
+    for spec in props.SPECS:
+        if spec[1] == prop:
+            light = spec[6].get('light')
+    for spec in clutter.SPECS + themes.SPECS:
+        if spec[1] == prop:
+            light = spec[5].get('light')
+    for module in (props, clutter_surface, clutter_depths, *themes.BUILDERS):
+        fn = getattr(module, 'build_' + prop, None)
+        if fn:
+            return fn, light
+    raise KeyError('no builder for ' + prop)
+
+
+def bow_and_tag(m, top):
+    """A red bow tied on at `top`, two loops and two tails, and a paper tag on a string."""
+    x, y, z = top
+    m.slot = 0
+    m.blob((x, y, z + .015), (.022, .02, .018), BOW_DARK, n=6, jitter=0)   # the knot
+    for side in (-1, 1):
+        m.ring((x + side * .036, y, z + .03), .03, .009, BOW, n=8, section=3, vertical=True, yaw=0, ellipse=.7)
+        m.leaf((x + side * .008, y - .01, z + .012), (x + side * .05, y - .05, z - .03), .014, BOW)
+    # the tag on its string, hanging off the front
+    tz = max(z - .07, .036)   # (on something flat the tag lies on the ground in front)
+    m.tube([(x + .01, y - .015, z + .01), (x + .03, y - .05, (z + tz) / 2), (x + .045, y - .07, tz + .025)], .003, TWINE, n=3)
+    m.box((x + .05, y - .075, tz), (.05, .006, .07), PAPER, tilt=.25)
+    m.box((x + .05, y - .079, tz + .025), (.03, .002, .006), INK, tilt=.25)
+
+
+def quest_prop(m, v=0):
+    """A world prop as a quest thing (QUEST_PROPS): made small (QUEST_SIZE), its glowing faces
+    on GLOW_SLOT, a bow and a tag on its top."""
+    _, prop, variant = QUEST_PROPS[v]
+    build_prop, m.glow = prop_builder(prop)
+    m.anchors = []   # (string anchors some builders note: not needed here)
+    build_prop(m, variant)
+    for i, lit in enumerate(m.glows):
+        if lit:
+            m.slots[i] = GLOW_SLOT
+    lo = [min(p[k] for p in m.vertices) for k in range(3)]
+    hi = [max(p[k] for p in m.vertices) for k in range(3)]
+    s = QUEST_SIZE / max(b - a for a, b in zip(lo, hi))
+    cx, cy = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2
+    m.vertices = [((x - cx) * s, (y - cy) * s, (z - lo[2]) * s) for x, y, z in m.vertices]
+    # the bow sits on the highest point near the middle (else the highest of all)
+    reach = .3 * QUEST_SIZE
+    near = [p for p in m.vertices if math.hypot(p[0], p[1]) < reach] or m.vertices
+    top = max(near, key=lambda p: p[2])
+    bow_and_tag(m, (top[0], top[1], top[2]))
+
+
 # Headwear for the people out in the world (src/core/npcs.js), around the head's centre like
 # the others (HEAD_R, the face towards -Y)
 HOOD = '#6b5a45'
@@ -1569,7 +1692,8 @@ SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
     ('wear_straw_hat', straw_hat, 0, 'wearable', 'head')] + [
     (f'quest_{q}', builder, 0, 'quest', 'ground') for q, builder in (
         ('locket', locket), ('toy_rabbit', toy_rabbit), ('letter', letter), ('parcel', parcel),
-        ('map_scrap', map_scrap), ('ring', ring_item), ('compass', compass), ('journal', journal))]
+        ('map_scrap', map_scrap), ('ring', ring_item), ('compass', compass), ('journal', journal))] + [
+    (f'quest_{q[0]}', quest_prop, i, 'quest', 'ground') for i, q in enumerate(QUEST_PROPS)]
 
 
 def build(scene=None):
@@ -1634,7 +1758,7 @@ def build(scene=None):
 
 
 def validate(objects):
-    assert len(objects) == len(SPECS) == 71
+    assert len(objects) == len(SPECS) == 71 + len(QUEST_PROPS)
     assert {o.name for o in objects} == {s[0] for s in SPECS}
     report = []
     for obj in objects:
@@ -1699,13 +1823,17 @@ def setup_preview(scene, objects):
     groups.append([o for o in objects if o.name.startswith(('wear_', 'held_'))])
     groups.append([o for o in objects if o.name.startswith(('item_potion_health', 'item_potion_mana', 'item_potion_stamina'))])
     groups.append([o for o in objects if o.name.startswith(('item_potion_', 'item_flask_')) and not any(o in g for g in groups)])
-    rest = [o for o in objects if not any(o in g for g in groups)]
+    rest = [o for o in objects if not any(o in g for g in groups) and not o.name.startswith('quest_')]
     groups += [rest[:8], rest[8:]]
+    # the quest things in a block of their own to the right, eight a row
+    quests = [o for o in objects if o.name.startswith('quest_')]
+    rows = len(groups)
+    groups += [quests[i:i + 8] for i in range(0, len(quests), 8)]
     labels = {'weapon_sword_greatsword': 'GREATSWORD', 'treasure_chest': 'CHEST',
               'item_town_portal': 'TOWN PORTAL', 'item_room_portal': 'ROOM PORTAL'}
     for row, group in enumerate(groups):
         for i, obj in enumerate(group):
-            x, y = (i - (len(group) - 1) / 2) * 1.6, (4 - row) * 3.1
+            x, y = (i - (len(group) - 1) / 2) * 1.6 + (-9 if row < rows else 11.5), (4 - row % rows) * 3.1
             low = min(v.co.z for v in obj.data.vertices)
             obj.location = (x, y, .085 - low)
             platform = bpy.data.meshes.new('ItemPlinth')
@@ -1714,7 +1842,7 @@ def setup_preview(scene, objects):
             platform.from_pydata(pm.vertices, [], pm.faces)
             platform.materials.append(town.plain_material('ItemsPreviewPlinth', '#c3c4b0'))
             link('Plinth_' + obj.name, platform)
-            label = labels.get(obj.name, obj.name.replace('weapon_', '').replace('item_', '').replace('_', ' ').upper())
+            label = labels.get(obj.name, obj.name.replace('weapon_', '').replace('item_', '').replace('quest_', '').replace('_', ' ').upper())
             data = bpy.data.curves.new('Label_' + obj.name, 'FONT')
             data.body, data.align_x, data.size = label, 'CENTER', .105
             data.materials.append(town.plain_material('ItemsPreviewInk', '#4f554e'))
@@ -1727,7 +1855,7 @@ def setup_preview(scene, objects):
     cam = link('ItemsCamera', bpy.data.cameras.new('ItemsCamera'))
     cam.location = (3, -12, 14)
     town.aim(cam, (0, 0, .35))
-    cam.data.type, cam.data.ortho_scale = 'ORTHO', 29
+    cam.data.type, cam.data.ortho_scale = 'ORTHO', 48
     scene.camera = cam
     for name, pos, power, size in [('ItemsKey', (-3, -5, 10), 1500, 7),
                                   ('ItemsFill', (7, -1, 8), 900, 6), ('ItemsRim', (0, 6, 9), 1100, 5)]:
@@ -1742,8 +1870,9 @@ def setup_preview(scene, objects):
     scene.render.engine = 'CYCLES'
     scene.cycles.samples = 32
     scene.cycles.use_denoising = True
-    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = 1920, 1600, 100
+    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = OVERVIEW + (100,)
     scene.render.image_settings.file_format = 'PNG'
+    scene.render.image_settings.compression = 100
     scene.view_settings.view_transform = 'AgX'
     for screen in bpy.data.screens:
         for area in screen.areas:
@@ -1755,6 +1884,12 @@ def setup_preview(scene, objects):
                 area.spaces.active.shading.use_scene_lights = True
                 area.spaces.active.overlay.show_overlays = False
     return preview
+
+
+# how big the pictures are (pixels): the overview (portrait: a row per group), each item's icon
+# (the kids' guide shows them small)
+OVERVIEW = (1600, 1000)
+ICON = 256
 
 
 def render_previews(scene, objects, preview, directory, overview=True, previews=None):
@@ -1784,7 +1919,7 @@ def render_previews(scene, objects, preview, directory, overview=True, previews=
         floor.location.z = .125
         for obj in decorations:
             obj.hide_render = True
-        scene.render.resolution_x = scene.render.resolution_y = 640
+        scene.render.resolution_x = scene.render.resolution_y = ICON
         for obj, item in zip(objects, report):
             for other in objects:
                 for part in [other] + list(other.children):
@@ -1801,7 +1936,7 @@ def render_previews(scene, objects, preview, directory, overview=True, previews=
             obj.hide_render = False
         floor.location = floor_location
         cam.location, cam.rotation_euler, cam.data.ortho_scale = saved
-        scene.render.resolution_x, scene.render.resolution_y = 1920, 1600
+        scene.render.resolution_x, scene.render.resolution_y = OVERVIEW
         scene.render.filepath = str(overview_path)
 
 

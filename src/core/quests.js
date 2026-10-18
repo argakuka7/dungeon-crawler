@@ -33,7 +33,7 @@ import { rollWeapon } from './gear/generate.js';
 import { RARITY } from './gear/rarities.js';
 import { validGen } from './loot.js';
 import { rollPotions } from './potions.js';
-import { ITEMS } from './items.js';
+import { ITEMS, QUEST_THINGS } from './items.js';
 import { CHESTS } from './chests.js';
 import { depthLevel, grown, GROWTH, ENEMY_KINDS } from './enemies.js';
 import { xpToNext } from './progression.js';
@@ -49,6 +49,11 @@ export const DIFFICULTIES = ['easy', 'medium', 'hard'];
 // quests a giver has out at a time: offered or not done yet (going on, to hand in, failed; also
 // archived), so nobody hands out a second quest before the first is done
 export const MAX_OFFERS = 1;
+// offers standing in town at a time (the villagers'); new ones come only when the party comes back
+// to town from below (log.townOpen): a few at a time, not all six villagers at once
+export const TOWN_OFFERS = 2;
+// how many things a gathering quest has you find, spread over one depth's hiding places
+export const GATHER = 3;
 // how close (cells) to a landmark's chest counts as standing beside it
 export const LANDMARK_REACH = 3.5;
 
@@ -70,12 +75,13 @@ export const isGiver = g => !!GIVERS[g] || isNpcGiver(g);
 // What a giver is to the quests: { name (in a sentence: 'the Innkeeper', 'Ada the hermit'),
 // title (on its own: 'Innkeeper', 'Ada the hermit'), where, kinds, depths(log) }; null: nobody
 export function giverProfile(giver, ctx) {
-  if (GIVERS[giver]) return { ...GIVERS[giver], name: `the ${GIVERS[giver].title}`, depths: log => window(log) };
+  if (GIVERS[giver]) return { ...GIVERS[giver], name: `the ${GIVERS[giver].title}`, owner: `the ${GIVERS[giver].title}`, role: giver, depths: log => window(log) };
   const id = spotOfGiver(giver), key = id && keyOfSpot(id);
   if (!key) return null;
   const depth = -Number(key.split(',')[1]), plan = ctx.layout(depth)?.spots?.get(key)?.find(s => s.id === id), npc = residentOf(plan);
   if (!npc) return null;
-  return { title: npc.title, name: npc.title, where: plan.kind === 'camp' ? `at the camp on ${depthName(depth)}` : `on ${depthName(depth)}`,
+  return { title: npc.title, name: npc.title, owner: npc.name, role: npc.role,
+    where: plan.kind === 'camp' ? `at the camp on ${depthName(depth)}` : `on ${depthName(depth)}`,
     kinds: ROLES[npc.role].kinds, depths: () => range(depth, depth + 1) };
 }
 // how a quest names its giver: in a sentence, on its own
@@ -86,8 +92,10 @@ export const giverTitle = q => q.from?.title ?? GIVERS[q.giver]?.title ?? 'Giver
 //   living: the people found and come to live at a camp: [{ id, name, tint, outfit, camp }]
 //   repeats: the repeatable quests done, waiting to come back (REPEAT): [{ id, giver, kind, depth,
 //           away, ready }]; repeated: how many came back (their slots' numbers)
+//   townOpen: the villagers may bring out new offers (TOWN_OFFERS): at first, and each time the
+//           party comes back to town from below (away: it has been below since)
 export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], used: [], living: [], repeats: [], repeated: 0,
-  version: 0 });
+  townOpen: true, away: false, version: 0 });
 // Repeatable quests (docs/quests.md "Repeatable quests"): what happens in a world again may be
 // asked again. One of these done comes back to its giver once the party has been away from the
 // giver's depth (the town: depth 0) and come back; filled in anew (a new target), paying half the
@@ -117,6 +125,56 @@ export function landmarkName(name) {
   return base.replace(/_/g, ' ');
 }
 const pick = (R, xs) => xs[Math.floor(R() * xs.length)];
+const NUMBER = ['no', 'one', 'two', 'three', 'four', 'five'];
+
+// --- the things the quests are about (core/items.js QUEST_THINGS) ---------------------------------
+
+// what a giver is more likely to have lost, or to want gathered or carried: by villager, or by the
+// role of somebody out in the world (core/npcs.js ROLES); any other thing may come up too
+const LEANS = {
+  innkeeper: ['cider_barrel', 'flour_sack', 'fireworks', 'honey_pot', 'pearl_clam', 'pink_salt', 'ring', 'locket'],
+  groom: ['wagon_wheel', 'backpack', 'lantern', 'compass', 'supply_crate'],
+  smith: ['shield', 'silver_bars', 'gears', 'crucible', 'pickaxe', 'obsidian', 'fire_crystal'],
+  keeper: ['crab', 'bird_nest', 'toy_rabbit', 'spider_eggs'],
+  alchemist: ['toadstool', 'cave_mushrooms', 'spore_pod', 'pitcher_plant', 'ice_shard', 'honey_pot'],
+  enchanter: ['singing_crystal', 'rainbow_crystal', 'thunder_jar', 'ice_heart', 'void_crystal', 'rune_stone'],
+  hermit: ['candles', 'incense_bowl', 'bone_lantern', 'prayer_stone', 'journal'],
+  explorer: ['backpack', 'compass', 'lantern', 'journal'],
+  miner: ['pickaxe', 'lantern', 'singing_crystal', 'silver_bars'],
+  pilgrim: ['butter_lamps', 'prayer_stone', 'paper_lantern', 'incense_bowl', 'candles'],
+  trapper: ['crab', 'bird_nest', 'horned_skull', 'spider_eggs'],
+  scholar: ['stone_tablet', 'statue_head', 'jade_idol', 'old_urn', 'painted_pots', 'journal'],
+  carter: ['supply_crate', 'flour_sack', 'cider_barrel', 'wagon_wheel'],
+};
+const LEAN = 4;   // how much likelier a thing the giver leans to is
+// the things of the quests not done yet (offered too): a thing is about one quest at a time
+const thingsOut = log => new Set(log.list.filter(q => q.state !== 'done').flatMap(q => q.stages.map(s => s.item)).filter(Boolean));
+// a thing for a quest of somebody of `role` (a villager's name, or a role out in the world)
+function pickThing(R, log, role) {
+  const out = thingsOut(log), lean = new Set((LEANS[role] ?? []).map(id => `quest_${id}`)), free = QUEST_THINGS.filter(id => !out.has(id));
+  return weighted(R, free.length ? free : QUEST_THINGS, id => lean.has(id) ? LEAN : 1);
+}
+// how a thing is spoken of: { name (lower case), it ('it', 'them'), many (several of it), this
+// ('this', 'these') }
+const PLURAL = new Set(['flour_sack', 'fireworks', 'silver_bars', 'gears', 'toadstool', 'butter_lamps', 'prayer_stone', 'paper_lantern',
+  'cave_mushrooms', 'candles', 'spider_eggs', 'painted_pots'].map(id => `quest_${id}`));
+const MANY = { quest_pink_salt: 'lumps of pink salt', quest_sea_glass: 'handfuls of sea glass', quest_ice_shard: 'bundles of never-melting ice',
+  quest_obsidian: 'pieces of obsidian', quest_bird_nest: 'birds\' nests', quest_statue_head: 'stone heads', quest_thunder_jar: 'jars of thunder',
+  quest_ice_heart: 'hearts of ice', quest_compass: 'compasses', quest_fireworks: 'boxes of fireworks', quest_silver_bars: 'stacks of silver bars',
+  quest_gears: 'piles of clockwork gears', quest_butter_lamps: 'trays of butter lamps' };
+export function thingWords(id) {
+  const name = ITEMS[id].name.toLowerCase(), plural = PLURAL.has(id);
+  return { name, it: plural ? 'them' : 'it', many: MANY[id] ?? (plural ? name : `${name}s`), this: plural ? 'these' : 'this' };
+}
+// whose a lost thing is: the giver's own (mine), or somebody's they know (a name, how they are
+// related, his or her)
+const SHE = new Set(['daughter', 'sister', 'granddaughter']);
+function ownerOf(R, g, seed) {
+  if (R() < 0.5) return { name: g.owner, mine: true };
+  const p = lostPerson(seed);
+  return { name: p.name, relation: p.relation, his: SHE.has(p.relation) ? 'her' : 'his' };
+}
+const possessive = name => `${name}'s`;
 
 // --- the kinds of quests ---------------------------------------------------------------------------
 
@@ -211,20 +269,24 @@ const KINDS = {
   find: {
     payout: 'return',
     targets: (ctx, log, depths) => hidingPlaces(ctx, log, depths),
-    quest(t, ctx, R, { giver }) {
-      const item = pick(R, LOST_ITEMS[giver] ?? LOST_ITEMS.npc), name = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
-      const clue = clueOf(ctx.layout, t.plan, landmarkName);
+    quest(t, ctx, R, { id, log, g }) {
+      const item = pickThing(R, log, g.role), w = thingWords(item), where = depthName(t.depth);
+      const clue = clueOf(ctx.layout, t.plan, landmarkName), o = ownerOf(R, g, hash32(ctx.seed ^ hashString(id) ^ 0x7a11));
+      const label = `${possessive(o.name)} ${w.name}`, it = w.it;
       return {
-        title: `The lost ${name}`,
-        text: pick(R, item === 'quest_toy_rabbit' ? [
-          `A little girl lost her toy rabbit on ${where}, ${clue}. She has been crying all day. Could you find it and bring it back to me?`,
-        ] : [
-          `I lost my ${name} down on ${where}, ${clue}. Could you look for it and bring it back to me?`,
-          `My ${name}! I dropped it when I ran from the monsters on ${where}, ${clue}. Please bring it back.`,
-          `Somebody left a ${name} on ${where}, ${clue}. It belongs to an old friend of mine. Would you fetch it for me?`,
+        title: o.mine ? `The lost ${w.name}` : cap(label),
+        text: o.mine ? pick(R, [
+          `I lost my ${w.name} down on ${where}, ${clue}. Could you look for ${it} and bring ${it} back to me?`,
+          `My ${w.name}! I dropped ${it} when I ran from the monsters on ${where}, ${clue}. Please bring ${it} back.`,
+          `I only put my ${w.name} down for a moment on ${where}, ${clue}, and then something came at me and I ran. Would you fetch ${it} for me?`,
+          `A big bird snatched my ${w.name} and let ${it} fall on ${where}, ${clue}. Can you get ${it} back for me?`,
+        ]) : pick(R, [
+          `My ${o.relation} ${o.name} left ${o.his} ${w.name} on ${where}, ${clue}. ${o.name} is too scared to go back. Would you fetch ${it}?`,
+          `${o.name}, my ${o.relation}, was carrying ${o.his} ${w.name} down to ${where} and dropped ${it} ${clue}. Please bring ${it} back to me.`,
+          `Somebody saw ${label} lying on ${where}, ${clue}. ${o.name} is my ${o.relation}. Would you bring ${it} back for us?`,
         ]),
         target: { spot: t.spot, item },
-        stages: [{ goal: 'find', depth: t.depth, key: t.key, spot: t.spot, item, text: `Find the ${name} on ${where}` }],
+        stages: [{ goal: 'find', depth: t.depth, key: t.key, spot: t.spot, item, label, text: `Find ${label} on ${where}` }],
       };
     },
   },
@@ -284,25 +346,29 @@ KINDS.bounty = {
     };
   },
 };
-// take a letter or a parcel to somebody further down: somebody living at a seat or a camp there,
-// else somebody waiting on a hiding place; they end it and pay
+// take something to somebody further down (a letter, a parcel, or any of the quest things):
+// somebody living at a seat or a camp there, else somebody waiting on a hiding place; they end it
+// and pay
 KINDS.delivery = {
   payout: 'spot',
   targets: (ctx, log, depths, giver) => recipients(ctx, log, depths, giver),
-  quest(t, ctx, R, { giver }) {
-    const item = pick(R, ['quest_letter', 'quest_parcel']), what = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
+  quest(t, ctx, R, { log, g }) {
+    const item = R() < 0.35 ? pick(R, ['quest_letter', 'quest_parcel']) : pickThing(R, log, g.role), w = thingWords(item), where = depthName(t.depth);
     const at = t.to.resident ? t.to.where : `on ${where}, ${clueOf(ctx.layout, t.plan, landmarkName)}`;
     return {
-      title: `A ${what} for ${t.to.name}`,
+      title: `${cap(w.name)} for ${t.to.name}`,
       text: pick(R, [
-        `Could you take this ${what} to ${t.to.title}, ${at}? ${t.to.name} has been waiting for it for a long time.`,
-        `This ${what} must get to ${t.to.title}, ${at}. Nobody else dares to go that far down. ${t.to.name} will thank you for it.`,
+        `Could you take ${w.this} ${w.name} to ${t.to.title}, ${at}? ${t.to.name} has been waiting for ${w.it} for a long time.`,
+        `${cap(w.this)} ${w.name} must get to ${t.to.title}, ${at}. Nobody else dares to go that far down. ${t.to.name} will thank you for it.`,
+        `${t.to.title} (${at}) asked me for ${w.this} ${w.name}, and I promised to send ${w.it}. Would you carry ${w.it} down there for me?`,
+        `I owe ${t.to.name} a favour. ${cap(w.this)} ${w.name} should make us even. You will find ${t.to.title} ${at}.`,
       ]),
       target: { recipient: t.id },
       stages: [{ goal: 'deliver', depth: t.depth, key: t.key, to: t.to, item, reply: pick(R, [
         `${t.to.name}: At last! Thank you so much. Here, this is for your trouble.`,
-        `${t.to.name}: For me? I hoped it would come. Take this, you have earned it.`]),
-        text: `Bring the ${what} to ${t.to.title} on ${where}` }],
+        `${t.to.name}: For me? I hoped ${w.it} would come. Take this, you have earned it.`,
+        `${t.to.name}: Oh, wonderful! I was beginning to think nobody would come. Here, take this.`]),
+        text: `Bring the ${w.name} to ${t.to.title} on ${where}` }],
     };
   },
 };
@@ -313,22 +379,54 @@ KINDS.relay = {
     const near = hidingPlaces(ctx, log, [r.depth]).filter(h => h.spot !== r.to.spot);
     return near.length ? [{ ...r, id: `${r.id}|${near[0].id}`, find: near[0] }] : [];
   }),
-  quest(t, ctx, R, { giver }) {
-    const item = pick(R, LOST_ITEMS[giver] ?? LOST_ITEMS.npc), name = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
+  quest(t, ctx, R, { log, g }) {
+    const item = pickThing(R, log, g.role), w = thingWords(item), it = w.it, where = depthName(t.depth);
     const at = t.to.resident ? t.to.where : `on ${where}, ${clueOf(ctx.layout, t.plan, landmarkName)}`;
-    const clue = clueOf(ctx.layout, t.find.plan, landmarkName);
+    const clue = clueOf(ctx.layout, t.find.plan, landmarkName), label = `${possessive(g.owner)} ${w.name}`;
     return {
       title: `Ask ${t.to.name}`,
       text: pick(R, [
-        `My ${name} is gone, and ${t.to.title} (${at}) saw where it went. Ask ${t.to.name}, find it, and bring it back to me.`,
-        `${t.to.title} found my ${name} once before! Go and ask, ${at}. Then bring it back to me, please.`,
+        `My ${w.name} ${it === 'them' ? 'are' : 'is'} gone, and ${t.to.title} (${at}) saw where ${it === 'them' ? 'they' : 'it'} went. Ask ${t.to.name}, find ${it}, and bring ${it} back to me.`,
+        `${t.to.title} found my ${w.name} once before! Go and ask, ${at}. Then bring ${it} back to me, please.`,
+        `Somebody took my ${w.name} down below. ${t.to.title} hears all the gossip down there, ${at}. Ask, then bring ${it} back to me.`,
       ]),
       target: { recipient: t.id, spot: t.find.spot, item },
       stages: [
-        { goal: 'talk', depth: t.depth, key: t.key, to: t.to, reply: `${t.to.name}: Your ${name}? I saw it on ${where}, ${clue}.`,
+        { goal: 'talk', depth: t.depth, key: t.key, to: t.to, reply: `${t.to.name}: Your ${w.name}? I saw ${it} on ${where}, ${clue}.`,
           text: `Ask ${t.to.title} on ${where}` },
-        { goal: 'find', depth: t.depth, key: t.find.key, spot: t.find.spot, item, clue, text: `Find the ${name} on ${where}, ${clue}` },
+        { goal: 'find', depth: t.depth, key: t.find.key, spot: t.find.spot, item, label, clue, text: `Find the ${w.name} on ${where}, ${clue}` },
       ],
+    };
+  },
+};
+// gather several of one thing, spread over the hiding places of one depth (in as many different
+// cubes as there are), and bring them all back
+KINDS.gather = {
+  payout: 'return',
+  targets: (ctx, log, depths) => depths.flatMap(depth => {
+    const free = hidingPlaces(ctx, log, [depth]);
+    return free.length >= GATHER ? [{ id: `gather:${depth}`, depth, key: free[0].key, tier: 1, free }] : [];
+  }),
+  quest(t, ctx, R, { log, g }) {
+    const pool = [...t.free], spots = [];
+    while (spots.length < GATHER) {
+      const apart = pool.filter(h => !spots.some(x => x.key === h.key)), from = apart.length ? apart : pool;
+      const h = from[Math.floor(R() * from.length)];
+      spots.push(h); pool.splice(pool.indexOf(h), 1);
+    }
+    const item = pickThing(R, log, g.role), w = thingWords(item), where = depthName(t.depth), n = NUMBER[GATHER];
+    const clue = clueOf(ctx.layout, spots[0].plan, landmarkName);
+    return {
+      title: `${cap(w.many)} on ${where}`,
+      text: pick(R, [
+        `A cart tipped over on ${where}, and ${n} ${w.many} went rolling off all over the place. One was seen ${clue}. Could you gather them up and bring them back to me?`,
+        `The monsters on ${where} ran off with my ${w.many}, ${n} of them, and dropped them here and there. Bring back every one! I think one is ${clue}.`,
+        `I need ${n} ${w.many}, and there are some lying about on ${where}, one of them ${clue}. Would you collect them for me?`,
+        `A great gust of wind blew ${n} of my ${w.many} all over ${where}. I saw one come down ${clue}. Please find them all!`,
+      ]),
+      target: { item },
+      stages: [{ goal: 'gather', depth: t.depth, spots: spots.map(h => h.spot), keys: spots.map(h => h.key), got: spots.map(() => false),
+        item, label: possessive(g.owner) + ' ' + w.name, clue, text: `Collect ${n} ${w.many} on ${where}` }],
     };
   },
 };
@@ -377,20 +475,16 @@ KINDS.defense = {
     };
   },
 };
-// the things a giver may have lost (core/items.js QUEST_ITEMS)
-const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], groom: ['quest_compass', 'quest_map_scrap'],
-  smith: ['quest_ring', 'quest_journal'], keeper: ['quest_toy_rabbit'], alchemist: ['quest_journal', 'quest_locket'],
-  enchanter: ['quest_locket', 'quest_ring', 'quest_journal'], npc: ['quest_compass', 'quest_journal', 'quest_locket', 'quest_ring'] };
 // the hiding places at these depths no quest going on is about
 function hidingPlaces(ctx, log, depths) {
   // (a treasure's spot stays its: its chest stays there, open)
   const busy = new Set(log.list.filter(q => q.state !== 'done' || q.kind === 'treasure')
-    .flatMap(q => q.stages.flatMap(s => [s.spot, s.to?.spot])).filter(Boolean));
+    .flatMap(q => q.stages.flatMap(s => [s.spot, s.to?.spot, ...(s.spots ?? [])])).filter(Boolean));
   return depths.flatMap(depth => ctx.layout(depth).spotList.filter(s => s.kind === 'hide' && !busy.has(s.id))
     .map(plan => ({ id: `spot:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: plan.tier, plan })));
 }
 // what a goal is, by name (the kinds' stages)
-export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty', 'deliver', 'talk', 'defend'];
+export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'gather', 'rescue', 'open', 'bounty', 'deliver', 'talk', 'defend'];
 export const QUEST_KINDS = Object.keys(KINDS);
 
 const range = (a, b) => Array.from({ length: Math.max(0, Math.min(b, MAX_DEPTH) - a + 1) }, (_, i) => a + i);
@@ -409,6 +503,7 @@ export function goalDone(stage, log, facts) {
     case 'horde': return log.broken.includes(stage.key);
     case 'open': return f.chests.has(stage.chest);
     case 'bounty': return f.defeated.has(stage.enemyId);
+    case 'gather': return !!stage.got?.length && stage.got.every(Boolean);
     default: return false;   // landmark, find, rescue: only by being there (events)
   }
 }
@@ -441,8 +536,8 @@ const weighted = (R, list, weight) => {
 // again once its quest is done)
 const takenTargets = log => new Set(log.list.filter(q => q.state !== 'done' || !q.target?.spot).map(q => q.target?.id).filter(Boolean));
 // the kinds to try for a slot of the plan: its own (a scout as the giver leans), then the others
-const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'], bounty: ['find'],
-  delivery: ['relay', 'find'], relay: ['delivery', 'find'], defense: ['find'] };
+const FALLBACK = { scout: ['find', 'gather'], find: ['gather', 'treasure', 'scout'], gather: ['find', 'treasure'], treasure: ['find', 'gather'],
+  rescue: ['find', 'gather'], bounty: ['find', 'gather'], delivery: ['relay', 'find', 'gather'], relay: ['delivery', 'find', 'gather'], defense: ['find'] };
 function kindsFor(slot, g, R) {
   const scouts = () => {
     const left = SCOUTS.map(k => [k, g.kinds[k] ?? 0.3]), out = [];
@@ -451,6 +546,9 @@ function kindsFor(slot, g, R) {
   };
   return [slot.kind, ...(FALLBACK[slot.kind] ?? [])].flatMap(k => k === 'scout' ? scouts() : [k]);
 }
+// the kinds of the quests out (offered, going on, to hand in, failed; not put away): a slot tries
+// the kinds nobody has out first, so the quests going on at once differ
+const kindsOut = log => new Set(log.list.filter(q => q.state !== 'done' && !q.archived).map(q => q.kind));
 
 // The quest of `giver` for slot `slot` of the plan (core/questplan.js), or null: nothing it
 // could be about at the slot's depth now. The log is not changed (refreshOffers does that).
@@ -459,15 +557,17 @@ export function makeQuest(log, ctx, giver, slot) {
   if (!g) throw new TypeError(`Not a quest giver: ${giver}`);
   const id = `${giver}:${slot.id}`, f = factsOf(ctx);
   const R = mulberry32(hash32(ctx.seed ^ hashString(giver) ^ hashString(slot.id)));
-  const taken = takenTargets(log);
-  for (const kind of kindsFor(slot, g, R)) {
+  const taken = takenTargets(log), out = kindsOut(log), kinds = kindsFor(slot, g, R);
+  // (slot.force: of its kind or none, the dev tools' and a repeat's)
+  const order = slot.force ? [slot.kind] : [...kinds.filter(k => !out.has(k)), ...kinds.filter(k => out.has(k))];
+  for (const kind of order) {
     const options = KINDS[kind].targets(ctx, log, [slot.depth], giver).filter(t => !taken.has(t.id)
       && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, f));
     if (!options.length) continue;
     const t = options[Math.floor(R() * options.length)];
     const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' || kind === 'bounty' || kind === 'defense' ? 1 : 0)
       + ((t.tier ?? 0) >= 3 ? 1 : 0)));
-    const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R, { id, giver, difficulty });
+    const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R, { id, giver, difficulty, log, g });
     const rewards = questRewards(R, t.depth, difficulty);
     return { id, giver, n: Number(slot.id.split(':')[1]) || 0, slot: slot.id, from: { name: g.name, title: g.title, where: g.where },
       kind, depth: t.depth, difficulty, target: { id: t.id, ...made.target },
@@ -483,7 +583,7 @@ export function makeQuest(log, ctx, giver, slot) {
 function makeRepeat(log, ctx, r) {
   const R = mulberry32(hash32(ctx.seed ^ hashString(r.id) ^ Math.imul(log.repeated + 1, 0x2545f491)));
   const depth = GIVERS[r.giver] ? Math.max(1, log.deepest - Math.floor(R() * 3)) : Math.min(MAX_DEPTH, r.depth + (r.kind === 'defense' ? 0 : Math.floor(R() * 2)));
-  const q = makeQuest(log, ctx, r.giver, { id: `r:${++log.repeated}`, depth, kind: r.kind });
+  const q = makeQuest(log, ctx, r.giver, { id: `r:${++log.repeated}`, depth, kind: r.kind, force: true });
   if (!q || q.kind !== r.kind) return null;
   const level = depthLevel(q.depth);
   Object.assign(q, { repeat: true, title: `${q.title} (again)`, text: `Back again? ${q.text}`,
@@ -497,33 +597,51 @@ const stale = (q, log, facts) => q.state === 'offered' && q.stages.some(s => goa
 // a giver's quests out: offered, or taken and not done yet
 const outFrom = (log, giver) => log.list.filter(q => q.giver === giver && q.state !== 'done').length;
 
-// Every giver's offers brought up to date: those that went stale go, and each giver with fewer
-// than MAX_OFFERS quests out (outFrom) offers its next slots of the plan, as far down as two below the deepest anyone
-// got (a slot nothing fits is passed over). true: something changed.
+// The next offer of `giver`, or null: the next slot of its plan that something fits (as far down
+// as two below the deepest anyone got; a slot nothing fits is passed over, log.used), else a
+// repeatable quest of theirs come back. The log notes the slots and repeats used up.
+function nextOffer(log, ctx, plan, giver) {
+  for (const slot of plan.byGiver.get(giver) ?? []) {
+    if (log.used.includes(slot.id)) continue;
+    if (slot.depth > log.deepest + 2) break;
+    log.used.push(slot.id);
+    const q = makeQuest(log, ctx, giver, slot);
+    if (q) return q;
+  }
+  const r = log.repeats.find(x => x.giver === giver && x.ready);
+  if (!r) return null;
+  log.repeats.splice(log.repeats.indexOf(r), 1);
+  return makeRepeat(log, ctx, r);
+}
+// how many offers stand in town
+const townOffers = log => log.list.filter(q => GIVERS[q.giver] && q.state === 'offered').length;
+
+// Every giver's offers brought up to date: those that went stale go. Out in the world each giver
+// with fewer than MAX_OFFERS quests out (outFrom) offers their next one (nextOffer). In town the
+// villagers take turns: when the town is open (log.townOpen: at first, and on coming back from
+// below), those who have given fewest so far (and have nothing out) bring out offers until
+// TOWN_OFFERS stand. true: something changed.
 export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log.met]) {
-  const before = log.list.length, plan = questPlan(ctx.seed, ctx.layout);
+  const before = log.list.length, plan = questPlan(ctx.seed, ctx.layout), usedBefore = log.used.length, repeatsBefore = log.repeats.length;
   log.list = log.list.filter(q => !stale(q, log, ctx));
   let changed = log.list.length !== before;
-  for (const giver of givers) {
-    const slots = plan.byGiver.get(giver) ?? [];
-    for (const slot of slots) {
-      if (outFrom(log, giver) >= MAX_OFFERS) break;
-      if (log.used.includes(slot.id)) continue;
-      if (slot.depth > log.deepest + 2) break;
-      const q = makeQuest(log, ctx, giver, slot);
-      log.used.push(slot.id);
-      changed = true;
+  if (log.townOpen && givers.some(g => GIVERS[g])) {
+    const given = g => log.list.filter(q => q.giver === g).length;
+    const turns = Object.keys(GIVERS).filter(g => outFrom(log, g) < MAX_OFFERS).sort((a, b) => given(a) - given(b));
+    for (const giver of turns) {
+      if (townOffers(log) >= TOWN_OFFERS) break;
+      const q = nextOffer(log, ctx, plan, giver);
       if (q) log.list.push(q);
     }
-    // nothing of the plan to offer: a repeatable quest come back
-    const r = outFrom(log, giver) >= MAX_OFFERS ? null : log.repeats.find(x => x.giver === giver && x.ready);
-    if (r) {
-      const q = makeRepeat(log, ctx, r);
-      log.repeats.splice(log.repeats.indexOf(r), 1);
-      changed = true;
-      if (q) log.list.push(q);
-    }
+    log.townOpen = false;
+    changed = true;
   }
+  for (const giver of givers.filter(g => !GIVERS[g])) {
+    if (outFrom(log, giver) >= MAX_OFFERS) continue;
+    const q = nextOffer(log, ctx, plan, giver);
+    if (q) log.list.push(q);
+  }
+  changed ||= log.list.length !== before || log.used.length !== usedBefore || log.repeats.length !== repeatsBefore;
   if (changed) log.version++;
   return changed;
 }
@@ -554,7 +672,7 @@ export function restart(log, id, gates = new Set()) {
   const q = find(log, id);
   if (q?.state !== 'failed') return false;
   q.state = 'active'; q.stage = 0;
-  for (const s of q.stages) s.done = false;
+  for (const s of q.stages) { s.done = false; if (s.got) s.got = s.got.map(() => false); }
   settle(log, gates);
   return touch(log);
 }
@@ -606,7 +724,8 @@ function settled(log, q) {
 //   { kind: 'horde', key }        the horde in that cube is broken
 //   { kind: 'landmark', key }     someone stands beside the landmark in that cube
 //   { kind: 'gate', key }         a guardian's gate opened (run.unlockedGates has it already)
-//   { kind: 'found', quest }      somebody picked up the thing quest `quest` is looking for
+//   { kind: 'found', quest, spot } somebody picked up the thing quest `quest` is looking for (of
+//                                 a gathering, the one on hiding place `spot`)
 //   { kind: 'rescued', quest }    somebody found the person quest `quest` is looking for
 //   { kind: 'talked', quest }     somebody talked to who quest `quest` sends them to (a letter
 //                                 delivered, somebody asked)
@@ -614,6 +733,11 @@ function settled(log, q) {
 // The log takes note, and the quests move on (settle). The quests paid on the spot.
 export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'visit' && Number.isInteger(ev.depth) && ev.depth > log.deepest) { log.deepest = Math.min(MAX_DEPTH, ev.depth); log.version++; }
+  // below, and back in town: the villagers may bring out new offers (refreshOffers)
+  if (ev.kind === 'visit' && Number.isInteger(ev.depth)) {
+    if (ev.depth > 0 && !log.away) { log.away = true; log.version++; }
+    if (ev.depth === 0 && log.away) { log.away = false; log.townOpen = true; log.version++; }
+  }
   // away from a repeatable quest's giver, and back: it comes back (REPEAT)
   if (ev.kind === 'visit' && Number.isInteger(ev.depth)) for (const r of log.repeats) {
     if (r.ready) continue;
@@ -624,7 +748,10 @@ export function questEvent(log, ev, gates = new Set(), now = 0) {
     const s = q.stages[q.stage];
     if (q.state === 'active' && !q.archived && s?.goal === 'landmark' && s.key === ev.key && !s.done) { s.done = true; log.version++; }
   }
-  if (['found', 'rescued', 'talked', 'defended'].includes(ev.kind) && typeof ev.quest === 'string') {
+  if (ev.kind === 'found' && typeof ev.spot === 'string') {
+    const q = find(log, ev.quest), s = q?.stages[q.stage], i = s?.goal === 'gather' ? s.spots.indexOf(ev.spot) : -1;
+    if (q?.state === 'active' && !q.archived && i >= 0 && !s.got[i]) { s.got[i] = true; log.version++; }
+  } else if (['found', 'rescued', 'talked', 'defended'].includes(ev.kind) && typeof ev.quest === 'string') {
     const q = find(log, ev.quest), s = q?.stages[q.stage];
     const goals = { found: ['find'], rescued: ['rescue'], talked: ['deliver', 'talk'], defended: ['defend'] }[ev.kind];
     if (q?.state === 'active' && !q.archived && goals.includes(s?.goal) && !s.done) { s.done = true; log.version++; }
@@ -638,16 +765,17 @@ export const wantsLandmark = (log, key) => log.list.some(q => q.state === 'activ
 // A death puts the cube back as it was when you came in (game/flow.js): quest progress made since
 // goes back with it. progressOf before, restoreProgress after.
 export const progressOf = log => ({ broken: [...log.broken],
-  quests: new Map(log.list.map(q => [q.id, { state: q.state, stage: q.stage, done: q.stages.map(s => s.done) }])) });
+  quests: new Map(log.list.map(q => [q.id, { state: q.state, stage: q.stage, done: q.stages.map(s => s.done), got: q.stages.map(s => s.got && [...s.got]) }])) });
 export function restoreProgress(log, before) {
   let changed = log.broken.length !== before.broken.length;
   log.broken = [...before.broken];
   for (const q of log.list) {
     const was = before.quests.get(q.id);
-    if (!was || q.state === 'done' || was.state === q.state && was.stage === q.stage) continue;
+    const gotSame = q.stages.every((s, i) => !s.got || String(s.got) === String(was?.got?.[i]));
+    if (!was || q.state === 'done' || was.state === q.state && was.stage === q.stage && gotSame) continue;
     if (!['active', 'ready'].includes(q.state) || !['active', 'ready'].includes(was.state)) continue;
     q.state = was.state; q.stage = was.stage;
-    q.stages.forEach((s, i) => { s.done = !!was.done[i]; });
+    q.stages.forEach((s, i) => { s.done = !!was.done[i]; if (s.got && was.got?.[i]) s.got = [...was.got[i]]; });
     changed = true;
   }
   if (changed) log.version++;
@@ -658,14 +786,19 @@ export function restoreProgress(log, before) {
 
 // The quests going on whose current goal is in cube `key`: [{ quest, stage }] (a thing to find,
 // somebody lost, a treasure's chest; they show only while it is the goal)
-export const questGoalsIn = (log, key) => log.list.filter(q => q.state === 'active' && !q.archived && q.stages[q.stage]?.key === key)
+export const questGoalsIn = (log, key) => log.list.filter(q => q.state === 'active' && !q.archived && inCube(q.stages[q.stage], key))
   .map(q => ({ quest: q, stage: q.stages[q.stage] }));
+// is stage s's goal (or a part of it still to do: a gathering's things not picked up) in cube `key`?
+const inCube = (s, key) => s?.key === key || !!s?.keys?.some((k, i) => k === key && !s.got[i]);
+// where a stage's goal is now: its cube, or a gathering's next thing still to pick up
+export const stageKey = s => s.keys ? s.keys.find((k, i) => !s.got[i]) ?? null : s.key ?? null;
 // the people living at camp `campId` (a spot's id), found by the quests
 export const livingAt = (log, campId) => log.living.filter(p => p.camp === campId);
 // what a quest carries (core/items.js QUEST_ITEMS): the things found for it, a treasure's map
 export function carried(q) {
   if (q.state === 'done' || q.state === 'offered') return [];
   const out = q.stages.filter(s => s.goal === 'find' && s.done).map(s => s.item);
+  for (const s of q.stages.filter(x => x.goal === 'gather')) out.push(...s.got.filter(Boolean).map(() => s.item));
   out.push(...q.stages.filter(s => s.goal === 'deliver' && !s.done).map(s => s.item));
   if (q.kind === 'treasure') out.push('quest_map_scrap');
   return out;
@@ -692,10 +825,12 @@ export function questLists(log) {
   return { active: shown.filter(q => !q.archived && q.state !== 'done'), done: shown.filter(q => !q.archived && q.state === 'done'),
     archived: shown.filter(q => q.archived) };
 }
+// a stage in words: a gathering with how many are found
+export const stageText = s => s.goal === 'gather' ? `${s.text} (${s.got.filter(Boolean).length}/${s.got.length})` : s.text;
 // a quest's state in words
 export function stateText(q) {
   if (q.archived) return 'Archived';
-  return { offered: 'Offered', active: q.stages[q.stage]?.text ?? 'Going on', ready: `Done: back to ${giverName(q)}`,
+  return { offered: 'Offered', active: q.stages[q.stage] ? stageText(q.stages[q.stage]) : 'Going on', ready: `Done: back to ${giverName(q)}`,
     done: 'Complete', failed: 'Failed' }[q.state];
 }
 
@@ -720,6 +855,13 @@ function checkStage(s) {
   if (typeof s.prestige === 'string' && CHESTS[s.prestige]) out.prestige = s.prestige;
   if (s.goal === 'find' && ITEMS[s.item]?.category !== 'quest') return null;
   if (s.goal === 'find') out.item = s.item;
+  if ((s.goal === 'find' || s.goal === 'gather') && typeof s.label === 'string') out.label = text(s.label, 60);
+  if (s.goal === 'gather') {
+    const spots = Array.isArray(s.spots) ? s.spots : [], keys = Array.isArray(s.keys) ? s.keys : [], got = Array.isArray(s.got) ? s.got : [];
+    if (ITEMS[s.item]?.category !== 'quest' || !spots.length || spots.length > 9 || keys.length !== spots.length
+      || ![...spots, ...keys].every(x => typeof x === 'string' && x.length <= 60)) return null;
+    Object.assign(out, { item: s.item, spots: [...spots], keys: [...keys], got: spots.map((_, i) => !!got[i]) });
+  }
   if (s.goal === 'rescue') { const p = checkPerson(s.person); if (!p) return null; out.person = p; }
   if (s.goal === 'bounty') {
     if (!ENEMY_KINDS[s.enemy] || typeof s.name !== 'string' || typeof s.enemyId !== 'string') return null;
@@ -784,6 +926,7 @@ export function checkQuestLog(x) {
     && REPEAT.kinds.includes(r.kind) && Number.isInteger(r.depth)).map(r => ({ id: r.id.slice(0, 80), giver: r.giver, kind: r.kind,
     depth: Math.min(MAX_DEPTH, nat(r.depth)), away: !!r.away, ready: !!r.ready }));
   log.repeated = nat(x.repeated);
+  log.townOpen = x.townOpen !== false; log.away = !!x.away;
   log.living = (Array.isArray(x.living) ? x.living : []).map(p => {
     const c = checkPerson(p);
     return c && typeof p.id === 'string' && typeof p.camp === 'string' ? { id: p.id.slice(0, 80), ...c, camp: p.camp.slice(0, 60) } : null;
@@ -795,4 +938,4 @@ export function checkQuestLog(x) {
 }
 // what is saved and sent of a log (plain JSON)
 export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, met: log.met,
-  used: log.used, living: log.living, repeats: log.repeats, repeated: log.repeated, version: log.version });
+  used: log.used, living: log.living, repeats: log.repeats, repeated: log.repeated, townOpen: log.townOpen, away: log.away, version: log.version });

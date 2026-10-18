@@ -9,7 +9,7 @@
 // the loot (game/loot.js) and picked up by walking onto them.
 import { state, player, setStatus } from './state.js';
 import { npcsIn } from './npcs.js';
-import { questGoalsIn, livingAt, giverName } from '../core/quests.js';
+import { questGoalsIn, livingAt, giverName, stageKey } from '../core/quests.js';
 import { ITEMS } from '../core/items.js';
 import { loadPropSets } from '../render/props.js';
 import { propSetsOf } from '../render/propplace.js';
@@ -88,11 +88,16 @@ export function questItemsHere() {
   const map = state.map, log = state.run?.quests;
   if (!map || !log || map.interior) return [];
   const out = [];
+  const thing = (quest, stage, spot, part) => {
+    const s = spotOf(map, spot);
+    if (s) out.push({ id: `q:${quest.id}${part ? `:${spot}` : ''}`, quest: quest.id, spot: part ? spot : undefined, itemId: stage.item,
+      label: stage.label, x: s.anchor.x, y: s.anchor.y, z: s.anchor.z, toss: 1, phase: 0, from: [s.anchor.x, s.anchor.y, s.anchor.z], count: 1,
+      questItem: true });
+  };
   for (const { quest, stage } of questGoalsIn(log, map.key)) {
-    if (stage.goal !== 'find' || stage.done) continue;
-    const s = spotOf(map, stage.spot);
-    if (s) out.push({ id: `q:${quest.id}`, quest: quest.id, itemId: stage.item, x: s.anchor.x, y: s.anchor.y, z: s.anchor.z,
-      toss: 1, phase: 0, from: [s.anchor.x, s.anchor.y, s.anchor.z], count: 1, questItem: true });
+    if (stage.goal === 'find' && !stage.done) thing(quest, stage, stage.spot, false);
+    // a gathering's things here not picked up yet
+    if (stage.goal === 'gather') stage.spots.forEach((spot, i) => { if (!stage.got[i] && stage.keys[i] === map.key) thing(quest, stage, spot, true); });
   }
   return out;
 }
@@ -105,10 +110,13 @@ export function pickUpQuestItems(found) {
   for (const p of questItemsHere()) {
     if (picked.has(p.id) || Math.hypot(p.x - player.x, p.z - player.z) > FIND_REACH || Math.abs(p.y - player.y) > 1) continue;
     picked.add(p.id);
-    const q = state.run.quests.list.find(x => x.id === p.quest);
+    const q = state.run.quests.list.find(x => x.id === p.quest), s = q?.stages[q.stage], name = ITEMS[p.itemId].name.toLowerCase();
     sfx('pickup');
-    setStatus(`Found the ${ITEMS[p.itemId].name.toLowerCase()}! Bring it back to ${q ? giverName(q) : 'whoever asked'}`);
-    found({ kind: 'found', quest: p.quest });
+    if (p.spot) {
+      const have = (s?.got?.filter(Boolean).length ?? 0) + 1, need = s?.got?.length ?? have;
+      setStatus(have >= need ? `That is all of them! Bring them back to ${q ? giverName(q) : 'whoever asked'}` : `Found one! ${have} of ${need}`);
+    } else setStatus(`Found the ${name}! Bring it back to ${q ? giverName(q) : 'whoever asked'}`);
+    found({ kind: 'found', quest: p.quest, spot: p.spot });
   }
 }
 // a death put the cube back: what was picked up there may be picked up again
@@ -157,7 +165,8 @@ function questGoal(q) {
   const stage = q.stages[q.stage];
   if (!stage) return null;
   if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to?.resident) return resident(stage.to.resident);
-  return { key: stage.key ?? null, depth: stage.key ? -parse(stage.key)[1] : stage.depth, cart: stage.goal === 'defend' ? stage.spot : null };
+  const key = stageKey(stage);
+  return { key, depth: key ? -parse(key)[1] : stage.depth, cart: stage.goal === 'defend' ? stage.spot : null };
 }
 
 // Which way out of cube `from` leads towards quest q's goal (for the minimap's arrow on that
@@ -198,6 +207,6 @@ export function noticeQuestGoals() {
   const goals = questGoalsIn(log, state.map.key).map(g => g.stage.goal);
   if (goals.includes('bounty')) setStatus('Something big is prowling about here...');
   else if (goals.includes('rescue')) setStatus('You hear somebody calling for help!');
-  else if (goals.includes('find')) setStatus('Something glints somewhere here...');
+  else if (goals.includes('find') || goals.includes('gather')) setStatus('Something glints somewhere here...');
   else if (goals.includes('open')) setStatus('The cross on the map must be here somewhere!');
 }

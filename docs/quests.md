@@ -15,17 +15,22 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   offers, what players do with a quest, events, checks for saves and the network.
 - **The plan** (`core/questplan.js questPlan`): exactly the numbers of "Per depth" below (100
   slots), each with its kind and giver, from the seed and the layouts. Kinds not built yet stand
-  in as built ones (`BUILT`, `STAND_IN`). Somebody lost is always asked for by whoever lives at a
+  in as built ones (`BUILT`, `STAND_IN`: scattered pieces as a gathering or a treasure map,
+  freeing prisoners as a scouting kind). Somebody lost is always asked for by whoever lives at a
   camp at or up to two above the depth (they will wait there together); the rest by the villagers
   (a share falling with depth) or the people of the depth and the one above.
-- **Eleven kinds:**
+- **Twelve kinds:**
   - the scouting kinds, about what the world has anyway: `reach` (get down to a depth nobody has
     been to, one or two below the deepest), `landmark` (stand beside a depth's landmark, within
     `LANDMARK_REACH` cells of its chest), `guardian` (beat a side or descent guardian: done once
     its gate is open), `horde` (break a depth's horde: every member defeated); a scouting slot
     takes the one its giver leans to that fits;
-  - `find`: a quest item (`core/items.js QUEST_ITEMS`) lies on a hiding place; walking onto it
-    picks it up (the quest carries it, not a bag), back to the giver;
+  - `find`: a quest thing (below) lies on a hiding place; walking onto it picks it up (the quest
+    carries it, not a bag), back to the giver. It is the giver's own (`the lost backpack`) or
+    somebody's they know (`Bram's backpack`), named so over it (`label`);
+  - `gather`: `GATHER` (three) of one quest thing lie on as many hiding places of one depth (in
+    different cubes where it can be); each picked up counts (`got`, shown as 1/3), all of them:
+    back to the giver;
   - `rescue`: somebody lost stands on a hiding place; talking to them ends it there and pays
     (`spot`); they go to live at the giver's camp (`log.living`);
   - `treasure`: a map scrap; a chest stands on a hiding place, opened like a reward site's, its
@@ -36,7 +41,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     death is remembered like any other (`run.defeated`, and it comes back with a death in its
     cube); the quest is done once it is defeated, paid back at the giver. Whoever runs the
     cube's enemies puts it there (`game/questworld.js bountiesHere`, `game/quests.js`).
-  - `delivery`: a letter or a parcel (carried by the quest from the start) for somebody at the
+  - `delivery`: a letter, a parcel or a quest thing (carried by the quest from the start) for somebody at the
     slot's depth: whoever lives at a seat or camp there (marked `?` while they wait for it), else
     a messenger waiting on a hiding place (there only while the quest wants them). Talking to
     them ends it; they pay (`spot`). Each of them is sent one letter in a world.
@@ -58,6 +63,19 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     the depth (else a villager) and opens the annex's sealed portal when taken (`opens`).
 
   The scouting kinds and `find` are paid back at the giver (`return`).
+- **Quest things** (`core/items.js QUEST_THINGS`): what is lost, gathered and carried, any of
+  them for any of these: the first quest items (locket, ring, compass, journal, toy rabbit) and 44
+  made from the world's props (backpack, wagon wheel, jar of thunder, honey pot, jade idol, rune
+  stone ...; `blender/items.py QUEST_PROPS`), small, with a red bow and a tag, and a gold glow on
+  the floor (`render/loot.js`), so they never pass for the clutter they look like. A thing is about
+  one quest at a time; givers lean to some (`LEANS`: the smith to a shield or silver bars, the
+  alchemist to toadstools, a pilgrim to butter lamps), four times as likely as the rest.
+- **The town** offers `TOWN_OFFERS` (two) at a time, not one from every villager: at first, and
+  each time the party comes back to town from below (`log.townOpen`, `log.away`), the villagers
+  with nothing out who have given fewest bring out offers until two stand. Nothing more until the
+  next time back.
+- **Variety:** a slot tries the kinds nobody has out (offered, going on, to hand in, failed) first,
+  then its own; so the quests out at once are mostly of different kinds.
 - **Givers** (the villagers, and the people out in the world once met) each have one quest out at
   a time (`MAX_OFFERS`): offered, or taken and not done yet (going on, to hand in, failed, also
   archived); the next comes only once that one is done. It is their next slot of the plan down to two below the deepest anyone got,
@@ -125,8 +143,8 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   faces discovery opened), or the way down (up) when the goal is deeper (higher up). Only that
   one gate shows, so the map past it stays unknown.
 - **Dev:** `/quest <kind> [depth]` makes a quest of that kind there and takes it; `/spot`.
-- **Not yet:** the other kinds (gather, scattered pieces, beacons, prisoners, pet chase): their
-  slots in the plan stand in as built kinds.
+- **Not yet:** the other kinds (scattered pieces, beacons, prisoners, pet chase): their slots in
+  the plan stand in as built kinds.
 
 ## What we want
 

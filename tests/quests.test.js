@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeLayouts } from '../src/world/layout.js';
 import { createQuestLog, refreshOffers, makeQuest, accept, archive, restart, fail, handIn, questEvent, settle, goalDone,
   progressOf, restoreProgress, checkQuestLog, packQuestLog, giverMark, questLists, carried, questGoalsIn, livingAt,
-  GIVERS, MAX_OFFERS, questRewards, GOALS } from '../src/core/quests.js';
+  GIVERS, MAX_OFFERS, TOWN_OFFERS, GATHER, questRewards, GOALS } from '../src/core/quests.js';
 import { questPlan, perDepth, BUILT, clueOf, campOf, TOWN } from '../src/core/questplan.js';
 import { npcGiver, isNpcGiver } from '../src/core/npcs.js';
 import { createWorld, checkWorld } from '../src/core/save.js';
@@ -57,6 +57,7 @@ test('offers follow the plan and are about what the world has, never two about o
     for (let deepest = 0; deepest <= 20; deepest++) {
       log.deepest = deepest;
       for (let round = 0; round < 6; round++) {
+        log.townOpen = true;   // (back in town from below)
         refreshOffers(log, ctx);
         for (const q of log.list) if (q.state === 'offered') {
           assert.ok(q.depth <= deepest + 2, `${q.id} at depth ${q.depth}, deepest ${deepest}`);
@@ -83,6 +84,7 @@ test('offers follow the plan and are about what the world has, never two about o
       if (s.spot) assert.ok(L.spotList.some(p => p.id === s.spot && p.kind === (s.goal === 'defend' ? 'outpost' : 'hide') && p.key === s.key),
         'on a hiding place (a defense: at its outpost)');
       if (s.item) assert.equal(ITEMS[s.item].category, 'quest');
+      if (s.goal === 'gather') s.spots.forEach((id, i) => assert.ok(L.spotList.some(p => p.id === id && p.kind === 'hide' && p.key === s.keys[i])));
       assert.ok(q.title && q.text && s.text && !/undefined|NaN|null/.test(q.title + q.text + s.text), q.text);
       assert.ok(q.rewards.xp > 0);
     }
@@ -106,6 +108,12 @@ test('a giver has one quest out at a time: the next only once the one taken is d
   refreshOffers(log, ctx, ['innkeeper']);
   assert.equal(offers().length, 0, 'nor while one is archived');
   q.archived = false; q.state = 'done';
+  refreshOffers(log, ctx, ['innkeeper']);
+  assert.equal(offers().length, 0, 'the town brings out new offers only when the party comes back from below');
+  questEvent(log, { kind: 'visit', depth: 1 });
+  questEvent(log, { kind: 'visit', depth: 0 });
+  // (the villagers take turns: the ones who gave fewest come first)
+  for (const g of Object.keys(GIVERS)) if (g !== 'innkeeper') log.list.push({ ...q, id: `x:${g}`, giver: g, state: 'done' });
   refreshOffers(log, ctx, ['innkeeper']);
   assert.equal(offers().length, 1, 'the next once it is done');
 });
@@ -395,4 +403,70 @@ test('a repeatable quest comes back to its giver once the party was away and cam
   assert.ok(again.rewards.items.every(i => !i.gen), 'potions, no weapon');
   assert.deepEqual(log.repeats, [], 'it comes back when this one is done');
   assert.deepEqual(checkQuestLog(roundTrip(packQuestLog(log))).list.at(-1), again);
+});
+
+test('the town has a few offers at a time, and new ones each time the party comes back from below', () => {
+  for (const seed of [1, 77, 4242]) {
+    const ctx = ctxOf(seed), log = createQuestLog(), town = () => log.list.filter(q => GIVERS[q.giver] && q.state === 'offered');
+    refreshOffers(log, ctx);
+    assert.equal(town().length, TOWN_OFFERS, 'a start');
+    for (const q of town()) accept(log, q.id);
+    refreshOffers(log, ctx);
+    assert.equal(town().length, 0, 'nothing more until the party has been below');
+    questEvent(log, { kind: 'visit', depth: 0 });
+    refreshOffers(log, ctx);
+    assert.equal(town().length, 0, 'the road out of town is not below');
+    questEvent(log, { kind: 'visit', depth: 1 });
+    questEvent(log, { kind: 'visit', depth: 0 });
+    refreshOffers(log, ctx);
+    assert.equal(town().length, TOWN_OFFERS, 'back from below');
+    assert.equal(new Set(log.list.map(q => q.giver)).size, log.list.length, 'from different villagers');
+  }
+});
+
+test('the quests out at once are of different kinds where the plan lets them', () => {
+  let same = 0, total = 0;
+  for (const seed of [1, 5, 77, 99, 4242]) {
+    const ctx = ctxOf(seed), plan = questPlan(seed, ctx.layout), log = createQuestLog();
+    log.met = [...new Set(plan.slots.map(s => s.giver).filter(isNpcGiver))];
+    for (let deepest = 0; deepest <= 6; deepest++) {
+      log.deepest = deepest; log.townOpen = true;
+      refreshOffers(log, ctx);
+      const out = log.list.filter(q => q.state !== 'done');
+      total += out.length; same += out.length - new Set(out.map(q => q.kind)).size;
+      for (const q of out) q.state = 'done';
+    }
+  }
+  assert.ok(same / total < 0.15, `${same} of ${total} share a kind`);
+});
+
+test('a gathering: several things over one depth, each picked up, then back to the giver', () => {
+  const { ctx, log, q } = questOf(77, 'gather', 2);
+  const s = q.stages[0];
+  assert.equal(s.spots.length, GATHER);
+  assert.equal(new Set(s.spots).size, GATHER);
+  assert.ok(ITEMS[s.item].category === 'quest' && !['quest_letter', 'quest_parcel', 'quest_map_scrap'].includes(s.item));
+  accept(log, q.id, ctx);
+  assert.deepEqual(questGoalsIn(log, s.keys[0]).map(g => g.quest), [q]);
+  const mark = progressOf(log);
+  questEvent(log, { kind: 'found', quest: q.id, spot: s.spots[0] }, ctx);
+  assert.deepEqual(carried(q), [s.item]);
+  restoreProgress(log, mark);
+  assert.deepEqual(carried(q), [], 'a death puts it back');
+  for (const spot of s.spots) questEvent(log, { kind: 'found', quest: q.id, spot }, ctx);
+  assert.equal(q.state, 'ready');
+  assert.equal(carried(q).length, GATHER);
+  const back = checkQuestLog(roundTrip(packQuestLog(log))).list[0];
+  assert.deepEqual(back.stages[0].got, s.got);
+});
+
+test('the things lost, gathered and carried are many, not the same few', () => {
+  const seen = new Set();
+  for (const seed of [1, 5, 77, 99, 4242]) for (const kind of ['find', 'gather', 'delivery', 'relay']) for (let d = 1; d <= 6; d++) {
+    const ctx = ctxOf(seed), log = createQuestLog();
+    log.deepest = d - 1;
+    const q = makeQuest(log, ctx, TOWN[d % TOWN.length], { id: `${d}:${kind}`, depth: d, kind, force: true });
+    if (q) for (const s of q.stages) if (s.item) seen.add(s.item);
+  }
+  assert.ok(seen.size >= 30, `${seen.size} different things`);
 });

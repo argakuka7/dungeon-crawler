@@ -9,7 +9,7 @@ import { ITEMS } from '../core/items.js';
 import { formatCoins } from '../core/inventory.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { displayName } from '../core/gear/stats.js';
-import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName, giverName, carried } from '../core/quests.js';
+import { GIVERS, giverOf, giverQuests, questLists, stateText, stageText, depthName, giverName, carried } from '../core/quests.js';
 import { questLog, questAct } from './quests.js';
 import { state } from './state.js';
 
@@ -77,9 +77,15 @@ export function drawQuests() {
   if (focus) (document.querySelector(`#quests-body [data-quest="${CSS.escape(focus)}"]`))?.focus();
 }
 
+// what a quest carries, each thing once with how many
+function carrying(q) {
+  const n = new Map();
+  for (const id of carried(q)) n.set(id, (n.get(id) ?? 0) + 1);
+  return [...n].map(([id, k]) => `<li>${esc(ITEMS[id].name)}${k > 1 ? ` ×${k}` : ''}</li>`).join('');
+}
 function details(q) {
   const atGiver = !!talker && giverOf(talker) === q.giver, r = q.rewards, who = giverName(q), where = q.from?.where ?? GIVERS[q.giver]?.where ?? '';
-  const goals = q.stages.map((s, i) => `<li class="${s.done ? 'done' : i === q.stage && q.state === 'active' ? 'now' : ''}">${esc(s.text)}</li>`).join('');
+  const goals = q.stages.map((s, i) => `<li class="${s.done ? 'done' : i === q.stage && q.state === 'active' ? 'now' : ''}">${esc(stageText(s))}</li>`).join('');
   const rewards = [`<li>+${r.xp} XP</li>`, r.copper ? `<li>${formatCoins(r.copper)}</li>` : '', ...r.items.map(itemLine),
     q.payout === 'self' ? '<li>and whatever the treasure holds</li>' : ''].join('');
   const back = q.payout === 'return' ? `Go back to ${who}${where ? ` (${where})` : ''} to hand it in.` : '';
@@ -100,7 +106,7 @@ function details(q) {
     + `<div class="quest-meta">From ${esc(who)} · ${esc(depthName(q.depth))} · ${q.difficulty}</div>`
     + `<p class="quest-text">${esc(q.text)}</p>`
     + `<h3>Goal</h3><ul class="quest-goals">${goals}</ul>`
-    + (carried(q).length ? `<h3>Carrying</h3><ul class="quest-rewards">${carried(q).map(id => `<li>${esc(ITEMS[id].name)}</li>`).join('')}</ul>` : '')
+    + (carried(q).length ? `<h3>Carrying</h3><ul class="quest-rewards">${carrying(q)}</ul>` : '')
     + `<h3>Reward</h3><ul class="quest-rewards">${rewards}</ul>`
     + (hint ? `<p class="quest-hint">${esc(hint)}</p>` : '')
     + (buttons ? `<div class="quest-actions">${buttons}</div>` : '');
