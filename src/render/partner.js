@@ -2,8 +2,9 @@
 // villagers (render/figure.js), tinted in their colour (net/online.js PLAYER_COLORS), posed
 // bone by bone as their game posed its character,
 // holding their weapon, wearing what they wear, with a silhouette where terrain hides them, a
-// small light, and their name, level and health over the head. capturePose() is the other
-// half: our own character's pose, to send.
+// small light, and their name, level and health over the head, in their painted skin (over
+// the tint, as our own: render/character.js setCharacterSkin; net/session.js fetches it).
+// capturePose() is the other half: our own character's pose, to send.
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_H } from '../core/constants.js';
@@ -11,7 +12,8 @@ import { ITEMS } from '../core/items.js';
 import { BONES, Q, packPose } from '../net/protocol.js';
 import { lerpAngle } from '../net/sync.js';
 import { scene, camera } from './scene.js';
-import { character, mountWeapon } from './character.js';
+import { character, mountWeapon, wornSkin } from './character.js';
+import { setSkinMap, skinTexture } from './skin.js';
 import { rig, createFigure, loadThing, thingLoaded, wear, takeOff } from './figure.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { makeBar, makeLevelLabel, makeNote } from './bars.js';
@@ -35,16 +37,21 @@ export function capturePose() {
 // what our character holds and wears, for the other side to show
 export function capturedLook() {
   return { armed: !!character.sword?.visible,
-    worn: Object.values(character.worn ?? {}).map(w => w.id) };
+    worn: Object.values(character.worn ?? {}).map(w => w.id), skin: wornSkin()?.id ?? null };
 }
 
-// slot -> { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url, object, want }, worn }
+// slot -> { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url, object, want }, worn, clay }
 const figs = new Map();
+// slot -> the texture of the skin player `slot` wears (setPartnerSkin); kept while their figure
+// is made again
+const skins = new Map();
 
 function build(slot, name) {
   const f = createFigure(playerTint(slot)), group = f.group;
   let mesh = null;
-  f.model.traverse(o => { if (o.isSkinnedMesh) mesh = o; });
+  const clay = [];   // the body's meshes, for the skin (not what is worn or held later)
+  f.model.traverse(o => { if (o.isSkinnedMesh) mesh = o; if (o.isMesh) { o.userData.skinMaterial = true; clay.push(o); } });
+  if (skins.has(slot)) for (const o of clay) setSkinMap(o, skins.get(slot));
   // silhouette where terrain hides them, like our own (render/character.js)
   const ghost = new THREE.SkinnedMesh(mesh.geometry, new THREE.MeshBasicMaterial({
     color: shade(slot, 0.5), transparent: true, opacity: 0.4, depthFunc: THREE.GreaterDepth, depthWrite: false }));
@@ -68,7 +75,15 @@ function build(slot, name) {
   tag.add(bars, label, note);
   scene.add(group, tag);
   group.visible = tag.visible = false;
-  return { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url: null, object: null, want: null }, worn: '' };
+  return { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url: null, object: null, want: null }, worn: '', clay };
+}
+
+// player `slot` wears the skin drawn in `canvas` (game/skinfiles.js skinImage; null: none)
+export function setPartnerSkin(slot, canvas = null) {
+  skins.get(slot)?.dispose();
+  const texture = canvas && skinTexture(canvas);
+  if (texture) skins.set(slot, texture); else skins.delete(slot);
+  for (const o of figs.get(slot)?.clay ?? []) setSkinMap(o, texture);
 }
 
 // player `slot` went (undefined: all of them)

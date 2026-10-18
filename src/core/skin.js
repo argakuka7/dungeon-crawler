@@ -17,6 +17,16 @@ export function checkSkin(value) {
   return { v: 2, uv: SKIN_UV, id: value.id, ...(name ? { name } : {}) };
 }
 
+// A skin texture as it came from another player (net/session.js): a PNG of SKIN_SIZE², checked
+// from its header before anything decodes it.
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+export function isSkinPng(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 24 || PNG.some((b, i) => bytes[i] !== b)) return false;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return String.fromCharCode(...bytes.subarray(12, 16)) === 'IHDR'
+    && view.getUint32(16) === SKIN_SIZE && view.getUint32(20) === SKIN_SIZE;
+}
+
 // Pixels use WebGL's bottom-up order. Only atlas texels may be filled. Explicit seam
 // links join corresponding texels of separate UV islands without crossing empty gutters.
 export function textureComponents(width, height, mask, seams) {

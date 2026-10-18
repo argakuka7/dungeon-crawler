@@ -156,3 +156,32 @@ test('the runner describes its enemies compactly for the others', () => {
   assert.deepEqual(roster.list.map(x => x.p), [0, 0]);
   assert.deepEqual(JSON.parse(JSON.stringify(roster)).list[1].id, 'k:snake:2');
 });
+
+test('a painted skin goes in pieces small enough for one message each', async () => {
+  const { SKIN_PIECE, SKIN_PIECES, SKIN_BYTES, skinIdOf, skinPieces, isSkinPiece, toBase64, fromBase64 } = await import('../src/net/protocol.js');
+  const { isSkinPng, SKIN_SIZE } = await import('../src/core/skin.js');
+  assert.ok(RELAYED.has('skin') && RELAYED.has('skinWant'));
+  assert.equal(skinIdOf('skin-1234-abcd'), 'skin-1234-abcd');
+  for (const bad of [null, 3, '', 'skin-', 'skin-../x', 'other-1']) assert.equal(skinIdOf(bad), null);
+  // a PNG header of SKIN_SIZE², then anything
+  const png = new Uint8Array(40000);
+  png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  new DataView(png.buffer).setUint32(16, SKIN_SIZE); new DataView(png.buffer).setUint32(20, SKIN_SIZE);
+  for (let i = 24; i < png.length; i++) png[i] = (i * 7919) & 255;
+  assert.ok(isSkinPng(png));
+  const small = png.slice(); new DataView(small.buffer).setUint32(20, 64);
+  assert.ok(!isSkinPng(small) && !isSkinPng(png.subarray(1)) && !isSkinPng(null));
+  const pieces = skinPieces(toBase64(png));
+  assert.ok(pieces.length > 1 && pieces.every(p => p.length <= SKIN_PIECE));
+  const messages = pieces.map((data, n) => ({ t: 'skin', id: 'skin-x', n, of: pieces.length, data }));
+  for (const m of messages) {
+    assert.ok(isSkinPiece(m));
+    assert.ok(new TextEncoder().encode(JSON.stringify({ ...m, from: 3, to: 2 })).length < 16300);   // PeerJS's JSON limit
+  }
+  assert.deepEqual(fromBase64(pieces.join('')), png);
+  const m = messages[0];
+  for (const bad of [{ ...m, id: 'x' }, { ...m, n: m.of }, { ...m, n: -1 }, { ...m, of: SKIN_PIECES + 1 }, { ...m, data: 'a"b' },
+    { ...m, data: 'A'.repeat(SKIN_PIECE + 1) }, { ...m, t: 'me' }]) assert.ok(!isSkinPiece(bad));
+  // the largest skin that goes still fits in SKIN_PIECES
+  assert.ok(Math.ceil(Math.ceil(SKIN_BYTES / 3) * 4 / SKIN_PIECE) <= SKIN_PIECES);
+});

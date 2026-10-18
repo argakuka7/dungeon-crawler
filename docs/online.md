@@ -30,7 +30,7 @@ being helped up and getting back in. Up to four players, co-op.
   same for the same seed, whatever the order cubes are visited in (`world/wfc.js`), so no
   map goes over the wire. Only the host starts new worlds (with the dev tools, N); the guests follow.
 - Everyone sends `me` 20 times a second: cube, position, the character's 14 bone rotations
-  (`render/partner.js capturePose`), weapon model, worn things, health and level. The
+  (`render/partner.js capturePose`), weapon model, worn things, skin id, health and level. The
   others draw them as a figure in the player's colour, ~110 ms in the past, blending the two
   messages around that moment (`src/net/sync.js Timeline`). Animation, attacks, ragdolls and
   get-ups all come along with the bones; nothing is animated twice. The host passes `me` on
@@ -42,6 +42,8 @@ being helped up and getting back in. Up to four players, co-op.
   `render/character.js tintCharacter`, and goes back to its own look alone) and their arrow on
   the minimap; over a friend's head their health bar is in their colour too (your own stays
   red, like playing alone).
+- **Skins:** a painted skin goes over that colour, on every screen. `me` carries only its id;
+  the others ask for the PNG once and get it in pieces (`skinWant`, `skin`; `docs/skins.md`).
 - Each explores where they like. Each player is an arrow in their colour on the minimap, pointing
   where they face (a friend off the map is a line under it: another depth, in a house, far
   away). The map is round, follows you and turns with the camera (`game/minimap.js`).

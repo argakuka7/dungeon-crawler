@@ -8,7 +8,7 @@ import { scene } from './scene.js';
 import { prepareHeld } from './held.js';
 import { rigReady } from './figure.js';
 import { ownShadowDepth } from './skinned.js';
-import { setSkinMap } from './skin.js';
+import { setSkinMap, skinTexture } from './skin.js';
 import { readSkinFile, skinImage } from '../game/skinfiles.js';
 
 const SWORD_URL = 'assets/sword.glb';
@@ -235,7 +235,10 @@ export function tintCharacter(color = null) {
   }
 }
 
-let skinRequest = 0, skinTexture = null;
+// worn: the skin on the hero now, { id, blob } (null: none), for the others playing together
+// (net/session.js sends it to who asks)
+let skinRequest = 0, paint = null, worn = null;
+export const wornSkin = () => worn;
 export async function setCharacterSkin(skin = null) {
   const request = ++skinRequest;
   try {
@@ -243,16 +246,14 @@ export async function setCharacterSkin(skin = null) {
     if (request !== skinRequest) return;
     // Never leave a previous hero's paint on screen while a new image is loading.
     for (const mesh of character.clay) setSkinMap(mesh, null);
-    skinTexture?.dispose(); skinTexture = null;
+    paint?.dispose(); paint = null; worn = null;
     const blob = await readSkinFile(skin);
     if (!blob || request !== skinRequest) return;
     const canvas = await skinImage(blob);
     if (request !== skinRequest) return;
-    skinTexture = new THREE.CanvasTexture(canvas);
-    skinTexture.colorSpace = THREE.SRGBColorSpace;
-    skinTexture.generateMipmaps = false;
-    skinTexture.minFilter = THREE.LinearFilter;
-    for (const mesh of character.clay) setSkinMap(mesh, skinTexture);
+    paint = skinTexture(canvas);
+    for (const mesh of character.clay) setSkinMap(mesh, paint);
+    worn = { id: skin.id, blob };
   } catch (e) { console.error('skin failed to apply', e); }
 }
 

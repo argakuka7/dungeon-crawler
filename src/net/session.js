@@ -28,6 +28,10 @@
 // shown in their colour and over their head), and so does what happens to them that the
 // others care about (`news`: died, levelled up, found something epic; core/chronicle.js NEWS).
 // Each game writes it into its own chronicle (game/log.js) as the friend's.
+//
+// A painted skin (docs/skins.md) is too big to go along with every `me`: that only says which
+// one the player wears. Who sees a new one asks its wearer (`skinWant`), which sends the PNG in
+// pieces (`skin`), a little at a time; the figure wears it once all came (render/partner.js).
 import { player, state, setStatus } from '../game/state.js';
 import { newWorld, enterCube, spawnAt, shareVisit, visitedKeys, shareFaces } from '../game/flow.js';
 import { visitedFaces } from '../core/boundaries.js';
@@ -43,11 +47,14 @@ import { lockPortalsHere } from '../game/portals.js';
 import { truePosition } from '../game/travel.js';
 import { equippedWeapon, readiedFlask } from '../core/combat.js';
 import { floatText } from '../render/floattext.js';
-import { capturePose, capturedLook, showPartner, showHelp, removePartner, playerTint } from '../render/partner.js';
-import { tintCharacter } from '../render/character.js';
+import { capturePose, capturedLook, showPartner, showHelp, removePartner, playerTint, setPartnerSkin } from '../render/partner.js';
+import { tintCharacter, wornSkin } from '../render/character.js';
+import { skinImage } from '../game/skinfiles.js';
+import { isSkinPng } from '../core/skin.js';
 import { openRoom, joinRoom } from './transport.js';
 import { PROTOCOL, MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf, roomCode, cleanName, isMe,
-  SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES, CHAT_MAX, chatAllowed } from './protocol.js';
+  SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES, CHAT_MAX, chatAllowed,
+  SKIN_EVERY, SKIN_BYTES, skinIdOf, skinPieces, isSkinPiece, toBase64, fromBase64 } from './protocol.js';
 import { Timeline } from './sync.js';
 import { online, relay, travel } from './online.js';
 import { Runner, Viewer, canBeHit } from './foes.js';
@@ -76,6 +83,7 @@ const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
 const SETTLED = 1000;    // ms in a cube: then a friend coming in is the one who arrived (handover)
 const AFFLICT_EVERY = 500;   // ms: a viewer tells the runner about a status at most this often
+const SKIN_ASK_AGAIN = 8000; // ms without a piece of a skin we wait for: ask for it again
 
 let room = null, myName = 'Friend', local = false, rejoin = null;
 // this page's player: getting back in after a lost connection, the host knows it is still us
@@ -91,10 +99,15 @@ let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendin
 let facesSent = 0;
 // the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's)
 let foes = null, lastFoes = 0;
+// our painted skin as pieces ({ id, pieces: a promise of them, null: too big to send}), and who
+// we are sending it to (slot -> { id, pieces, n: the next piece }), one piece each SKIN_EVERY
+let ownSkin = null, lastSkinPiece = 0;
+const skinSends = new Map();
 
 // The other players, by number: { slot, name, pid, timeline (their `me`), body (their
 // stand-in, for the enemies we run to go after, game/party.js), inCube (in our cube, not
-// travelling: as of their last word), here (and we are not travelling either) }. The host
+// travelling: as of their last word), here (and we are not travelling either), skin (the one
+// they wear: { id, of, parts, got, done, heard }, followSkin) }. The host
 // also keeps its line to each guest: link, lastHeard, and passed (whose `me` it passed on to
 // them last: slot -> { ts, cube, seed, busy }).
 const peers = new Map();
@@ -107,7 +120,8 @@ function standIn(slot) {
     hurt(blow, fx, fz, nx, nz) { post({ t: 'hurt', blow, fx, fz, nx, nz }, slot); } };
 }
 function addPeer(slot, name) {
-  const p = peers.get(slot) ?? { slot, timeline: new Timeline(), body: standIn(slot), inCube: false, here: false };
+  const p = peers.get(slot) ?? { slot, timeline: new Timeline(), body: standIn(slot), inCube: false, here: false,
+    skin: { id: null, done: true } };
   p.name = name;
   peers.set(slot, p); online.peers.set(slot, { name });
   return p;
@@ -118,6 +132,8 @@ function dropPeer(slot) {
   p.body.here = false;
   peers.delete(slot); online.peers.delete(slot);
   removePartner(slot);
+  setPartnerSkin(slot, null);
+  skinSends.delete(slot);
 }
 const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
 
@@ -515,6 +531,8 @@ function shared(m, p) {
   else if (m.t === 'quest') { if (online.role === 'host') guestQuestAct(m); }
   else if (m.t === 'quests') { if (m.from === 0 && online.role === 'guest') takeQuestLog(m.log); }
   else if (m.t === 'questReward') { if (m.from === 0 && online.role === 'guest') questRewarded(m.id, m.rewards, m.title); }
+  else if (m.t === 'skinWant') { const id = skinIdOf(m.id); if (id) sendSkin(p.slot, id); }
+  else if (m.t === 'skin') { if (isSkinPiece(m)) skinPiece(p, m); }
   else if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; }
   else if (m.t === 'arrow') {
     if (!p.here || !['arrow', 'bolt', 'spell'].includes(m.kind) || !Array.isArray(m.at) || m.at.length !== 6 || !finite(...m.at)
@@ -528,6 +546,57 @@ function shared(m, p) {
 }
 
 const strings = xs => Array.isArray(xs) && xs.every(x => typeof x === 'string');
+
+// --- painted skins -----------------------------------------------------------------------------
+
+// player p's last `me` says which skin they wear: a new one, ask them for it (and again when
+// its pieces stopped coming); none, their figure is clay again
+function followSkin(p, m, now) {
+  const id = skinIdOf(m.skin), s = p.skin;
+  if (id === s.id) {
+    if (!s.done && now - s.heard > SKIN_ASK_AGAIN) { s.heard = now; post({ t: 'skinWant', id }, p.slot); }
+    return;
+  }
+  p.skin = { id, of: 0, parts: [], got: 0, done: !id, heard: now };
+  setPartnerSkin(p.slot, null);
+  if (id) post({ t: 'skinWant', id }, p.slot);
+}
+// a piece of the skin player p wears; all there: their figure wears it
+function skinPiece(p, m) {
+  const s = p.skin;
+  if (m.id !== s.id || s.done || s.of && m.of !== s.of) return;
+  s.of = m.of; s.heard = performance.now();
+  if (s.parts[m.n] === undefined) { s.parts[m.n] = m.data; s.got++; }
+  if (s.got < s.of) return;
+  s.done = true;
+  const base64 = s.parts.join('');
+  s.parts = null;
+  (async () => {
+    const bytes = fromBase64(base64);
+    if (bytes.length > SKIN_BYTES || !isSkinPng(bytes)) throw new Error('not a skin PNG');
+    const canvas = await skinImage(new Blob([bytes], { type: 'image/png' }));
+    if (peers.get(p.slot) === p && p.skin === s) setPartnerSkin(p.slot, canvas);   // (still theirs)
+  })().catch(e => console.warn(`${p.name}'s skin could not be shown`, e));
+}
+// player `slot` asks for our skin `id` (if we still wear it: else our next `me` says what we do)
+async function sendSkin(slot, id) {
+  const worn = wornSkin();
+  if (worn?.id !== id) return;
+  if (ownSkin?.id !== id) ownSkin = { id, pieces: worn.blob.size > SKIN_BYTES ? Promise.resolve(null)
+    : worn.blob.arrayBuffer().then(b => skinPieces(toBase64(new Uint8Array(b)))) };
+  const own = ownSkin, pieces = await own.pieces.catch(e => { console.warn('could not send the skin', e); return null; });
+  if (pieces && ownSkin === own && peers.has(slot)) skinSends.set(slot, { id, pieces, n: 0 });
+}
+// every frame: the next piece to everyone waiting for our skin
+function sendSkinPieces(now) {
+  if (!skinSends.size || now - lastSkinPiece < SKIN_EVERY) return;
+  lastSkinPiece = now;
+  for (const [slot, s] of skinSends) {
+    if (s.id !== wornSkin()?.id) { skinSends.delete(slot); continue; }
+    post({ t: 'skin', id: s.id, n: s.n, of: s.pieces.length, data: s.pieces[s.n] }, slot);
+    if (++s.n >= s.pieces.length) skinSends.delete(slot);
+  }
+}
 
 // The shared floor loot (game/loot.js). The host decides: a guest's drop stands if it is the
 // first of its source (and, where the host runs the enemies, the enemy is dead there: the
@@ -728,6 +797,7 @@ export function updateOnline() {
   const seed = state.cubes?.seed, buddies = [];
   for (const p of peers.values()) {
     const m = p.timeline.latest();
+    if (m) followSkin(p, m, now);
     p.inCube = !!m && !m.busy && m.seed === seed && m.cube === state.cubeKey;
     p.here = p.body.here = p.inCube && !state.transitioning;
     if (p.here) {
@@ -742,6 +812,7 @@ export function updateOnline() {
   online.buddies = buddies;   // (the minimap shows them: game/minimap.js)
   updateRunner(now);
   if (now - lastSend >= SEND_EVERY) { lastSend = now; send(now); }
+  sendSkinPieces(now);
   if (foes instanceof Runner) {
     setOthers([...peers.values()].filter(p => p.here).map(p => p.body));
     const viewers = [...peers.values()].filter(p => p.inCube).map(p => p.slot);

@@ -22,6 +22,15 @@ export function setSkinMap(mesh, texture, premultiplied = false) {
   material.needsUpdate = true;
 }
 
+// a skin PNG drawn into a canvas (game/skinfiles.js skinImage) as the texture setSkinMap takes
+export function skinTexture(canvas) {
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  return texture;
+}
+
 // Bake the standing pose once: picking and projection painting must not repeatedly run
 // CPU skinning, and must address exactly the same UVs as the animated game mesh.
 export function createSkinPicker(mesh) {

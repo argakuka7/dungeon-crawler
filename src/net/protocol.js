@@ -23,8 +23,9 @@
 //   faces   { keys }                   to all: the side faces open for me (open for you too)
 //   world   { seed }                   host -> guests: the host started a new world
 //   me      { ts, seed, cube, busy, pose, body, ground, swim, down, ko, hp, maxHp, level,
-//             weapon, armed, worn }    to all, about 20 times a second: where I am and how I
-//                                      look (`ts`: the sender's clock, ms; body: [x, y, z, vx,
+//             weapon, armed, worn, skin }  to all, about 20 times a second: where I am and how I
+//                                      look (`ts`: the sender's clock, ms; skin: the id of the
+//                                      painted skin I wear, or null; body: [x, y, z, vx,
 //                                      vz], what enemies go after; ko: lying downed, [helped up
 //                                      %, s left], game/downed.js). The host passes it on less
 //                                      often to players in another cube (FAR_EVERY).
@@ -42,6 +43,10 @@
 //   hurt    { blow, fx, fz, nx, nz }   runner -> viewer: an enemy's blow landed on you
 //   shot    { n, id, spec, at }        runner -> viewers: enemy `id` threw projectile n
 //   landed  { n, end }                 runner -> viewers: ... and it ended
+// A painted skin (core/skin.js) is a PNG too big for one message: who sees a new `skin` id in a
+// `me` asks its wearer for it, and gets it in pieces (SKIN_PIECE base64 characters each):
+//   skinWant { id }                    to the wearer: send me skin `id`
+//   skin    { id, n, of, data }        to who asked: piece n (0..of-1) of skin `id`'s PNG
 //   arrow   { kind, stats, at, origin }  to those here: I shot (it only looks, net/session.js)
 //   flask   { flask }                  to those here: I threw a flask (it only looks)
 // What the players say, and what happened to them (game/console.js shows both in the chat box):
@@ -73,12 +78,12 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 9;
+export const PROTOCOL = 10;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
 export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
-  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news', 'quest']);
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news', 'quest', 'skinWant', 'skin']);
 // is a message addressed `to` (undefined: everyone) for player `slot`?
 export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
 // a valid `to` from a guest: a slot, a list of slots, or none (everyone)
@@ -139,6 +144,39 @@ export function chatAllowed(times, now) {
   if (times.length >= CHAT_BURST) return false;
   times.push(now);
   return true;
+}
+
+// --- painted skins (render/partner.js shows them) ---------------------------------------------
+
+// A PeerJS JSON message must stay under 16300 bytes (vendor/peerjs chunkedMTU), so a skin goes
+// in pieces, one every SKIN_EVERY ms per player asking, between the other messages. Larger
+// PNGs than SKIN_BYTES are not sent: the others see the wearer's clay.
+export const SKIN_PIECE = 12000, SKIN_EVERY = 30, SKIN_BYTES = 4 * 1024 * 1024;
+export const SKIN_PIECES = Math.ceil(Math.ceil(SKIN_BYTES / 3) * 4 / SKIN_PIECE);
+// a skin id as a `me` carries it (core/skin.js checkSkin), else null
+export const skinIdOf = id => typeof id === 'string' && /^skin-[a-zA-Z0-9-]{1,80}$/.test(id) ? id : null;
+export function toBase64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+// (throws on what is not base64)
+export function fromBase64(text) {
+  const s = atob(text), bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+  return bytes;
+}
+// base64 -> pieces
+export function skinPieces(base64) {
+  const pieces = [];
+  for (let i = 0; i < base64.length; i += SKIN_PIECE) pieces.push(base64.slice(i, i + SKIN_PIECE));
+  return pieces;
+}
+// a `skin` message we can use
+export function isSkinPiece(m) {
+  return m?.t === 'skin' && skinIdOf(m.id) !== null && Number.isInteger(m.of) && m.of > 0 && m.of <= SKIN_PIECES
+    && Number.isInteger(m.n) && m.n >= 0 && m.n < m.of && typeof m.data === 'string' && m.data.length <= SKIN_PIECE
+    && /^[A-Za-z0-9+/]*={0,2}$/.test(m.data);
 }
 
 // The character's bones (assets/character.glb), in the order a pose lists them.
