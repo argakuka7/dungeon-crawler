@@ -17,6 +17,8 @@ import { themeOf } from '../themes/depth.js';
 import { sfx } from '../audio/sfx.js';
 import { makeEnemy, coinRange } from '../core/enemies.js';
 import { bountyKind, bountyLevel } from '../core/bounties.js';
+import { residentsOf, spotOfGiver, keyOfSpot } from '../core/npcs.js';
+import { TOWN_KEY } from '../world/town.js';
 
 const FIND_REACH = 0.75;   // cells: walking this close to a thing picks it up
 
@@ -126,6 +128,36 @@ export function bountiesHere() {
       x: s.anchor.x, y: s.anchor.y, z: s.anchor.z, yaw: Math.atan2(s.approach.x - s.anchor.x, s.approach.z - s.anchor.z) }, kind, 0));
   }
   return out;
+}
+
+// Where quest q wants you now, for the minimap (game/minimap.js): { key, at } with `at` the place
+// in that cube ({ x, z } in cells) or null (somewhere in it). Only a cube somebody has been to
+// (docs/quests.md, rule 2), else null. People one is sent to (whoever lives at a seat, a camp, an
+// outpost; a villager, a giver out in the world to hand in to) and an outpost's cart are pinned
+// where they stand; what has to be looked for (a hiding place, a landmark, a guardian, a horde)
+// only by its cube: the clue says the rest.
+export function questTarget(q, cubes = state.cubes) {
+  if (!q || q.archived || !cubes) return null;
+  const visited = k => { const c = k && cubes.cubes.get(k); return c?.visits ? c : null; };
+  const resident = (giver, k) => {
+    const id = spotOfGiver(giver), c = visited(k ?? keyOfSpot(id ?? ''));
+    if (!c) return null;
+    const who = residentsOf((c.map.spots ?? []).filter(s => s.id === id))[0];
+    return { key: c.key, at: who ? { x: who.x, z: who.z } : null };
+  };
+  if (q.state === 'ready') {
+    if (spotOfGiver(q.giver)) return resident(q.giver);
+    const c = visited(TOWN_KEY), v = c?.map.villagers?.find(x => x.name === q.giver);
+    return c ? { key: c.key, at: v ? { x: v.x, z: v.z } : null } : null;
+  }
+  if (q.state !== 'active' && q.state !== 'failed') return null;
+  const stage = q.stages[q.stage];
+  if (!stage?.key) return null;
+  if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to?.resident) return resident(stage.to.resident, stage.key);
+  const c = visited(stage.key);
+  if (!c) return null;
+  const at = stage.goal === 'defend' && spotOf(c.map, stage.spot)?.anchor;   // the cart
+  return { key: c.key, at: at ? { x: at.x, z: at.z } : null };
 }
 
 // What there is to notice coming into a cube with a quest's goal in it: said once a visit

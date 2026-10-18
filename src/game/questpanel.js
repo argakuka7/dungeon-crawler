@@ -126,10 +126,14 @@ $('quests-body').addEventListener('click', e => {
 // The quest followed, in the corner: the one chosen (Follow), else the newest one going on
 const box = $('quest-track');
 let shownTrack = '';
-export function drawTracker() {
+// (the minimap marks where it wants you, game/minimap.js)
+export function followedQuest() {
   const L = questLog(), live = state.mode === 'play' && !!L;
   const going = live ? L.list.filter(q => (q.state === 'active' || q.state === 'ready' || q.state === 'failed') && !q.archived) : [];
-  const q = going.find(x => x.id === tracked) ?? going.at(-1) ?? null;
+  return going.find(x => x.id === tracked) ?? going.at(-1) ?? null;
+}
+export function drawTracker() {
+  const q = followedQuest();
   const text = q ? `<b>${esc(q.title)}</b>${esc(stateText(q))}` : '';
   if (text === shownTrack) return;
   shownTrack = text;

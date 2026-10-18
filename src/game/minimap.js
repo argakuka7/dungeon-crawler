@@ -3,7 +3,10 @@
 // -z). Cubes are coloured by their WFC tile; edges show rivers (blue) and portals (gold: leads
 // somewhere new, cyan: explored); triangles are wells / rings; a violet dot is the open town
 // portal. Each player is an arrow pointing where they face, in their colour (ours is white when
-// playing alone). Inside a house it shows the cube outside, centred on the house's door. Below:
+// playing alone). The quest followed (game/questpanel.js followedQuest) shows in gold where it
+// wants you, once that cube has been visited (game/questworld.js questTarget): a pin on the person
+// or cart, a dashed frame round the cube when the place has to be looked for, an arrow on the rim
+// when it is off the map. Inside a house it shows the cube outside, centred on the house's door. Below:
 // the cube we are in and its depth. Asked for every frame (main.js), drawn when the camera or a
 // player moved, else REFRESH times a second (for the rest: faces opening, portals, friends' lines).
 import { KIND_COLOR } from '../world/tiles.js';
@@ -15,13 +18,15 @@ import { N } from '../core/constants.js';
 import { TOWN_KEY, isInterior } from '../world/town.js';
 import { online, playerColor, together } from '../net/online.js';
 import { truePosition } from './travel.js';
+import { followedQuest } from './questpanel.js';
+import { questTarget } from './questworld.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
 const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 42 });
 document.body.appendChild(canvas);
 const g = canvas.getContext('2d');
-const BG = '#0b0d1266', OUTLINE = '#0b0d12';
+const BG = '#0b0d1266', OUTLINE = '#0b0d12', QUEST = '#ffd34a';
 const REFRESH = 4;
 let drawn = '', drawnAt = -Infinity;   // what the map showed last, and when (ms)
 
@@ -48,6 +53,20 @@ function arrow([x, y], yaw, color) {
   const at = (f, s) => [x + fx * f - fy * s, y + fy * f + fx * s];   // f along the facing, s to its side
   g.fillStyle = color; g.strokeStyle = OUTLINE; g.lineWidth = 1.5; g.lineJoin = 'round'; g.beginPath();
   g.moveTo(...at(7, 0)); g.lineTo(...at(-5, 5)); g.lineTo(...at(-2, 0)); g.lineTo(...at(-5, -5)); g.closePath();
+  g.fill(); g.stroke();
+}
+// the quest's pin: a diamond
+function pin([x, y]) {
+  g.fillStyle = QUEST; g.strokeStyle = OUTLINE; g.lineWidth = 1.5; g.lineJoin = 'round'; g.beginPath();
+  g.moveTo(x, y - 6); g.lineTo(x + 4.5, y); g.lineTo(x, y + 6); g.lineTo(x - 4.5, y); g.closePath();
+  g.fill(); g.stroke();
+}
+// the quest off the map: an arrow on the rim towards [x, y] (canvas)
+function rimArrow([x, y]) {
+  const a = Math.atan2(y - C, x - C), r = R * CELL - 8, fx = Math.cos(a), fy = Math.sin(a);
+  const at = (f, s) => [C + fx * (r + f) - fy * s, C + fy * (r + f) + fx * s];
+  g.fillStyle = QUEST; g.strokeStyle = OUTLINE; g.lineWidth = 1.5; g.lineJoin = 'round'; g.beginPath();
+  g.moveTo(...at(6, 0)); g.lineTo(...at(-5, 6)); g.lineTo(...at(-5, -6)); g.closePath();
   g.fill(); g.stroke();
 }
 
@@ -126,6 +145,15 @@ export function drawMinimap() {
   }
   // the cube we are in
   g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(-fx * CELL, -fz * CELL, CELL, CELL);
+  // the quest followed: somewhere in a cube, a frame round it (inside, so ours still shows)
+  const goal = questTarget(followedQuest()), [gx, gy, gz] = goal ? parse(goal.key) : [];
+  const goalAt = goal && gy === Y ? [gx + (goal.at ? goal.at.x / N : 0.5) - cx, gz + (goal.at ? goal.at.z / N : 0.5) - cz] : null;
+  const goalOn = goalAt && Math.hypot(...goalAt) < R - 0.25;
+  if (goalOn && !goal.at) {
+    g.strokeStyle = QUEST; g.lineWidth = 2; g.setLineDash([4, 3]);
+    g.strokeRect((gx - X0 - fx) * CELL + 3, (gz - Z0 - fz) * CELL + 3, CELL - 6, CELL - 6);
+    g.setLineDash([]);
+  }
   g.restore();
   for (const [at, draw] of marks) {
     const p = screen(...at);
@@ -145,6 +173,10 @@ export function drawMinimap() {
   g.fillText('N', nx, ny + 0.5);
   g.textAlign = 'start'; g.textBaseline = 'alphabetic';
   g.strokeStyle = '#ffffff30'; g.lineWidth = 1; g.beginPath(); g.arc(C, C, R * CELL - 0.5, 0, Math.PI * 2); g.stroke();
+  // the quest followed: a pin where it wants you, or an arrow on the rim (over the N) when that
+  // is off the map
+  if (goalOn && goal.at) pin(screen(goalAt[0] * CELL, goalAt[1] * CELL));
+  else if (goalAt && !goalOn) rimArrow(screen(goalAt[0] * CELL, goalAt[1] * CELL));
   // the players: the friends here, then us on top (in a house: a dot at its door)
   for (const b of friends) {
     const at = spot(b, cx, Y, cz);
