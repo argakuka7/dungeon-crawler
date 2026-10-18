@@ -4,7 +4,7 @@
 // potion is drunk, core/potions.js; a flask is taken in hand to throw, or put away again,
 // game/equipment.js). With the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
 // the same slot: off; the bar pulses while such an item is selected). A potion's slot fills
-// while its cooldown runs. With touch controls (game/touch.js) the bar sits at the top, with a
+// while its cooldown runs. With touch controls (game/touch.js) the bar sits at the top on a phone (at the bottom on a tablet), with a
 // bag button at its end for the inventory and a menu button for the Esc menu (game/escmenu.js).
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';

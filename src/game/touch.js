@@ -7,7 +7,7 @@
 // it while there is something to do (the action key, game/action.js; its picture shows what). A
 // turn button at each side of the screen turns the view a quarter (as Q and E). On the game
 // itself a tap does what a click does, except walking (an enemy, an item, a chest, a
-// villager), a long press collects what is around, and two fingers pinch to zoom. The quick bar moves to the top with a
+// villager), a long press collects what is around, and two fingers pinch to zoom. The quick bar moves to the top (on a phone; a tablet keeps it at the bottom) with a
 // bag button (game/quickbar.js, style.css).
 import { stickVector, pinchStep } from '../core/stick.js';
 import { stepZoom } from '../core/zoom.js';
