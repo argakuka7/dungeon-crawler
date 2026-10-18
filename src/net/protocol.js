@@ -7,7 +7,8 @@
 // (a slot or a list of slots), and the host stamps who it is `from` (only the types in
 // RELAYED go on). Everything a guest hears has a `from` (0: the host itself).
 //
-// Messages are plain JSON objects with a type `t`:
+// Messages are plain JSON objects with a type `t`, of any size (net/wire.js cuts big ones into
+// frames for the carrier, net/transport.js):
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
@@ -78,7 +79,7 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 10;
+export const PROTOCOL = 11;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
@@ -148,9 +149,10 @@ export function chatAllowed(times, now) {
 
 // --- painted skins (render/partner.js shows them) ---------------------------------------------
 
-// A PeerJS JSON message must stay under 16300 bytes (vendor/peerjs chunkedMTU), so a skin goes
-// in pieces, one every SKIN_EVERY ms per player asking, between the other messages. Larger
-// PNGs than SKIN_BYTES are not sent: the others see the wearer's clay.
+// Any message may be big (net/wire.js cuts it into frames), but a big one holds up everything
+// sent after it. So a skin goes in pieces of one frame each, one every SKIN_EVERY ms per player
+// asking, between the other messages. Larger PNGs than SKIN_BYTES are not sent: the others see
+// the wearer's clay.
 export const SKIN_PIECE = 12000, SKIN_EVERY = 30, SKIN_BYTES = 4 * 1024 * 1024;
 export const SKIN_PIECES = Math.ceil(Math.ceil(SKIN_BYTES / 3) * 4 / SKIN_PIECE);
 // a skin id as a `me` carries it (core/skin.js checkSkin), else null

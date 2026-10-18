@@ -160,6 +160,7 @@ test('the runner describes its enemies compactly for the others', () => {
 test('a painted skin goes in pieces small enough for one message each', async () => {
   const { SKIN_PIECE, SKIN_PIECES, SKIN_BYTES, skinIdOf, skinPieces, isSkinPiece, toBase64, fromBase64 } = await import('../src/net/protocol.js');
   const { isSkinPng, SKIN_SIZE } = await import('../src/core/skin.js');
+  const { encodeMessage } = await import('../src/net/wire.js');
   assert.ok(RELAYED.has('skin') && RELAYED.has('skinWant'));
   assert.equal(skinIdOf('skin-1234-abcd'), 'skin-1234-abcd');
   for (const bad of [null, 3, '', 'skin-', 'skin-../x', 'other-1']) assert.equal(skinIdOf(bad), null);
@@ -176,7 +177,7 @@ test('a painted skin goes in pieces small enough for one message each', async ()
   const messages = pieces.map((data, n) => ({ t: 'skin', id: 'skin-x', n, of: pieces.length, data }));
   for (const m of messages) {
     assert.ok(isSkinPiece(m));
-    assert.ok(new TextEncoder().encode(JSON.stringify({ ...m, from: 3, to: 2 })).length < 16300);   // PeerJS's JSON limit
+    assert.equal(encodeMessage({ ...m, from: 3, to: 2 }, 1).length, 1);   // one frame each (net/wire.js)
   }
   assert.deepEqual(fromBase64(pieces.join('')), png);
   const m = messages[0];

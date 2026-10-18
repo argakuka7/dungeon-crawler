@@ -96,10 +96,10 @@ transparent. The game uses the same UVs on its animated rig, including the menu 
 The paint goes over the player colour's tint (`docs/online.md`), on our own hero and on the
 others'. Each `me` carries only the worn skin's id (`render/partner.js capturedLook`, from
 `render/character.js wornSkin`). Whoever sees a new id asks its wearer (`skinWant`); the wearer
-sends the PNG as base64 in pieces of `SKIN_PIECE` characters (`skin`, `src/net/protocol.js`):
-PeerJS refuses JSON messages over 16300 bytes. One piece goes to each player asking every
-`SKIN_EVERY` ms, so a skin does not hold up the other messages; a typical one takes well under
-a second. The host passes the pieces on between guests like any other message. Once all came,
+sends the PNG as base64 in pieces of `SKIN_PIECE` characters (`skin`, `src/net/protocol.js`),
+one wire frame each (`src/net/wire.js`). One piece goes to each player asking every
+`SKIN_EVERY` ms: one big message would hold up the others behind it. A typical skin takes
+well under a second. The host passes the pieces on between guests like any other message. Once all came,
 the PNG header must say 2048×2048 (`core/skin.js isSkinPng`) before it is decoded, then the
 figure wears it (`setPartnerSkin`). Pieces that stop coming are asked for again after 8 s.
 PNGs over `SKIN_BYTES` (4 MB) are not sent: the others see that player's clay.

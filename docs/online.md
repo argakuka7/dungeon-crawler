@@ -11,11 +11,22 @@ being helped up and getting back in. Up to four players, co-op.
   in the main menu's Join Game (`src/game/menu.js`) or open the link, which opens it there. The room stays open while there is room, friends come and go. "Stop
   hosting" closes it (with friends in it, the button asks again first: they drop out). Your name
   is your saved hero's (`docs/saves.md`); without one (`?seed=`, the dev tools), a random one.
-- `src/net/transport.js`: PeerJS (`vendor/peerjs/`, loaded only when hosting or joining).
-  The host registers `cube-crawler-<CODE>` with the public PeerJS broker. Each guest
+- `src/net/transport.js`: the links the session talks over, whatever carries them. Over the
+  internet `src/net/peerjs.js`: PeerJS (`vendor/peerjs/`, loaded only when hosting or
+  joining). The host registers `cube-crawler-<CODE>` with the public PeerJS broker. Each guest
   connects to it, and from then on talks to the host directly over a WebRTC data channel
-  (reliable, ordered, JSON). `?net=local` uses a BroadcastChannel between tabs of one browser
-  instead: for testing without a network.
+  (reliable, ordered). `?net=local` uses a BroadcastChannel between tabs of one browser
+  instead (`src/net/tabs.js`): for testing without a network.
+- **The wire** (`src/net/wire.js`): a carrier only moves text frames of at most 16000 bytes
+  (what any data channel takes; PeerJS runs with `serialization: 'raw'`, as its `json` mode
+  drops messages over 16300 bytes and closes the connection). A message (an object with a
+  type `t`) goes as one frame, or, when big (`welcome` in a long-played world, `faces`,
+  `quests`), cut into pieces that follow one another and are put together on the other side,
+  up to 8 MB. Too big a message or no message at all throws when sent; a frame that breaks
+  the rules closes the link. Carriers make their links with `wireLink` only, and
+  `transport.js` refuses any other: whatever carries the frames (PeerJS now, a WebSocket or
+  bare WebRTC later), the session and the size rules stay the same. A game from before the
+  wire (`PROTOCOL` 10 and older) is told the versions differ.
 - **A star:** the guests are only connected to the host, which passes on what they say to
   each other. Every player has a number (slot): the host 0, the guests 1 to 3 in the order
   they came (`MAX_PLAYERS` in `src/net/protocol.js`). A guest's message goes to everyone
