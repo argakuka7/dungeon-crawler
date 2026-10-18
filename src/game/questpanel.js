@@ -9,7 +9,7 @@ import { ITEMS } from '../core/items.js';
 import { formatCoins } from '../core/inventory.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { displayName } from '../core/gear/stats.js';
-import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName } from '../core/quests.js';
+import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName, giverName, giverTitle } from '../core/quests.js';
 import { questLog, questAct } from './quests.js';
 
 const $ = id => document.getElementById(id);
@@ -21,7 +21,7 @@ let filter = 'active', selected = null, signature = '', talker = null, onChange 
 export function openQuests(v = null) {
   talker = giverOf(v) ? v : null;
   selected = null; signature = '';
-  const news = talker && giverQuests(questLog(), talker.name).find(q => q.state === 'ready' || q.state === 'offered');
+  const news = talker && giverQuests(questLog(), giverOf(talker)).find(q => q.state === 'ready' || q.state === 'offered');
   if (news) selected = news.id;
   if (!selected) filter = 'active';
 }
@@ -42,7 +42,7 @@ const itemLine = i => {
 export function drawQuests() {
   const L = questLog();
   if (!L) return;
-  const lists = questLists(L), mine = talker ? giverQuests(L, talker.name) : [];
+  const lists = questLists(L), mine = talker ? giverQuests(L, giverOf(talker)) : [];
   const all = [...mine, ...lists.active, ...lists.done, ...lists.archived];
   if (selected && !L.list.some(q => q.id === selected && (q.state !== 'offered' || mine.includes(q)))) selected = null;
   if (!selected) selected = (mine[0] ?? lists[filter][0])?.id ?? null;
@@ -53,7 +53,7 @@ export function drawQuests() {
   // what the villager has
   $('quests-talk').hidden = !talker;
   if (talker) {
-    const g = GIVERS[talker.name];
+    const g = { title: talker.title ?? GIVERS[talker.name]?.title ?? talker.name };
     const say = mine.some(q => q.state === 'ready') ? 'You are back! Did you do what I asked?'
       : mine.some(q => q.state === 'offered') ? 'I could use some help...' : mine.length ? 'How is it going?' : 'Nothing for you just now. Come back when you have been further down.';
     $('quests-talk').innerHTML = `<h2>${esc(g.title)}</h2><p>${esc(say)}</p>`
@@ -76,13 +76,13 @@ export function drawQuests() {
 }
 
 function details(q) {
-  const g = GIVERS[q.giver], atGiver = talker?.name === q.giver, r = q.rewards;
+  const atGiver = !!talker && giverOf(talker) === q.giver, r = q.rewards, who = giverName(q), where = q.from?.where ?? GIVERS[q.giver]?.where ?? '';
   const goals = q.stages.map((s, i) => `<li class="${s.done ? 'done' : i === q.stage && q.state === 'active' ? 'now' : ''}">${esc(s.text)}</li>`).join('');
   const rewards = [`<li>+${r.xp} XP</li>`, r.copper ? `<li>${formatCoins(r.copper)}</li>` : '', ...r.items.map(itemLine)].join('');
-  const back = q.payout === 'return' ? `Go back to the ${g.title} (${g.where}) to hand it in.` : '';
+  const back = q.payout === 'return' ? `Go back to ${who}${where ? ` (${where})` : ''} to hand it in.` : '';
   const hint = q.archived ? 'Archived: put away. It counts nothing until you bring it back.'
     : q.state === 'ready' && !atGiver ? `Done! ${back}`
-    : q.state === 'offered' ? (q.payout === 'return' ? `When it is done, come back to the ${g.title} for the reward.` : '')
+    : q.state === 'offered' ? (q.payout === 'return' ? `When it is done, come back to ${who} for the reward.` : '')
     : q.state === 'failed' ? 'It failed. Restart it to try again from the beginning.'
     : q.state === 'done' ? 'Complete: everyone in the game got the reward.' : '';
   const buttons = [
@@ -93,7 +93,7 @@ function details(q) {
     q.archived ? '<button data-act="unarchive">Unarchive</button>' : '',
   ].join('');
   return `<h2>${esc(q.title)}</h2>`
-    + `<div class="quest-meta">From the ${esc(g.title)} · ${esc(depthName(q.depth))} · ${q.difficulty}</div>`
+    + `<div class="quest-meta">From ${esc(who)} · ${esc(depthName(q.depth))} · ${q.difficulty}</div>`
     + `<p class="quest-text">${esc(q.text)}</p>`
     + `<h3>Goal</h3><ul class="quest-goals">${goals}</ul>`
     + `<h3>Reward</h3><ul class="quest-rewards">${rewards}</ul>`

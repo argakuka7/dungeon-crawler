@@ -14,6 +14,8 @@ import { buildProps, propSetLoaded } from './props.js';
 import { openedChest, tickChests } from './chests.js';
 import { placeProps, propSetsOf } from './propplace.js';
 import { buildVillagers, tickVillagers } from './villagers.js';
+import { indexBlockers } from '../core/blockers.js';
+import { NPC_R, NPC_H } from '../core/npcs.js';
 import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
 
@@ -36,9 +38,11 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   // decoration (also sets the colliders of blocking props on the map); missingSets: the prop
   // sets not loaded yet, whose props are not drawn (game/flow.js builds the cube again for them)
   const placed = placeProps(m, themeOf(m)), missingSets = propSetsOf(m, themeOf(m)).filter(s => !propSetLoaded(s));
-  m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list]);
+  // the people out in the world (m.npcs, game/npcs.js) are colliders where they stand, like the villagers
+  const people = indexBlockers((m.npcs || []).map(n => ({ x: n.x, z: n.z, r: NPC_R, bottom: n.y, top: n.y + NPC_H, npc: n.id })));
+  m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list, ...people[i]]);
   buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
-  const villagers = buildVillagers(m.villagers, group);
+  const villagers = buildVillagers([...(m.villagers || []), ...(m.npcs || [])], group);
   addGhosts(group);
   const glass = makeGlass(1, open);
   glass.visible = !m.interior;   // inside a house: walls, no glass box

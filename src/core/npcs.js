@@ -1,0 +1,61 @@
+// The people out in the world (docs/quests.md, "NPCs and spots"). Pure: who somebody is comes
+// from the seed of the spot they belong to (world/spots.js), so every game agrees without saying.
+//
+// Each seat and each camp has somebody living there: they stand on the seat, or at the camp's
+// fire, and give quests of their own about their depth and the one below (core/quests.js). Who
+// else stands on a spot (somebody lost and found, somebody waiting for a parcel) is the quests'
+// to say (game/npcs.js).
+//
+// An NPC: { id, giver, name, role, title, tint, outfit, depth, spot, x, y, z, yaw }
+//   giver: the id the quests know them by ('npc:' + the spot's id)
+//   outfit: worn and held things (core/items.js WEARABLES), like the villagers'
+import { mulberry32, hash32 } from './util.js';
+
+// What they are, which kinds of quest they lean towards (core/quests.js), what they wear, and
+// the depths they are found at (light, the sky down to the canyon; caves; the deep)
+export const ROLES = {
+  hermit: { title: 'hermit', kinds: { landmark: 2, reach: 1 }, outfits: [['wear_headscarf'], ['wear_headscarf', 'held_crystal_ball']], depths: [0, 20] },
+  explorer: { title: 'explorer', kinds: { reach: 2, landmark: 2, guardian: 1 }, outfits: [['held_rope'], ['held_rope', 'held_feed_bag']], depths: [0, 20] },
+  miner: { title: 'miner', kinds: { guardian: 2, horde: 2 }, outfits: [['held_hammer'], ['wear_welding_mask', 'held_hammer']], depths: [5, 20] },
+  pilgrim: { title: 'pilgrim', kinds: { landmark: 3, reach: 1 }, outfits: [['wear_headscarf', 'held_towel'], ['held_towel']], depths: [0, 13] },
+  trapper: { title: 'trapper', kinds: { horde: 3, guardian: 1 }, outfits: [['held_rope', 'held_feed_bag'], ['held_feed_bag']], depths: [0, 16] },
+  scholar: { title: 'scholar', kinds: { landmark: 2, reach: 2 }, outfits: [['wear_wizard_hat'], ['wear_wizard_hat', 'held_crystal_ball']], depths: [3, 20] },
+};
+export const NAMES = ['Ada', 'Alma', 'Bodo', 'Bram', 'Clara', 'Cora', 'Dov', 'Edda', 'Emil', 'Finn', 'Frida', 'Greta', 'Gus',
+  'Hanna', 'Hugo', 'Ilse', 'Ivo', 'Jonah', 'Juna', 'Kai', 'Kira', 'Lars', 'Lotte', 'Mats', 'Mila', 'Nils', 'Nora', 'Olga',
+  'Otto', 'Pip', 'Quinn', 'Rosa', 'Sven', 'Tilda', 'Ulf', 'Vera', 'Wim', 'Yara', 'Zeno', 'Esme'];
+const TINTS = ['#d9b48c', '#c99a86', '#e0c7a0', '#b9c79a', '#b8b0d8', '#9fc3c9', '#d6a9a0', '#c4b48a', '#a8c0a0', '#d8c0d0'];
+export const NPC_R = 0.22;      // how big they are to bump into (world/town.js VILLAGER_R)
+export const NPC_H = 1.1;       // ... and how tall
+
+// the quests' name for the one who lives at a spot, and back
+export const npcGiver = spotId => `npc:${spotId}`;
+export const isNpcGiver = g => typeof g === 'string' && g.startsWith('npc:');
+export const spotOfGiver = g => isNpcGiver(g) ? g.slice(4) : null;
+// the cube key in a spot's id ('<seed>:<key>:spot:<n>')
+export const keyOfSpot = id => String(id).split(':')[1] ?? null;
+
+// who lives at a planned seat or camp (world/spots.js; null: a hiding place, nobody lives there)
+export function residentOf(plan) {
+  if (plan?.kind !== 'seat' && plan?.kind !== 'camp') return null;
+  const R = mulberry32(hash32(plan.seed ^ 0x9e0c5));
+  const roles = Object.entries(ROLES).filter(([, r]) => plan.depth >= r.depths[0] && plan.depth <= r.depths[1]);
+  const [role, r] = roles[Math.floor(R() * roles.length)];
+  const name = NAMES[Math.floor(R() * NAMES.length)];
+  return { id: `${plan.id}:resident`, giver: npcGiver(plan.id), name, role, title: `${name} the ${r.title}`,
+    tint: TINTS[Math.floor(R() * TINTS.length)], outfit: r.outfits[Math.floor(R() * r.outfits.length)],
+    depth: plan.depth, spot: plan.id, camp: plan.kind === 'camp' };
+}
+
+// the residents of a cube's placed spots (map.spots, cubegen/spots.js), standing where they live:
+// on the seat facing who comes to talk, or at the camp's fire
+export function residentsOf(spots = []) {
+  const out = [];
+  for (const s of spots) {
+    const npc = residentOf(s);
+    if (!npc) continue;
+    const at = s.kind === 'camp' ? s.places[0] : s.anchor;
+    if (at) out.push({ ...npc, x: at.x, y: at.y, z: at.z, yaw: at.yaw });
+  }
+  return out;
+}

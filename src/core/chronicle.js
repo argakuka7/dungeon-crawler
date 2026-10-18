@@ -109,7 +109,7 @@ export function describe({ kind, data: d = {}, who }) {
     case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
     case 'horde': return 'A horde woke up!';
     case 'trade': return `Bought ${d.item} for ${d.price}`;
-    case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to the ${d.giver}`,
+    case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to ${d.giver}`,
       done: `Quest complete: ${d.title}${d.xp ? ` · +${d.xp} XP` : ''}${d.coins ? ` · ${d.coins}` : ''}`, failed: `Quest failed: ${d.title}`,
       restarted: `Quest started again: ${d.title}` }[d.what] ?? `Quest: ${d.title}`;
     case 'world': return d.name ? `${d.name} · seed ${d.seed}` : `A new world · seed ${d.seed}`;

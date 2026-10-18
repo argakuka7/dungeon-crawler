@@ -36,6 +36,7 @@ import { depthLevel, grown, GROWTH, ENEMY_KINDS } from './enemies.js';
 import { xpToNext } from './progression.js';
 import { bossAt } from './bosses.js';
 import { PROP_METADATA } from './propmetadata.js';
+import { ROLES, residentOf, isNpcGiver, spotOfGiver, keyOfSpot } from './npcs.js';
 
 const MAX_DEPTH = 20;   // themes/depth.js MAX_DEPTH
 export const STATES = ['offered', 'active', 'ready', 'done', 'failed'];
@@ -46,7 +47,9 @@ export const MAX_OFFERS = 1;
 export const LANDMARK_REACH = 3.5;
 
 // Who gives quests, and which kinds they lean towards (weights). The six villagers of the town
-// and the merchant camp (world/town.js VILLAGERS, by name).
+// and the merchant camp (world/town.js VILLAGERS, by name); and the people living at the seats
+// and camps out in the world (core/npcs.js), 'npc:' + their spot's id, who ask about their own
+// depth and the one below. A giver once talked to (log.met) makes offers like the villagers.
 export const GIVERS = {
   innkeeper: { title: 'Innkeeper', where: 'on the inn\'s porch in town', kinds: { reach: 3, horde: 2, landmark: 1 } },
   groom: { title: 'Groom', where: 'at the stable in town', kinds: { reach: 2, landmark: 2, guardian: 1 } },
@@ -55,9 +58,31 @@ export const GIVERS = {
   alchemist: { title: 'Alchemist', where: 'in the merchant camp', kinds: { landmark: 2, guardian: 1, horde: 1 } },
   enchanter: { title: 'Enchanter', where: 'in the merchant camp', kinds: { landmark: 3, reach: 2, guardian: 1 } },
 };
-export const giverOf = villager => GIVERS[villager?.name] ? villager.name : null;
+export const giverOf = villager => villager?.giver ?? (GIVERS[villager?.name] ? villager.name : null);
+export const isGiver = g => !!GIVERS[g] || isNpcGiver(g);
 
-export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], version: 0 });
+// What a giver is to the quests: { name (in a sentence: 'the Innkeeper', 'Ada the hermit'),
+// title (on its own: 'Innkeeper', 'Ada the hermit'), where, kinds, depths(log) }; null: nobody
+export function giverProfile(giver, ctx) {
+  if (GIVERS[giver]) return { ...GIVERS[giver], name: `the ${GIVERS[giver].title}`, depths: log => window(log) };
+  const id = spotOfGiver(giver), key = id && keyOfSpot(id);
+  if (!key) return null;
+  const depth = -Number(key.split(',')[1]), plan = ctx.layout(depth)?.spots?.get(key)?.find(s => s.id === id), npc = residentOf(plan);
+  if (!npc) return null;
+  return { title: npc.title, name: npc.title, where: plan.kind === 'camp' ? `at the camp on ${depthName(depth)}` : `on ${depthName(depth)}`,
+    kinds: ROLES[npc.role].kinds, depths: () => range(depth, depth + 1) };
+}
+// how a quest names its giver: in a sentence, on its own
+export const giverName = q => q.from?.name ?? `the ${GIVERS[q.giver]?.title ?? 'giver'}`;
+export const giverTitle = q => q.from?.title ?? GIVERS[q.giver]?.title ?? 'Giver';
+
+export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], version: 0 });
+// talked to giver g for the first time: from now on it makes offers (refreshOffers)
+export function meet(log, g) {
+  if (GIVERS[g] || !isNpcGiver(g) || log.met.includes(g)) return false;
+  log.met.push(g); log.version++;
+  return true;
+}
 
 // --- words ----------------------------------------------------------------------------------------
 
@@ -75,13 +100,14 @@ const pick = (R, xs) => xs[Math.floor(R() * xs.length)];
 
 // --- the kinds of quests ---------------------------------------------------------------------------
 
-// Each kind: targets(ctx, log) -> what it could be about now ({ id, depth, ... }), and quest(t,
+// Each kind: targets(ctx, log, depths) -> what it could be about now, at those depths ({ id,
+// depth, ... }), and quest(t,
 // ctx, R, giver) -> its words and stages. A target's `id` is what two quests may not share.
 const KINDS = {
   // get down to a depth nobody has been to yet
   reach: {
     payout: 'return',
-    targets: (ctx, log) => range(log.deepest + 1, log.deepest + 2).map(depth => ({ id: `reach:${depth}`, depth })),
+    targets: (ctx, log, depths) => depths.filter(d => d > log.deepest && d <= log.deepest + 2).map(depth => ({ id: `reach:${depth}`, depth })),
     quest(t, ctx, R) {
       const place = themeName(ctx, t.depth);
       return {
@@ -97,7 +123,7 @@ const KINDS = {
   // stand beside the landmark of a depth (its grand reward site, world/sites.js)
   landmark: {
     payout: 'return',
-    targets: (ctx, log) => window(log).filter(d => d > 0).flatMap(depth => [...ctx.layout(depth).sitePlans]
+    targets: (ctx, log, depths) => depths.filter(d => d > 0).flatMap(depth => [...ctx.layout(depth).sitePlans]
       .filter(([, plans]) => plans[0]?.landmark).map(([key, plans]) => ({ id: `landmark:${key}`, depth, key, landmark: plans[0].landmark }))),
     quest(t, ctx, R) {
       const name = landmarkName(t.landmark), place = themeName(ctx, t.depth);
@@ -115,7 +141,7 @@ const KINDS = {
   // beat a guardian (core/guardians.js): its gate opens
   guardian: {
     payout: 'return',
-    targets: (ctx, log) => window(log).flatMap(depth => {
+    targets: (ctx, log, depths) => depths.flatMap(depth => {
       const L = ctx.layout(depth), side = [...L.guardians].filter(([, g]) => g.role === 'side')
         .sort(([a], [b]) => L.route.indexOf(a) - L.route.indexOf(b)).map(([k]) => k);
       return [...L.guardians].filter(([k]) => !ctx.gates.has(k)).map(([key, g]) => ({ id: `guardian:${key}`, depth, key,
@@ -146,7 +172,7 @@ const KINDS = {
   // break a depth's horde (world/hordes.js): every one of it defeated
   horde: {
     payout: 'return',
-    targets: (ctx, log) => window(log).flatMap(depth => [...ctx.layout(depth).hordes]
+    targets: (ctx, log, depths) => depths.flatMap(depth => [...ctx.layout(depth).hordes]
       .map(([key, h]) => ({ id: `horde:${key}`, depth, key, enemy: h.kind }))),
     quest(t, ctx, R) {
       const them = plural(ENEMY_KINDS[t.enemy]?.label ?? 'enemy').toLowerCase(), where = depthName(t.depth);
@@ -213,21 +239,23 @@ const takenTargets = log => new Set(log.list.map(q => q.target?.id).filter(Boole
 // The next quest of `giver` (null: there is nothing for it to ask now). Its number is
 // log.next[giver]; the log is not changed (offer does that).
 export function makeQuest(log, ctx, giver) {
-  const g = GIVERS[giver];
+  const g = giverProfile(giver, ctx);
   if (!g) throw new TypeError(`Not a quest giver: ${giver}`);
+  const depths = g.depths(log);
   const n = log.next[giver] ?? 0;
   const R = mulberry32(hash32(ctx.seed ^ hashString(giver) ^ Math.imul(n + 1, 0x9e3779b1)));
   const taken = takenTargets(log), kinds = Object.entries(g.kinds);
   while (kinds.length) {
     const [kind] = weighted(R, kinds, ([, w]) => w);
     kinds.splice(kinds.findIndex(([k]) => k === kind), 1);
-    const options = KINDS[kind].targets(ctx, log).filter(t => !taken.has(t.id)
+    const options = KINDS[kind].targets(ctx, log, depths).filter(t => !taken.has(t.id)
       && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, ctx.gates));
     if (!options.length) continue;
     const t = weighted(R, options, o => DEPTH_WEIGHT[o.depth - log.deepest] ?? 0.5);
     const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' ? 1 : 0)));
     const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R);
-    return { id: `${giver}:${n}`, giver, n, kind, depth: t.depth, difficulty, target: { id: t.id, ...made.target },
+    return { id: `${giver}:${n}`, giver, n, from: { name: g.name, title: g.title, where: g.where },
+      kind, depth: t.depth, difficulty, target: { id: t.id, ...made.target },
       title: made.title, text: made.text, stages: made.stages.map(s => ({ ...s, done: false })), stage: 0,
       payout: KINDS[kind].payout, rewards: questRewards(R, t.depth, difficulty), state: 'offered', archived: false,
       created: ctx.now ?? 0, finished: 0 };
@@ -240,7 +268,7 @@ const stale = (q, log, gates) => q.state === 'offered' && q.stages.some(s => goa
 
 // Every giver's offers brought up to date: those that went stale go, and each giver with fewer
 // than MAX_OFFERS makes new ones. true: something changed.
-export function refreshOffers(log, ctx, givers = Object.keys(GIVERS)) {
+export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log.met]) {
   const before = log.list.length;
   log.list = log.list.filter(q => !stale(q, log, ctx.gates));
   let changed = log.list.length !== before;
@@ -376,7 +404,7 @@ export function questLists(log) {
 // a quest's state in words
 export function stateText(q) {
   if (q.archived) return 'Archived';
-  return { offered: 'Offered', active: q.stages[q.stage]?.text ?? 'Going on', ready: `Done: back to the ${GIVERS[q.giver].title}`,
+  return { offered: 'Offered', active: q.stages[q.stage]?.text ?? 'Going on', ready: `Done: back to ${giverName(q)}`,
     done: 'Complete', failed: 'Failed' }[q.state];
 }
 
@@ -403,12 +431,15 @@ export function checkRewards(r) {
   return { xp: nat(r.xp), copper: nat(r.copper), items: (Array.isArray(r.items) ? r.items : []).map(checkItem).filter(Boolean) };
 }
 export function checkQuest(q) {
-  if (!isObj(q) || typeof q.id !== 'string' || q.id.length > 60 || !GIVERS[q.giver] || !QUEST_KINDS.includes(q.kind)) return null;
+  if (!isObj(q) || typeof q.id !== 'string' || q.id.length > 80 || !isGiver(q.giver) || !QUEST_KINDS.includes(q.kind)) return null;
   if (!STATES.includes(q.state) || !DIFFICULTIES.includes(q.difficulty) || !['return', 'spot'].includes(q.payout)) return null;
   const stages = Array.isArray(q.stages) ? q.stages.map(checkStage) : [];
   if (!stages.length || stages.includes(null) || !Number.isInteger(q.depth)) return null;
   const target = isObj(q.target) && typeof q.target.id === 'string' ? structuredClone(q.target) : { id: q.id };
-  return { id: q.id, giver: q.giver, n: nat(q.n), kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
+  const f = isObj(q.from) ? q.from : {}, town = GIVERS[q.giver];
+  const from = { name: text(f.name, 60) || (town ? `the ${town.title}` : 'somebody'), title: text(f.title, 60) || town?.title || 'Somebody',
+    where: text(f.where, 80) || town?.where || '' };
+  return { id: q.id, giver: q.giver, n: nat(q.n), from, kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
     title: text(q.title, 80), text: text(q.text), stages, stage: Math.min(nat(q.stage), stages.length), payout: q.payout,
     rewards: checkRewards(q.rewards),
     state: q.state, archived: !!q.archived, created: nat(q.created), finished: nat(q.finished) };
@@ -422,11 +453,12 @@ export function checkQuestLog(x) {
     const c = checkQuest(q);
     if (c && !seen.has(c.id)) { seen.add(c.id); log.list.push(c); }
   }
-  if (isObj(x.next)) for (const [g, n] of Object.entries(x.next)) if (GIVERS[g]) log.next[g] = nat(n);
+  if (isObj(x.next)) for (const [g, n] of Object.entries(x.next)) if (isGiver(g)) log.next[g] = nat(n);
+  log.met = Array.isArray(x.met) ? [...new Set(x.met.filter(g => isNpcGiver(g) && g.length <= 60))] : [];
   log.deepest = Math.min(MAX_DEPTH, nat(x.deepest));
   log.broken = Array.isArray(x.broken) ? [...new Set(x.broken.filter(k => typeof k === 'string'))] : [];
   log.version = nat(x.version);
   return log;
 }
 // what is saved and sent of a log (plain JSON)
-export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, version: log.version });
+export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, met: log.met, version: log.version });

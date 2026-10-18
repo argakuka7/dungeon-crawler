@@ -47,7 +47,12 @@ The first step of "Order of work" below, but for the quest plan ("The numbers"):
 - **Shared:** the log is the world's (`run.quests`, saved with the world, `core/save.js`); the
   host decides and tells the guests ([online.md](online.md#quests)); a quest handed in pays
   everyone in the game. The chronicle notes quests taken, done, complete and failed.
-- **Not yet:** the quest plan, NPCs out in the world and their spots, the other kinds,
+- **Spots** for the quests to use are planned and kept free in the world (below, "Spots, planned
+  from the seed").
+- **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
+  and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
+  villagers, about their own depth and the one below.
+- **Not yet:** the quest plan, the other kinds,
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want
@@ -203,6 +208,16 @@ child, a worried father ...), a name, a clay tint and an outfit (wearables, `cor
 new ones get models in `blender/items.py`). Some are always there (they sit somewhere, maybe at a
 camp, and give quests of their own: the deeper quests start out there). Others only appear while a
 quest needs them. Enemies ignore NPCs and cannot hurt them.
+
+**Built** for the residents of the seats and camps: `residentOf(spot)` makes them from the
+spot's seed alone, so every game agrees: a role (hermit, explorer, miner, pilgrim, trapper,
+scholar; some only at some depths), a name, a clay tint and an outfit of the villagers' things.
+They stand on their seat facing whoever comes to talk, or at their camp's fire. `game/flow.js`
+puts them on the map as a cube is entered (`map.npcs`); `render/world.js` draws them like the
+villagers (`render/villagers.js`) and makes each a collider; they are labelled, clicked and talked
+to like the villagers (`Talk to Finn the explorer`). Their quests are the giver `npc:<spot id>`,
+leaning by role (`ROLES`); a quest keeps its giver's name and place (`from`), so it reads right
+anywhere. Hiding places have nobody yet.
 
 ### Where people go when they are found
 

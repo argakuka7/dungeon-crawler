@@ -98,7 +98,7 @@ export function talkTo(v) {
   const quests = !!giver && (news || !shop);
   if (quests) for (const q of mine) if (q.state === 'offered') seenOffers.add(q.id);
   setInventoryOpen(true, v, quests ? 'quests' : 'bag');
-  if (state.inventoryOpen) setStatus(quests ? `${GIVERS[giver].title}: ${news ? 'hello there!' : 'hello again.'}` : `${shop.title}: what will it be?`);
+  if (state.inventoryOpen) setStatus(quests ? `${v.title ?? GIVERS[giver]?.title}: ${news ? 'hello there!' : 'hello again.'}` : `${shop.title}: what will it be?`);
 }
 export const openShop = talkTo;
 // I (or V): the bag, open or closed (from the quests tab: over to the bag)

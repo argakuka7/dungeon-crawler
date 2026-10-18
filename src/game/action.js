@@ -12,15 +12,16 @@ import { talkTo } from './inventory.js';
 import { collectable, requestCollect } from './loot.js';
 import { shopOf } from '../core/shops.js';
 import { GIVERS, giverOf } from '../core/quests.js';
+import { peopleHere } from './npcs.js';
 import { ITEMS } from '../core/items.js';
 
 // a villager with something to say: quests to give, or wares
 export const talkative = v => !!(shopOf(v) || giverOf(v));
-const titleOf = v => GIVERS[v.name]?.title ?? shopOf(v)?.title ?? v.name;
+const titleOf = v => v.title ?? `the ${GIVERS[v.name]?.title ?? shopOf(v)?.title ?? v.name}`;
 // the villager the player stands next to who has something to say (the nearest one), if any
 function villagerInReach() {
   let best = null, bestD = Infinity;
-  for (const v of state.map?.villagers ?? []) {
+  for (const v of peopleHere()) {
     if (!talkative(v) || !canTrade(v)) continue;
     const d = Math.hypot(v.x - player.x, v.z - player.z);
     if (d < bestD) { best = v; bestD = d; }
@@ -45,7 +46,7 @@ export function pendingAction() {
   const chest = chestInReach();
   if (chest) return { kind: 'chest', target: chest, label: 'Open the chest', picture: 'treasure_chest' };
   const villager = villagerInReach();
-  if (villager) return { kind: 'talk', target: villager, label: `Talk to the ${titleOf(villager)}` };
+  if (villager) return { kind: 'talk', target: villager, label: `Talk to ${titleOf(villager)}` };
   const loot = collectable();
   if (loot.length) {
     const best = showcase(loot);

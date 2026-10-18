@@ -19,6 +19,7 @@ import { orderPickup, orderChest, orderTrade } from './orders.js';
 import { shopOf } from '../core/shops.js';
 import { GIVERS, giverOf, giverMark } from '../core/quests.js';
 import { talkative } from './action.js';
+import { peopleHere } from './npcs.js';
 import { closedChests } from './chests.js';
 import { RARITY } from '../core/gear/rarities.js';
 
@@ -37,13 +38,13 @@ const isVillager = p => !!p?.outfit;
 export const hoveredPickup = () => hovered && !hovered.prestige && !isVillager(hovered) ? hovered : null;
 export const hoveredChest = () => hovered?.prestige ? hovered : null;
 export const hoveredVillager = () => isVillager(hovered) ? hovered : null;
-const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + p.name : p.id;
+const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + (p.id ?? p.name) : p.id;
 // the villagers in this cube with something to say
-const traders = () => (state.map?.villagers ?? []).filter(talkative);
+const traders = () => peopleHere().filter(talkative);
 // what a villager's label says: the quest mark, their name, their trade
 function villagerText(v) {
   const shop = shopOf(v), mark = giverOf(v) && state.run?.quests ? giverMark(state.run.quests, v.name) : '';
-  const name = GIVERS[v.name]?.title ?? shop?.title ?? v.name;
+  const name = v.title ?? GIVERS[v.name]?.title ?? shop?.title ?? v.name;
   return `${mark ? `${mark} ` : ''}${name}${shop ? ` · ${shop.trade}` : ''}`;
 }
 export function toggleLabels() { state.showLabels = !state.showLabels; }

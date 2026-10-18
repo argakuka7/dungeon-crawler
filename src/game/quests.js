@@ -17,7 +17,7 @@ import { awardXP } from '../core/progression.js';
 import { addCopper, addInstance, autoBar, fits, formatCoins } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { dropAtFeet } from './loot.js';
-import { GIVERS, giverOf, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
+import { giverOf, giverName, meet, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
 
@@ -61,6 +61,7 @@ function doAct(act, id) {
     case 'archive': return archive(L, id, true, gates);
     case 'unarchive': return archive(L, id, false, gates);
     case 'restart': return restart(L, id, gates);
+    case 'meet': return meet(L, id) && refreshOffers(L, ctx(), [id]);
     case 'handIn': {
       const q = handIn(L, id, Date.now());
       if (q) payEveryone(q);
@@ -76,7 +77,7 @@ export function guestQuestAct(m) {
   if (m.act === 'event' && m.ev && typeof m.ev === 'object') {
     const { kind, depth, key } = m.ev;
     if (['visit', 'horde', 'landmark'].includes(kind)) questEvent({ kind, depth: Number.isInteger(depth) ? depth : undefined, key: typeof key === 'string' ? key : undefined });
-  } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn'].includes(m.act)) { doAct(m.act, m.id); share(); }
+  } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet'].includes(m.act)) { doAct(m.act, m.id); share(); }
 }
 
 // A guest: the host's quest log (net/session.js); fresh: it comes with the welcome (nothing to
@@ -134,10 +135,10 @@ function announce(L) {
   if (seen && seenIn === state.run) for (const q of L.list) {
     const was = seen.get(q.id);
     if (!was || was === q.state) continue;
-    const giver = GIVERS[q.giver].title;
+    const giver = giverName(q);
     if (q.state === 'active' && was === 'offered') { log('quest', { title: q.title, what: 'taken' }); setStatus(`Quest taken: ${q.title}`); }
     else if (q.state === 'active' && was === 'failed') log('quest', { title: q.title, what: 'restarted' });
-    else if (q.state === 'ready') { log('quest', { title: q.title, what: 'ready', giver }); setStatus(`Quest done: ${q.title} · back to the ${giver}`); sfx('unlock'); }
+    else if (q.state === 'ready') { log('quest', { title: q.title, what: 'ready', giver }); setStatus(`Quest done: ${q.title} · back to ${giver}`); sfx('unlock'); }
     else if (q.state === 'failed') { log('quest', { title: q.title, what: 'failed' }); setStatus(`Quest failed: ${q.title}`); }
   }
   seen = now; seenIn = state.run;
@@ -182,6 +183,7 @@ export const questLogPacked = () => state.run?.quests ? packQuestLog(state.run.q
 export function talkQuests(v) {
   const giver = giverOf(v);
   if (!giver || !live()) return giver;
+  if (!questLog().met.includes(giver) && v.giver) questAct('meet', giver);   // somebody out in the world: met now
   if (questAuthority()) refreshOffers(questLog(), ctx(), [giver]);
   return giver;
 }

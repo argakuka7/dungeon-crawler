@@ -32,6 +32,7 @@ import { isInterior } from '../world/town.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 import { questEvent, questMark, restoreQuests } from './quests.js';
+import { npcsIn } from './npcs.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
 
@@ -191,6 +192,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   const k = c.key;
   if (!back) discover(c);
   state.cubeKey = k; state.map = c.map; state.lookDepth = c.map.depth;
+  c.map.npcs = npcsIn(c.map);   // the people living here (game/npcs.js)
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(k, c.map), c.geo, openedSides(state.openedFaces, k), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
   if (back) {

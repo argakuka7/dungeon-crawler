@@ -6,7 +6,7 @@
 // thing lights its surroundings a little.
 import * as THREE from 'three';
 import { clamp } from '../core/util.js';
-import { ITEMS } from '../core/items.js';
+import { ITEMS, WEARABLES } from '../core/items.js';
 import { VILLAGERS } from '../world/town.js';
 import { player } from '../game/state.js';
 import { rig, rigReady, createFigure, dress, poseFigure, animateWorn, loadThing } from './figure.js';
@@ -15,9 +15,10 @@ const NOTICE = 3.2;   // cells: how close the player comes before they look
 const BODY = 1.1;     // radians a villager turns away from where they face, at most
 const HEAD = .9;      // ... and the head on top of that
 
-// everything the villagers wear, loaded (game/flow.js waits for it before the first cube)
+// everything the villagers and the people out in the world (core/npcs.js) may wear, loaded
+// (game/flow.js waits for it before the first cube)
 export const villagersReady = rigReady.then(() =>
-  Promise.all([...new Set(VILLAGERS.flatMap(v => v.outfit))].map(loadThing)));
+  Promise.all([...new Set([...VILLAGERS.flatMap(v => v.outfit), ...WEARABLES.map(w => w.id)])].map(loadThing)));
 villagersReady.catch(e => console.error('villagers failed to load', e));
 
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
@@ -31,7 +32,7 @@ export function buildVillagers(list, group) {
     dress(f, v.outfit);
     f.group.position.set(v.x, v.y, v.z);
     f.group.rotation.y = v.yaw;
-    f.group.userData.villager = v.name;
+    f.group.userData.villager = v.id ?? v.name;
     for (const w of Object.values(f.worn)) {
       const glow = ITEMS[w.id].glow;
       // a point light: the cube's light pool takes it over as a source (render/lightpool.js)
