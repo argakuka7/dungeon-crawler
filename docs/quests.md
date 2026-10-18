@@ -54,6 +54,8 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     (its strength, shown over it, drains), and they fight a player who comes close or hits them.
     All waves beaten: done, the keeper pays (`spot`). The cart emptied, or dying: it fails;
     Restart in the quest menu, then again by the cart. Leaving the cube calls the raid off.
+    An annex's outpost (below) is defended the same way; its quest comes from somebody living on
+    the depth (else a villager) and opens the annex's sealed portal when taken (`opens`).
 
   The scouting kinds and `find` are paid back at the giver (`return`).
 - **Givers** (the villagers, and the people out in the world once met) each have one offer at a
@@ -97,7 +99,15 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
 - **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
   and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
   villagers, about their own depth and the one below.
-- **Not yet:** annex rooms, the other kinds (gather, scattered pieces, prisoners),
+- **Annexes** (`world/layout.js`): three a world, the first on the first depth from 4 on with
+  room for it, the second from 10, the third from 16: a room beside a plain room of the way, in the
+  depth's room budget (the depth keeps one of its branches for it), behind a portal sealed like a
+  side guardian's gate (`gateFaces`: `annex:<key>`). Plain ground, no holes, no tunnel, no reward
+  site or set piece; its only spot is its outpost. Before a quest opens it the portal stands grey
+  and unlit (`render/markers.js`), "Sealed. Somebody on this depth may know the way in."; the
+  quest taken opens it for good (`openedGates`, `run.unlockedGates`). Faces never open into an
+  annex but by its portal (`core/boundaries.js`).
+- **Not yet:** the other kinds (gather, scattered pieces, prisoners),
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want

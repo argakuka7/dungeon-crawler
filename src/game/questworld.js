@@ -69,12 +69,16 @@ export function questWorld(map) {
   map.npcs = [...npcsIn(map), ...o.people];
   map.rewardSites = [...map.baseSites, ...o.chests];
   map.sitePlacements = [...map.basePlacements, ...o.placements];
-  map.questSig = o.sig;
+  // an annex's portal, sealed until a quest opens it (render/markers.js draws it grey)
+  map.sealed = [0, 1, 2, 3].filter(d => map.gateKeys?.[d]?.startsWith('annex:') && !state.run?.unlockedGates.has(map.gateKeys[d]));
+  map.questSig = o.sig + '|' + map.sealed.join(',');
   if (o.placements.length) loadPropSets(propSetsOf(map, themeOf(map))).catch(() => {});   // (the chest's set; game/flow.js builds again once in)
   return o.sig;
 }
 // has the quests' part of the cube we are in changed since it was built?
-export const questWorldChanged = () => !!state.map && overlay(state.map, state.run?.quests).sig !== (state.map.questSig ?? '');
+export const questWorldChanged = () => !!state.map && overlay(state.map, state.run?.quests).sig + '|'
+  + [0, 1, 2, 3].filter(d => state.map.gateKeys?.[d]?.startsWith('annex:') && !state.run?.unlockedGates.has(state.map.gateKeys[d])).join(',')
+  !== (state.map.questSig ?? '');
 
 // the things to find lying here, as pickups to draw (render/loot.js drawLoot)
 export function questItemsHere() {

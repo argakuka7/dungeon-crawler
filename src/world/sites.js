@@ -42,6 +42,7 @@ export function planSites(seed, layout, distance) {
   // about in on foot: the foot of a spiral or a hairpin, a hairpin's summit
   const open = k => { const a = layout.areaCells?.get(k); return !a || (a.i === 0 || (a.piece.kind === 'hairpin' && a.i === 5)); };
   const candidates = [...layout.exists].filter(k => k !== layout.up && k !== layout.down && !layout.guardians?.has(k) && !layout.hordes?.has(k)
+    && k !== layout.annex?.key   // (a quest's room behind a sealed portal: world/layout.js)
     && layout.spanCells?.get(k)?.role !== 'gorge' && open(k))
     .map(key => ({ key, score: (distance.get(key) || 0) * 2 + R() - (layout.areaCells?.has(key) ? 100 : 0) }));
   candidates.sort((a, b) => b.score - a.score);

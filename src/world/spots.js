@@ -43,7 +43,7 @@ export function planSpots(seed, layout) {
   // world/areas.js)
   const open = k => { const a = layout.areaCells?.get(k); return !a || a.i === 0 || (a.piece.kind === 'hairpin' && a.i === 5); };
   const rooms = layout.cells.map(([x, z]) => key(x, -d, z)).filter(k => !isClearing(k, seed) && !layout.guardians.has(k)
-    && layout.spanCells?.get(k)?.role !== 'gorge' && open(k));
+    && layout.spanCells?.get(k)?.role !== 'gorge' && open(k) && k !== layout.annex?.key);   // (an annex has only its outpost)
   const info = rooms.map(k => {
     const at = layout.routeIndex.get(k) ?? 0, branch = route.indexOf(k) < 0;
     const tier = Math.min(MAX_TIER, obstacles.filter(i => i < at).length + (branch ? 1 : 0)
@@ -87,6 +87,12 @@ export function planSpots(seed, layout) {
     const room = plain.map(r => ({ r, s: r.spots.filter(s => s.kind !== 'hide').length * 10 + Math.abs(r.at / last - 0.5) * 4 + R2() }))
       .sort((a, b) => a.s - b.s)[0]?.r;
     if (room) add(room, 'outpost');
+  }
+  // an annex: an outpost of its own, behind its sealed portal (world/layout.js)
+  if (layout.annex) {
+    const room = { key: layout.annex.key, at: layout.routeIndex.get(layout.annex.key) ?? 0, branch: true, tier: 2, spots: [] };
+    Object.assign(add(room, 'outpost'), { annex: layout.annex.gate });
+    info.push(room);
   }
   for (const r of info) if (r.spots.length) plans.set(r.key, r.spots);
   return { spots: plans, list: info.flatMap(r => r.spots) };

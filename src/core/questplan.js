@@ -53,10 +53,14 @@ export function questPlan(seed, layout) {
       if (!giver) { kind = 'find'; giver = TOWN[Math.floor(R() * TOWN.length)]; }
       slots.push({ id: `${d}:${i}`, depth: d, kind, giver });
     }
-    // an outpost's defense, from whoever keeps it, in place of the depth's last quest
+    // an outpost's defense, in place of one of the depth's quests: from whoever keeps it; an
+    // annex's (behind its sealed portal) from somebody living on the depth who knows the way in,
+    // else a villager
     for (const o of layout(d).spotList.filter(s => s.kind === 'outpost')) {
       const slot = slots.findLast(s => s.depth === d && s.kind !== 'defense');
-      if (slot) Object.assign(slot, { kind: 'defense', giver: npcGiver(o.id) });
+      const seats = layout(d).spotList.filter(s => s.kind === 'seat' || s.kind === 'camp');
+      const giver = !o.annex ? npcGiver(o.id) : seats.length ? npcGiver(seats[Math.floor(R() * seats.length)].id) : TOWN[Math.floor(R() * TOWN.length)];
+      if (slot) Object.assign(slot, { kind: 'defense', giver });
     }
   }
   const byGiver = new Map();

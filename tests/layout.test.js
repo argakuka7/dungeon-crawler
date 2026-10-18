@@ -10,7 +10,7 @@ import { createRun } from '../src/core/progression.js';
 // This exercises the extra full-face paths, not merely the authored portal graph.
 function rooms(L) {
   return new Map([...L.exists].map(k => [k, { key: k, visits: 1, map: {
-    key: k, exit: L.exit.get(k), guardian: L.guardians.get(k), routeIndex: L.routeIndex.get(k), route: L.route,
+    key: k, exit: L.exit.get(k), guardian: L.guardians.get(k), routeIndex: L.routeIndex.get(k), route: L.route, annexRoom: L.annex?.key === k,
     gateKeys: [0, 1, 2, 3].map(d => L.gateFaces.get(faceKey(k, d))),
     portals: [0, 1, 2, 3].filter(d => L.portals.has(faceKey(k, d))).map(dir => ({ dir, kind: 'side' })),
   } }]));
@@ -47,11 +47,17 @@ test('all depths have routes within their band, the core all nine rooms; discove
       }
       if (d < 20) assert.equal(goal, L.down);
       for (const k of L.guardians.keys()) run.unlockedGates.add(k);
+      // an annex (a quest's room beside the way) is sealed until a quest opens it
+      if (L.annex) {
+        assert.equal(distances(L, cubes, run, entry).has(L.annex.key), false, `seed ${seed}, depth ${d}: the annex is sealed`);
+        run.unlockedGates.add(L.annex.gate);
+      }
       const forward = distances(L, cubes, run, entry), back = distances(L, cubes, run, goal);
       assert.equal(forward.size, L.exists.size); assert.equal(back.size, L.exists.size);
       // Fully explored and unlocked, every pair of neighbouring rooms is joined.
       for (const c of cubes.values()) for (let dir = 0; dir < 4; dir++)
-        if (cubes.has(step(c.key, dir))) assert.ok(discoveredFaces(cubes, c, run).includes(faceKey(c.key, dir)), `seed ${seed}, depth ${d}: ${c.key} ${dir} sealed`);
+        if (cubes.has(step(c.key, dir)) && !((c.map.annexRoom || cubes.get(step(c.key, dir)).map.annexRoom) && !L.portals.has(faceKey(c.key, dir))))
+          assert.ok(discoveredFaces(cubes, c, run).includes(faceKey(c.key, dir)), `seed ${seed}, depth ${d}: ${c.key} ${dir} sealed`);
       // An undiscovered route room cannot be skipped, whatever else was discovered
       // (rooms beyond it reached by a fall or the town portal).
       for (const k of L.route.slice(1, -1)) {

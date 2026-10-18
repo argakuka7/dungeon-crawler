@@ -36,6 +36,8 @@ export function discoveredFaces(cubes, c, run) {
   if (c.visits) for (let d = 0; d < 4; d++) {
     const neighbor = cubes.get(step(c.key, d));
     if (!neighbor?.visits) continue;
+    // an annex (world/layout.js) joins only through its own portal, never through a whole face
+    if ((c.map?.annexRoom || neighbor.map?.annexRoom) && !c.map.portals.some(p => p.dir === d)) continue;
     const a = c.map?.routeIndex, b = neighbor.map?.routeIndex;
     if (a != null && b != null && !c.map.portals.some(p => p.dir === d) && !sectionsJoined(cubes, c.map, neighbor.map, run)) continue;
     if (run && (portalLocked(c.map, run, { dir: d }) || portalLocked(neighbor.map, run, { dir: d ^ 1 }))) continue;

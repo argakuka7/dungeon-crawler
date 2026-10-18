@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { N, CUBE_H, BASE, STEP, SWIM_STEP, SNAP } from '../core/constants.js';
 import { isFaceOpen, openedSides, boundaryArrival } from '../core/boundaries.js';
-import { portalLocked, gateLocked, guardianLockMessage } from '../core/guardians.js';
+import { portalLocked, gateLocked, guardianLockMessage, lockMessage } from '../core/guardians.js';
 import { step, D6, OPP6, faceKey } from '../world/coords.js';
 import { buildWorld, setWorldOpenFaces } from '../render/world.js';
 import { setGlassFaces } from '../render/glass.js';
@@ -45,7 +45,7 @@ export const truePosition = () => tr ? (tr.last ?? tr.S) : player;
 // force: ignore guardian locks (dev tools, game/dev.js); the gate itself stays locked.
 export function startTravel(p, { force = false } = {}) {
   if (state.transitioning || state.inventoryOpen) return;
-  if (!force && portalLocked(state.map, state.run, p)) { setStatus(guardianLockMessage(state.map)); return; }
+  if (!force && portalLocked(state.map, state.run, p)) { setStatus(lockMessage(state.map, p.dir)); return; }
   clearMouseInput();
   state.transitioning = true;
   cancelSword(); cancelCast();

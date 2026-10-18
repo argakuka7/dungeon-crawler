@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { N, CUBE_H } from '../core/constants.js';
 
 let STONE = null;   // one per cube (cubes fade on their own)
-const COLORS = { new: [0xffc94a, 0xffa500], seen: [0x5fd3ff, 0x1f8fd0], locked: [0xff3547, 0xff1530] };
+// sealed: an annex's portal before a quest opens it (world/layout.js): grey, and nothing glows
+const COLORS = { new: [0xffc94a, 0xffa500], seen: [0x5fd3ff, 0x1f8fd0], locked: [0xff3547, 0xff1530], sealed: [0x7d838c, 0x3a3e44] };
 const glowMat = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true });
 const box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), STONE); m.position.set(x, y, z); m.castShadow = true; return m; };
 
@@ -126,7 +127,7 @@ export function townPortalFx(pad) {
 export function buildMarkers(m, group, showPath, seen = {}, open = [], locked = !!m.guardian) {
   STONE = new THREE.MeshStandardMaterial({ color: 0x9aa3b0, roughness: 0.8, flatShading: true });
   const portalFx = m.portals.filter(p => p.kind !== 'side' || !open[p.dir]).map(p => {
-    const col = COLORS[seen[p.id] ? 'seen' : 'new'];
+    const col = COLORS[m.sealed?.includes(p.dir) ? 'sealed' : seen[p.id] ? 'seen' : 'new'];
     const guardian = p.dir === m.exit ? m.guardian : null;
     const fx = p.kind === 'side' ? gate(p, col, guardian) : p.kind === 'down' ? well(p, col, guardian) : p.kind === 'up' ? ring(p, col) : spawnPad(p);
     fx.obj.userData.guardianRole = guardian?.role ?? null;

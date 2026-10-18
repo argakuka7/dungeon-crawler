@@ -80,7 +80,9 @@ export class World {
     const lake = L.lake === k && !special ? { islet: discovery ? { x: 7 + Rs(), z: 7 + Rs(), r: discovery.prestige === 'basic' ? 2.3 : 2.9 } : null } : null;
     // a short tunnel the way leads through (cubegen/tunnel.js): not where rivers run, falls come
     // or go, spouts pour, a horde waits, or something else shapes the cube
-    const tunnel = -Y > 0 && !special && !pinnacle && !peak && !lake && !L.hordes.has(k) && !t.sock.includes('W') && !outflow && !inflow
+    // an annex (world/layout.js): plain ground to fight on, no holes, no tunnel
+    const annex = L.annex?.key === k;
+    const tunnel = -Y > 0 && !special && !annex && !pinnacle && !peak && !lake && !L.hordes.has(k) && !t.sock.includes('W') && !outflow && !inflow
       && faces.every(f => !f.spout) && R() < heightsOf(theme).tunnel;
     return {
       key: k, X, Y, Z, kind: t.kind, exit: this.layout(-Y).exit.get(k) ?? null, K: t.K, B: LAYER_BASE.slice(0, t.K), faces, portals,
@@ -91,13 +93,14 @@ export class World {
       gateKeys: [0, 1, 2, 3].map(d => this.layout(-Y).gateFaces.get(faceKey(k, d)) || null),
       roomRole: this.layout(-Y).roles.get(k), rewardSites: this.layout(-Y).sitePlans.get(k) || [],
       spots: L.spots.get(k) || [],   // places kept free for the quests (world/spots.js, cubegen/spots.js)
-      fluid: theme.river, fluidMix: theme.fluids, voidOK: voidAllowed(this, k), fallIn: fallMask(this, k),
+      annexRoom: L.annex?.key === k,   // a quest's room behind a sealed portal (world/layout.js)
+      fluid: theme.river, fluidMix: theme.fluids, voidOK: !annex && voidAllowed(this, k), fallIn: fallMask(this, k),
       outflow, inflow, relief: theme.relief, height, pinnacle, tunnel, shaftBottom: special ? null : shaftAbove(this, k),
       area, peak, lake, sparse: !!(peak || lake),   // sparse: mostly empty (few props, render/propplace.js)
       // islands without pillars: lakes, the sky islands near the top and the abyss
       floating: !isClearing(k, this.seed) && (t.kind === 'lake' || ((-Y <= 3 || -Y >= 19) && this.wfc.rng(k, 0xf10a7)() < 0.5)),
       seed: hash32(this.seed ^ hashKey(k)),
-      archetype: span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 ? 'plain'
+      archetype: span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 || annex ? 'plain'
         : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
       forceBridge: this.opts.bridge || null, forceLadder: this.opts.ladder || null,
     };

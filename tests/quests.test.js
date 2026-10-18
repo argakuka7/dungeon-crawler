@@ -41,7 +41,8 @@ test('the plan: about a hundred quests, by depth, from the villagers and the peo
       assert.ok(BUILT.has(s.kind), s.kind);
       assert.ok(TOWN.includes(s.giver) || isNpcGiver(s.giver));
       if (s.kind === 'rescue') assert.ok(campOf(ctx.layout, s.giver), 'somebody lost is asked for by somebody at a camp');
-      if (s.kind === 'defense') assert.ok(ctx.layout(s.depth).spotList.some(o => o.kind === 'outpost' && npcGiver(o.id) === s.giver), 'by its keeper');
+      if (s.kind === 'defense') assert.ok(ctx.layout(s.depth).spotList.some(o => o.kind === 'outpost' && (o.annex || npcGiver(o.id) === s.giver)),
+        'by its keeper (an annex: by somebody of the depth)');
     }
     const outposts = Array.from({ length: 21 }, (_, d) => ctx.layout(d).spotList.filter(o => o.kind === 'outpost')).flat();
     assert.equal(plan.slots.filter(s => s.kind === 'defense').length, outposts.length, 'every outpost has its defense');
@@ -329,4 +330,24 @@ test('a defense: the keeper of every outpost asks for one; beating the raid ends
   const paid = questEvent(log, { kind: 'defended', quest: q.id });
   assert.deepEqual(paid, [q]);
   assert.equal(q.state, 'done');
+});
+
+test('an annex: its storehouse defense opens the sealed portal, for good, once taken', async () => {
+  const { openedGates } = await import('../src/core/quests.js');
+  const ctx = ctxOf(21), L = ctx.layout;
+  const d = Array.from({ length: 21 }, (_, i) => i).find(i => L(i).annex), annex = L(d).annex;
+  const outpost = L(d).spotList.find(s => s.annex);
+  assert.equal(outpost.annex, annex.gate);
+  const seat = L(d).spotList.find(s => s.kind === 'seat'), log = createQuestLog();
+  log.deepest = d;
+  const q = makeQuest(log, ctx, npcGiver(seat.id), { id: `${d}:96`, depth: d, kind: 'defense' });
+  assert.equal(q.stages[0].opens, annex.gate, 'somebody of the depth knows the way in');
+  log.list.push(q);
+  assert.deepEqual(openedGates(log), [], 'sealed while only offered');
+  accept(log, q.id);
+  assert.deepEqual(openedGates(log), [annex.gate]);
+  questEvent(log, { kind: 'defended', quest: q.id });
+  assert.deepEqual(openedGates(log), [annex.gate], 'and it stays open');
+  const plan = questPlan(21, L);
+  assert.ok(plan.slots.some(s => s.kind === 'defense' && s.depth === d && !isNpcGiver(s.giver) || s.giver !== npcGiver(outpost.id)));
 });

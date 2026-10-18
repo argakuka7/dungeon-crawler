@@ -34,7 +34,10 @@ test('every depth plans its spots from the seed: hiding places, two seats, a cam
       if (d > 0) assert.ok(Math.max(...tiers) > Math.min(...tiers), `depth ${d}: hiding places of several tiers`);
     }
     assert.deepEqual(planSpots(seed, L(5)).list, L(5).spotList, 'the same plan again');
-    const outposts = Array.from({ length: 21 }, (_, d) => L(d).spotList.filter(x => x.kind === 'outpost')).flat();
+    const outposts = Array.from({ length: 21 }, (_, d) => L(d).spotList.filter(x => x.kind === 'outpost' && !x.annex)).flat();
+    const annexes = Array.from({ length: 21 }, (_, d) => L(d)).filter(l => l.annex);
+    assert.equal(annexes.length, 3, 'three annexes');
+    for (const l of annexes) assert.deepEqual(l.spots.get(l.annex.key).map(s => [s.kind, s.annex]), [['outpost', l.annex.gate]], 'an annex has its outpost, nothing else');
     assert.equal(outposts.length, OUTPOST_BANDS.length, 'an outpost in every stretch of depths');
     for (const [i, [a, b]] of OUTPOST_BANDS.entries()) assert.equal(outposts.filter(o => o.depth >= a && o.depth <= b).length, 1, `stretch ${i}`);
     for (const o of outposts) assert.ok(!L(o.depth).hordes.has(o.key) && L(o.depth).route.includes(o.key), 'on the way, not the horde\'s room');

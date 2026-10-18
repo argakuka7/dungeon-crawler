@@ -17,12 +17,12 @@ import { awardXP } from '../core/progression.js';
 import { addCopper, addInstance, autoBar, fits, formatCoins } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { dropAtFeet } from './loot.js';
-import { giverOf, giverName, meet, fail, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
+import { giverOf, giverName, meet, fail, openedGates, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
 import { pickUpQuestItems, questWorldChanged, bountiesHere } from './questworld.js';
 import { allEnemies, addEnemies, mirroring } from './enemies.js';
-import { rebuildWorld } from './flow.js';
+import { rebuildWorld, refreshOpenFaces } from './flow.js';
 
 const CHECK_EVERY = 0.5;   // s (real time): the gates looked at, offers brought up to date, a landmark looked for
 // seen: the quests' states as last told (in run seenIn); sent: the log as last given out
@@ -172,6 +172,8 @@ export function updateQuests(dt) {
       landmarkSaid = `${state.cubeKey}:${L.version}`;
       questEvent({ kind: 'landmark', key: state.cubeKey });
     }
+    // the sealed portals the quests taken open (an annex's): open for good, for everyone
+    for (const g of openedGates(L)) if (!state.run.unlockedGates.has(g)) { state.run.unlockedGates.add(g); refreshOpenFaces(); }
     // somebody lost found, a chest opened, a quest taken: the cube as it is now
     if (state.map && !state.transitioning && questWorldChanged()) rebuildWorld();
     // a bounty waiting here (where we run the enemies): on its hiding place

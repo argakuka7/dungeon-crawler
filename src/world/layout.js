@@ -17,6 +17,12 @@ import { AREA_SIZE, templateCells, planArea, indexAreas } from './areas.js';
 // [first depth, fewest, most] rooms on the route. The core always walks all nine rooms of
 // its 3x3, so the route above it ends on a corner (an edge start cannot reach the centre
 // in nine).
+// Annexes (docs/quests.md, Defense): a room of its own beside the way, behind a portal sealed until
+// a quest opens it (core/quests.js). Three a world: the first from depth ANNEX_FROM[0] on, the
+// second from [1] on, the third from [2] on, each on the first depth with room for it (one of its
+// branches: the depth keeps one of them for it).
+export const ANNEX_FROM = [4, 10, 16];
+export const annexGate = key => `annex:${key}`;
 export const ROUTE_ROOMS = [[0, 18, 24], [4, 16, 22], [8, 14, 20], [12, 12, 18], [16, 9, 16], [MAX_DEPTH, 9, 9]];
 export const routeRooms = d => ROUTE_ROOMS.findLast(([from]) => d >= from).slice(1);
 // learn: world.html#route (see learn/README.md)
@@ -158,7 +164,8 @@ function build(seed, d, above, theme) {
   // One-room branches only, never attached to arenas or the safe surface prefix.
   // No loops: all sideways guardians are articulation points on the required route.
   const used = new Set(cells.map(id)), allowed = new Set(candidates.map(id));
-  const branchBudget = Math.min(4, max - cells.length);
+  const annexes = above?.annexes ?? 0, wantAnnex = d >= 2 && d < MAX_DEPTH && annexes < ANNEX_FROM.length && d >= ANNEX_FROM[annexes];
+  const branchBudget = Math.min(4, max - cells.length) - (wantAnnex ? 1 : 0);
   // gorge spans (spans.js): on the route, and maybe a lonely island branch over a bridge
   const free = c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1);
   const spanPlan = planSpans(seed, d, theme.spans, spine, K, k => guardians.has(k) || hordes.has(k)
@@ -194,7 +201,26 @@ function build(seed, d, above, theme) {
     cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
     routeIndex.set(K(n), routeIndex.get(K(c))); distance.set(K(n), 1);
   }
-  const layout = { depth: d, theme, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex,
+  // the annex: a room beside a plain room of the way where a branch could go, in the depth's room
+  // budget, its portal sealed (gateFaces, like a side guardian's) until a quest opens it
+  let annex = null;
+  if (wantAnnex && cells.length < max) {
+    const AR = mulberry32(hash32(seed ^ Math.imul(d + 1, 0xa11e7) ^ 0xa1)), rooms = spine.slice(2, -2);
+    for (let j = rooms.length - 1; j > 0; j--) { const k = Math.floor(AR() * (j + 1)); [rooms[j], rooms[k]] = [rooms[k], rooms[j]]; }
+    for (const c of rooms) {
+      if (guardians.has(K(c)) || hordes.has(K(c)) || spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c)) || inArea(c)) continue;
+      const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n) && !near(n, plateaus) && !nearArea(n));
+      if (!options.length) continue;
+      const n = options[Math.floor(AR() * options.length)];
+      cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
+      routeIndex.set(K(n), routeIndex.get(K(c))); distance.set(K(n), 1);
+      gateFaces.set(faceKey(K(c), direction(c, n)), annexGate(K(n)));
+      annex = { key: K(n), parent: K(c), gate: annexGate(K(n)) };
+      break;
+    }
+  }
+  const layout = { depth: d, theme, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex, annex,
+    annexes: annexes + (annex ? 1 : 0),
     exists: new Set(cells.map(K)), portals, exit, guardians, gateFaces, hordes,
     up: d ? K(start) : null, down: d < MAX_DEPTH ? K(end) : null, guardian: guardianDepth(seed, d) };
   indexSpans(layout, spanPlan.spans, spanPlan.cells);

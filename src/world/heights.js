@@ -98,7 +98,7 @@ export function planHeights(seed, d, theme, spine, K, blocked, tableland) {
 export function planSetPiece(layout, slots) {
   const out = { pinnacle: null, peak: null, lake: null };
   if (!slots.small) return out;
-  const busy = k => layout.heightCells.has(k) || layout.spanCells.has(k) || layout.areaCells?.has(k);
+  const busy = k => layout.heightCells.has(k) || layout.spanCells.has(k) || layout.areaCells?.has(k) || k === layout.annex?.key;
   const near = k => [0, 1, 2, 3].some(d => busy(step(k, d)));
   const discovery = [...layout.sitePlans].filter(([k, intents]) => !busy(k) && intents.every(i => !i.landmark)).map(([k]) => k).sort();
   const options = {

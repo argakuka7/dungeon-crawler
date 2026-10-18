@@ -340,10 +340,21 @@ function recipients(ctx, log, depths, giver) {
 KINDS.defense = {
   payout: 'spot',
   targets: (ctx, log, depths, giver) => depths.flatMap(depth => ctx.layout(depth).spotList
-    .filter(s => s.kind === 'outpost' && residentOf(s)?.giver === giver)
+    .filter(s => s.kind === 'outpost' && (s.annex || residentOf(s)?.giver === giver))
     .map(plan => ({ id: `defend:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: 1, plan }))),
   quest(t, ctx, R) {
     const keeper = residentOf(t.plan), where = depthName(t.depth);
+    // an annex's: behind a portal sealed until the quest is taken (world/layout.js)
+    if (t.plan.annex) return {
+      title: `The sealed storehouse`,
+      text: pick(R, [
+        `Behind a sealed door on ${where} ${keeper.name} keeps a hidden storehouse, and the monsters have found it. Here is the way in: take it, and help ${keeper.name} hold the cart until they give up.`,
+        `There is a door on ${where} that nobody can open. I can. Behind it, ${keeper.name}'s storehouse is under attack. Go in and keep them off the cart!`,
+      ]),
+      target: { spot: t.spot },
+      stages: [{ goal: 'defend', depth: t.depth, key: t.key, spot: t.spot, waves: 3, opens: t.plan.annex,
+        text: `Defend ${keeper.name}'s storehouse on ${where}` }],
+    };
     return {
       title: `Raiders at the cart`,
       text: pick(R, [
@@ -616,6 +627,10 @@ export function carried(q) {
   return out;
 }
 
+// the sealed portals the quests taken have opened (an annex's: world/layout.js annexGate); they
+// stay open, also once the quest is done
+export const openedGates = log => log.list.filter(q => q.state !== 'offered').flatMap(q => q.stages.map(s => s.opens)).filter(Boolean);
+
 // --- what is shown --------------------------------------------------------------------------------
 
 // what a giver has for the players: quests to hand in, offers, and those going on
@@ -678,6 +693,7 @@ function checkStage(s) {
   }
   if (typeof s.clue === 'string') out.clue = text(s.clue, 120);
   if (s.goal === 'defend') out.waves = Math.max(1, Math.min(9, nat(s.waves) || 3));
+  if (typeof s.opens === 'string' && s.opens.startsWith('annex:')) out.opens = s.opens.slice(0, 60);
   if (['find', 'rescue', 'open', 'bounty', 'defend'].includes(s.goal) && !out.spot) return null;
   return out;
 }

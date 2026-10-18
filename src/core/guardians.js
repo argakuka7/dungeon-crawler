@@ -11,6 +11,9 @@ export const guardianLockMessage = map => map.guardian?.boss ? `Defeat ${bossNam
   : map.guardian?.role === 'descent' ? 'Defeat the descent guardian to unlock this descent'
   : 'Defeat the side guardian to unlock this passage';
 export const guardianId = key => `${key}:guardian`;
+// what a locked portal (towards dir) says: a guardian's, or an annex's sealed one (world/layout.js)
+export const lockMessage = (map, dir) => map?.gateKeys?.[dir]?.startsWith('annex:')
+  ? 'Sealed. Somebody on this depth may know the way in.' : guardianLockMessage(map);
 export const gateLocked = (map, run) => !!map?.guardian && !run.unlockedGates.has(map.key);
 export const portalLocked = (map, run, portal) => {
   const gate = portal.dir < 4 && map?.gateKeys?.[portal.dir];
