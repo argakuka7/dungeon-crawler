@@ -7,13 +7,15 @@
 // with ?join=CODE, and drop out as they like), stop hosting, leave a friend's game (back to the
 // main menu; joining one is done there, game/menu.js). Up to four play together
 // (net/session.js); ?net=local plays between tabs of this browser instead of over the internet
-// (for testing, net/transport.js). Your name is your saved hero's (game/save.js); without one a
-// field asks for it.
+// (for testing, net/transport.js). Your name is your saved hero's (game/save.js); without one
+// (?seed=, the dev tools) a random one for this page.
 import { state } from './state.js';
 import { clearInput } from './inputstate.js';
 import { clearMouseInput } from './orders.js';
 import { setHelpOpen } from './help.js';
 import { savedHero } from './save.js';
+import { NAME_MAX } from '../core/save.js';
+import { ADJECTIVES } from '../core/names.js';
 import { quitToMenu } from './menu.js';
 import { openSettings, closeSettings } from './settingsmenu.js';
 import { online, together, playerColor } from '../net/online.js';
@@ -22,7 +24,6 @@ import { hostGame, leaveGame, sessionStatus, onSessionChange } from '../net/sess
 const $ = id => document.getElementById(id);
 const overlay = $('menu-overlay'), params = new URLSearchParams(location.search);
 const local = params.get('net') === 'local';
-const NAME_KEY = 'cube-crawler-name';
 const CONFIRM_MS = 4000;
 let confirmUntil = 0, quitUntil = 0;   // the stop hosting / the quit button asks again until then
 
@@ -45,15 +46,10 @@ export const toggleMenu = () => setMenuOpen(!state.menuOpen);
 
 // --- your name ----------------------------------------------------------------------------------
 
-const storedName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; } };
-$('menu-name').value = storedName();
-function playerName() {
-  const hero = savedHero();
-  if (hero) return hero.name;
-  const n = $('menu-name').value.trim();
-  try { localStorage.setItem(NAME_KEY, n); } catch { /* private mode: not remembered */ }
-  return n;
-}
+// without a saved hero: a word of the world names and Crawler ("Misty Crawler")
+const SHORT = ADJECTIVES.filter(w => w.length <= NAME_MAX - ' Crawler'.length);
+const randomName = `${SHORT[Math.floor(Math.random() * SHORT.length)]} Crawler`;
+const playerName = () => savedHero()?.name ?? randomName;
 
 // --- drawing ------------------------------------------------------------------------------------
 
@@ -61,7 +57,7 @@ const link = code => `${location.origin}${location.pathname}?join=${code}${local
 
 function players() {
   if (online.slot === null) return [];
-  const list = [{ slot: online.slot, name: playerName() || 'You', you: true },
+  const list = [{ slot: online.slot, name: playerName(), you: true },
     ...[...online.peers].map(([slot, p]) => ({ slot, name: p.name }))];
   return list.sort((a, b) => a.slot - b.slot);
 }
@@ -71,7 +67,6 @@ function render() {
   const { phase, text } = sessionStatus(), idle = phase === 'idle', host = online.role === 'host';
   $('menu-paused').textContent = together() ? 'The game goes on' : 'Paused';
   $('menu-start').hidden = !idle;
-  $('menu-name-row').hidden = !!savedHero();
   $('menu-room').hidden = !(host && online.code && (phase === 'waiting' || phase === 'connected'));
   $('menu-room-code').textContent = online.code ?? '';
   const list = players();

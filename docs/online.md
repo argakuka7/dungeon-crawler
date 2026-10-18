@@ -10,7 +10,7 @@ being helped up and getting back in. Up to four players, co-op.
   four letter room code (no I or O) and a link (`?join=CODE`); up to three guests type the code
   in the main menu's Join Game (`src/game/menu.js`) or open the link, which opens it there. The room stays open while there is room, friends come and go. "Stop
   hosting" closes it (with friends in it, the button asks again first: they drop out). Your name
-  is your saved hero's (`docs/saves.md`); without one, the menu asks for it.
+  is your saved hero's (`docs/saves.md`); without one (`?seed=`, the dev tools), a random one.
 - `src/net/transport.js`: PeerJS (`vendor/peerjs/`, loaded only when hosting or joining).
   The host registers `cube-crawler-<CODE>` with the public PeerJS broker. Each guest
   connects to it, and from then on talks to the host directly over a WebRTC data channel

@@ -70,7 +70,7 @@ const PRESS = {
 };
 
 addEventListener('keydown', e => {
-  // typing a name or a code (the Esc menu): only Escape is ours
+  // typing in a field: only Escape is ours
   if (e.target?.tagName === 'INPUT' && e.target.type === 'text') {
     if (e.code === 'Escape' && state.menuOpen) { setMenuOpen(false); e.preventDefault(); }
     return;

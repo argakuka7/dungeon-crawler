@@ -107,8 +107,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-panel #menu-close { margin-left: auto; color: #8a96a8; background: none; border: none; padding: 0; font-size: 11px; }
 #menu-panel .menu-big { display: block; width: 100%; margin-top: 10px; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
 #menu-resume { margin-top: 0 !important; }
-.menu-field { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: #e6e9ef; }
-.menu-field input { flex: 1; min-width: 0; }
 .menu-row { display: flex; gap: 8px; }
 #menu-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
 #menu-room button, #menu-leave, #menu-quit { display: block; width: 100%; }
@@ -117,7 +115,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-players { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: #e6e9ef; }
 #menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
 #menu-status { min-height: 1.4em; color: #cfe2ff !important; }
-#menu-panel .menu-note { margin-top: 14px; font-size: 11px; color: #6f7a8c; }
+#menu-status:empty { display: none; }
 #menu-panel .menu-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid #2a2f3a; }
 #menu-settings { display: block; width: 100%; }
 #help-panel .help-note { margin: 10px 0 0; color: #6f7a8c; font-size: 11px; }
