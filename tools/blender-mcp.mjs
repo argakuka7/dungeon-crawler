@@ -27,15 +27,52 @@ function run(command, args, capture = false) {
   return result.stdout?.trim();
 }
 
-function connected() {
+// Resolves to 'ready' when the port speaks this addon's protocol, 'free' when
+// nothing listens, and 'foreign' when another server (e.g. a different Blender
+// MCP addon) holds it.  Merely accepting a connection is not enough: a foreign
+// server would leave every tool call hanging.
+function probe(port, timeout = 3000) {
   return new Promise(resolve => {
-    const socket = createConnection({ host: env.BLENDER_HOST || 'localhost', port: Number(env.BLENDER_PORT || 9876) });
+    const socket = createConnection({ host: env.BLENDER_HOST || 'localhost', port });
+    let buffer = '';
+    let opened = false;
     const finish = value => { socket.destroy(); resolve(value); };
-    socket.setTimeout(1000);
-    socket.once('connect', () => finish(true));
-    socket.once('error', () => finish(false));
-    socket.once('timeout', () => finish(false));
+    socket.setTimeout(timeout);
+    socket.once('connect', () => {
+      opened = true;
+      socket.write(JSON.stringify({ type: 'get_addon_info', params: {} }));
+    });
+    socket.on('data', chunk => {
+      buffer += chunk;
+      try {
+        const response = JSON.parse(buffer);
+        finish(response?.result?.protocol_version != null ? 'ready' : 'foreign');
+      } catch { /* incomplete, wait for more */ }
+    });
+    socket.once('error', () => finish(opened ? 'foreign' : 'free'));
+    socket.once('timeout', () => finish(opened ? 'foreign' : 'free'));
+    socket.once('end', () => finish(opened ? 'foreign' : 'free'));
   });
+}
+
+// An explicit BLENDER_PORT is used as is; otherwise reuse the first port in a
+// small range that runs this addon, or pick the first free one for a new Blender.
+async function choosePort() {
+  if (env.BLENDER_PORT) {
+    const port = Number(env.BLENDER_PORT);
+    const state = await probe(port);
+    if (state === 'foreign') throw new Error(`Port ${port} is used by another server; choose a different BLENDER_PORT.`);
+    return { port, running: state === 'ready' };
+  }
+  let free = null;
+  for (let port = 9876; port < 9886; port++) {
+    const state = await probe(port);
+    if (state === 'ready') return { port, running: true };
+    if (state === 'free' && free === null) free = port;
+    if (state === 'foreign') console.error(`Port ${port} is used by another server; trying the next one.`);
+  }
+  if (free === null) throw new Error('No free port in 9876-9885; set BLENDER_PORT.');
+  return { port: free, running: false };
 }
 
 function findBlender() {
@@ -70,7 +107,9 @@ try {
     writeFileSync(marker, version);
   }
 
-  if (!await connected()) {
+  const { port, running } = await choosePort();
+  env.BLENDER_PORT = String(port);
+  if (!running) {
     if (env.BLENDER_HOST && !['localhost', '127.0.0.1', '::1'].includes(env.BLENDER_HOST)) {
       throw new Error('Remote Blender is not reachable; start its addon server first.');
     }
@@ -86,7 +125,7 @@ try {
     blender.unref();
     let ready = false;
     for (let attempt = 0; attempt < 90; attempt++) {
-      if (await connected()) { ready = true; break; }
+      if (await probe(port) === 'ready') { ready = true; break; }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     if (!ready) throw new Error('Blender did not start its MCP server within 90 seconds. Check the Blender window.');
