@@ -8,12 +8,18 @@
 // The synth (compressors, a long reverb) is built for the first song and only hangs on the bus
 // while a song plays or rings out: the audio thread works on every node it can reach from the
 // speakers, heard or not, and with the music off that was most of the game's sound work.
+// The drums play from hits rendered once per song (drumkit.js), the rest from the synth.
+// Notes are scheduled from the main thread a second ahead: a frame that stalls (compiling a
+// shader, building a cube) must not starve the audio. A note that comes late all the same
+// still plays if it is at most LATE behind, at once; one later than that is dropped.
 import { createSynth } from '../../vendor/scrimshaw/synth.js';
 import { loadScore } from './score.js';
 import { onAudioStart } from './context.js';
+import { prepareDrums, playDrum } from './drumkit.js';
 
 const VOLUME = 0.4;                         // the music sits under the sound effects
-const LOOKAHEAD = 0.3, HIDDEN_LOOKAHEAD = 1.6;   // seconds scheduled ahead; timers slow down in hidden tabs
+const LOOKAHEAD = 1, HIDDEN_LOOKAHEAD = 2.5;   // seconds scheduled ahead; timers slow down in hidden tabs
+const LATE = 0.15;                          // s: a note this late still plays (at once)
 const FADE = 0.35;                          // time constant of a song or voice fading out
 const GAP = 0.8;                            // seconds between one song fading and the next starting
 const JOIN_MARGIN = 0.04;                   // s: a joining voice comes in on the first step after this
@@ -98,7 +104,11 @@ function startSong(score) {
   attach();
   const sess = syn.session(song);
   syn.warm(song);
-  const voices = sess.ch.map((c, i) => ({ gain: c.input.gain.value, on: moods[mood].has(i), at: 0 }));
+  prepareDrums(ctx, song);
+  // gain: the voice's level; on: in the mood; at: when it last joined or leaves; scheduled:
+  // how far its notes were scheduled when it last left (they still play, unheard, and are
+  // heard again if it comes back before then)
+  const voices = sess.ch.map((c, i) => ({ gain: c.input.gain.value, on: moods[mood].has(i), at: 0, scheduled: 0 }));
   voices.forEach((vc, i) => { if (!vc.on) sess.ch[i].input.gain.value = 0; });
   const startAt = ctx.currentTime + 0.1;
   cur = { score, sess, voices, startAt, list: 'intro', i: 0, offset: 0, until: startAt };
@@ -113,6 +123,17 @@ function stopSong() {
 
 // a voice joining plays from its switch time on, one leaving plays up to it
 const audible = (vc, t) => (vc.on ? t >= vc.at : t < vc.at);
+
+// one note of the song: a drum from its rendered hits once they are in, else the synth.
+// On a sample frame: Chrome renders the synth's short attacks (a ramp of a few ms, then a decay)
+// at about half their energy when they start between two frames, so the drums' and plucks'
+// loudness jumped by up to 3 dB with where the beat fell.
+function play(ev, t) {
+  t = Math.round(t * ctx.sampleRate) / ctx.sampleRate;
+  const v = cur.score.song.voices[ev.v];
+  if (v.drum && playDrum(ctx, v.inst, ev.vel, cur.sess.ch[ev.v].input, t)) return;
+  cur.sess.play(ev, t);
+}
 
 // the jukebox's scheduler: the intro once, then the loop forever
 function schedule() {
@@ -129,7 +150,7 @@ function schedule() {
     }
     const ev = tl.events[cur.i], t = cur.startAt + cur.offset + ev.t;
     if (t > horizon) break;
-    if (t >= ctx.currentTime - 0.03 && audible(cur.voices[ev.v], t)) cur.sess.play(ev, Math.max(t, ctx.currentTime + 0.005));
+    if (t >= ctx.currentTime - LATE && audible(cur.voices[ev.v], t)) play(ev, Math.max(t, ctx.currentTime + 0.005));
     cur.i++;
   }
   cur.until = Math.max(cur.until, horizon);
@@ -163,8 +184,8 @@ function catchUp(i, at, held) {
     if (ev.v !== i) continue;
     const t = base + ev.t, end = t + ev.d;
     if (t >= cur.until) break;
-    if (t >= at) cur.sess.play(ev, t);
-    else if (held && !drum && end - at >= MIN_HELD) cur.sess.play({ ...ev, d: end - at, g: undefined }, at);
+    if (t >= at) play(ev, t);
+    else if (held && !drum && end - at >= MIN_HELD) play({ ...ev, d: end - at, g: undefined }, at);
   }
 }
 
@@ -179,14 +200,17 @@ function retarget() {
     if (on === vc.on) return;
     const g = cur.sess.ch[i].input.gain;
     g.cancelScheduledValues(now);
+    if (!on) vc.scheduled = cur.until;   // (a voice leaving before it even joined has its caught-up notes)
     if (vc.at > now) {
       // the last change has not happened yet: dropping it is enough, except that a voice
-      // that was about to leave missed its notes after that point
-      if (on) catchUp(i, vc.at, false);
+      // that was about to leave missed its notes after that point (those it had scheduled
+      // before it was told to leave are still there)
+      if (on) catchUp(i, Math.max(vc.at, vc.scheduled), false);
       vc.on = on; vc.at = 0; return;
     }
     vc.on = on; vc.at = on ? step : beat;
     g.setTargetAtTime(on ? vc.gain : 0, vc.at, on ? 0.01 : FADE);
-    if (on) catchUp(i, step, true);
+    // back before its scheduled notes ran out: those play again, the rest is caught up
+    if (on) catchUp(i, Math.max(step, vc.scheduled), step >= vc.scheduled);
   });
 }

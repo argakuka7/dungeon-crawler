@@ -2,7 +2,9 @@
 
 Every sound is generated with Web Audio: no sample files. Music is separate (`docs/music.md`).
 All of it plays into the one AudioContext of `src/audio/context.js`, made on the first key or
-click.
+click. It runs at 44.1 kHz whatever the speakers run at (the browser resamples), with
+`latencyHint: 'balanced'`: the audio thread's work grows with the sample rate, and at a device's
+96 or 192 kHz the music alone took two to four times as long, up to all of a core, and broke up.
 
 | File | What |
 |---|---|

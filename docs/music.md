@@ -14,11 +14,23 @@ off, and set its volume apart from the sound effects' (`src/game/settings.js`, k
 built for the first song and leaves the bus a few seconds after the music stops, so with the
 music off its compressors and reverb cost nothing.
 
+The synth builds every note from Web Audio nodes, and every running node is work for the audio
+thread. The drums are rendered once per song instead (`src/audio/drumkit.js`): each drum and
+velocity the song uses is rendered offline when the song starts (three takes of the short hits,
+whose noise differs) and played as one buffer source into its voice's channel; until they are in,
+the synth plays them. That took about a third off the music's work. The melodic notes stay live:
+rendering them all would take 45 to 90 MB per song.
+
+Notes are scheduled from the main thread 1 s ahead (2.5 s in a hidden tab, whose timers slow
+down), so a stalled frame does not starve the audio. A note that comes late all the same still
+plays, at once, if it is at most 150 ms late; a later one is dropped.
+
 | File | Role |
 |---|---|
 | `src/audio/context.js` | the AudioContext shared with the sound effects, made on the first key or click |
 | `src/audio/score.js` | compiles a score and reads its moods (pure, tested in node) |
 | `src/audio/music.js` | the player: schedules notes ahead, loops, switches songs, fades voices between moods |
+| `src/audio/drumkit.js` | the drum hits a song uses, rendered once and played as samples |
 | `src/game/music.js` | picks the song (`songFor`) and the mood from the game state; `forceMood` holds one (`__game.musicMood`) |
 
 ## Editing
@@ -53,8 +65,9 @@ The highest mood that applies wins and takes over at once; a calmer one takes ov
 after the current one's hold time.
 
 Voices that are out are not scheduled at all. A joining voice comes in on the first sixteenth
-at least 40 ms away. Its notes from there up to what the scheduler has already done (0.3 s
-ahead) are played at once, and a note already sounding plays its remainder from the join,
+at least 40 ms away. Its notes from there up to what the scheduler has already done (1 s
+ahead) are scheduled at once (except those it still had scheduled from before it left, which
+are heard again), and a note already sounding plays its remainder from the join,
 so a switch is heard within about 0.2 s. A leaving voice fades out from the next beat.
 
 ## Songs

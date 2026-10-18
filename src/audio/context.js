@@ -2,6 +2,13 @@
 // (music.js). Browsers only let audio start after a user gesture, so it is made on the first key
 // or click. Two buses, each with its own volume (the settings, game/settings.js): the sounds
 // and the music.
+// The context runs at RATE, whatever the speakers run at: every sound is generated, and the
+// audio thread's work grows with the sample rate. Left to the device, a USB DAC or audio
+// interface at 96 or 192 kHz made the music alone cost two to four times as much, up to all
+// of a core: the sound broke up. The browser resamples to the device, which is cheap.
+// 'balanced' latency gives the audio thread a longer buffer than 'interactive', so a busy
+// moment does not crackle; the sound effects come a few ms later, which nobody hears.
+const RATE = 44100;
 let ctx = null, sounds = null, music = null;
 const starters = [];
 const level = { sounds: 1, music: 1 };
@@ -12,7 +19,8 @@ function start() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    ctx = new AC();
+    try { ctx = new AC({ sampleRate: RATE, latencyHint: 'balanced' }); }
+    catch { ctx = new AC(); }   // (old Safari takes no options)
     sounds = ctx.createGain(); music = ctx.createGain();
     sounds.gain.value = gainOf(level.sounds); music.gain.value = gainOf(level.music);
     sounds.connect(ctx.destination); music.connect(ctx.destination);
