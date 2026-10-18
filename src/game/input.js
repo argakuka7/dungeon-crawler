@@ -10,7 +10,7 @@
 // beside the player, else trade with the villager beside them, else collect what lies around
 // (Enter is the chat, game/console.js). I (or V): the inventory, with the floor in reach beside the bag
 // when something lies there (game/inventory.js); X: item labels. 1-6: the quick bar (game/
-// quickbar.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
+// quickbar.js; while the teleport scroll asks where to, they pick there: game/teleportmenu.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
 // action button holds like Shift, its use button is the action key, and a tap on the game
 // clicks there without walking.
 import { stepZoom } from '../core/zoom.js';
@@ -33,6 +33,7 @@ import { toggleMusic, keysOf, bindings, actionsOf } from './settings.js';
 import { settingsOpen } from './settingsmenu.js';
 import { actionsFor, isChar, isModifier, BAR_ACTIONS, MOVE_ACTIONS } from '../core/keybinds.js';
 import { barKey } from './quickbar.js';
+import { teleportMenuOpen, closeTeleportMenu, pickTeleport } from './teleportmenu.js';
 import { setMenuOpen, toggleMenu } from './escmenu.js';
 import { useAction } from './action.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
@@ -95,8 +96,13 @@ addEventListener('keydown', e => {
   if (is('inventory')) { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
   if (e.code === 'Escape' && state.inventoryOpen) { setInventoryOpen(false); e.preventDefault(); return; }
   // the quick bar (with the inventory open: put the selected item there); not while typing
+  // (the teleport scroll asking where to, game/teleportmenu.js: the keys pick there; Esc closes it)
   const bar = BAR_ACTIONS.findIndex(is);
-  if (bar >= 0 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) { if (!e.repeat) barKey(bar); e.preventDefault(); return; }
+  if (bar >= 0 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) {
+    if (!e.repeat) { if (teleportMenuOpen()) pickTeleport(bar); else barKey(bar); }
+    e.preventDefault(); return;
+  }
+  if (e.code === 'Escape' && teleportMenuOpen()) { closeTeleportMenu(); e.preventDefault(); return; }
   if (state.inventoryOpen) return;
   if (is('help')) { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
   if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }

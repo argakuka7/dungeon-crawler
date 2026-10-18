@@ -12,7 +12,8 @@ import { ITEMS } from '../core/items.js';
 import { BAR_SIZE, barEntry, ownedItem, removeItem } from '../core/inventory.js';
 import { drinkPotion, cooldownShare } from '../core/potions.js';
 import { floatText } from '../render/floattext.js';
-import { displayName } from '../core/gear/stats.js';
+import { itemName, defName } from './itemnames.js';
+import { together } from '../net/online.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { equipOwnedWeapon, readyFlask } from './equipment.js';
 import { useTownPortal } from './townportal.js';
@@ -49,7 +50,7 @@ export function useItem(instanceId) {
   if (!def || state.transitioning) return false;
   if (def.weapon) {
     // the weapon's own slot with a flask in hand: put the flask away
-    if (inv.equipped === instanceId && !inv.readied) { setStatus(`${displayName(slot)} is already equipped`); return false; }
+    if (inv.equipped === instanceId && !inv.readied) { setStatus(`${itemName(slot)} is already equipped`); return false; }
     if (inv.equipped === instanceId) return readyFlask(null);
     equipOwnedWeapon(instanceId);
     return true;
@@ -124,13 +125,13 @@ function draw() {
     b.classList.toggle('none-left', !!e && !e.slot);
     b.querySelector('.qb-count').textContent = def && def.stackLimit > 1 ? String(e.count) : '';
     const k = slotKey(i), key = k ? ` (${k})` : '';
-    b.title = def ? `${e.slot ? displayName(e.slot) : def.name}${key}` : `Empty${key}: select a bag item in the inventory and ${k ? `press ${k}` : 'click here'}`;
+    b.title = def ? `${e.slot ? itemName(e.slot) : defName(def)}${key}` : `Empty${key}: select a bag item in the inventory and ${k ? `press ${k}` : 'click here'}`;
   });
 }
 
 // every frame: redraw on inventory changes, and fill the slot being cast
 export function updateQuickbar() {
-  const inv = player.inventory, next = `${inv.version}:${inv.equipped}:${inv.readied}`;
+  const inv = player.inventory, next = `${inv.version}:${inv.equipped}:${inv.readied}:${together()}`;   // (together: a tool's other name)
   if (next !== signature || inv !== shown) { signature = next; shown = inv; draw(); }
   bar.classList.toggle('assigning', state.inventoryOpen);
   bar.classList.toggle('ready', barReady());

@@ -983,6 +983,8 @@ quick bar, assignment, the cast and its interruptions, both trips and closing.
   stand where you came into this cube (`state.arrival`), with your health and conditions as
   they were; the cube is not reset as on a death. Portals and open faces at the arrival point
   wait until you step out of them (`lockPortalsHere`).
+  Playing together it is the Teleport Scroll and can take you to a friend as well (see
+  `docs/online.md`).
 
 ### Opened side connections
 

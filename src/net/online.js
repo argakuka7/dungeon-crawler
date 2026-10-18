@@ -12,6 +12,12 @@ export const online = {
 };
 export const together = () => online.peers.size > 0;
 
+// Going over to another player (the teleport scroll: game/roomportal.js; net/session.js sets these):
+//   targets()   the others, by number: [{ slot, name, why }]; why: null when they can be gone to
+//               now, else why not ('In another world', 'On the move', ...)
+//   goTo(slot)  fade over to them and stand beside them; false (having said why) when not now
+export const travel = { targets: () => [], goTo: () => false };
+
 // Every player's colour, by player number: the same on every screen (their hero, our own too
 // while together, their health bar and minimap arrow: render/partner.js, render/character.js
 // tintCharacter, game/minimap.js)

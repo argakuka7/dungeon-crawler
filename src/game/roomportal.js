@@ -4,6 +4,10 @@
 // ground: it works on a ladder, in mid-air or wedged anywhere. Then the screen fades and you
 // stand where you came into this cube (state.arrival), as you were: unlike a death, the cube
 // stays as it is. One way, never used up.
+//
+// Playing together it is the teleport scroll (game/itemnames.js): using it first asks where to
+// (game/teleportmenu.js): back to where you came in, as alone, or over to one of the others
+// (net/online.js travel). The cast is the same; where the friend is counts once it is read.
 import { ROOM_PORTAL_CAST } from '../core/items.js';
 import { respawnPoint } from '../physics/respawn.js';
 import { floatText } from '../render/floattext.js';
@@ -15,6 +19,8 @@ import { startCast, cancelCast } from './townportal.js';
 import { lockPortalsHere } from './portals.js';
 import { cancelSword } from './sword.js';
 import { clearMouseInput } from './orders.js';
+import { openTeleportMenu, closeTeleportMenu, teleportMenuOpen } from './teleportmenu.js';
+import { together, travel, playerColor } from '../net/online.js';
 
 const FADE_MS = 380;
 
@@ -25,23 +31,54 @@ function say(message) {
 
 // why the scroll cannot be read right now (null: it can)
 function castBlocked() {
-  const p = player, a = state.arrival;
-  if (!state.map || state.transitioning || !a) return 'Not now';
+  const p = player;
+  if (!state.map || state.transitioning || !state.arrival) return 'Not now';
   if (state.fallFrom) return 'Not while falling';
-  if (p.hp <= 0 || p.ragdoll || p.getUp) return 'Get up first';
+  if (p.hp <= 0 || p.ragdoll || p.getUp || p.down) return 'Get up first';
   if (p.stun > 0 || p.sword.active) return 'Finish your current action first';
-  if (Math.hypot(p.x - a.x, p.z - a.z) < 1 && Math.abs(p.y - a.y) < 0.6) return 'You are where you came in already';
   return null;
 }
+// ... and why it cannot take you back to where you came in
+function entryBlocked() {
+  const p = player, a = state.arrival;
+  return a && Math.hypot(p.x - a.x, p.z - a.z) < 1 && Math.abs(p.y - a.y) < 0.6 ? 'You are where you came in already' : null;
+}
 
-// use the scroll: start reading it (or stop a cast in progress)
+// use the scroll: start reading it (playing together: ask where to first), or stop a cast in
+// progress (or the asking)
 export function useRoomPortal() {
+  if (teleportMenuOpen()) { closeTeleportMenu(); return false; }
   if (state.cast) { cancelCast('Portal cancelled'); return false; }
   const why = castBlocked();
   if (why) { say(why); return false; }
-  startCast({ kind: 'roomPortal', duration: ROOM_PORTAL_CAST, firm: false, done: takeRoomPortal });
-  setStatus('Reading the room portal scroll... hold still');
+  if (together()) { openTeleportMenu(destinations, castTo); return true; }
+  const back = entryBlocked();
+  if (back) { say(back); return false; }
+  return castTo({ to: 'entry' });
+}
+
+// where the teleport scroll can take you: where you came in, then the others (null: alone again)
+function destinations() {
+  if (!together()) return null;
+  return [{ to: 'entry', label: 'Where you came in', why: entryBlocked() },
+    ...travel.targets().map(t => ({ to: t.slot, label: t.name, color: playerColor(t.slot), why: t.why }))];
+}
+
+// read the scroll for there: to 'entry' or a player's number
+function castTo({ to, label }) {
+  const why = castBlocked();
+  if (why) { say(why); return false; }
+  const friend = to !== 'entry';
+  startCast({ kind: 'roomPortal', duration: ROOM_PORTAL_CAST, firm: false, done: friend ? () => takeToFriend(to) : takeRoomPortal });
+  setStatus(friend ? `Reading the teleport scroll to ${label}... hold still`
+    : together() ? 'Reading the teleport scroll... hold still' : 'Reading the room portal scroll... hold still');
   return true;
+}
+
+function takeToFriend(slot) {
+  if (state.transitioning) return;
+  if (travel.goTo(slot)) sfx('portal');
+  else sfx('fizzle');
 }
 
 function takeRoomPortal() {

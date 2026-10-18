@@ -109,18 +109,22 @@ const stackables = [
 ].map(([id, name]) => ({ id, name, category: 'item', stackLimit: 99, model: model(id) }));
 // Tools are used, not consumed. `bound`: never leaves the bag (no Drop); `use`: what using it
 // does (game/quickbar.js useItem). They never lie on the floor, so they have no `model`; their
-// `picture` is the model the bag shows them as (render/itemviews.js).
+// `picture` is the model the bag shows them as (render/itemviews.js). `together`: the name and
+// description it goes by while friends play along (game/itemnames.js); it is the same item.
 export const TOWN_PORTAL = {
   id: 'item_town_portal', name: 'Town Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'townPortal',
   description: 'Opens a portal to town after 5 seconds of standing still. Step back through it in town to return here. Never used up.',
   picture: model('item_town_portal'),
 };
-// the way out of a spot you cannot leave (game/roomportal.js)
+// the way out of a spot you cannot leave (game/roomportal.js); playing together it also takes
+// you to a friend, picked from a little menu (game/teleportmenu.js)
 export const ROOM_PORTAL_CAST = 3;   // s holding still to read it
 export const ROOM_PORTAL = {
   id: 'item_room_portal', name: 'Room Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'roomPortal',
   description: `Takes you back to where you came into this room after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere: the way out when you are stuck. One way. Never used up.`,
   picture: model('item_room_portal'),
+  together: { name: 'Teleport Scroll',
+    description: `Takes you back to where you came into this room, or to a friend, after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere. Never used up.` },
 };
 // every hero carries these (core/progression.js carryTools)
 export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];

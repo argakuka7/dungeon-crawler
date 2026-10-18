@@ -12,8 +12,8 @@
 // after any player there; the others are shown them and fight them, blows on them are sent
 // over as `hurt`. When players meet or part, the enemies change hands as they are
 // (`handover`, game/enemies.js adoptEnemies). In a cube together every kill gives each player
-// XP; apart, a kill only tells the others the enemy is gone (`defeated`). goToFriend fades you
-// over to a friend (not bound to a key for now; an item will do it).
+// XP; apart, a kill only tells the others the enemy is gone (`defeated`). The teleport scroll
+// (game/roomportal.js) fades you over to a friend (online.js travel: goTo).
 //
 // The floor loot and the chests are shared (game/loot.js): the killer's or opener's game rolls
 // a drop and shows it at once (`drop`), the host keeps the first drop of each source and tells
@@ -49,7 +49,7 @@ import { openRoom, joinRoom } from './transport.js';
 import { PROTOCOL, MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf, roomCode, cleanName, isMe,
   SEND_EVERY, FOES_EVERY, FAR_EVERY, PING_EVERY, LOST, REJOIN_EVERY, REJOIN_TRIES, CHAT_MAX, chatAllowed } from './protocol.js';
 import { Timeline } from './sync.js';
-import { online, relay } from './online.js';
+import { online, relay, travel } from './online.js';
 import { Runner, Viewer, canBeHit } from './foes.js';
 import { setOthers } from '../game/party.js';
 import { allEnemies, adoptEnemies, shareDefeat } from '../game/enemies.js';
@@ -90,8 +90,6 @@ let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendin
 let facesSent = 0;
 // the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's)
 let foes = null, lastFoes = 0;
-// F: the player we went to last (the next F goes to the next one)
-let followed = -1;
 
 // The other players, by number: { slot, name, pid, timeline (their `me`), body (their
 // stand-in, for the enemies we run to go after, game/party.js), inCube (in our cube, not
@@ -646,15 +644,24 @@ function beside(p) {
   return null;
 }
 
-// fade over to the cube a friend is in, and stand next to them (the next friend each time)
-export function goToFriend() {
-  const list = [...peers.values()].filter(p => p.timeline.latest()).sort((a, b) => a.slot - b.slot);
-  if (!list.length) return;
-  const p = list.find(o => o.slot > followed) ?? list[0], them = p.timeline.latest();
-  if (busy() || player.down || player.ragdoll || them.busy || them.seed !== state.cubes?.seed) { say('Not now'); return; }
-  followed = p.slot;
-  follow(them, p.name);
+// why we cannot go over to the other player p now (null: we can)
+function unreachable(p) {
+  const them = p.timeline.latest();
+  if (!them) return 'Not here yet';
+  if (them.seed !== state.cubes?.seed) return 'In another world';
+  if (them.busy) return 'On the move';
+  const [x, , z] = them.body;
+  if (them.cube === state.cubeKey && Math.hypot(x - player.x, z - player.z) < 2) return 'Right beside you';
+  return null;
 }
+travel.targets = () => [...peers.values()].sort((a, b) => a.slot - b.slot).map(p => ({ slot: p.slot, name: p.name, why: unreachable(p) }));
+// fade over to the cube player `slot` is in, and stand next to them
+travel.goTo = slot => {
+  const p = peers.get(slot), why = !p ? 'They left' : busy() || player.down || player.ragdoll ? 'Not now' : unreachable(p);
+  if (why) { say(p ? `${p.name}: ${why}` : why); return false; }
+  follow(p.timeline.latest(), p.name);
+  return true;
+};
 function follow(them, name) {
   const cubes = state.cubes, key = them.cube, at = { x: them.pose.p[0], y: them.pose.p[1], z: them.pose.p[2] };
   following = true;
@@ -662,7 +669,7 @@ function follow(them, name) {
   state.transitioning = true; state.portalCharge = null;
   cancelSword(true); cancelCast(); clearMouseInput();
   fadeOut();
-  say(`Following ${name}`);
+  say(`Off to ${name}`);
   setTimeout(() => whenReady(cubes.get(key)).then(c => {
     following = false;
     if (state.cubes !== cubes) return;

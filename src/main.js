@@ -28,6 +28,7 @@ import { updatePlayerBar } from './render/playerbar.js';
 import { updatePortalBar } from './render/portalbar.js';
 import { updateCastBar } from './render/castbar.js';
 import { updateQuickbar } from './game/quickbar.js';
+import { updateTeleportMenu } from './game/teleportmenu.js';
 import { updateTouch } from './game/touch.js';
 import './game/nozoom.js';   // the page never zooms, only the game's view
 import { updateLoot } from './game/loot.js';
@@ -133,7 +134,7 @@ function frame(now = performance.now()) {
   updateHud(player, state.map);
   updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
   updateInventory();
-  updateQuickbar(); updateEffects(); updateTouch();
+  updateQuickbar(); updateTeleportMenu(); updateEffects(); updateTouch();
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Teacher (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items

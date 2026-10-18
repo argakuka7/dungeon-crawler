@@ -44,9 +44,15 @@ being helped up and getting back in. Up to four players, co-op.
   red, like playing alone).
 - Each explores where they like. Each player is an arrow in their colour on the minimap, pointing
   where they face (a friend off the map is a line under it: another depth, in a house, far
-  away). The map is round, follows you and turns with the camera (`game/minimap.js`). Going over to a friend (`session.js goToFriend`:
-  beside them and locked out of any portal you arrive in, `game/portals.js lockPortalsHere`;
-  again: the next friend) has no key for now; an item is to do it.
+  away). The map is round, follows you and turns with the camera (`game/minimap.js`).
+- **The teleport scroll**: playing together, the room portal scroll goes by that name (the
+  same item, `core/items.js` `together`, `game/itemnames.js`). Using it first asks where to
+  (`game/teleportmenu.js`, on the quick bar keys or a click): where you came into the room, or
+  one of the others, in their colour. A friend in another world, travelling or right beside you
+  cannot be picked (it says why). Then it is read as alone (3 s holding still), and where the
+  friend is counts once it is read: you fade over to their cube and stand beside them, locked
+  out of any portal you arrive in (`online.js travel`, `session.js follow`,
+  `game/portals.js lockPortalsHere`). Esc, using the scroll again or moving closes the menu.
 - A fifth player is turned away (`full`), another version too (`version`, `PROTOCOL` in
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for new guests. When the host leaves, the game is over for everyone.
