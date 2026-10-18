@@ -139,6 +139,10 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #settings-close { margin-left: auto; color: #8a96a8 !important; background: none !important; border: none !important; padding: 0 !important; font-size: 11px !important; }
 #settings-reset { margin-left: auto; padding: 2px 8px !important; font-size: 11px !important; color: #aab3c2 !important; }
 #settings-reset.confirm { color: #ffd0c4 !important; border-color: #b0563f !important; background: #3a2420 !important; }
+.settings-graphics { display: grid; grid-template-columns: 9em 1fr; align-items: center; gap: 8px 12px; color: #e6e9ef; }
+.settings-choice { display: flex; flex-wrap: wrap; gap: 4px; }
+.settings-choice button { min-width: 4em; }
+#settings-panel .settings-choice button.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }
 .settings-sound { display: grid; grid-template-columns: 9em 1fr 3.5em; align-items: center; gap: 8px 12px; color: #e6e9ef; }
 .settings-sound button { justify-self: start; min-width: 5em; }
 #settings-music.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }

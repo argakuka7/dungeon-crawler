@@ -70,6 +70,7 @@ import { musicInfo } from './audio/music.js';
 import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
+import { frameRate } from './game/settings.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
 import { updateShowcase } from './game/showcase.js';
@@ -80,11 +81,30 @@ import { drawPortrait, portraitShown } from './render/portrait.js';
 
 // seconds since the last frame (THREE.Clock is deprecated; Timer measures the same)
 const timer = new THREE.Timer(), clock = { getDelta: () => timer.update().getDelta() };
+// s: the longest step the game takes at once, so a hitch is not one huge jump (a little over
+// 1/30: frames capped at 30 a second wobble around it)
+const MAX_STEP = 1 / 27;
+
+// The frame rate cap (the settings, game/settings.js): the screen asks for a frame as often as it
+// shows one (60, 120 times a second ...); under a cap the ones that come too early are skipped.
+// SLACK: ms a frame may come early (the screen's ticks wobble a little).
+const SLACK = 2;
+let due = 0;   // when the next frame is due (ms)
+function tooEarly(now) {
+  const fps = frameRate();
+  if (!fps) return false;
+  const interval = 1000 / fps;
+  if (now < due - SLACK) return true;
+  if (now - due > interval) due = now;   // fell behind (or just started): count from here
+  due += interval;
+  return false;
+}
 
 // learn: architecture.html#conductor #main-js, loop.html#frame-code #one-tick #pause #smoothing (see learn/README.md)
-function frame() {
+function frame(now = performance.now()) {
+  if (tooEarly(now)) { requestAnimationFrame(frame); return; }
   const start = performance.now();
-  const elapsed = Math.min(clock.getDelta(), 1 / 30);
+  const elapsed = Math.min(clock.getDelta(), MAX_STEP);
   if (state.mode === 'menu') { menuFrame(elapsed, start); return; }
   if (character.ready) character.group.visible = true;
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
@@ -133,7 +153,7 @@ function frame() {
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   renderer.render(scene, camera);
   keepPrograms();   // compiled shaders stay (render/programs.js)
-  tickResolution(start);   // fewer pixels while the GPU cannot keep up (render/resolution.js)
+  tickResolution(start, frameRate());   // fewer pixels while the GPU cannot keep up (render/resolution.js)
   requestAnimationFrame(frame);
 }
 
@@ -162,7 +182,7 @@ function menuFrame(dt, start) {
   renderer.render(scene, camera);
   drawPortrait(heroBox());
   keepPrograms();
-  tickResolution(start);
+  tickResolution(start, frameRate());
   requestAnimationFrame(frame);
 }
 

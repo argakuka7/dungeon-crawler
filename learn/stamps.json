@@ -154,7 +154,7 @@
     "src/game/sword.js#updateSword": "c63bdb32",
     "src/game/update.js#lunge": "9120b7a5",
     "src/game/update.js#updatePlayer": "775e8718",
-    "src/main.js#frame": "1fdccdba",
+    "src/main.js#frame": "6e81bd06",
     "src/net/foes.js#header": "6a75fdb3",
     "src/net/foes.js#Viewer": "bd4df430",
     "src/net/protocol.js#CODE_LENGTH": "7525b64a",

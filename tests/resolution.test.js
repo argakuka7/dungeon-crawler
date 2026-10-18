@@ -79,3 +79,29 @@ test('stalls (a background tab, a hitch) are not counted', () => {
   assert.deepEqual(run(c, 20000, 500, 5), []);
   assert.equal(c.ratio, 2);
 });
+
+// feed `ms` of frames under a frame rate cap of `target` ms
+function capped(c, ms, interval, spent, target) {
+  const changes = [];
+  for (let t = 0; t < ms; t += interval) {
+    const r = c.tick(interval, spent, target);
+    if (r) changes.push(r);
+  }
+  return changes;
+}
+
+test('a frame rate cap is not mistaken for slow frames', () => {
+  const c = resolutionController(2);
+  assert.deepEqual(capped(c, 20000, 1000 / 30, 4, 1000 / 30), []);   // capped at 30, keeping up
+  assert.equal(c.ratio, 2);
+  const d = resolutionController(2);
+  assert.deepEqual(capped(d, 1000, 50, 5, 1000 / 30), [1.7]);        // capped at 30 but only making 20
+  const e = resolutionController(2);
+  run(e, 1000, 30, 5);                                               // 2 -> 1.7
+  capped(e, 1000, 1000 / 30, 4, 1000 / 30);                          // proves itself under the cap
+  capped(e, 8000, 1000 / 30, 4, 1000 / 30);                          // smooth at the cap: back up
+  assert.ok(e.ratio > 1.7, String(e.ratio));
+  const f = resolutionController(2);
+  assert.deepEqual(capped(f, 1000, 1000 / 60, 4, 1000 / 60), []);    // a cap of 60 judges as before
+  assert.deepEqual(capped(f, 1000, 30, 5, 1000 / 60), [1.7]);
+});

@@ -9,9 +9,12 @@
 //     is taken back and stepping down rests for a while.
 //   - Stepping up again waits for a calm spell, twice as long each time a step up had to be taken
 //     back right away, so the resolution does not see-saw.
+//   - Under a frame rate cap (the settings, game/settings.js) frames are judged against the cap:
+//     30 frames a second that were asked for are not slow.
 
 export const SLOW = 1000 / 50;       // ms between frames: slower than 50 fps is too slow
 const SMOOTH = 1000 / 57;            // ms between frames: faster than ~57 fps (vsync at 60 or more)
+const CAP_SLOW = 1.2, CAP_SMOOTH = 1.05;   // under a cap: too slow / smooth, times the capped interval
 const CPU_BOUND = 0.6;               // the frame's work takes this much of the time between frames
 const STALL = 250;                   // ms: a hitch, a background tab; not counted
 const WINDOW = 1000;                 // ms of frames judged at a time
@@ -24,20 +27,21 @@ export function resolutionController(max, min = Math.min(max, Math.max(0.6, max 
   let ratio = max, sum = 0, work = 0, n = 0, span = 0;
   let smooth = 0, calm = CALM, rest = 0, trial = null, raised = -Infinity, clock = 0;
   const clamp = r => Math.min(max, Math.max(min, r));
-  // interval: ms since the last frame; spent: ms the frame's own work took. Returns the new
-  // ratio when it changes, else null.
-  function tick(interval, spent) {
+  // interval: ms since the last frame; spent: ms the frame's own work took; target: ms between
+  // frames the frame rate cap asks for (0: no cap). Returns the new ratio when it changes, else null.
+  function tick(interval, spent, target = 0) {
     if (!(interval > 0) || interval > STALL) return null;
     clock += interval; rest = Math.max(0, rest - interval);
     sum += interval; work += spent; n++; span += interval;
     if (span < WINDOW) return null;
     const avg = sum / n, busy = work / sum;
+    const slow = Math.max(SLOW, target * CAP_SLOW), fast = Math.max(SMOOTH, target * CAP_SMOOTH);
     sum = work = n = span = 0;
     if (trial) {   // the second after a step down: did it help?
       const t = trial; trial = null;
       if (avg > t.before * PROOF) { rest = REST; return set(t.from); }
     }
-    if (avg > SLOW) {
+    if (avg > slow) {
       smooth = 0;
       if (clock - raised < 3000) calm = Math.min(CALM_MAX, calm * 2);   // the step up was too much
       if (busy < CPU_BOUND && rest === 0 && ratio > min) {
@@ -46,7 +50,7 @@ export function resolutionController(max, min = Math.min(max, Math.max(0.6, max 
       }
       return null;
     }
-    smooth = avg < SMOOTH ? smooth + WINDOW : 0;
+    smooth = avg < fast ? smooth + WINDOW : 0;
     if (smooth >= calm && ratio < max) { smooth = 0; raised = clock; return set(clamp(ratio * UP)); }
     return null;
   }

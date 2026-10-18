@@ -1,5 +1,5 @@
 // The settings menu, from the Esc menu (game/escmenu.js) and the main menu (game/menu.js): the
-// music on or off, the music's and the sounds' volume, and the keys: each control's primary and
+// frame rate cap, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
 // The keys come in tabs, one per kind of control (core/keybinds.js GROUPS; Left and Right go
@@ -8,6 +8,7 @@
 // or Delete leaves the place empty. While the settings are open the game gets no keys.
 import { ACTIONS, ACTION, GROUPS, UNBINDABLE } from '../core/keybinds.js';
 import {
+  FRAME_RATES, frameRate, setFrameRate,
   musicOn, setMusic, musicVolume, setMusicVolume, soundVolume, setSoundVolume,
   keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange,
 } from './settings.js';
@@ -43,6 +44,13 @@ export function closeSettings() {
 
 // --- drawing ------------------------------------------------------------------------------------
 
+// a row of buttons, one pressed: [value, label] pairs
+function choice(box, options, current) {
+  box.innerHTML = options.map(([v, label]) => `<button data-value="${v}" aria-pressed="${v === current}" class="${v === current ? 'on' : ''}">${esc(label)}</button>`).join('');
+}
+function renderGraphics() {
+  choice($('settings-fps'), FRAME_RATES.map(f => [f, f ? String(f) : 'Unlimited']), frameRate());
+}
 function renderSound() {
   const on = musicOn();
   $('settings-music').textContent = on ? 'On' : 'Off';
@@ -76,9 +84,12 @@ function render() {
   const focused = document.activeElement?.closest?.('#settings-keys [data-id]');
   const place = focused && { id: focused.dataset.id, slot: focused.dataset.slot };
   const onTab = document.activeElement?.closest?.('#settings-tabs');
-  renderSound(); renderKeys();
-  // the focus stays on the key place or the tab it was on (they were drawn anew)
-  if (place) keysBox.querySelector(`[data-id="${place.id}"][data-slot="${place.slot}"]`)?.focus();
+  const pressed = document.activeElement?.closest?.('.settings-choice [data-value]');
+  const chosen = pressed && { box: pressed.parentElement.id, value: pressed.dataset.value };
+  renderGraphics(); renderSound(); renderKeys();
+  // the focus stays on the key place, the tab or the choice it was on (they were drawn anew)
+  if (chosen) $(chosen.box).querySelector(`[data-value="${chosen.value}"]`)?.focus();
+  else if (place) keysBox.querySelector(`[data-id="${place.id}"][data-slot="${place.slot}"]`)?.focus();
   else if (onTab) tabs.querySelector('.on')?.focus();
 }
 function showTab(g) {
@@ -137,6 +148,10 @@ keysBox.addEventListener('click', e => {
 });
 $('settings-close').onclick = () => closeSettings();
 overlay.addEventListener('pointerdown', e => { if (e.target === overlay) closeSettings(); });
+$('settings-fps').addEventListener('click', e => {
+  const b = e.target.closest('[data-value]');
+  if (b) setFrameRate(Number(b.dataset.value));
+});
 $('settings-music').onclick = () => setMusic(!musicOn());
 $('settings-music-volume').addEventListener('input', e => setMusicVolume(e.target.value / 100));
 $('settings-sound-volume').addEventListener('input', e => setSoundVolume(e.target.value / 100));
