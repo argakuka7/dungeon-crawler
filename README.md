@@ -94,33 +94,35 @@ see `docs/combat.md`.
 
 ## Blender MCP (Pi)
 
-With Node.js, [uv](https://docs.astral.sh/uv/getting-started/installation/), and
-Blender installed, start Pi from the repository root. `.pi/mcp.json` runs
+Pi talks to Blender through the [Blender Lab MCP server](https://projects.blender.org/lab/blender_mcp).
+With Node.js, git, [uv](https://docs.astral.sh/uv/getting-started/installation/), and
+Blender 5.1+ installed, start Pi from the repository root. `.pi/mcp.json` runs
 `tools/blender-mcp.mjs`, which automatically:
 
-- Creates a Python 3.11 environment in `.pi/blender-mcp/` (ignored by Git).
-- Installs the pinned `mcp-for-blender==2.1.9` server and matching bundled addon.
-- Reuses a running addon server, or opens a new Blender window with the addon
-  loaded for that session, without modifying saved Blender preferences.
+- Checks out the pinned server and addon revision into `.pi/blender_mcp/src/`
+  and installs the server into a Python environment in `.pi/blender_mcp/venv/`
+  (both ignored by Git).
+- Reuses a running Blender that serves the addon, or opens a new Blender window
+  with it. An installed and enabled copy of the addon is used as is; otherwise
+  the project checkout is loaded for that session only, without saving it to
+  your Blender preferences.
 
-The first launch needs internet access and may take longer while downloading
-Python and dependencies. Keep the Blender window open. No manual addon install
-or personal checkout path is needed. The server's tools differ from the previous
-custom Mac-only setup. Delete `.pi/blender-mcp/` to rebuild the local environment.
+The first launch needs internet access. Keep the Blender window open. To update
+the server, change `revision` in `tools/blender-mcp.mjs`; delete
+`.pi/blender_mcp/` to rebuild everything.
 
 The launcher detects standard Windows and macOS Blender installs, or uses
-`blender` on PATH. For other locations, set `BLENDER_EXECUTABLE` to the executable
-path before starting Pi. It finds uv in `~/.local/bin` or on PATH; `BLENDER_MCP_UV`
-overrides that. The launcher reuses the first port in 9876-9885 that runs this
-addon and skips ports held by other servers (such as a different Blender MCP
-addon); otherwise it starts Blender on the first free one. `BLENDER_PORT` pins a
-single port. A remote `BLENDER_HOST` requires
-an already running remote addon; the launcher will not start a local Blender for it.
+`blender` on PATH; `BLENDER_PATH` overrides that. It finds uv in `~/.local/bin`
+or on PATH; `BLENDER_MCP_UV` overrides that. It reuses the first port in
+9876-9885 that runs the addon and skips ports held by other servers; otherwise it
+starts Blender on the first free one. `BLENDER_MCP_PORT` pins a single port. A
+remote `BLENDER_MCP_HOST` requires an already running addon there; the launcher
+will not start a local Blender for it.
 
 Run `pi mcp list` to check discovery and ask Pi for scene information to verify
 the live connection. Use `/reload` after configuration changes in an existing
-Pi session. Telemetry is disabled and Python stdio uses UTF-8. Keep the addon
-bound to localhost: it allows arbitrary Python execution. Save your work first.
+Pi session. Keep the addon bound to localhost: it allows arbitrary Python
+execution. Save your work first.
 
 ## Re-exporting assets
 

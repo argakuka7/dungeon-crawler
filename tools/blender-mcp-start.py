@@ -1,18 +1,51 @@
-"""Load the project-bundled addon in a new Blender session, without saving preferences."""
-import importlib.util
+"""Serve the Blender Lab MCP addon from this session, without saving preferences.
+
+Run by tools/blender-mcp.mjs as `blender --python blender-mcp-start.py -- <addon dir>`.
+An already enabled copy of the addon (e.g. an installed extension) is reused,
+otherwise the project checkout is enabled for this session only.
+"""
 import os
 import sys
 
+import addon_utils
 import bpy
 
-# An enabled user addon may already have registered these properties.
-if not hasattr(bpy.types.Scene, 'blendermcp_port'):
-    addon_path = sys.argv[sys.argv.index('--') + 1]
-    spec = importlib.util.spec_from_file_location('blender_mcp_project', addon_path)
-    addon = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = addon
-    spec.loader.exec_module(addon)
-    addon.register()
+PORT = int(os.environ.get('BLENDER_MCP_PORT', '9876'))
+preferences = bpy.context.preferences
+was_dirty = preferences.is_dirty
 
-bpy.context.scene.blendermcp_port = int(os.environ.get('BLENDER_PORT', '9876'))
-bpy.context.scene.blendermcp_auto_start_server = True
+
+def find_enabled():
+    for name in preferences.addons.keys():
+        if name + '.mcp_to_blender_server' in sys.modules:
+            return name
+    return None
+
+
+name = find_enabled()
+if name is None:
+    sys.path.insert(0, sys.argv[sys.argv.index('--') + 1])
+    # The addon reads its settings from its preferences entry, so it needs one;
+    # the dirty flag is reset below so the entry is not saved on quit.
+    addon_utils.enable('blender_mcp_addon', default_set=True)
+    name = 'blender_mcp_addon'
+
+addon = preferences.addons[name].preferences
+if addon.port != PORT:
+    addon.port = PORT
+preferences.is_dirty = was_dirty
+server = sys.modules[name + '.mcp_to_blender_server']
+
+
+def ensure_started():
+    # The addon's own autostart may be disabled or delayed; start it if not running.
+    if server.is_running():
+        return None
+    try:
+        bpy.ops.blmcp.server_start()
+    except RuntimeError as ex:
+        print(f'Blender MCP: {ex}', file=sys.stderr)
+    return None
+
+
+bpy.app.timers.register(ensure_started, first_interval=addon.autostart_delay + 1.0)

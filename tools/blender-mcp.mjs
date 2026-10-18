@@ -1,4 +1,7 @@
-// Project-local MCP environment; never install Python packages into Blender itself.
+// Launches the Blender Lab MCP server (https://projects.blender.org/lab/blender_mcp)
+// from a project-local checkout and environment in .pi/blender_mcp/, starting
+// Blender with its addon when no running instance serves it.  Never installs
+// anything into Blender itself.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -7,13 +10,17 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const directory = join(root, '.pi', 'blender-mcp');
-const version = '2.1.9';
-const python = join(directory, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
-const marker = join(directory, '.installed-version');
-const env = { ...process.env, DISABLE_TELEMETRY: 'true', PYTHONIOENCODING: 'utf-8' };
+const directory = join(root, '.pi', 'blender_mcp');
+const repository = 'https://projects.blender.org/lab/blender_mcp.git';
+const revision = 'dbbf836ad4b1025f14a2b3b504c43903f39e0b04';
+const source = join(directory, 'src');
+const venv = join(directory, 'venv');
+const python = join(venv, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+const marker = join(directory, '.installed-revision');
+const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
 const localUv = join(homedir(), '.local', 'bin', process.platform === 'win32' ? 'uv.exe' : 'uv');
-const uv = process.env.BLENDER_MCP_UV || (existsSync(localUv) ? localUv : 'uv');
+const uv = env.BLENDER_MCP_UV || (existsSync(localUv) ? localUv : 'uv');
+const host = env.BLENDER_MCP_HOST || 'localhost';
 
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, {
@@ -22,32 +29,53 @@ function run(command, args, capture = false) {
     stdio: ['ignore', capture ? 'pipe' : 2, 2],
   });
   if (result.error || result.status !== 0) {
-    throw new Error(`${command} failed: ${result.error?.message || `exit ${result.status}`}`);
+    throw new Error(`${command} ${args[0]} failed: ${result.error?.message || `exit ${result.status}`}`);
   }
   return result.stdout?.trim();
 }
 
-// Resolves to 'ready' when the port speaks this addon's protocol, 'free' when
-// nothing listens, and 'foreign' when another server (e.g. a different Blender
-// MCP addon) holds it.  Merely accepting a connection is not enough: a foreign
-// server would leave every tool call hanging.
-function probe(port, timeout = 3000) {
+function install() {
+  if (!existsSync(join(source, '.git'))) {
+    mkdirSync(directory, { recursive: true });
+    run('git', ['clone', '--quiet', repository, source]);
+  }
+  if (run('git', ['-C', source, 'rev-parse', 'HEAD'], true) !== revision) {
+    const has = spawnSync('git', ['-C', source, 'cat-file', '-e', `${revision}^{commit}`]).status === 0;
+    if (!has) run('git', ['-C', source, 'fetch', '--quiet', 'origin']);
+    run('git', ['-C', source, 'checkout', '--quiet', '--detach', revision]);
+  }
+  if (!existsSync(python)) run(uv, ['venv', '--quiet', '--python', '3.12', venv]);
+  const installed = existsSync(marker) ? readFileSync(marker, 'utf8').trim() : null;
+  if (installed !== revision) {
+    run(uv, ['pip', 'install', '--quiet', '--python', python, '--reinstall-package', 'blender-mcp', join(source, 'mcp')]);
+    writeFileSync(marker, revision);
+  }
+}
+
+// Resolves to 'ready' when the port runs the Blender Lab addon, 'free' when
+// nothing listens, and 'foreign' when another server holds it.  Merely
+// accepting a connection is not enough: with a foreign server (e.g. a
+// different Blender MCP addon) every tool call would hang.
+function probe(port, timeout = 5000) {
   return new Promise(resolve => {
-    const socket = createConnection({ host: env.BLENDER_HOST || 'localhost', port });
+    const socket = createConnection({ host, port });
     let buffer = '';
     let opened = false;
     const finish = value => { socket.destroy(); resolve(value); };
     socket.setTimeout(timeout);
     socket.once('connect', () => {
       opened = true;
-      socket.write(JSON.stringify({ type: 'get_addon_info', params: {} }));
+      socket.write(JSON.stringify({ type: 'execute', code: 'result = {}', strict_json: true }) + '\0');
     });
     socket.on('data', chunk => {
       buffer += chunk;
+      const end = buffer.indexOf('\0');
+      if (end < 0) return;
       try {
-        const response = JSON.parse(buffer);
-        finish(response?.result?.protocol_version != null ? 'ready' : 'foreign');
-      } catch { /* incomplete, wait for more */ }
+        finish(JSON.parse(buffer.slice(0, end)).status === 'ok' ? 'ready' : 'foreign');
+      } catch {
+        finish('foreign');
+      }
     });
     socket.once('error', () => finish(opened ? 'foreign' : 'free'));
     socket.once('timeout', () => finish(opened ? 'foreign' : 'free'));
@@ -55,13 +83,13 @@ function probe(port, timeout = 3000) {
   });
 }
 
-// An explicit BLENDER_PORT is used as is; otherwise reuse the first port in a
-// small range that runs this addon, or pick the first free one for a new Blender.
+// An explicit BLENDER_MCP_PORT is used as is; otherwise reuse the first port in
+// a small range that runs the addon, or pick the first free one for a new Blender.
 async function choosePort() {
-  if (env.BLENDER_PORT) {
-    const port = Number(env.BLENDER_PORT);
+  if (env.BLENDER_MCP_PORT) {
+    const port = Number(env.BLENDER_MCP_PORT);
     const state = await probe(port);
-    if (state === 'foreign') throw new Error(`Port ${port} is used by another server; choose a different BLENDER_PORT.`);
+    if (state === 'foreign') throw new Error(`Port ${port} is used by another server; choose a different BLENDER_MCP_PORT.`);
     return { port, running: state === 'ready' };
   }
   let free = null;
@@ -71,12 +99,12 @@ async function choosePort() {
     if (state === 'free' && free === null) free = port;
     if (state === 'foreign') console.error(`Port ${port} is used by another server; trying the next one.`);
   }
-  if (free === null) throw new Error('No free port in 9876-9885; set BLENDER_PORT.');
+  if (free === null) throw new Error('No free port in 9876-9885; set BLENDER_MCP_PORT.');
   return { port: free, running: false };
 }
 
 function findBlender() {
-  if (env.BLENDER_EXECUTABLE) return env.BLENDER_EXECUTABLE;
+  if (env.BLENDER_PATH) return env.BLENDER_PATH;
   if (process.platform === 'darwin') {
     for (const base of ['/Applications', join(homedir(), 'Applications')]) {
       const candidate = join(base, 'Blender.app', 'Contents', 'MacOS', 'Blender');
@@ -97,25 +125,20 @@ function findBlender() {
 }
 
 try {
-  const installed = existsSync(marker) ? readFileSync(marker, 'utf8').trim() : null;
-  if (!existsSync(python)) {
-    mkdirSync(dirname(directory), { recursive: true });
-    run(uv, ['venv', '--python', '3.11', directory]);
-  }
-  if (installed !== version) {
-    run(uv, ['pip', 'install', '--python', python, `mcp-for-blender==${version}`]);
-    writeFileSync(marker, version);
-  }
+  install();
+  // The server's *_for_cli tools run `blender --background` themselves.
+  env.BLENDER_PATH = findBlender();
 
   const { port, running } = await choosePort();
-  env.BLENDER_PORT = String(port);
+  env.BLENDER_MCP_HOST = host;
+  env.BLENDER_MCP_PORT = String(port);
   if (!running) {
-    if (env.BLENDER_HOST && !['localhost', '127.0.0.1', '::1'].includes(env.BLENDER_HOST)) {
-      throw new Error('Remote Blender is not reachable; start its addon server first.');
+    if (!['localhost', '127.0.0.1', '::1'].includes(host)) {
+      throw new Error(`Blender at ${host} is not reachable; start its addon server first.`);
     }
-    const addon = run(python, ['-c', 'from blender_mcp.addon_manager import get_bundled_addon_path; print(get_bundled_addon_path())'], true);
-    console.error('Starting Blender with the project MCP addon (no preferences are changed).');
-    const blender = spawn(findBlender(), ['--python', join(root, 'tools', 'blender-mcp-start.py'), '--', addon], {
+    console.error(`Starting Blender with the project MCP addon on port ${port} (no preferences are changed).`);
+    const addon = join(source, 'addon');
+    const blender = spawn(env.BLENDER_PATH, ['--online-mode', '--python', join(root, 'tools', 'blender-mcp-start.py'), '--', addon], {
       detached: true, stdio: 'ignore', env,
     });
     await new Promise((resolve, reject) => {
@@ -131,11 +154,11 @@ try {
     if (!ready) throw new Error('Blender did not start its MCP server within 90 seconds. Check the Blender window.');
   }
 
-  const child = spawn(python, ['-m', 'blender_mcp.server'], { cwd: root, env, stdio: 'inherit' });
+  const child = spawn(python, ['-m', 'blmcp'], { cwd: root, env, stdio: 'inherit' });
   child.on('error', error => { console.error(error.message); process.exitCode = 1; });
   child.on('exit', code => { process.exitCode = code ?? 1; });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 } catch (error) {
-  console.error(`Blender MCP: ${error.message}\nInstall uv and Blender, or set BLENDER_MCP_UV and BLENDER_EXECUTABLE to their executable paths.`);
+  console.error(`Blender MCP: ${error.message}\nInstall git, uv and Blender 5.1+, or set BLENDER_MCP_UV and BLENDER_PATH to their executable paths.`);
   process.exitCode = 1;
 }
