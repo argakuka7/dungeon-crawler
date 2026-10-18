@@ -70,7 +70,7 @@ function kindsFor(family, d, theme, force) {
 export function sunkenStages(d, theme, R, force = null) {
   const n = sunkenCount(d);
   if (force?.stages?.length) return force.stages.slice(0, 3);
-  const pool = TRIAL_KINDS.filter(k => isPuzzle(k) && TRIALS[k].built && k !== 'runes' && k !== 'timedgate');
+  const pool = TRIAL_KINDS.filter(k => isPuzzle(k) && TRIALS[k].built && k !== 'runes' && k !== 'timedgate' && TRIALS[k].deck <= 6);
   let list = pool.filter(k => trialFits(k, d, theme)).map(k => [k, trialWeight(k, theme)]);
   if (list.length < n) list = pool.map(k => [k, trialWeight(k, theme)]);
   const out = [];

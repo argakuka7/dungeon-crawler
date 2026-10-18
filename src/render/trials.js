@@ -168,6 +168,16 @@ function wheelPart(p) {
   g.position.set(p.x, p.y, p.z); g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
   return { obj: g, wheel, spin: 0 };
 }
+// a heavy crate: planks round a box, iron at its corners
+function cratePart(p) {
+  const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.85, flatShading: true });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.84, 0.84), wood); box.position.y = 0.42; box.castShadow = true; box.receiveShadow = true;
+  const band = IRON();
+  for (const y of [0.1, 0.74]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.07, 0.88), band); b.position.y = y; g.add(b); }
+  g.add(box);
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g };
+}
 // the carved lines between linked braziers
 function linkLines(pz) {
   const pts = [], at = new Map(pz.parts.filter(p => p.type === 'brazier').map(p => [p.i, p]));
@@ -242,11 +252,12 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
-    if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.plates.set(p.id, b); }
+    if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; b.cell = p.cell; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
-      : p.type === 'brazier' ? brazierPart(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p) : null;
+      : p.type === 'brazier' ? brazierPart(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
+        : p.type === 'crate' ? cratePart(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
@@ -335,6 +346,16 @@ export function setGridParts(world, m, s, shown) {
       for (const w of g.wet) w.visible = wet;
     } else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
     else if (p.type === 'wheel') g.driven = !!info?.wheel;
+    else if (p.type === 'crate') {   // where its bit says (a field cell), slid there
+      const pz = m.puzzles[p.puzzle ?? 0], F = pz.field, D = pz.deck;
+      const x = D.x0 + bit % F.w + 0.5, z = D.z0 + Math.floor(bit / F.w) + 0.5, o = g.obj.position;
+      o.x += (x - o.x) * 0.25; o.z += (z - o.z) * 0.25;
+    }
+  }
+  // a crate puzzle's plates glow while held
+  for (const [id, pl] of v.plates) {
+    const held = shown.get(pl.puzzle)?.held;
+    if (held && !(s.phase === 'resolved' || (s.stage ?? 0) > pl.puzzle)) pl.rune.material.color.set(held.has(pl.cell) ? 0xffe070 : pl.color);
   }
   for (const [i, b] of v.beams) {
     const beam = shown.get(i)?.beam, pz = m.puzzles[i];

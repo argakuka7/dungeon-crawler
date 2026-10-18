@@ -552,9 +552,11 @@ function shared(m, p) {
   // a trial room (net/trials.js): resolved, by anyone; its owner's word, to those shown it; an act on ours
   else if (m.t === 'trial') {
     const tm = trialMessage(m);
-    if (tm?.stage != null && tm.seed === state.cubes?.seed) shareTrialStage(tm);
-    else if (tm?.phase === 'resolved' && tm.gate && tm.seed === state.cubes?.seed) shareTrialResolved(tm);
-    else if (tm && foes instanceof Viewer && m.from === foes.runner) takeTrialWord(tm);
+    if (tm && tm.seed === state.cubes?.seed) {
+      if (tm.stage != null) shareTrialStage(tm);   // (a sunken room's stage: for everyone)
+      if (tm.phase === 'resolved' && tm.gate) shareTrialResolved(tm);
+      else if (foes instanceof Viewer && m.from === foes.runner) takeTrialWord(tm);
+    }
   } else if (m.t === 'trialAct') {
     const a = trialAct(m);
     if (a && foes instanceof Runner && p.here) trialActFrom(a);

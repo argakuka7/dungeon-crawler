@@ -162,6 +162,47 @@ export async function runGridChecks(kind) {
   return [kind, `${used} uses`];
 }
 
+// Crates (?trial=crates) or the two plates (?trial=plates): the reset lever puts a pushed crate back,
+// then the solver's pushes, each by walking into the crate from behind it; (the two plates: then
+// standing on the other plate) solved, the way on open
+export async function runCratesChecks(kind = 'crates') {
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === kind && t.role === 'route'));
+  check(state.dev && all.length, `load the game with ?dev=1&trial=${kind}`);
+  const t = all[0];
+  await goTrial(kind, t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
+  const pz = state.map.trial.puzzles[0], F = pz.field, D = pz.deck, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const crate = i => state.trial.bits[pz.parts.find(p => p.type === 'crate' && p.i === i).id];
+  const push = async (i, d) => {
+    const c = crate(i), bx = D.x0 + c % F.w - SD[d][0] + 0.5, bz = D.z0 + Math.floor(c / F.w) - SD[d][1] + 0.5;
+    Object.assign(player, { x: bx, y: D.level * 0.5, z: bz, vx: 0, vz: 0 });
+    player.autoDir = SD[d];
+    await until(() => crate(i) !== c, `crate ${i} pushed ${d}`, 3000);
+    player.autoDir = null;
+    await delay(150);
+  };
+  // a push, then the reset lever
+  const [i0, d0] = pz.check.solution[0], before = crate(i0);
+  await push(i0, d0);
+  const lever = pz.parts.find(p => p.type === 'reset');
+  Object.assign(player, { x: lever.x, y: lever.y, z: lever.z, vx: 0, vz: 0 });
+  await delay(100);
+  check(pendingAction()?.target?.type === 'reset', 'the reset lever in reach');
+  useAction();
+  check(crate(i0) === before, 'the reset lever puts the crates back');
+  for (const [i, d] of pz.check.solution) await push(i, d);
+  if (kind === 'plates') {   // the other plate: someone stands on it
+    const other = F.plates.find(c => !pz.parts.some(p => p.type === 'crate' && state.trial.bits[p.id] === c));
+    Object.assign(player, { x: D.x0 + other % F.w + 0.5, y: D.level * 0.5, z: D.z0 + Math.floor(other / F.w) + 0.5, vx: 0, vz: 0 });
+  }
+  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return [kind, `${pz.check.solution.length} pushes`];
+}
+
 export async function runTrialChecks(kind = 'flood') {
   const results = [];
   const all = [];

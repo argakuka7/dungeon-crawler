@@ -1,7 +1,7 @@
 // The puzzle solvers (docs/trials.md "Puzzles"): every puzzle is made together with its solution
 // and checked by one of these before the cube is handed out. Pure, no generator state: the tests
 // and the game's /trial solve use them too.
-import { slideStop, traceBeam, pressBrazier, allLit, tileOpen, channelFlow } from '../../core/trials.js';
+import { slideStop, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget } from '../../core/trials.js';
 
 // --- slide ---------------------------------------------------------------------------------------
 
@@ -264,6 +264,130 @@ export function makeChannels(R, w, h, band, tries = 400) {
       const turns = need.reduce((s, want, i) => s + (want ? turnsTo(tiles[i].shape, start[i], want) : 0), 0);
       if (turns >= band[0] && turns <= band[1]) return { field: F, start, solution: { turns, turnsOf: start.map((r, i) => need[i] ? turnsTo(tiles[i].shape, r, need[i]) : 0) } };
     }
+  }
+  return null;
+}
+
+// --- crates (Sokoban) --------------------------------------------------------------------------------
+
+// The cells the player reaches from p without pushing (walls and crates in the way)
+function region(F, crates, p) {
+  const seen = new Set([p]), stack = [p], block = new Set([...F.walls, ...crates]);
+  while (stack.length) {
+    const c = stack.pop(), x = c % F.w, z = Math.floor(c / F.w);
+    for (const [dx, dz] of SD) {
+      const nx = x + dx, nz = z + dz, n = nz * F.w + nx;
+      if (nx < 0 || nz < 0 || nx >= F.w || nz >= F.h || seen.has(n) || block.has(n)) continue;
+      seen.add(n); stack.push(n);
+    }
+  }
+  return seen;
+}
+
+// The fewest pushes that put a crate on every plate (goal: the plates to cover, by default all),
+// from crates and the player at p: { pushes (Infinity: none), way: [[crate index, dir], ...] }.
+// A breadth-first search over the crates' places and where the player can get to (max states).
+export function solveSokoban(F, crates, p, goal = F.plates, max = 40000) {
+  const key = (cs, reg) => `${[...cs].sort((a, b) => a - b).join(',')}|${Math.min(...reg)}`;
+  const start = { cs: crates.slice(), p, way: [] }, seen = new Set([key(crates, region(F, crates, p))]);
+  const done = cs => goal.every(g => cs.includes(g));
+  if (done(crates)) return { pushes: 0, way: [] };
+  let frontier = [start];
+  for (let depth = 1; frontier.length && seen.size < max; depth++) {
+    const next = [];
+    for (const st of frontier) {
+      const reg = region(F, st.cs, st.p);
+      for (let i = 0; i < st.cs.length; i++) for (let d = 0; d < 4; d++) {
+        const c = st.cs[i], bx = c % F.w - SD[d][0], bz = Math.floor(c / F.w) - SD[d][1], behind = bz * F.w + bx;
+        if (bx < 0 || bz < 0 || bx >= F.w || bz >= F.h || !reg.has(behind)) continue;
+        const to = pushTarget(F, st.cs, c, d);
+        if (to === null) continue;
+        const cs = st.cs.slice(); cs[i] = to;
+        const k = key(cs, region(F, cs, c));
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const way = [...st.way, [i, d]];
+        if (done(cs)) return { pushes: depth, way };
+        next.push({ cs, p: c, way });
+      }
+    }
+    frontier = next;
+  }
+  return { pushes: Infinity, way: null };
+}
+
+// Crates on plates on w x h: rubble walls inside, n plates, as many crates; made backwards (the
+// crates on the plates, pulled off at random 20-60 times), kept when the fewest pushes from the
+// entry are in `band` and no crate starts on a plate
+export function makeCrates(R, w, h, band, n, entrySide, tries = 300) {
+  const ri = (a, b) => a + Math.floor(R() * (b - a + 1)), cells = w * h;
+  for (let k = 0; k < tries; k++) {
+    const t = ri(1, (entrySide < 2 ? h : w) - 2), [ex, ez] = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][entrySide], entry = ez * w + ex;
+    const walls = [];
+    for (let c = 0; c < cells; c++) if (c !== entry && R() < 0.12) walls.push(c);
+    const F = { w, h, walls, plates: [], entry: { x: ex, z: ez, side: entrySide } };
+    if (region(F, [], entry).size !== cells - walls.length) continue;   // (every floor cell joined up)
+    const free = [...region(F, [], entry)].filter(c => c !== entry);
+    for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+    F.plates = free.slice(0, n);
+    const crates = F.plates.slice();
+    let p = free[n];
+    // pull them off: stand beside a crate, step back from it, it follows
+    const want = ri(20, 60);
+    for (let done = 0, m = 0; m < want * 8 && done < want; m++) {
+      const reg = region(F, crates, p), i = ri(0, n - 1), c = crates[i], d = ri(0, 3);
+      const sx = c % w + SD[d][0], sz = Math.floor(c / w) + SD[d][1], s = sz * w + sx;
+      const bx = sx + SD[d][0], bz = sz + SD[d][1], b = bz * w + bx;
+      if (sx < 0 || sz < 0 || sx >= w || sz >= h || bx < 0 || bz < 0 || bx >= w || bz >= h) continue;
+      if (!reg.has(s) || walls.includes(b) || crates.includes(b)) continue;
+      crates[i] = s; p = b; done++;
+    }
+    if (crates.some(c => F.plates.includes(c) || c === entry)) continue;
+    const sol = solveSokoban(F, crates, entry);
+    if (sol.pushes >= band[0] && sol.pushes <= band[1]) return { field: F, start: crates, solution: sol };
+  }
+  return null;
+}
+
+// Two plates out of sight of each other round a corner (an L of open ground, a wall in its crook),
+// at least 6 cells apart; one crate a short push (2-4) from plate B
+export function makePlates(R, w, h, tries = 300) {
+  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
+  for (let k = 0; k < tries; k++) {
+    // the L: the field less a block in one corner (the wall that hides one plate from the other)
+    const cw = ri(2, w - 3), ch = ri(2, h - 3), corner = ri(0, 3), walls = [];
+    for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
+      const inX = corner & 1 ? x >= w - cw : x < cw, inZ = corner & 2 ? z >= h - ch : z < ch;
+      if (inX && inZ) walls.push(z * w + x);
+    }
+    const open = [...Array(w * h).keys()].filter(c => !walls.includes(c));
+    const sees = (a, b) => {   // a straight line between the cells' middles over open ground only
+      const [ax, az, bx, bz] = [a % w + 0.5, Math.floor(a / w) + 0.5, b % w + 0.5, Math.floor(b / w) + 0.5], n = 24;
+      for (let i = 0; i <= n; i++) { const x = Math.floor(ax + (bx - ax) * i / n), z = Math.floor(az + (bz - az) * i / n); if (walls.includes(z * w + x)) return false; }
+      return true;
+    };
+    const A = open[ri(0, open.length - 1)], B = open[ri(0, open.length - 1)];
+    if (Math.abs(A % w - B % w) + Math.abs(Math.floor(A / w) - Math.floor(B / w)) < 6 || sees(A, B)) continue;
+    // the entry: on a side, into open ground, not on a plate
+    const side = ri(0, 3), t = ri(1, (side < 2 ? h : w) - 2), [ex, ez] = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side], entry = ez * w + ex;
+    if (walls.includes(entry) || entry === A || entry === B) continue;
+    const F = { w, h, walls, plates: [A, B], entry: { x: ex, z: ez, side } };
+    // the crate: pulled off plate B a few times
+    let crate = B, p = null;
+    for (let m = 0; m < 40 && !p; m++) {
+      const d = ri(0, 3), s = pushTarget(F, [], crate, d);
+      if (s !== null && pushTarget(F, [], s, d) !== null) p = s;
+    }
+    if (!p) continue;
+    const want = ri(2, 4);
+    for (let done = 0, m = 0; m < 60 && done < want; m++) {
+      const d = ri(0, 3), s = pushTarget(F, [crate], crate, d), b = s === null ? null : pushTarget(F, [crate], s, d);
+      if (s === null || b === null || !region(F, [crate], p).has(s)) continue;
+      crate = s; p = b; done++;
+    }
+    if (crate === B || crate === A || crate === entry) continue;
+    const sol = solveSokoban(F, [crate], entry, [B]);
+    if (sol.pushes >= 2 && sol.pushes <= 4) return { field: F, start: [crate], solution: sol };
   }
   return null;
 }

@@ -79,12 +79,12 @@ export function shapeSunken(ctx) {
     const next = path[i + 2] ?? null, entrySide = sideTo(prev), goalSide = next ? sideTo(next) : exit.dir;
     const kind = stages[i], within = { ...rect, level, walk: 0, free: [entrySide, goalSide].filter(s => !(shared && i === n - 1 && s === exit.dir)) };
     const pz = kind === 'slide' ? buildSlide(ctx, { size: SIZE.slide, band: [3, 5], decoys: 2, towards, entrySide, goalSides: [goalSide], within })
-      : buildGrid(ctx, kind, { ...gridSize(kind, spec.depth, true), towards, within });
+      : buildGrid(ctx, kind, { ...gridSize(kind, spec.depth, true), towards, within, entrySide });
     if (!pz) return;
     if (kind !== 'slide') pz.goalCell = gridGoal(pz);
     // where you stand to begin it: beyond a slide's entry gap; beside a grid puzzle's field, on the side the way comes in
     const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][kind === 'slide' ? pz.field.entry.side : entrySide];
-    pz.approach = kind === 'slide' ? pz.entryGap + dx + dz * N
+    pz.approach = kind === 'slide' ? pz.entryGap + dx + dz * N : pz.approach != null ? pz.approach
       : idx(Math.min(N - 2, Math.max(1, pz.deck.x0 + (pz.deck.w >> 1) + dx * ((pz.deck.w >> 1) + 1))), Math.min(N - 2, Math.max(1, pz.deck.z0 + (pz.deck.h >> 1) + dz * ((pz.deck.h >> 1) + 1))));
     pz.stage = i; pz.level = level; pz.rect = rect;
     built.push(pz);

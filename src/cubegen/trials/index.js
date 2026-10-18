@@ -28,6 +28,8 @@ const KINDS = {
   mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   braziers: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   channels: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  crates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  plates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -200,7 +202,7 @@ function gateAt(deck, x, z, side, id) {
 
 // Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
 // map.trial.parts), checked against the built ground
-const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid };
+const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid };
 function finishPuzzles(ctx, t) {
   const puzzles = [], parts = [], start = {};
   for (const [i, pz] of t.puzzles.entries()) {
@@ -218,7 +220,8 @@ function finishPuzzles(ctx, t) {
 // A grid puzzle (cubegen/trials/grid.js): its field flat at the deck's level (but a mirror field's
 // rocks), nothing built over it; its parts and start
 function finishGrid(ctx, pz, id) {
-  const { deck } = pz, rocks = new Set((pz.made.field?.blockers || []).map(b => `${b}`));
+  const { deck } = pz, F = pz.made.field ?? {};
+  const rocks = new Set([...(F.blockers || []).map(b => `${b}`), ...(F.walls || []).map(c => `${c % F.w},${Math.floor(c / F.w)}`)]);
   for (let z = 0; z < deck.h; z++) for (let x = 0; x < deck.w; x++) {
     const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
     if (ctx.pieces[c].length) return null;

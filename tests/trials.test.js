@@ -8,8 +8,8 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow } from '../src/core/trials.js';
-import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo } from '../src/cubegen/trials/solve.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld } from '../src/core/trials.js';
+import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -697,4 +697,42 @@ test('every mirror, braziers and channels room generates, unsolved, with its few
     assert.ok(pz.parts.every(p => p.puzzle === 0));
   }
   assert.ok(n.mirror > 30 && n.braziers > 30 && n.channels > 30, JSON.stringify(n));
+});
+
+// --- crates, plates ------------------------------------------------------------------------------
+
+test('Sokoban: a crate pushed (never pulled) onto its plate in the fewest pushes; a crate in a corner is lost', () => {
+  // 4 x 3, no walls: the crate at (1,1), the plate at (3,1), the player at (0,1): two pushes east
+  const F = { w: 4, h: 3, walls: [], plates: [7], entry: { x: 0, z: 1, side: 1 } };
+  assert.deepEqual(solveSokoban(F, [5], 4), { pushes: 2, way: [[0, 0], [0, 0]] });
+  assert.equal(pushTarget(F, [5], 5, 1), 4);
+  assert.equal(pushTarget(F, [5], 7, 0), null, 'off the field');
+  // in a corner it never comes out
+  assert.equal(solveSokoban(F, [0], 5).pushes, Infinity);
+  // a wall in the way: round it
+  const W = { w: 4, h: 3, walls: [6], plates: [7], entry: { x: 0, z: 1, side: 1 } };
+  assert.equal(solveSokoban(W, [5], 4).pushes, Infinity);
+  assert.ok(platesHeld(F, [7]) && !platesHeld(F, [6]) && platesHeld(F, [6], [7]));
+});
+
+test('every crates and two-plates room generates: solvable in its band from the way in, no crate on a plate at the start', () => {
+  const n = {};
+  for (const kind of ['crates', 'plates']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1, 2])) {
+    n[kind] = (n[kind] ?? 0) + 1;
+    const pz = m.trial.puzzles[0], F = pz.field, crates = pz.parts.filter(p => p.type === 'crate').sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
+    const entry = F.entry.z * F.w + F.entry.x;
+    assert.ok(!crates.some(c => F.plates.includes(c)), `${seed}/${d}: a crate on a plate`);
+    assert.ok(pz.parts.some(p => p.type === 'reset'), `${seed}/${d}: no reset lever`);
+    if (kind === 'crates') {
+      const s = solveSokoban(F, crates, entry);
+      assert.ok(s.pushes === pz.check.pushes && s.pushes >= (d >= 10 ? 8 : 4), `${seed}/${d}: ${s.pushes} pushes`);
+      assert.equal(crates.length, F.plates.length);
+    } else {
+      const [A, B] = F.plates, dist = Math.abs(A % F.w - B % F.w) + Math.abs(Math.floor(A / F.w) - Math.floor(B / F.w));
+      assert.ok(dist >= 6, `${seed}/${d}: the plates ${dist} apart`);
+      const s = solveSokoban(F, crates, entry, [B]);
+      assert.ok(s.pushes >= 2 && s.pushes <= 4, `${seed}/${d}: ${s.pushes} pushes onto plate B`);
+    }
+  }
+  assert.ok(n.crates > 30 && n.plates > 30, JSON.stringify(n));
 });

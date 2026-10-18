@@ -32,17 +32,19 @@ export const TRIALS = {
     population: 0.5 },
   braziers: { name: 'Lights out', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040', built: true,
     lean: { ossuary: 2.5, ruins: 2.5 }, population: 0.5 },
-  crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060' },
+  crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060', built: true,
+    population: 0.5 },
   stones: { name: 'Sinking stones', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['lagoon', 'grotto', 'cenote', 'swamp', 'volcanic', 'abyss'], weight: 1.5, color: '#60e0b0' },
   sluices: { name: 'Sluices', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['grotto', 'cenote', 'lagoon', 'hive', 'mines'], weight: 1.5, color: '#40c8e0' },
   timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0' },
   runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff' },
-  plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0' },
+  plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0', built: true,
+    population: 0.5 },
 };
 for (const [id, t] of Object.entries(TRIALS)) {
   t.id = id;
   // a puzzle's deck in a sunken room (field and rim): 6 x 6 for the slide and the crates, else 5 x 5
-  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : 5;
+  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : id === 'plates' ? 9 : 5;   // (the two plates fit no platform)
 }
 // may a sunken room have small stage puzzles (a 5 x 5 deck): any built? (then it has three stages
 // from depth 10, and its last may share the exit's quadrant: cubegen/trials/sunken.js)
@@ -206,7 +208,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -230,7 +232,7 @@ export function crustState(m, s, q) {
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
-  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel' };
+  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------
@@ -331,3 +333,17 @@ export function channelFlow(F, turns) {
   }
   return { wet, wheel };
 }
+
+// --- crates and plates (docs/trials.md, `crates`, `plates`) ---------------------------------------
+// A field of w x h cells (cell index x + z w): walls (rubble) on some, plates on some, crates
+// (their cells: the puzzle's bits). A crate is pushed one cell by walking into it; never pulled. A
+// push of the crate at c the way d: the cell beyond free (on the field, no wall, no crate).
+//   field: { w, h, walls: [c], plates: [c], entry: { x, z, side } }
+export function pushTarget(F, crates, c, d) {
+  const x = c % F.w + SD[d][0], z = Math.floor(c / F.w) + SD[d][1];
+  if (x < 0 || z < 0 || x >= F.w || z >= F.h) return null;
+  const n = z * F.w + x;
+  return F.walls.includes(n) || crates.includes(n) ? null : n;
+}
+// is every plate held? by a crate, or by a body standing on it (cells: the bodies' field cells)
+export const platesHeld = (F, crates, cells = []) => F.plates.every(p => crates.includes(p) || cells.includes(p));

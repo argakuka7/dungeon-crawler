@@ -196,7 +196,12 @@ test('a trial room: its owner tells those in the cube its state, on a change, ev
   let out = owner.messages(10, [1], s, 7);
   assert.equal(out.length, 1); assert.deepEqual(out[0][1], [1]);
   assert.equal(out[0][0].t, 'trial');
-  assert.deepEqual(trialMessage(out[0][0]), { key: 'k', seed: 7, phase: 'idle', time: 0, gate: null });
+  assert.deepEqual(trialMessage(out[0][0]), { key: 'k', seed: 7, phase: 'idle', time: 0, gate: null, bits: {} });
+  // a puzzle's bits changing: told at once
+  s.bits = { lever: 1 };
+  assert.deepEqual(owner.messages(15, [1], s, 7).map(([m]) => m.bits), [{ lever: 1 }]);
+  s.bits = {};
+  owner.messages(16, [1], s, 7);
   assert.deepEqual(owner.messages(20, [1], s, 7), []);
   // armed: everyone hears, and every TRIAL_EVERY while it runs
   stepTrial(s, 0, { away: true });

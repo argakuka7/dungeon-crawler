@@ -1,7 +1,7 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 5 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
-`sunken`, `mirror`, `braziers` and `channels` are planned, built, checked, playable (alone and
+Status: steps 1 to 6 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
+`sunken`, `mirror`, `braziers`, `channels`, `crates` and `plates` are planned, built, checked, playable (alone and
 together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
 "Implementation order" at the end).
@@ -495,6 +495,11 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   pulls). Then a forward Sokoban solver (BFS over crates and the player's region) gives the
   minimal pushes, which must be within the depth band. No crate may start on a plate.
 - **Themes:** mines, ruins, forge, hive (wax blocks), any.
+- **As built** (`grid.js`, `solve.js makeCrates`, `solveSokoban`; `game/trials.js stepCrates`): a
+  6x6 field with two crates (7x7 with three from depth 10; 4x4 with two on a sunken platform) in a
+  rim, the rubble walls up to the rim's height, the way in a gap with the reset lever in front of it.
+  Pushes needed: 4-10 (8-16 from depth 10). A crate is a box in the way; walking square into one for
+  0.3 s pushes it. Playing together the crates' cells go to the others with the puzzle's bits.
 
 ### `stones`: Sinking stones
 
@@ -551,6 +556,10 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   through (latched by a plate past it). Two players do it directly; alone, push the crate onto
   plate B and stand on plate A. Reset lever as for crates.
 - **Generator:** the crate's way onto plate B is 2–4 pushes (Sokoban solver as for `crates`).
+- **As built** (`solve.js makePlates`): a 7x7 field in a rim, a block of wall in one corner making
+  it an L, the plates at least six cells apart with no straight line between them. Both held at
+  once solves it for good (no latch plate past the gate: holding both is the moment it opens).
+  It fits no sunken platform.
 - **Themes:** any.
 
 ## Assets (Blender, `assets/trials.glb`)
@@ -601,7 +610,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
    first solver.
 4. [x] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
 5. [x] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
-6. [ ] **`crates`, `plates`** (crates, Sokoban solver).
+6. [x] **`crates`, `plates`** (crates, Sokoban solver).
 7. [ ] **`stones`, `sluices`, `timedgate`.**
 8. [ ] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
 9. [ ] **`siege`, `chase`, `drift`.**

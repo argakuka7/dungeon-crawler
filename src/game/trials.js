@@ -9,7 +9,7 @@ import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
   nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage,
-  traceBeam, allLit, channelFlow, pressBrazier } from '../core/trials.js';
+  traceBeam, allLit, channelFlow, pressBrazier, pushTarget } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts } from '../render/trials.js';
@@ -33,6 +33,8 @@ const PUZZLE_HINT = {
   slide: 'Slide across the ice onto the plate by the closed gate',
   mirror: 'Turn the mirrors till the beam lights the receiver',
   braziers: 'Light every brazier: each one lights or puts out those it is linked to',
+  crates: 'Push a crate onto every plate (the lever by the way in puts them back)',
+  plates: 'Hold both plates down at once: a friend, or the crate',
   channels: 'Turn the channels till the water drives the wheel',
 };
 // what the banner says as an event arms
@@ -149,6 +151,7 @@ export function updateTrial(dt) {
   announce(s, happened);
   stepCrust(m, s, dt);
   keystone(m, s);
+  stepCrates(m, s, dt);
   stepParts(m, s);
   showTrial();
   if (!mirroring()) drown(m, s);
@@ -181,6 +184,7 @@ export function trialActFrom(m) {
   if (m.act === 'away') awayFrom = true;
   if (m.act === 'part' && m.id === 'keystone') { resolve(); return; }
   if (m.act === 'part' && m.id.startsWith('solve:')) { solvePuzzle(+m.id.slice(6)); return; }
+  if (m.act === 'part' && m.id.startsWith('push:')) { const [, pi, i, d] = m.id.split(':').map(Number); const pz = mapTrial()?.puzzles?.[pi]; if (pz) pushCrateAt(pz, i, d, true); return; }
   if (m.act === 'part') { const p = mapTrial()?.parts?.find(q => q.id === m.id); if (p) usePart(p, true); }
 }
 // a trial resolved somewhere (by whoever): its gate is open for us too
@@ -327,7 +331,54 @@ const RULES = {
     shown.set(pz.index, { wet: flow.wet, wheel: flow.wheel });
     return flow.wheel;
   },
+  // every plate held at once: by a crate, or by a body standing on it
+  crates(pz, s, bodies) {
+    const F = pz.field, D = pz.deck, crates = bitsOf(pz, s, 'crate');
+    const cells = bodies.filter(b => Math.abs(b.y - D.level * LH) < 0.6).map(b => (Math.floor(b.z) - D.z0) * F.w + Math.floor(b.x) - D.x0);
+    const held = new Set(F.plates.filter(p => crates.includes(p) || cells.includes(p)));
+    shown.set(pz.index, { held });
+    return held.size === F.plates.length;
+  },
 };
+RULES.plates = RULES.crates;   // (the two plates: both held at once, then the gate stays open)
+
+// --- crates (push only) ------------------------------------------------------------------------
+// Walking into a crate for PUSH_TIME s pushes it a cell on, if the cell beyond is free (core/trials.js
+// pushTarget). Shown another's trial, the push goes to its owner.
+export const PUSH_TIME = 0.3;
+let steer = [0, 0], pushing = null;   // { pz, i (crate), d, t }
+function stepCrates(m, s, dt) {
+  const [dx, dz] = steer, len = Math.hypot(dx, dz);
+  let want = null;
+  if (len > 0.5 && player.grounded && player.hp > 0) for (const pz of m.puzzles || []) {
+    if ((pz.kind !== 'crates' && pz.kind !== 'plates') || puzzleSolved(s, pz.index)) continue;
+    const D = pz.deck, F = pz.field;
+    if (Math.abs(player.y - D.level * LH) > 0.6) continue;
+    const d = Math.abs(dx) > Math.abs(dz) * 1.5 ? (dx > 0 ? 0 : 1) : Math.abs(dz) > Math.abs(dx) * 1.5 ? (dz > 0 ? 2 : 3) : -1;
+    if (d < 0) continue;
+    const fx = Math.floor(player.x) - D.x0, fz = Math.floor(player.z) - D.z0, ahead = (fz + SD[d][1]) * F.w + fx + SD[d][0];
+    const crates = bitsOf(pz, s, 'crate'), i = crates.indexOf(ahead);
+    // up against it: near the edge of our cell that faces it, square on
+    const along = d < 2 ? player.x - (D.x0 + fx + 0.5) : player.z - (D.z0 + fz + 0.5), across = d < 2 ? player.z - (D.z0 + fz + 0.5) : player.x - (D.x0 + fx + 0.5);
+    if (i < 0 || along * (d & 1 ? -1 : 1) < 0.02 || Math.abs(across) > 0.3 || fx < 0 || fz < 0 || fx >= F.w || fz >= F.h) continue;
+    want = { pz, i, d };
+  }
+  if (!want) { pushing = null; return; }
+  if (!pushing || pushing.pz !== want.pz || pushing.i !== want.i || pushing.d !== want.d) pushing = { ...want, t: 0 };
+  if ((pushing.t += dt) < PUSH_TIME) return;
+  pushing = null;
+  pushCrateAt(want.pz, want.i, want.d);
+}
+function pushCrateAt(pz, i, d, fromOther = false) {
+  const s = state.trial, crates = bitsOf(pz, s, 'crate'), to = pushTarget(pz.field, crates, crates[i], d);
+  if (to === null) { if (!fromOther) sfx('thud', { volume: 0.3 }); return false; }
+  if (!fromOther && mirroring()) { relay.trialAct?.({ key: s.key, act: 'part', id: `push:${pz.index}:${i}:${d}` }); return true; }
+  const crate = pz.parts.find(p => p.type === 'crate' && p.i === i);
+  s.bits[crate.id] = to;
+  sfx('door', { volume: 0.5, pitch: 0.7 });
+  updateCrateBlockers(pz, s);
+  return true;
+}
 function stepParts(m, s) {
   if (!m.puzzles) return;
   const bodies = [player, ...online.buddies.filter(b => b.here && b.hp > 0)];
@@ -449,7 +500,7 @@ const gateOpen = (s, part) => puzzleSolved(s, part.puzzle ?? 0);
 // the parts that stand in the way, as colliders (physics/collide.js): a gate while shut
 let partCells = null, partBoxes = [];
 function partBlockers(m) {
-  partBoxes = [];
+  partBoxes = []; crateBoxes.clear();
   partCells = Array.from({ length: N * N }, () => []);
   for (const p of m?.parts || []) if (p.type === 'gate') {
     const half = (p.w ?? 1) / 2, across = p.side < 2;
@@ -461,7 +512,24 @@ function partBlockers(m) {
   }
   setPartBlockers(partCells);
 }
-function updatePartBlockers(m, s) { for (const b of partBoxes) b.off = gateOpen(s, b.part); }
+function updatePartBlockers(m, s) {
+  for (const b of partBoxes) b.off = gateOpen(s, b.part);
+  for (const pz of m?.puzzles || []) if (pz.kind === 'crates' || pz.kind === 'plates') updateCrateBlockers(pz, s);
+}
+// the crates where they stand now: boxes in the way (moved by a push, a reset, the owner's word)
+const crateBoxes = new Map();   // crate part id -> box
+function updateCrateBlockers(pz, s) {
+  const D = pz.deck, F = pz.field;
+  for (const p of pz.parts) if (p.type === 'crate') {
+    const c = s.bits[p.id] ?? 0, x = D.x0 + c % F.w + 0.5, z = D.z0 + Math.floor(c / F.w) + 0.5;
+    let b = crateBoxes.get(p.id);
+    if (b && b.x === x && b.z === z) continue;
+    if (b) for (const list of partCells) { const k = list.indexOf(b); if (k >= 0) list.splice(k, 1); }
+    b = { shape: 'box', x, z, x0: x - 0.42, x1: x + 0.42, z0: z - 0.42, z1: z + 0.42, bottom: p.y - 0.1, top: p.y + 0.9, crate: p.id };
+    crateBoxes.set(p.id, b);
+    partCells[Math.floor(z) * N + Math.floor(x)].push(b);
+  }
+}
 
 // The vault (a puzzle in a branch room): its reward site's chest stays shut, caged, until it is solved
 export function vaultLocked(site) {
@@ -506,6 +574,7 @@ export function onIce(m = mapTrial()) {
 }
 // one step of the player on the ice (game/update.js); true: it moved the player (nothing else does)
 export function iceStep(dt, dx, dz) {
+  steer = [dx, dz];   // (the crates read it: game/trials.js stepCrates)
   const m = mapTrial(), s = state.trial;
   if (!m?.puzzles || !s) { ice = null; return false; }
   if (ice) {
