@@ -84,5 +84,18 @@ export async function runTrialChecks(kind = 'flood') {
     check(seals().every(s => !s), 'no seals left');
     results.push('resolved');
   }
+  // resolved by stepping onto the exit apron, the keystone (collapse): armed first, the crust
+  // falling behind
+  if (kind === 'collapse') {
+    player.autoDir = [ax, az];
+    await until(() => state.trial.phase !== 'idle', 'armed again', 4000);
+    player.autoDir = null;
+    await until(() => state.trial.phase === 'running', 'running', 5000);
+    const k = state.map.trial.keystone;
+    Object.assign(player, { x: k.x, y: k.y + 0.05, z: k.z, vx: 0, vz: 0 });
+    await until(() => state.trial.phase === 'resolved', 'the keystone holds', 3000);
+    check(state.run.unlockedGates.has(t.gate) && !sealedIn(), 'resolved, its gate open');
+    results.push('resolved');
+  }
   return results;
 }

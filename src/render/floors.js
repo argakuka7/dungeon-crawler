@@ -30,7 +30,8 @@ function walls(m, f, b) {
     const [ea, eb] = EDGE_CORNERS[d], [na, nb] = EDGE_CORNERS[OPP[d]];
     const topLine = [cs[ea], cs[eb]];
     const nx = f.x + DIRS[d][0], nz = f.z + DIRS[d][1];
-    const nbs = inb(nx, nz) ? m.cols[idx(nx, nz)].slice().sort((a, b) => a.bottom - b.bottom) : [];
+    // (a crumbling crust's floors, render/trials.js, may be gone: walls behind them are drawn)
+    const nbs = inb(nx, nz) ? m.cols[idx(nx, nz)].filter(g => !g.crust).sort((a, b) => a.bottom - b.bottom) : [];
     const [P0, P1] = edgePts(f.x, f.z, d);
     let gl = [-1e9, -1e9];
     const gaps = [];
@@ -47,7 +48,7 @@ function fluidVolume(m, f, b) {
     const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
     if (!inb(nx, nz)) return false;
     const [na, nb] = EDGE_CORNERS[OPP[d]];
-    return m.cols[idx(nx, nz)].some(g => g.fluid ? g.surf >= f.surf && g.top * LH <= sy
+    return m.cols[idx(nx, nz)].some(g => g.crust ? false : g.fluid ? g.surf >= f.surf && g.top * LH <= sy
       : g.bottom * LH <= by + 0.01 && Math.min(g.cs[na], g.cs[nb]) >= sy);
   };
   b.box(x, by, z, x + 1, sy, z + 1, C('#ffffff'), C('#ffffff'), {
@@ -58,6 +59,7 @@ function fluidVolume(m, f, b) {
 export function buildFloors(m, layers) {
   if (m.interior) return buildInteriorFloors(m, layers);
   for (const f of m.floors) {
+    if (f.crust) continue;   // the crumbling crust: drawn on its own, it falls (render/trials.js)
     const L = layers[f.layer], x = f.x, z = f.z, cs = f.cs;
     const P = [[x, cs[0], z], [x + 1, cs[1], z], [x, cs[2], z + 1], [x + 1, cs[3], z + 1]];
     // smooth top surface: 2 triangles, shared normals for soft shading

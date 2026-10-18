@@ -10,6 +10,12 @@ export function cellAt(x, z) {
   return inb(cx, cz) ? idx(cx, cz) : -1;
 }
 const pieceBottom = (p, top) => p.kind === 'bridge' ? top - 0.2 : p.base;
+
+// A trial's crumbling crust (game/trials.js): floors that are gone for now (gone(floor) -> true)
+// are not there for anything here, in the active cube
+let gone = null;
+export const setGoneFloors = fn => { gone = fn; };
+const here = (f, map = state.map) => !(gone && f.crust && map === state.map && gone(f));
 const inPillar = (p, fx, fz) => fx >= p.x0 && fx <= p.x1 && fz >= p.z0 && fz <= p.z1;
 const local = (x, z) => [x - Math.floor(x), z - Math.floor(z)];
 
@@ -20,7 +26,7 @@ export function groundAt(x, z, y, step, map = state.map) {
   if (i < 0) return { h: -Infinity, s: null, i };
   const [fx, fz] = local(x, z);
   let h = -Infinity, s = null;
-  for (const f of map.cols[i]) { const t = floorY(f, fx, fz); if (t <= y + step && t > h) { h = t; s = f; } }
+  for (const f of map.cols[i]) { if (!here(f, map)) continue; const t = floorY(f, fx, fz); if (t <= y + step && t > h) { h = t; s = f; } }
   for (const p of map.pieces[i]) {
     if (p.kind === 'pillar') continue;
     const t = runY(p, fx, fz);
@@ -38,7 +44,7 @@ export function blockedAt(x, z, y, step, piecesOnly = false, h = player.h) {
   const [fx, fz] = local(x, z), head = y + h;
   // Trees use trunk circles; town buildings use their rotated footprint boxes.
   for (const b of state.map.blockers?.[i] || []) if (containsXZ(b, x, z) && b.bottom < head && b.top > y + step) return true;
-  if (!piecesOnly) for (const f of state.map.cols[i]) if (floorY(f, fx, fz) > y + step && f.bottom * LH < head) return true;
+  if (!piecesOnly) for (const f of state.map.cols[i]) if (here(f) && floorY(f, fx, fz) > y + step && f.bottom * LH < head) return true;
   for (const p of state.map.pieces[i]) {
     if (p.kind === 'pillar') {
       if (inPillar(p, fx, fz) && p.bottom < head && p.top > y + step) return true;
@@ -57,7 +63,7 @@ export function ceilingAt(x, z, y) {
   const [fx, fz] = local(x, z);
   let c = Infinity;
   for (const b of state.map.blockers?.[i] || []) if (b.bottom > y && containsXZ(b, x, z)) c = Math.min(c, b.bottom);
-  for (const f of state.map.cols[i]) if (f.bottom * LH > y) c = Math.min(c, f.bottom * LH);
+  for (const f of state.map.cols[i]) if (here(f) && f.bottom * LH > y) c = Math.min(c, f.bottom * LH);
   for (const p of state.map.pieces[i]) {
     const b = p.kind === 'pillar' ? (inPillar(p, fx, fz) ? p.bottom : Infinity) : pieceBottom(p, runY(p, fx, fz));
     if (b > y) c = Math.min(c, b);
@@ -71,7 +77,7 @@ export function insideSolid(x, z, y) {
   if (i < 0) return true;
   for (const b of state.map.blockers?.[i] || []) if (y > b.bottom && y < b.top && containsXZ(b, x, z)) return true;
   const [fx, fz] = local(x, z);
-  for (const f of state.map.cols[i]) if (floorY(f, fx, fz) > y && f.bottom * LH < y) return true;
+  for (const f of state.map.cols[i]) if (here(f) && floorY(f, fx, fz) > y && f.bottom * LH < y) return true;
   for (const p of state.map.pieces[i]) {
     if (p.kind === 'pillar') { if (inPillar(p, fx, fz) && p.bottom < y && p.top > y) return true; continue; }
     const t = runY(p, fx, fz);
@@ -87,7 +93,7 @@ export function solidTop(x, z, y) {
   if (i < 0) return null;
   const [fx, fz] = local(x, z);
   let top = null;
-  for (const f of state.map.cols[i]) { const t = floorY(f, fx, fz); if (t > y && f.bottom * LH < y) top = { h: t, s: f }; }
+  for (const f of state.map.cols[i]) { if (!here(f)) continue; const t = floorY(f, fx, fz); if (t > y && f.bottom * LH < y) top = { h: t, s: f }; }
   for (const p of state.map.pieces[i]) {
     if (p.kind === 'pillar') continue;
     const t = runY(p, fx, fz);

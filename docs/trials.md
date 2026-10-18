@@ -1,8 +1,9 @@
 # Trials: events and puzzles in a cube
 
-Status: step 1 is done: the framework and `flood` are planned, built, checked, playable (alone
-and together) and on in every world (45% of the depths from 1 to 19). The rest is the list of
-what to build, kind by kind, until done (see "Implementation order" at the end).
+Status: steps 1 and 2 are done: the framework, `flood` and `collapse` are planned, built,
+checked, playable (alone and together) and on in every world (an event on 45% of the depths from
+1 to 19). The rest is the list of what to build, kind by kind, until done (see "Implementation
+order" at the end).
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -276,6 +277,17 @@ The floor breaks up behind you in a wave from the entry; outrun it to the exit.
   Each dead end must be one: no path leaves it.
 - **After:** the crust is whole again and holds.
 - **Population:** none on the crust; a few on the exit apron's side.
+- **As built** (`cubegen/trials/collapse.js`): the causeway is a path of 2x2 blocks that never
+  touch but where they follow each other (two cells of basin between stretches, more round the
+  aprons: a jump only crosses one cell, or two with a long drop), all at one level, the lower
+  apron climbing to it. Rock walls stand along the room's faces (`world/profile.js caveWall`),
+  so the crust is the only way; the planner predicts where the portals stand
+  (`world/trials.js portalPos`) and puts a collapse only where the aprons have room. A gap gets
+  two straight blocks of run-up. The wave waits `delay` s (fitted per room: as little as lets a
+  slow player outrun it, `WAVE`), and a jump costs a second of run-up in the timing. Once the
+  whole crust is gone and nobody is across, the trial fails. The crust floors are drawn on their
+  own (`render/trials.js`) and are not there for the physics once gone (`physics/collide.js
+  setGoneFloors`); the basin's fluid stands over every hole while it runs.
 
 ### `cold`: Cold snap
 
@@ -546,7 +558,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 1. [x] **Framework + `flood`:** plan, the warning on the portal, states, sealing, death to
    `from`, the trial fluid level (physics and render), the timing check (deadlines),
    `/trial`, playing together. In phases: "Step 1 in phases" below.
-2. [ ] **`collapse`:** crust, wave, keystone; shares the deadlines.
+2. [x] **`collapse`:** crust, wave, keystone; shares the deadlines.
 3. [ ] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
    first solver.
 4. [ ] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.

@@ -13,7 +13,8 @@ export const TRIALS = {
   flood: { name: 'Rising water', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#3fa8ff', built: true,
     population: 0.5 },
   sunken: { name: 'The sunken room', family: 'event', sealed: false, timed: false, depths: [2, 19], themes: null, weight: 1, color: '#3fd0c0' },
-  collapse: { name: 'Crumbling floor', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050' },
+  collapse: { name: 'Crumbling floor', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050', built: true,
+    population: 0.3 },
   cold: { name: 'Cold snap', family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff' },
   storm: { name: 'The storm', family: 'event', sealed: true, timed: true, depths: [1, 6],
     themes: ['meadow', 'clouds', 'lagoon', 'karst', 'peaks', 'highlands', 'badlands', 'saltflats', 'canyon'], weight: 1, color: '#b0b8ff' },
@@ -164,8 +165,12 @@ export function resolveTrial(s, level = null) {
 export function resetTrial(s) { Object.assign(s, { phase: 'idle', t: 0, done: 0, at: null }); }
 
 // the level (in levels) the trial's fluid stands at in map trial `m` with state s, or null for none
+export const BASIN = 2;   // the collapse's basin: its fluid's surface (cubegen/river.js RIVER_SURF)
 export function trialFluidLevel(m, s) {
-  if (!m || !s || m.kind !== 'flood') return null;
+  if (!m || !s) return null;
+  // the collapse: what falls through the crust is in the basin's fluid (its surface over every hole)
+  if (m.kind === 'collapse') return s.phase === 'armed' || s.phase === 'running' ? BASIN : null;
+  if (m.kind !== 'flood') return null;
   const tl = m.timeline;
   if (s.phase === 'idle') return null;
   if (s.phase === 'resolved') return s.at == null || s.done >= DRAIN_TIME ? null : drainLevel(tl, s.at, s.done);
@@ -176,5 +181,19 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45 };
+export const TRIAL_TIME = { flood: 45, collapse: 30 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
+
+// --- collapse ----------------------------------------------------------------------------------------
+// The crust crumbles in a wave from the entry: a crust cell d cells (over the crust) from the entry
+// apron goes at ARM_TIME + delay + d / speed, shaking for SHAKE s before. The delay is fitted per
+// room (cubegen/trials/index.js): as little as lets a slow player outrun it, plus a margin.
+export const WAVE = { speed: 1.3, margin: 0.5, most: 8, shake: 1.5 };
+export const crumbleTime = (wave, d) => ARM_TIME + wave.delay + d / wave.speed;
+
+// is crust cell q ({ d }) of trial m gone at state s? (shaking: the SHAKE s before)
+export function crustState(m, s, q) {
+  if (!s || s.phase === 'idle' || s.phase === 'resolved') return 'whole';
+  const at = crumbleTime(m.wave, q.d);
+  return s.t >= at ? 'gone' : s.t >= at - WAVE.shake ? 'shaking' : 'whole';
+}

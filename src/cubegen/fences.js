@@ -36,7 +36,7 @@ export function addFences(ctx) {
 
   // cliff edges: in runs (noise), around lava, never on route edges
   for (const f of floors) {
-    if (f.fluid) continue;
+    if (f.fluid || ctx.noFence?.has(f.c)) continue;   // (a crumbling crust: its edges stay open, cubegen/trials/collapse.js)
     const runsF = fenceNoise(f.x * 0.45 + f.layer * 9, f.z * 0.45) > 0.56;
     for (let d = 0; d < 4; d++) {
       const nx = f.x + DIRS[d][0], nz = f.z + DIRS[d][1];

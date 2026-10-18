@@ -14,6 +14,7 @@ import { knockDown } from './ragdoll.js';
 // fell through the void: into the cube below, if there is one there (else: false)
 export function startFall() {
   if (state.map.interior) return false;   // houses have no cube below (and walls all round)
+  if (state.map.trialRoom) return false;   // nothing falls out of a trial room (world/trials.js)
   const below = step(state.cubeKey, 4);
   if (!state.cubes.layout(depthOf(below)).exists.has(below)) return false;
   // only the first cube of a fall counts

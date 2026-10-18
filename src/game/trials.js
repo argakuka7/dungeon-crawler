@@ -8,9 +8,10 @@ import { step } from '../world/coords.js';
 import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
-  nextPulse, floodEnd, trialSealed, trialGate } from '../core/trials.js';
+  nextPulse, floodEnd, trialSealed, trialGate, crustState } from '../core/trials.js';
 import { setTrialFluid } from '../physics/fluid.js';
-import { setTrialWater, setTrialParts, setTrialBarriers } from '../render/trials.js';
+import { setTrialWater, setTrialParts, setTrialBarriers, setCrust } from '../render/trials.js';
+import { setGoneFloors } from '../physics/collide.js';
 import { openedSides } from '../core/boundaries.js';
 import { setPortalSeals } from '../render/world.js';
 import { player, state, setStatus } from './state.js';
@@ -23,6 +24,11 @@ import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWor
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
+// what the banner says as an event arms
+const HOW = {
+  flood: 'The water is coming. Climb to the summit and press the button.',
+  collapse: 'The floor crumbles behind you. Run for the far side!',
+};
 const SEALED = 'The portals are sealed.';
 export const trialHere = () => state.trial;
 const mapTrial = () => state.map?.trial ?? null;
@@ -31,8 +37,37 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 // coming into a cube (game/flow.js enterCube): its trial, as built or resolved for good
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
+  gone.clear(); crust.clear();
   showTrial(true);
 }
+
+// the crumbling floor (collapse): which crust cells are gone (their floors are not there for the
+// physics, physics/collide.js) and how each looks
+const gone = new Set(), crust = new Map();
+setGoneFloors(f => gone.has(f.id));
+function stepCrust(m, s, dt) {
+  if (!m.crust) return;
+  let fell = 0;
+  for (const q of m.crust) {
+    const now = crustState(m, s, q);
+    if (now === 'gone' && !gone.has(q.f)) { gone.add(q.f); fell++; }
+    if (now !== 'gone') gone.delete(q.f);
+    crust.set(q.c, now);
+  }
+  if (fell) sfx('rumble', { volume: 0.35, pitch: 1.3 });
+  setCrust(state.world, crust, dt, s.phase === 'resolved');
+  // all of it gone, and still not across: there is no way over any more
+  if (s.phase === 'running' && gone.size === m.crust.length && !mirroring()) failTrial('The way across is gone');
+}
+// the keystone: stepping onto the exit apron stops the wave
+function keystone(m, s) {
+  if (!m.exitApron || s.phase !== 'running' && s.phase !== 'armed' || player.hp <= 0 || !player.grounded) return;
+  const c = Math.floor(player.z) * N + Math.floor(player.x);
+  if (!m.exitApron.includes(c) || player.y < m.keystone.y - 2) return;
+  if (mirroring()) { if (!keystoneAsked) { keystoneAsked = true; relay.trialAct?.({ key: s.key, act: 'part', id: 'keystone' }); } return; }
+  resolve();
+}
+let keystoneAsked = false;
 
 // is the room we are in sealed? (game/portals.js, the scrolls, the teleports)
 export const sealedIn = () => trialSealed(state.trial);
@@ -95,7 +130,10 @@ export function updateTrial(dt) {
     awayFrom = false;
   }
   if (s.phase !== 'idle') awayAsked = false;
+  if (s.phase === 'idle' || s.phase === 'resolved') keystoneAsked = false;
   announce(s, happened);
+  stepCrust(m, s, dt);
+  keystone(m, s);
   showTrial();
   if (!mirroring()) drown(m, s);
 }
@@ -103,7 +141,7 @@ export function updateTrial(dt) {
 function announce(s, happened) {
   if (happened === 'armed') {
     setStatus(`${TRIALS[s.kind].name}! ${SEALED}`);
-    banner(TRIALS[s.kind].name, 'The water is coming. Climb to the summit and press the button.');
+    banner(TRIALS[s.kind].name, HOW[s.kind] ?? '');
     sfx('rumble'); sfx('gate', { delay: 0.4 });
   }
   if (happened === 'running') sfx('rumble', { pitch: 0.7 });
@@ -125,6 +163,7 @@ export function trialActFrom(m) {
   const s = state.trial;
   if (!s || m.key !== s.key || mirroring()) return;
   if (m.act === 'away') awayFrom = true;
+  if (m.act === 'part' && m.id === 'keystone') { resolve(); return; }
   if (m.act === 'part') { const p = mapTrial()?.parts?.find(q => q.id === m.id); if (p) usePart(p, true); }
 }
 // a trial resolved somewhere (by whoever): its gate is open for us too
@@ -187,7 +226,7 @@ export function resolve(tell = true) {
   if (tell) relay.trialDone?.({ key: s.key, gate: m.gate, time: s.t });   // resolved for everyone (net/session.js)
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
   setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
-  banner('Well done!', 'The water drains away.');
+  banner('Well done!', { flood: 'The water drains away.', collapse: 'The keystone holds: the floor is whole again.' }[m.kind] ?? '');
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
   showTrial();
   return true;
@@ -218,6 +257,10 @@ function hud() {
     if (s.phase === 'armed') line = `The water comes in ${Math.ceil(ARM_TIME - s.t)}…`;
     else line = next != null ? `The water rises in ${Math.ceil(next - s.t)} s` : 'The water rises…';
     fill = Math.min(1, s.t / floodEnd(tl));
+  }
+  if (s.kind === 'collapse') {
+    line = s.phase === 'armed' ? 'The floor shakes…' : 'Run! Reach the far side';
+    fill = m.crust.length ? gone.size / m.crust.length : 0;
   }
   $('trial-line').textContent = line;
   $('trial-bar').style.width = `${Math.round(fill * 100)}%`;

@@ -1,16 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { state } from './fixtures.js';
 import { makeLayouts } from '../src/world/layout.js';
 import { World } from '../src/world/world.js';
 import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
-  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed } from '../src/core/trials.js';
+  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN } from '../src/core/trials.js';
+import { setGoneFloors } from '../src/physics/collide.js';
+import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
 import { createRun } from '../src/core/progression.js';
 import { discoveredFaces } from '../src/core/boundaries.js';
-import { state } from './fixtures.js';
 import { player } from '../src/game/state.js';
 import { movePlayer } from '../src/physics/move.js';
 import { groundAt } from '../src/physics/collide.js';
@@ -368,4 +370,111 @@ test('the warning: every map knows which of its faces lead into a trial room, as
     }
   }
   assert.ok(n > 30, `${n} warnings`);
+});
+
+// --- collapse --------------------------------------------------------------------------------------
+
+function* collapses(seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: 'collapse' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'collapse') yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('every collapse room generates: aprons, a crust 25-40 cells along with its gaps and dead ends, the wave checked', () => {
+  let n = 0, branches = 0, gaps = 0;
+  for (const { seed, d, m, t } of collapses(SEEDS)) {
+    n++;
+    const tr = m.trial;
+    assert.equal(tr.kind, 'collapse'); assert.equal(m.archetype, 'trial');
+    assert.equal(tr.entryApron.length, 9); assert.equal(tr.exitApron.length, 9);
+    const along = tr.crust.filter(q => !q.branch).length / 2;
+    assert.ok(along >= 15 && along <= 40, `${seed}/${d}: ${along} cells along`);
+    branches += tr.branches; gaps += tr.gaps;
+    assert.ok(tr.check.slack >= 0 && tr.wave.delay <= WAVE.most, `${seed}/${d}: slack ${tr.check.slack}, delay ${tr.wave.delay}`);
+    // the checked path crosses the crust (there is no way round it) and ends on the exit apron
+    assert.ok(tr.check.path.some(p => p.dl != null), `${seed}/${d}: the way does not cross the crust`);
+    const last = tr.check.path.at(-1);
+    assert.ok(tr.exitApron.includes(Math.floor(last.z) * N + Math.floor(last.x)));
+    assert.equal(last.dl, null);
+    // under the crust, the basin: its fluid all round, nothing else to stand on
+    for (const q of tr.crust) assert.ok(m.floors[q.f].crust && m.floors[q.f].noSpawn);
+    const keep = new Set([...tr.crust.map(q => q.c), ...tr.entryApron, ...tr.exitApron]);
+    for (const f of m.floors) {
+      const ring = Math.min(f.x, f.z, N - 1 - f.x, N - 1 - f.z);
+      if (ring >= 2 && !keep.has(f.c)) assert.ok(f.fluid, `${seed}/${d}: dry ground at ${f.x},${f.z} off the crust`);
+    }
+    // nothing built: no stairs, bridges or ladders, no fences on the crust
+    assert.equal(m.runs.filter(r => r.kind !== 'landing').length, 0, `${seed}/${d}: a structure`);
+    assert.equal(m.ladders.length, 0);
+    for (const fe of m.fenceList) assert.ok(!tr.crust.some(q => q.f === fe.cliff), `${seed}/${d}: a fence on the crust`);
+    void t;
+  }
+  assert.ok(n > 150, `${n} rooms`);
+  assert.ok(branches / n > 0.9 && gaps / n > 0.5, `${branches} dead ends, ${gaps} gaps in ${n} rooms`);
+});
+
+test('the planner predicts where a trial room\'s portals stand', () => {
+  for (const seed of [0, 1, 2]) {
+    const w = new World(seed, { trial: 'collapse' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) {
+      w.prepare(t.key);
+      for (const p of w.spec(t.key).portals) if (p.dir < 4) assert.equal(p.pos, portalPos(seed, t.key, p.dir), `${seed}/${d}`);
+    }
+  }
+});
+
+// The slow player again: walking the checked path while the crust falls away behind, as the wave
+// says from the moment it arms; never in the basin, onto the exit apron in the end
+test('walking the checked way across every collapse with the real crust falling: across, dry', () => {
+  let n = 0;
+  for (const { seed, d, m } of collapses(SEEDS.slice(0, 4))) {
+    const tr = m.trial, pts = tr.check.path;
+    place(m, pts[0].x, pts[0].y, pts[0].z);
+    let t = 0, fell = null;
+    const goneNow = () => new Set(tr.crust.filter(q => crumbleTime(tr.wave, q.d) <= t).map(q => q.f));
+    let gone = goneNow();
+    setGoneFloors(f => gone.has(f.id));
+    setTrialFluid({ y: BASIN * LH, fluid: tr.fluid });
+    for (let j = 1; j < pts.length && !fell; j++) {
+      const q = pts[j];
+      // a gap ahead (the next point two cells on): run at it and jump at the edge, for real
+      let steps = 0, jumped = false;
+      const gap = Math.hypot(q.x - player.x, q.z - player.z) > 1.5;
+      if (gap) {   // not running that way yet: step back first, for a run-up
+        const ux = (q.x - player.x) / Math.hypot(q.x - player.x, q.z - player.z), uz = (q.z - player.z) / Math.hypot(q.x - player.x, q.z - player.z);
+        if (player.vx * ux + player.vz * uz < 2) for (let k = 0; k < 24; k++) { movePlayer(DT, -ux, -uz, false, false); t += DT; gone = goneNow(); }
+      }
+      while (Math.hypot(q.x - player.x, q.z - player.z) > 0.15 && steps++ < 300) {
+        const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
+        // (just before the edge would stop it: still running)
+        const jump = gap && !jumped && player.grounded && dist - 1.5 < CHAR_R + Math.hypot(player.vx, player.vz) * DT * 2 + 0.1;
+        if (jump) jumped = true;
+        movePlayer(DT, dx / dist, dz / dist, gap, jump);
+        t += DT; gone = goneNow();
+        if (inFluid(groundAt(player.x, player.z, player.y + 0.1, 0), player.y)) { fell = `at ${t.toFixed(1)} s, on the way to point ${j}`; break; }
+        if (gap && jumped && player.grounded && dist < 0.6) break;
+      }
+      if (!fell && Math.hypot(q.x - player.x, q.z - player.z) > 0.6) fell = `stuck before point ${j} at ${player.x.toFixed(2)}, ${player.z.toFixed(2)}`;
+    }
+    setGoneFloors(null); setTrialFluid(null);
+    assert.ok(!fell, `${seed}/${d}: fell ${fell}`);
+    assert.ok(tr.exitApron.includes(Math.floor(player.z) * N + Math.floor(player.x)), `${seed}/${d}: not on the exit apron`);
+    n++;
+  }
+  assert.ok(n > 40, `${n} walks`);
+});
+
+test('a crust cell shakes, then is gone; the wave follows the distance from the entry', () => {
+  const m = { kind: 'collapse', wave: { speed: 1.3, delay: 2 } }, s = newTrial({ key: 'k', kind: 'collapse' });
+  const q = { d: 6.5 };
+  assert.equal(crustState(m, s, q), 'whole');
+  stepTrial(s, 0, { away: true });
+  const at = crumbleTime(m.wave, q.d);
+  assert.equal(at, ARM_TIME + 2 + 5);
+  stepTrial(s, at - WAVE.shake - 0.1); assert.equal(crustState(m, s, q), 'whole');
+  stepTrial(s, 0.2); assert.equal(crustState(m, s, q), 'shaking');
+  stepTrial(s, WAVE.shake); assert.equal(crustState(m, s, q), 'gone');
+  assert.equal(trialFluidLevel(m, s), BASIN);
+  resolveTrial(s); assert.equal(crustState(m, s, q), 'whole');   // the keystone: whole again, for good
 });

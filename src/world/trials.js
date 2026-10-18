@@ -19,6 +19,21 @@
 import { mulberry32, hash32 } from '../core/util.js';
 import { MAX_DEPTH } from '../themes/depth.js';
 import { TRIALS, TRIAL_KINDS, trialGate, trialFits, trialWeight, parseForce, isEvent, isPuzzle } from '../core/trials.js';
+import { faceKey, hashKey } from './coords.js';
+import { N } from '../core/constants.js';
+
+// Where the portal on side face d of trial room k stands along the face: a trial room's faces are
+// flat (LLLL, no river) and nothing else moves their portals, so it is the face's own first draw
+// (world/faces.js sideFace), known now already
+export const portalPos = (seed, k, d) => 3 + Math.floor(mulberry32(hash32(seed ^ hashKey(faceKey(k, d)) ^ 0x51de))() * 10);
+// a kind's room needs room between its two portals: the collapse's aprons in front of them
+// (cubegen/trials/collapse.js) must stand well apart where the way turns
+function roomFits(kind, seed, k, entry, exit) {
+  if (kind !== 'collapse' || exit == null || (entry ^ 1) === exit || entry === (exit ^ 1)) return true;
+  const at = d => { const t = portalPos(seed, k, d); return [[N - 4, t], [3, t], [t, N - 4], [t, 3]][d]; };
+  const [a, b] = [at(entry), at(exit)];
+  return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) >= 7;
+}
 
 // the chances of the slots (docs/trials.md "Planning"); 0 until the kinds are on (step by step)
 export const EVENT_CHANCE = 0.45;
@@ -73,7 +88,8 @@ export function planTrials({ seed, d, theme, force: f, spine, K, blocked, pinned
   const roll = R(), kindRoll = R(), roomRoll = R();
   const events = kindsFor('event', d, theme, force);
   if (!events.length || !(force ? isEvent(force.kind) : roll < EVENT_CHANCE)) return plan;
-  const kind = weighted(events, kindRoll), rooms = routeRooms(plan, spine, K, blocked, pinned);
+  const kind = weighted(events, kindRoll);
+  const rooms = routeRooms(plan, spine, K, blocked, pinned).filter(i => roomFits(kind, seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1])));
   if (!rooms.length) return plan;
   const i = rooms[Math.floor(roomRoll * rooms.length)];
   add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),

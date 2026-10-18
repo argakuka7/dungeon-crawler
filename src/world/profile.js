@@ -4,7 +4,8 @@
 // column gets one value all four agree on.
 import { N } from '../core/constants.js';
 import { clamp } from '../core/util.js';
-import { key, parse } from './coords.js';
+import { key, parse, step } from './coords.js';
+import { MAX_DEPTH } from '../themes/depth.js';
 import { voidAllowed, isVoid } from './voids.js';
 import { isClearing, TOWN_LEVEL } from './town.js';
 import { spanFace, spanVertex, spanU, valleyFloor } from './spans.js';
@@ -93,16 +94,21 @@ function spanProfile(world, fk, out) {
 // cave depths and canyons: a rock wall along the face (both cubes build their half of it), open around the
 // portal and the river crossing. Heights come from world noise sampled at the face (corners at
 // the shared vertex), so the four faces meeting at a corner agree.
+// (a trial room that has to be walled in, world/trials.js: the crumbling floor's, where the crust
+// is the only way, gets rock walls along its faces even under the sky)
+const walledTrial = (world, k) => { const d = -parse(k)[1]; return d >= 0 && d <= MAX_DEPTH && world.layout(d).trialCells?.get(k)?.kind === 'collapse'; };
 export function caveWall(world, fk, f) {
   const [k, d] = fk.split('/'), [X, Y, Z] = parse(k);
   const theme = world.layout(-Y).theme;
-  if (!theme.cave && !theme.walls) return null;
+  const trialOnly = !theme.cave && !theme.walls;
+  if (trialOnly && !walledTrial(world, k) && !walledTrial(world, step(k, +d))) return null;
   const out = new Int16Array(N);
   // (none at a corner where a large area's unwalled inner face ends, areas.js)
   const open = [innerCorner(world, d === '0' ? X + 1 : X, Y, d === '0' ? Z : Z + 1), innerCorner(world, X + 1, Y, Z + 1)];
   for (let t = 0; t < N; t++) {
     if ((f.portal && Math.abs(t - f.portal.pos) <= 2) || (f.spout && Math.abs(t - f.spout.pos) <= 2)) continue;
     if ((t === 0 && open[0]) || (t === N - 1 && open[1])) continue;
+    if (trialOnly && (t === 0 || t === N - 1)) continue;   // (the corners belong to the faces beside it too)
     if (f.river && t >= f.river.pos - 1 && t <= f.river.pos + f.river.w) continue;
     const a = t === 0 ? 0 : t === N - 1 ? N : t + 0.5;
     const wx = d === '0' ? (X + 1) * N : X * N + a, wz = d === '0' ? Z * N + a : (Z + 1) * N;

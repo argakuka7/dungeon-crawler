@@ -2,7 +2,7 @@
 // not a perfect one. A Dijkstra over the cube's real reach graph (cubegen/reach.js, after the
 // smoothing and the fences, with the structures) gives every floor its earliest arrival, each
 // move costing its real duration: walking at WALK_SPEED (or RUN_SPEED), ramps and stairs by their
-// length, ladders at the climb speed, a jump or a drop 0.6 s.
+// length, ladders at the climb speed, a jump or a drop 0.6 s (a jump a second more, its run-up).
 //   deadlines  the hazard gives each floor the time it stops being safe: the path must leave
 //              every floor with arrival x SLACK + ARM_TIME <= deadline, and end on a floor with
 //              none
@@ -12,7 +12,8 @@ import { ARM_TIME, SLACK } from '../../core/trials.js';
 import { graph } from '../reach.js';
 import { floorWalkable } from '../../physics/floornav.js';
 
-export const JUMP_TIME = 0.6, USE_TIME = 1;
+// a jump or a drop; a jump over a gap also gets a run-up (a slow player stops, steps back and runs)
+export const JUMP_TIME = 0.6, RUN_UP = 1, USE_TIME = 1;
 const level = f => f.fluid ? f.surf : f.top;
 const lowest = f => f.cs ? Math.min(...f.cs) / LH : f.top;   // the floor's lowest corner (levels)
 
@@ -21,7 +22,7 @@ function duration(a, b, move, speed) {
   if (move) {
     const k = move.cells.length, rise = Math.abs(b.top - a.top) * LH;
     if (move.kind === 'ladder') return rise / CLIMB_SPEED + JUMP_TIME;
-    if (move.kind === 'jump') return JUMP_TIME + (move.gap || 1) / speed;
+    if (move.kind === 'jump') return JUMP_TIME + RUN_UP + (move.gap || 1) / speed;
     if (move.kind === 'drop') return JUMP_TIME;
     return Math.hypot(k + 1, rise) / speed;   // walk, stair, bridge, walkway
   }

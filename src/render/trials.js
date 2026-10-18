@@ -5,8 +5,14 @@
 // and the parts' state every frame.
 import * as THREE from 'three';
 import { N, BASE, LH } from '../core/constants.js';
-import { fluidMaterial, FLUID_LOOK } from './materials.js';
+import { EDGE_CORNERS, edgePts } from '../core/constants.js';
+import { fluidMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
 import { TRIALS } from '../core/trials.js';
+import { GeoBuilder } from './builder.js';
+import { gradient } from './palette.js';
+import { cutMaterial } from './section.js';
+import { themeOf } from '../themes/depth.js';
+import { soft, rand, emit } from './particles.js';
 
 const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
@@ -59,11 +65,37 @@ function barrier(p) {
   return g;
 }
 
+// a crust cell of the crumbling floor (cubegen/trials/collapse.js): its column of rock, drawn
+// on its own (render/floors.js leaves it out) round its centre, so it can shake and fall
+function crustCell(m, f, theme) {
+  const b = new GeoBuilder(), cs = f.cs, y0 = f.bottom * LH, cx = f.x + 0.5, cz = f.z + 0.5;
+  const avg = (cs[0] + cs[1] + cs[2] + cs[3]) / 4, top = gradient(theme.top, avg / LH).multiplyScalar(0.92);
+  const P = [[-0.5, cs[0], -0.5], [0.5, cs[1], -0.5], [-0.5, cs[2], 0.5], [0.5, cs[3], 0.5]];
+  b.tri(P[0], P[1], P[3], top, [0, 1, 0]); b.tri(P[0], P[3], P[2], top, [0, 1, 0]);
+  for (let d = 0; d < 4; d++) {
+    const [a, c] = EDGE_CORNERS[d], [p0, p1] = edgePts(f.x, f.z, d), side = gradient(theme.side, avg / LH).multiplyScalar(d & 1 ? 0.8 : 0.9);
+    const A = [p0[0] - cx, cs[a], p0[1] - cz], B = [p1[0] - cx, cs[c], p1[1] - cz];
+    b.quad([A[0], y0, A[2]], [B[0], y0, B[2]], B, A, [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]][d], side);
+  }
+  const mesh = new THREE.Mesh(b.build(), cutMaterial(solidMaterial('full')));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.position.set(cx, 0, cz);
+  return mesh;
+}
+
 export function buildTrialView(m, group) {
   const t = m.trial;
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
-  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map() };
+  const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null };
+  if (t.crust) {
+    const theme = themeOf(m);
+    view.crust = new Map(t.crust.map(q => {
+      const f = m.floors[q.f], mesh = crustCell(m, f, theme);
+      group.add(mesh);
+      return [q.c, { mesh, f, state: 'whole', t: 0, base: mesh.material.color.clone() }];
+    }));
+  }
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
@@ -92,6 +124,44 @@ export function setTrialWater(world, y, phase) {
   if (!v.water.visible) return;
   const h = y + BASE;
   v.water.scale.y = h; v.water.position.y = -BASE + h / 2;
+}
+
+// the crust as the trial says (states: cell -> 'whole' | 'shaking' | 'gone'): a cell shakes, cracks
+// and drops dust, then falls away into the basin; resolved, the fallen ones rise back whole
+export function setCrust(world, states, dt, resolved = false) {
+  const v = world?.trialView;
+  if (!v?.crust) return;
+  for (const [c, cell] of v.crust) {
+    const want = resolved ? 'whole' : states.get(c) ?? 'whole', m = cell.mesh;
+    if (want === 'gone' && cell.state !== 'falling' && cell.state !== 'gone') { cell.state = 'falling'; cell.t = 0; dust(m, 10); }
+    else if (want === 'whole' && (cell.state === 'falling' || cell.state === 'gone')) { cell.state = 'rising'; cell.t = 0; }
+    else if (want === 'shaking' && cell.state === 'whole') { cell.state = 'shaking'; cell.t = 0; }
+    else if (want === 'whole' && cell.state === 'shaking') cell.state = 'whole';
+    cell.t += dt;
+    const p = m.position;
+    if (cell.state === 'shaking') {
+      const k = Math.min(1, cell.t / 1.5);
+      p.x = cell.f.x + 0.5 + Math.sin(cell.t * 60) * 0.035 * k; p.z = cell.f.z + 0.5 + Math.cos(cell.t * 53) * 0.035 * k; p.y = 0;
+      m.material.color.copy(cell.base).multiplyScalar(1 - 0.35 * k);
+      if (Math.random() < dt * 6) dust(m, 1);
+    } else if (cell.state === 'falling') {
+      p.y = -6 * cell.t * cell.t; m.rotation.x = cell.t * 0.6; m.rotation.z = cell.t * 0.4;
+      if (cell.t > 1.4) { cell.state = 'gone'; m.visible = false; }
+    } else if (cell.state === 'rising') {
+      m.visible = true; m.rotation.set(0, 0, 0);
+      const k = Math.min(1, cell.t / 1.2);
+      p.set(cell.f.x + 0.5, -4 * (1 - k) * (1 - k), cell.f.z + 0.5);
+      m.material.color.copy(cell.base);
+      if (k >= 1) cell.state = 'whole';
+    } else if (cell.state === 'whole') { p.set(cell.f.x + 0.5, 0, cell.f.z + 0.5); m.material.color.copy(cell.base); }
+  }
+}
+function dust(mesh, n) {
+  const at = new THREE.Vector3();
+  mesh.getWorldPosition(at);
+  const top = Math.max(...mesh.geometry.attributes.position.array.filter((_, i) => i % 3 === 1));
+  for (let i = 0; i < n; i++) emit(soft, at.x + rand(-0.5, 0.5), at.y + top, at.z + rand(-0.5, 0.5),
+    { v: [0, 0.4, 0], spread: 0.6, life: 1.1, size: 0.22, grow: 1.5, color: '#b8a888', alpha: 0.55, gravity: -0.2, drag: 1 });
 }
 
 // the seals across open faces (open: which faces are open, by dir): shown on the sealed ones
