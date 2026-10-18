@@ -47,6 +47,11 @@
 //   hurt    { blow, fx, fz, nx, nz }   runner -> viewer: an enemy's blow landed on you
 //   shot    { n, id, spec, at }        runner -> viewers: enemy `id` threw projectile n
 //   landed  { n, end }                 runner -> viewers: ... and it ended
+// The runner owns the cube's trial too (net/trials.js):
+//   trial   { key, seed, phase, time, gate? }  runner -> viewers: its state (when it changes, every
+//                                      second while it runs, to one just in); resolved: to all, with
+//                                      its gate, opened for everyone
+//   trialAct { key, act, id? }         viewer -> runner: I stepped off the pad ('away'), used a part
 // A painted skin (core/skin.js) is a PNG too big for one message: who sees a new `skin` id in a
 // `me` asks its wearer for it, and gets it in pieces (SKIN_PIECE base64 characters each):
 //   skinWant { id }                    to the wearer: send me skin `id`
@@ -82,12 +87,13 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 11;
+export const PROTOCOL = 12;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
 export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
-  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news', 'quest', 'skinWant', 'skin']);
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news', 'quest', 'skinWant', 'skin',
+  'trial', 'trialAct']);
 // is a message addressed `to` (undefined: everyone) for player `slot`?
 export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
 // a valid `to` from a guest: a slot, a list of slots, or none (everyone)

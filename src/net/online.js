@@ -49,5 +49,9 @@ export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];
 //   quests(log)                               the host: the quest log changed (packed)
 //   questAct({ act, id?, ev? })               a guest: we did this with a quest, or this happened
 //   questReward(id, rewards, title)           the host: a quest was handed in, everyone gets this
+// and the trial rooms (game/trials.js, net/trials.js):
+//   trialAct({ key, act, id? })               shown another's trial: we stepped off the pad, used a part
+//   trialDone({ key, gate, time })               a trial resolved here: its gate opens for everyone
 export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null,
-  drop: null, take: null, forget: null, chat: null, news: null, quests: null, questAct: null, questReward: null };
+  drop: null, take: null, forget: null, chat: null, news: null, quests: null, questAct: null, questReward: null,
+  trialAct: null, trialDone: null };

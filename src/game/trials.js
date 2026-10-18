@@ -16,8 +16,10 @@ import { setPortalSeals } from '../render/world.js';
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { log } from './log.js';
-import { allEnemies } from './enemies.js';
-import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal } from './flow.js';
+import { allEnemies, mirroring } from './enemies.js';
+import { relay, online } from '../net/online.js';
+import { followTrial } from '../net/trials.js';
+import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld } from './flow.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
@@ -75,20 +77,67 @@ function showTrial(immediate = false) {
   hud();
 }
 
-// one step of the trial in the cube we are in (main.js, after the player and the enemies)
+// one step of the trial in the cube we are in (main.js, after the player and the enemies).
+// Playing together, the game that runs the cube's enemies owns the trial (net/trials.js): it
+// steps it; the others' clocks run on between its words, and stepping off the pad is told to it.
+let awayAsked = false, awayFrom = false;
 export function updateTrial(dt) {
   const s = state.trial, m = mapTrial();
   if (!s || !m) return;
   const away = player.hp > 0 && !!state.arrival && Math.hypot(player.x - state.arrival.x, player.z - state.arrival.z) > ARM_DISTANCE;
-  const happened = stepTrial(s, dt, { away });
+  let happened = null;
+  if (mirroring()) {
+    if (s.phase === 'armed' || s.phase === 'running') { s.t += dt; if (s.phase === 'armed' && s.t >= ARM_TIME) { s.phase = 'running'; happened = 'running'; } }
+    if (s.phase === 'resolved') s.done += dt;
+    if (away && s.phase === 'idle' && !awayAsked) { awayAsked = true; relay.trialAct?.({ key: s.key, act: 'away' }); }
+  } else {
+    happened = stepTrial(s, dt, { away: away || awayFrom });
+    awayFrom = false;
+  }
+  if (s.phase !== 'idle') awayAsked = false;
+  announce(s, happened);
+  showTrial();
+  if (!mirroring()) drown(m, s);
+}
+// what a phase coming says: the banner and the rumble as it arms
+function announce(s, happened) {
   if (happened === 'armed') {
     setStatus(`${TRIALS[s.kind].name}! ${SEALED}`);
     banner(TRIALS[s.kind].name, 'The water is coming. Climb to the summit and press the button.');
     sfx('rumble'); sfx('gate', { delay: 0.4 });
   }
   if (happened === 'running') sfx('rumble', { pitch: 0.7 });
+}
+
+// --- playing together (net/trials.js, net/session.js) -------------------------------------------
+
+// the owner's word on the trial of the cube we are in (we are shown it); m: trialMessage
+export function takeTrialWord(m) {
+  const s = state.trial;
+  if (!s || m.key !== s.key || m.seed !== state.cubes?.seed) return;
+  if (m.phase === 'resolved') { resolve(false); return; }   // (its gate, the banner, the water draining)
+  const happened = followTrial(s, m);
+  announce(s, happened);
   showTrial();
-  drown(m, s);
+}
+// another player's act on the trial we own: stepping off the pad, using a part
+export function trialActFrom(m) {
+  const s = state.trial;
+  if (!s || m.key !== s.key || mirroring()) return;
+  if (m.act === 'away') awayFrom = true;
+  if (m.act === 'part') { const p = mapTrial()?.parts?.find(q => q.id === m.id); if (p) usePart(p, true); }
+}
+// a trial resolved somewhere (by whoever): its gate is open for us too
+export function shareTrialResolved(m) {
+  if (!m.gate || state.run.unlockedGates.has(m.gate)) return;
+  if (state.trial?.key === m.key && state.trial.phase !== 'resolved') { resolve(false); return; }
+  state.run.unlockedGates.add(m.gate);
+  refreshOpenFaces();
+  // standing at its portal: the warning goes
+  if (state.map?.trialWarn?.some(Boolean)) {
+    const before = state.map.trialWarn.join();
+    if (warnTrials(state.map).join() !== before) rebuildWorld();
+  }
 }
 
 // enemies under the trial's fluid drown (no reward: the water took them)
@@ -116,24 +165,30 @@ export function partInReach() {
 }
 const partLabel = p => ({ button: 'Press the button' })[p.type] ?? 'Use it';
 
-// the action key on part p
-export function usePart(p) {
-  if (p.type === 'button') { sfx('clink'); resolve(); return true; }
+// the action key on part p (fromOther: another player used it, we own the trial). Shown another's
+// trial, the press goes to its owner.
+export function usePart(p, fromOther = false) {
+  const s = state.trial;
+  if (!s) return false;
+  if (!fromOther && mirroring()) { sfx('clink'); relay.trialAct?.({ key: s.key, act: 'part', id: p.id }); return true; }
+  if (p.type === 'button') { if (!fromOther) sfx('clink'); resolve(); return true; }
   return false;
 }
 
 // The goal is met: the gate into the run (saved, shared, respected by discovery like a guardian's),
-// the seals open, the fluid drains back, the chronicle notes it.
-export function resolve() {
+// the seals open, the fluid drains back, the chronicle notes it. tell: we resolved it (not told so):
+// the others hear of it
+export function resolve(tell = true) {
   const s = state.trial, m = mapTrial();
   if (!s || !m || s.phase === 'resolved') return false;
   resolveTrial(s, trialFluidLevel(m, s));
   state.run.unlockedGates.add(m.gate);
   refreshOpenFaces();
+  if (tell) relay.trialDone?.({ key: s.key, gate: m.gate, time: s.t });   // resolved for everyone (net/session.js)
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
   setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
   banner('Well done!', 'The water drains away.');
-  log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: true });
+  log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
   showTrial();
   return true;
 }

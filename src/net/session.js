@@ -79,6 +79,8 @@ import { log } from '../game/log.js';
 import { speech } from '../game/console.js';
 import { detachWorld } from '../game/save.js';
 import { takeQuestLog, guestQuestAct, questRewarded, questLogPacked } from '../game/quests.js';
+import { TrialOwner, trialMessage, trialAct } from './trials.js';
+import { takeTrialWord, trialActFrom, shareTrialResolved, sealedIn } from '../game/trials.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -98,8 +100,10 @@ let lastSend = 0, ping = null;
 let lastKey = null, cubeSince = 0, following = false, pendingSeed = null, pendingRun = null, announced = null;
 // how many open faces the others know of (a face once open stays open: more is new)
 let facesSent = 0;
-// the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's)
+// the enemies (net/foes.js): a Runner (ours, maybe shown to others) or a Viewer (another's); the
+// runner owns the cube's trial too (net/trials.js)
 let foes = null, lastFoes = 0;
+const trialOwner = new TrialOwner();
 // our painted skin as pieces ({ id, pieces: a promise of them, null: too big to send}), and who
 // we are sending it to (slot -> { id, pieces, n: the next piece }), one piece each SKIN_EVERY
 let ownSkin = null, lastSkinPiece = 0;
@@ -281,6 +285,7 @@ function apart() {
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
   relay.drop = relay.take = relay.forget = relay.chat = relay.news = null;
+  relay.trialAct = relay.trialDone = null;
   relay.quests = relay.questAct = relay.questReward = null;
   settleClaims();   // what we reached for is ours: nobody else is left to have it
   setOthers([]);
@@ -502,6 +507,9 @@ function together() {
   relay.forget = (key, sources) => post({ t: host ? 'gone' : 'forget', cube: key, sources }, host ? undefined : 0);
   relay.launch = (pr, e) => { const to = hereSlots(); if (to.length) post({ t: 'shot', n: pr.n, id: e.id, spec: pr.spec, at: [pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz] }, to); };
   relay.landed = (pr, end) => { const to = hereSlots(); if (to.length) post({ t: 'landed', n: pr.n, end }, to); };
+  // a trial room: shown another's, what we do there goes to its owner; resolved, to everyone
+  relay.trialAct = a => { if (foes instanceof Viewer) post({ t: 'trialAct', ...a }, foes.runner); };
+  relay.trialDone = d => post({ t: 'trial', key: d.key, seed: state.cubes?.seed, phase: 'resolved', time: d.time, gate: d.gate });
 }
 const hereSlots = () => [...peers.values()].filter(p => p.here).map(p => p.slot);
 
@@ -539,6 +547,15 @@ function shared(m, p) {
   else if (m.t === 'skinWant') { const id = skinIdOf(m.id); if (id) sendSkin(p.slot, id); }
   else if (m.t === 'skin') { if (isSkinPiece(m)) skinPiece(p, m); }
   else if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; }
+  // a trial room (net/trials.js): resolved, by anyone; its owner's word, to those shown it; an act on ours
+  else if (m.t === 'trial') {
+    const tm = trialMessage(m);
+    if (tm?.phase === 'resolved' && tm.gate && tm.seed === state.cubes?.seed) shareTrialResolved(tm);
+    else if (tm && foes instanceof Viewer && m.from === foes.runner) takeTrialWord(tm);
+  } else if (m.t === 'trialAct') {
+    const a = trialAct(m);
+    if (a && foes instanceof Runner && p.here) trialActFrom(a);
+  }
   else if (m.t === 'arrow') {
     if (!p.here || !['arrow', 'bolt', 'spell'].includes(m.kind) || !Array.isArray(m.at) || m.at.length !== 6 || !finite(...m.at)
       || !Array.isArray(m.origin) || m.origin.length !== 3 || !finite(...m.origin) || !finite(m.stats?.range)) return true;
@@ -718,7 +735,7 @@ function send(now) {
   const p = player, at = truePosition(), r = x => Math.round(x * 1000) / 1000;
   const m = { t: 'me', ts: now, seed: state.cubes.seed, cube: state.cubeKey, busy: busy(), pose,
     body: [at.x, at.y, at.z, p.vx, p.vz].map(r), ground: p.grounded ? 1 : 0, swim: p.swimming ? 1 : 0, down: p.ragdoll ? 1 : 0,
-    ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook() };
+    ko: downInfo(), hp: p.hp, maxHp: p.maxHp, level: p.level, weapon, ...capturedLook(), sealed: sealedIn() ? 1 : 0 };
   if (online.role === 'host') { m.from = 0; passMe(m, 0); }
   else link?.send(m);
 }
@@ -739,6 +756,7 @@ function unreachable(p) {
   if (!them) return 'Not here yet';
   if (them.seed !== state.cubes?.seed) return 'In another world';
   if (them.busy) return 'On the move';
+  if (them.sealed) return 'Sealed in a trial room';   // (a trial room while its event runs: game/trials.js)
   const [x, , z] = them.body;
   if (them.cube === state.cubeKey && Math.hypot(x - player.x, z - player.z) < 2) return 'Right beside you';
   return null;
@@ -828,6 +846,8 @@ export function updateOnline() {
       lastFoes = now;
       for (const [msg, to] of foes.messages(now, viewers)) post(msg, to);
     }
+    // and its trial, if this is a trial room
+    if (state.cubes) for (const [msg, to] of trialOwner.messages(now, viewers, state.trial, state.cubes.seed)) post(msg, to);
   } else {
     setOthers([]);
     foes?.check(now);

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { roomCode, readCode, CODE_LETTERS, CODE_LENGTH, cleanName, packPose, isPose, isMe, BONES, Q,
   MAX_PLAYERS, RELAYED, isFor, validTo, freeSlot, runnerOf } from '../src/net/protocol.js';
 import { Timeline, lerpAngle, DELAY } from '../src/net/sync.js';
+import { TrialOwner, trialMessage, trialAct, followTrial, TRIAL_EVERY } from '../src/net/trials.js';
+import { newTrial, stepTrial, trialSealed, ARM_TIME } from '../src/core/trials.js';
 
 test('room codes are four letters without I and O', () => {
   assert.ok(!CODE_LETTERS.includes('I') && !CODE_LETTERS.includes('O'));
@@ -185,4 +187,57 @@ test('a painted skin goes in pieces small enough for one message each', async ()
     { ...m, data: 'A'.repeat(SKIN_PIECE + 1) }, { ...m, t: 'me' }]) assert.ok(!isSkinPiece(bad));
   // the largest skin that goes still fits in SKIN_PIECES
   assert.ok(Math.ceil(Math.ceil(SKIN_BYTES / 3) * 4 / SKIN_PIECE) <= SKIN_PIECES);
+});
+
+test('a trial room: its owner tells those in the cube its state, on a change, every second, and at once to one who comes in', () => {
+  const owner = new TrialOwner(), s = newTrial({ key: 'k', kind: 'flood' });
+  assert.deepEqual(owner.messages(0, [], s, 7), []);
+  // a viewer in the cube: told at once, then only when something changes
+  let out = owner.messages(10, [1], s, 7);
+  assert.equal(out.length, 1); assert.deepEqual(out[0][1], [1]);
+  assert.equal(out[0][0].t, 'trial');
+  assert.deepEqual(trialMessage(out[0][0]), { key: 'k', seed: 7, phase: 'idle', time: 0, gate: null });
+  assert.deepEqual(owner.messages(20, [1], s, 7), []);
+  // armed: everyone hears, and every TRIAL_EVERY while it runs
+  stepTrial(s, 0, { away: true });
+  out = owner.messages(30, [1], s, 7);
+  assert.equal(out[0][0].phase, 'armed');
+  stepTrial(s, 0.5);
+  assert.deepEqual(owner.messages(500, [1], s, 7), []);
+  assert.equal(owner.messages(30 + TRIAL_EVERY, [1], s, 7).length, 1);
+  // a friend coming in while it runs: told at once (and only they)
+  stepTrial(s, ARM_TIME);
+  owner.messages(2000, [1], s, 7);
+  out = owner.messages(2100, [1, 2], s, 7);
+  assert.deepEqual(out.map(([m, to]) => [m.phase, to]), [['running', [2]]]);
+});
+
+test('a trial room: one shown it follows its owner (joining in progress sealed), an act goes back, resolved is resolved for all', () => {
+  const owner = newTrial({ key: 'k', kind: 'flood' }), viewer = newTrial({ key: 'k', kind: 'flood' });
+  stepTrial(owner, 0, { away: true }); stepTrial(owner, ARM_TIME + 5);
+  // the friend comes in while it runs: its trial follows the owner's word, sealed in
+  assert.equal(followTrial(viewer, trialMessage({ key: 'k', seed: 1, phase: owner.phase, time: owner.t })), 'running');
+  assert.ok(trialSealed(viewer)); assert.equal(viewer.t, owner.t);
+  // a word on another room changes nothing
+  assert.equal(followTrial(viewer, { key: 'x', seed: 1, phase: 'idle', time: 0 }), null);
+  // one of them fails (back to the room before): the owner's trial goes on, the word keeps coming
+  assert.equal(followTrial(viewer, trialMessage({ key: 'k', seed: 1, phase: 'running', time: owner.t + 1 })), null);
+  assert.equal(viewer.t, owner.t + 1);
+  // armed for long enough, a viewer's clock turns to running by itself
+  const late = newTrial({ key: 'k', kind: 'flood' });
+  assert.equal(followTrial(late, { key: 'k', seed: 1, phase: 'armed', time: ARM_TIME + 0.1 }), 'running');
+  // what a viewer does goes to the owner, checked
+  assert.deepEqual(trialAct({ key: 'k', act: 'part', id: 'button' }), { key: 'k', act: 'part', id: 'button' });
+  assert.deepEqual(trialAct({ key: 'k', act: 'away' }), { key: 'k', act: 'away', id: null });
+  assert.equal(trialAct({ key: 'k', act: 'part' }), null);
+  assert.equal(trialAct({ key: 'k', act: 'cheat' }), null);
+  // resolved: everyone hears it with its gate; resolved stays resolved
+  const done = trialMessage({ key: 'k', seed: 1, phase: 'resolved', time: 30, gate: 'trial:k' });
+  assert.equal(done.gate, 'trial:k');
+  assert.equal(followTrial(viewer, done), 'resolved');
+  assert.equal(followTrial(viewer, { key: 'k', seed: 1, phase: 'running', time: 31 }), null);
+  assert.equal(viewer.phase, 'resolved');
+  assert.equal(trialMessage({ key: 'k', seed: 1, phase: 'resolved', time: 1, gate: 'k:guardian' }), null);
+  assert.equal(trialMessage({ key: 'k', seed: 1, phase: 'flying', time: 1 }), null);
+  assert.ok(RELAYED.has('trial') && RELAYED.has('trialAct'));
 });

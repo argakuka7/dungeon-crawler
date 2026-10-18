@@ -157,8 +157,8 @@ export function besidePortal(map, dir) {
 }
 export function backBeforeTrial(message) {
   const t = state.map.trial, cubes = state.cubes;
-  restoreVisit(state.visit);   // the trial room as it was
-  restartTrial();
+  // the trial room as it was; playing together, it goes on for the others there (as they have it)
+  if (!mirroring() && !online.buddies.some(b => b.here && !b.out && b.hp > 0)) { restoreVisit(state.visit); restartTrial(); }
   state.transitioning = true;
   cancelSword(true); cancelCast();
   fadeOut();
