@@ -24,6 +24,7 @@ import { clearInput } from './inputstate.js';
 import { cancelCast } from './townportal.js';
 import { useItem } from './quickbar.js';
 import { log } from './log.js';
+import { keyLabel, barKeysText, onSettingsChange } from './settings.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -192,7 +193,7 @@ export function updateInventory() {
     b.title = i === barKey ? `Take it off quick bar slot ${i + 1}` : `Put it on quick bar slot ${i + 1}`;
   });
   $('inventory-bar-hint').textContent = barKey >= 0 ? 'Again to take it off'
-    : touchOn() ? 'Or tap a slot of the bar above' : 'Or press 1-6';
+    : touchOn() ? 'Or tap a slot of the bar above' : `Or press ${barKeysText()}`;
   $('inventory-item-stats').textContent = (def?.weapon ? weaponText(item)
     : def?.effect || def?.flask ? potionText(item, selected?.from)
     : def?.use ? `${def.stackLimit > 1 ? `Count ${item.count}\n` : ''}${def.description}${def.bound ? '\nBound: it cannot be dropped' : ''}`
@@ -276,6 +277,14 @@ function use() {
 }
 
 $('inventory-close').addEventListener('click', () => setInventoryOpen(false));
+// the keys it names are the settings' (game/settings.js)
+function showKeys() {
+  const bag = keyLabel('inventory');
+  $('inventory-close').textContent = `Close · ${bag ? `${bag} / ` : ''}Esc`;
+  $('inventory-bar-keys-text').textContent = barKeysText();
+}
+showKeys();
+onSettingsChange(showKeys);
 $('inventory-overlay').addEventListener('click', e => { if (e.target === $('inventory-overlay')) setInventoryOpen(false); });
 $('inventory-grid').addEventListener('click', e => {
   const button = e.target.closest('[data-slot]');

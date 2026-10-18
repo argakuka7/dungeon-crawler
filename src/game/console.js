@@ -21,6 +21,8 @@ import { floatText } from '../render/floattext.js';
 import { partnerAt } from '../render/partner.js';
 import { player, state } from './state.js';
 import { clearInput } from './inputstate.js';
+import { isFor } from './settings.js';
+import { isModifier } from '../core/keybinds.js';
 import { chronicle, log, note } from './log.js';
 import { commands, runCommand } from './commands.js';
 import './devcommands.js';
@@ -69,13 +71,14 @@ export function closeChat() {
   shown = -1; render();
 }
 
-// Enter: chat; `: a
-// command (also with the inventory and the other panels' fields left alone)
+// the chat key (Enter): chat; the command key (`): a command (game/settings.js; not with the
+// inventory open, and the other panels' fields left alone)
 addEventListener('keydown', e => {
-  if (open || e.repeat || e.metaKey || e.ctrlKey || e.altKey || state.inventoryOpen || state.menuOpen || state.mode !== 'play') return;
+  if (open || e.repeat || state.inventoryOpen || state.menuOpen || state.mode !== 'play') return;
+  if (!isModifier(e.code) && (e.metaKey || e.ctrlKey || e.altKey)) return;
   if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target?.tagName)) return;
-  if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); openChat(''); }
-  else if (e.code === 'Backquote') { e.preventDefault(); openChat('/'); }
+  if (isFor(e, 'chat')) { e.preventDefault(); openChat(''); }
+  else if (isFor(e, 'command')) { e.preventDefault(); openChat('/'); }
 });
 
 // --- typing ----------------------------------------------------------------------------------

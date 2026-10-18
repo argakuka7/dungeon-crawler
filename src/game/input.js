@@ -1,4 +1,6 @@
 // Keyboard, mouse and wheel. Modal input never enters the game queue.
+// Keys are actions (core/keybinds.js), each on the keys the settings give it (game/settings.js);
+// the keys named here are the defaults. Esc is always the menu (and closes what is open).
 // The player always runs; holding left Ctrl walks. Holding Shift auto-attacks enemies the weapon
 // can reach (and does nothing without one, or with a flask in hand). Space jumps.
 // Mouse: click the floor to walk there, click an enemy to attack it (hold for more), click an
@@ -27,7 +29,9 @@ import { throwTarget } from './throws.js';
 import { lineOfFire } from './shots.js';
 import { clearLine } from '../physics/enemynav.js';
 import { allEnemies } from './enemies.js';
-import { toggleMusic } from '../audio/music.js';
+import { toggleMusic, keysOf, bindings, actionsOf } from './settings.js';
+import { settingsOpen } from './settingsmenu.js';
+import { actionsFor, isChar, isModifier, BAR_ACTIONS, MOVE_ACTIONS } from '../core/keybinds.js';
 import { barKey } from './quickbar.js';
 import { setMenuOpen, toggleMenu } from './escmenu.js';
 import { useAction } from './action.js';
@@ -35,64 +39,74 @@ import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
 
 const { keys } = controls;
-const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
-const WALK = ['ControlLeft'], ACTION = ['KeyF', 'ControlRight'], ATTACK = ['ShiftLeft', 'ShiftRight'];
+const typed = new Map();   // code -> the character it typed last (for keys bound by character)
+
+// is any of the action's keys held?
+export function held(id) {
+  return keysOf(id).some(k => k !== null && (isChar(k) ? [...keys].some(c => typed.get(c) === k) : keys.has(k)));
+}
+// a chord with Ctrl or Alt held that the game does not hold as one of its keys, or with Cmd:
+// the browser's or the system's shortcut (Ctrl+L), not the game's
+const ours = (a, b) => [a, b].some(c => keys.has(c) && actionsFor(bindings(), c, null).length);
+const foreign = e => e.metaKey || (e.ctrlKey && !ours('ControlLeft', 'ControlRight')) || (e.altKey && !ours('AltLeft', 'AltRight'));
+
+// what a press does (the hold actions are read every frame: inputDir, wantsWalk, autoAttackHeld;
+// the inventory, the quick bar, the help and the menu are handled before, as they work with
+// panels open)
+const PRESS = {
+  jump: () => { controls.jumpPressed = true; },
+  // a tap between two frames still swings (holding is handled every frame in update.js)
+  attack: () => { if (!state.transitioning) autoAttack(); },
+  music: () => setStatus(toggleMusic() ? 'Music on' : 'Music off'),
+  turnLeft: () => { view.yawTarget -= Math.PI / 2; },
+  turnRight: () => { view.yawTarget += Math.PI / 2; },
+  respawn: () => { spawnEntry(); setStatus('Respawned where you came in'); },
+  labels: () => toggleLabels(),
+  action: () => useAction(),   // chest, villager, collect, else nothing
+  zoomIn: () => { view.zoomTarget = stepZoom(view.zoomTarget, -1); },
+  zoomOut: () => { view.zoomTarget = stepZoom(view.zoomTarget, 1); },
+  knockOver: () => { if (!player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: 'Whoops!' }); },
+  path: () => { state.showPath = !state.showPath; if (state.world) state.world.pathLine.visible = state.showPath; },
+};
 
 addEventListener('keydown', e => {
-  if (e.metaKey || e.altKey) return;
   // typing a name or a code (the Esc menu): only Escape is ours
   if (e.target?.tagName === 'INPUT' && e.target.type === 'text') {
     if (e.code === 'Escape' && state.menuOpen) { setMenuOpen(false); e.preventDefault(); }
     return;
   }
-  // the main menu (game/menu.js) has its own keys
-  if (state.mode === 'menu') return;
-  // the Esc menu is open: Esc and O close it, the game gets no keys
+  // the main menu (game/menu.js) has its own keys, the settings (game/settingsmenu.js) too
+  if (state.mode === 'menu' || settingsOpen()) return;
+  const acts = isModifier(e.code) || !foreign(e) ? actionsOf(e) : [];
+  const is = id => acts.includes(id);
+  // the Esc menu is open: Esc and the menu key close it, the game gets no keys
   if (state.menuOpen) {
-    if ((e.code === 'Escape' || e.code === 'KeyO') && !e.repeat) setMenuOpen(false);
+    if ((e.code === 'Escape' || is('menu')) && !e.repeat) setMenuOpen(false);
     if (!['Tab', 'Enter', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab, Enter and Space)
     return;
   }
-  // right Ctrl is the action key (as F)
-  if (e.code === 'ControlRight') {
-    if (!e.repeat && !state.inventoryOpen) useAction();
-    e.preventDefault(); return;
-  }
-  // left Ctrl is the walk modifier: track it and the movement keys (and keep Ctrl+S / Ctrl+D /
-  // Ctrl+A from saving, bookmarking or selecting), leave every other Ctrl shortcut alone
-  if (e.ctrlKey) {
-    if (!state.inventoryOpen && (WALK.includes(e.code) || MOVE.includes(e.code))) { keys.add(e.code); e.preventDefault(); }
+  if (!isModifier(e.code) && foreign(e)) {
+    // Ctrl held but not as one of the game's keys: moving still goes on (Ctrl+S, Ctrl+D and
+    // Ctrl+A neither save, bookmark nor select), every other shortcut is left alone
+    const move = actionsOf(e).some(id => MOVE_ACTIONS.includes(id));
+    if (move && e.ctrlKey && !e.metaKey && !e.altKey && !state.inventoryOpen) { keys.add(e.code); typed.set(e.code, e.key); e.preventDefault(); }
     return;
   }
-  if (e.code === 'KeyI') { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
-  if (e.code === 'KeyV') { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
+  if (is('inventory')) { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
   if (e.code === 'Escape' && state.inventoryOpen) { setInventoryOpen(false); e.preventDefault(); return; }
-  // 1-6: the quick bar (with the inventory open: put the selected item there); not while typing
-  const bar = /^Digit([1-6])$/.exec(e.code);
-  if (bar && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) { if (!e.repeat) barKey(bar[1] - 1); e.preventDefault(); return; }
+  // the quick bar (with the inventory open: put the selected item there); not while typing
+  const bar = BAR_ACTIONS.findIndex(is);
+  if (bar >= 0 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) { if (!e.repeat) barKey(bar); e.preventDefault(); return; }
   if (state.inventoryOpen) return;
-  // by key, not code: ? and / sit on different keys across layouts
-  if (e.key === '?' || e.key === '/') { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
+  if (is('help')) { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
   if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }
-  // Esc with nothing else open, and O: the menu (play together is in it)
-  if (e.code === 'Escape' || e.code === 'KeyO') { if (!e.repeat) toggleMenu(); e.preventDefault(); return; }
-  keys.add(e.code);
+  // Esc with nothing else open, and the menu key: the menu (play together and the settings are in it)
+  if (e.code === 'Escape' || is('menu')) { if (!e.repeat) toggleMenu(); e.preventDefault(); return; }
+  keys.add(e.code); typed.set(e.code, e.key);
+  if (acts.length || e.code.startsWith('Arrow')) e.preventDefault();
   if (e.repeat) return;
-  if (e.code === 'Space') { controls.jumpPressed = true; e.preventDefault(); }
-  // a tap between two frames still swings (holding is handled every frame in update.js)
-  if (ATTACK.includes(e.code) && !state.transitioning) autoAttack();
-  if (e.code === 'KeyM') setStatus(toggleMusic() ? 'Music on' : 'Music off');
-  if (e.code === 'KeyQ') view.yawTarget -= Math.PI / 2;
-  if (e.code === 'KeyE') view.yawTarget += Math.PI / 2;
-  if (e.code === 'KeyR') { spawnEntry(); setStatus('Respawned where you came in'); }
+  for (const id of acts) PRESS[id]?.();
   if (e.code === 'KeyN' && state.dev) nextCube();   // (new worlds come from the main menu)
-  if (e.code === 'KeyX') toggleLabels();
-  // F: the action key (chest, villager, collect), else nothing
-  if (ACTION.includes(e.code)) useAction();
-  if (e.code === 'KeyK' || e.code === 'KeyL') { view.zoomTarget = stepZoom(view.zoomTarget, e.code === 'KeyK' ? -1 : 1); e.preventDefault(); }
-  if (e.code === 'KeyB' && !player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: 'Whoops!' });
-  if (e.code === 'KeyP') { state.showPath = !state.showPath; if (state.world) state.world.pathLine.visible = state.showPath; }
-  if (e.code.startsWith('Arrow')) e.preventDefault();
 });
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', clearInput);
@@ -125,9 +139,9 @@ export function quickThrow() {
   const [dx, dz] = inputDir(), yaw = dx || dz ? Math.atan2(dx, dz) : player.yaw;
   queueAttack(softTarget(player, allEnemies(), yaw, bladeSees));
 }
-export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning && (controls.attackHeld || ATTACK.some(k => keys.has(k)));
-// left Ctrl, or the touch stick pushed only a little
-export const wantsWalk = () => WALK.some(k => keys.has(k)) || (controls.stick.m > 0 && controls.stick.m < WALK_BELOW);
+export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning && (controls.attackHeld || held('attack'));
+// the walk key (left Ctrl), or the touch stick pushed only a little
+export const wantsWalk = () => held('walk') || (controls.stick.m > 0 && controls.stick.m < WALK_BELOW);
 addEventListener('pointerdown', e => {
   // touches are game/touch.js's (a tap comes back through tapGame)
   if (e.button !== 0 || e.pointerType === 'touch' || e.target.tagName !== 'CANVAS' || state.transitioning || state.inventoryOpen) return;
@@ -179,10 +193,10 @@ export function inputDir() {
   if (state.inventoryOpen) return [0, 0];
   if (player.autoDir) return player.autoDir;
   let ix = 0, iy = 0;
-  if (keys.has('KeyW') || keys.has('ArrowUp')) iy += 1;
-  if (keys.has('KeyS') || keys.has('ArrowDown')) iy -= 1;
-  if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
-  if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+  if (held('moveUp')) iy += 1;
+  if (held('moveDown')) iy -= 1;
+  if (held('moveRight')) ix += 1;
+  if (held('moveLeft')) ix -= 1;
   const s = controls.stick;
   if (s.m > 0) { ix += s.x; iy += s.y; }
   return screenToWorld(ix, iy, view.yaw);

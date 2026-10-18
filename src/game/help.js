@@ -1,8 +1,60 @@
-// The controls overlay (? or /). It does not pause the game.
+// The controls overlay (the help key, ?). It does not pause the game. The keys it shows are the
+// ones the settings give (game/settings.js), drawn anew whenever they change.
 import { state } from './state.js';
+import { keysOf, nameOf, keyLabel, onSettingsChange } from './settings.js';
+import { BAR_ACTIONS } from '../core/keybinds.js';
 
 const overlay = document.getElementById('help-overlay');
+const list = document.getElementById('help-keys'), closeHint = document.getElementById('help-close');
 if (state.dev) for (const el of overlay.querySelectorAll('.dev-only')) el.hidden = false;
+
+// keys: the actions whose keys it shows (several: each one's first key; one: both keys), or the
+// words for a mouse control; esc: Esc comes first; also: after the keys; {id} in the text: that
+// action's first key
+const ROWS = [
+  { keys: ['moveUp', 'moveLeft', 'moveDown', 'moveRight'], text: 'run (hold {walk} to walk)' },
+  { keys: ['jump'], text: 'jump' },
+  { keys: 'click floor', text: 'walk there (hold to keep following the cursor)' },
+  { keys: 'click enemy', text: 'go and attack it (hold to keep attacking)' },
+  { keys: ['attack'], text: 'hold to auto-attack enemies within reach (not with a flask in hand)' },
+  { keys: ['turnLeft', 'turnRight'], text: 'rotate the view' },
+  { keys: ['zoomIn', 'zoomOut'], also: 'wheel', text: 'zoom in / out (5 levels)' },
+  { keys: 'click item / label', text: 'walk there and pick it up (weapons are only taken this way or from the inventory)' },
+  { keys: 'click chest', text: 'walk up and open it' },
+  { keys: ['action'], text: 'action: open the treasure chest next to you, else trade with the villager next to you, else collect coins and items within four cells' },
+  { keys: 'click villager', text: 'walk up and trade (the alchemist in the merchant camp sells potions)' },
+  { keys: ['labels'], text: 'show the names of all items on the floor' },
+  { keys: ['inventory'], text: 'inventory, with the items on the floor around you beside it: take them, or drop from the bag' },
+  { keys: BAR_ACTIONS, text: 'quick bar: use an item, drink a potion ({bar2} at the start), take a flask in hand (again: put it away) or equip a weapon (in the inventory: put the selected item there)' },
+  { keys: 'click, flask in hand', text: 'throw it where the arc points' },
+  { keys: ['knockOver'], text: 'knock over' },
+  { keys: ['respawn'], text: 'respawn where you came in' },
+  { keys: ['path'], text: 'show the generator path' },
+  { keys: ['music'], text: 'music on / off' },
+  { keys: ['menu'], esc: true, text: 'the menu: play together with up to three friends, the settings (music, volumes, keys), save and quit (alone, the game waits meanwhile)' },
+  { keys: ['chat'], text: 'chat (playing together, your friends read it); the box keeps what happened' },
+  { keys: ['command'], text: 'type a command (<kbd>/help</kbd> lists them, <kbd>Tab</kbd> completes)' },
+  { keys: ['help'], text: 'this help' },
+];
+
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const kbd = name => `<kbd>${esc(name)}</kbd>`;
+const first = id => keysOf(id).find(k => k !== null) ?? null;
+function keysCell({ keys, esc: withEsc, also }) {
+  if (typeof keys === 'string') return esc(keys);
+  const names = keys.length > 1 ? keys.map(first).filter(k => k !== null).map(k => kbd(nameOf(k))).join('')
+    : keysOf(keys[0]).filter(k => k !== null).map(k => kbd(nameOf(k))).join(' / ');
+  const parts = [withEsc && kbd('Esc'), names, also].filter(Boolean);
+  return parts.length ? parts.join(' / ') : '<i>no key</i>';
+}
+const fill = text => text.replace(/\{(\w+)\}/g, (_, id) => (first(id) ? kbd(nameOf(first(id))) : 'its key'));
+function render() {
+  list.innerHTML = ROWS.map(r => `<dt>${keysCell(r)}</dt><dd>${fill(r.text)}</dd>`).join('');
+  const help = keyLabel('help', { both: false });
+  closeHint.innerHTML = `${help ? `${kbd(help)} / ` : ''}${kbd('Esc')} to close`;
+}
+render();
+onSettingsChange(render);
 
 export const helpOpen = () => !overlay.hidden;
 export function setHelpOpen(open) { overlay.hidden = !open; }

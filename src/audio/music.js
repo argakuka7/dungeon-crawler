@@ -3,7 +3,8 @@
 // the new one from the top. The mood (explore, treasure, sense, rise, fight, boss; picked by
 // game/music.js) decides which voices play: joining ones come in on the next step (a
 // sixteenth), picking up notes already under way, leaving ones fade out from the next beat.
-// Off by default; M turns it on and off (remembered). Turned on, the song starts from the top.
+// Off until turned on (game/settings.js keeps that: the settings menu, or M). Turned on, the
+// song starts from the top. It plays into the music bus (context.js), with its own volume.
 import { createSynth } from '../../vendor/scrimshaw/synth.js';
 import { loadScore } from './score.js';
 import { onAudioStart } from './context.js';
@@ -18,11 +19,11 @@ const MIN_HELD = 0.15;                      // s: a held note joined with less t
 let ctx = null, syn = null;
 const scores = new Map();                   // name -> score once loaded (null if it failed)
 let want = null, mood = 'explore';
-let enabled = localStorage.getItem('crawler.music') === '1';
+let enabled = false;
 let cur = null;                             // the song playing
 let nextAt = 0;                             // the next song may start from here
 
-onAudioStart((ac, output) => {
+onAudioStart((ac, sounds, output) => {
   ctx = ac;
   syn = createSynth(ctx, output);
   syn.out.gain.value = VOLUME;
@@ -54,11 +55,7 @@ export function setMood(name) {
 }
 
 export const musicEnabled = () => enabled;
-export function toggleMusic() {
-  enabled = !enabled;
-  localStorage.setItem('crawler.music', enabled ? '1' : '0');
-  return enabled;
-}
+export function setMusicEnabled(on) { enabled = !!on; }
 
 // for checks and the devtools console: what plays right now
 export function musicInfo() {

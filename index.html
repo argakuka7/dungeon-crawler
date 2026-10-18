@@ -27,33 +27,9 @@
 </div>
 <div id="help-overlay" hidden>
   <section id="help-panel" role="dialog" aria-labelledby="help-title">
-    <header><h1 id="help-title">Controls</h1><span><kbd>?</kbd> / <kbd>Esc</kbd> to close</span></header>
-    <dl class="keys">
-      <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>run (hold left <kbd>Ctrl</kbd> to walk)</dd>
-      <dt><kbd>Space</kbd></dt><dd>jump</dd>
-      <dt>click floor</dt><dd>walk there (hold to keep following the cursor)</dd>
-      <dt>click enemy</dt><dd>go and attack it (hold to keep attacking)</dd>
-      <dt><kbd>Shift</kbd></dt><dd>hold to auto-attack enemies within reach (not with a flask in hand)</dd>
-      <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>rotate the view</dd>
-      <dt><kbd>K</kbd> <kbd>L</kbd> / wheel</dt><dd>zoom in / out (5 levels)</dd>
-      <dt>click item / label</dt><dd>walk there and pick it up (weapons are only taken this way or from the inventory)</dd>
-      <dt>click chest</dt><dd>walk up and open it</dd>
-      <dt><kbd>F</kbd> / right <kbd>Ctrl</kbd></dt><dd>action: open the treasure chest next to you, else trade with the villager next to you, else collect coins and items within four cells</dd>
-      <dt>click villager</dt><dd>walk up and trade (the alchemist in the merchant camp sells potions)</dd>
-      <dt><kbd>X</kbd></dt><dd>show the names of all items on the floor</dd>
-      <dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd>inventory, with the items on the floor around you beside it: take them, or drop from the bag</dd>
-      <dt><kbd>1</kbd>&ndash;<kbd>6</kbd></dt><dd>quick bar: use an item, drink a potion (<kbd>2</kbd> at the start), take a flask in hand (again: put it away) or equip a weapon (in the inventory: put the selected item there)</dd>
-      <dt>click, flask in hand</dt><dd>throw it where the arc points</dd>
-      <dt><kbd>B</kbd></dt><dd>knock over</dd>
-      <dt><kbd>R</kbd></dt><dd>respawn where you came in</dd>
-      <dt><kbd>P</kbd></dt><dd>show the generator path</dd>
-      <dt><kbd>M</kbd></dt><dd>music on / off</dd>
-      <dt><kbd>Esc</kbd></dt><dd>the menu: play together, the controls, the music, save and quit (alone, the game waits meanwhile)</dd>
-      <dt><kbd>O</kbd></dt><dd>play together with up to three friends (the menu)</dd>
-      <dt><kbd>Enter</kbd></dt><dd>chat (playing together, your friends read it); the box keeps what happened</dd>
-      <dt><kbd>`</kbd></dt><dd>type a command (<kbd>/help</kbd> lists them, <kbd>Tab</kbd> completes)</dd>
-      <dt><kbd>?</kbd></dt><dd>this help</dd>
-    </dl>
+    <header><h1 id="help-title">Controls</h1><span id="help-close"></span></header>
+    <dl class="keys" id="help-keys"></dl>
+    <p class="help-note">The keys can be changed in the menu's settings.</p>
     <div class="dev-only" hidden>
       <h2>Developer</h2>
       <dl class="keys">
@@ -97,8 +73,23 @@
     <p id="menu-status" role="status" aria-live="polite"></p>
     <button id="menu-leave" hidden>Leave</button>
     <p class="menu-note">Up to four play together, each with their own hero, in the host's world. Friends come and go as they like. Explore together or apart: the coloured dots on the map are your friends, F takes you to them. The monsters go after all of you, every kill gives each of you XP, the loot is shared: whoever gets to it first takes it. Knocked out, you lie there until a friend helps you up. Needs the internet: the browsers find the host through the PeerJS service and then talk to it directly.</p>
-    <div class="menu-row menu-more"><button id="menu-controls">Controls</button><button id="menu-music">Music: off</button></div>
+    <div class="menu-more"><button id="menu-settings">Settings</button></div>
     <button id="menu-quit">Save and quit to the menu</button>
+  </section>
+</div>
+<div id="settings-overlay" hidden>
+  <section id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <header><h1 id="settings-title">Settings</h1><button id="settings-close" aria-label="Close settings">Done · Esc</button></header>
+    <h2>Sound</h2>
+    <div class="settings-sound">
+      <span>Music</span><button id="settings-music" aria-pressed="false">Off</button><span></span>
+      <label for="settings-music-volume">Music volume</label><input id="settings-music-volume" type="range" min="0" max="100" step="5"><output id="settings-music-level" for="settings-music-volume"></output>
+      <label for="settings-sound-volume">Sound volume</label><input id="settings-sound-volume" type="range" min="0" max="100" step="5"><output id="settings-sound-level" for="settings-sound-volume"></output>
+    </div>
+    <h2>Keys <button id="settings-reset">Reset keys</button></h2>
+    <p class="settings-note">Click a key, then press the new one (<kbd>Esc</kbd>: keep the old one, <kbd>Backspace</kbd>: no key). A key goes to one control only. <kbd>Esc</kbd> always opens the menu and closes what is open.</p>
+    <div id="settings-keys"></div>
+    <p id="settings-feedback" role="status" aria-live="polite"></p>
   </section>
 </div>
 <div id="title-overlay" hidden>
@@ -111,7 +102,7 @@
 <div id="loot-labels"></div>
 <div id="inventory-overlay" hidden>
   <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title" tabindex="-1">
-    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><button id="inventory-close" aria-label="Close inventory">Close · I / Esc</button></header>
+    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><button id="inventory-close" aria-label="Close inventory">Close · Esc</button></header>
     <div id="inventory-equipped"></div>
     <div id="inventory-currency" aria-label="Currency"></div>
     <div class="inventory-body">
@@ -123,7 +114,7 @@
         <div id="inventory-bar" hidden><span>Quick bar</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot"></div><small id="inventory-bar-hint"></small></div>
         <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div></aside>
     </div>
-    <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · 1-6 (or the Quick bar buttons) put the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
+    <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · <span id="inventory-bar-keys-text">1-6</span> (or the Quick bar buttons) put the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
   </section>
 </div>
 <div id="effects" aria-label="Potions at work"></div>

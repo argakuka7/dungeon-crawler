@@ -61,4 +61,4 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
     its first scale. Without that a stray zoom stayed, as the pinch back out is called off.
 
 The menu button at the end of the quick bar opens the Esc menu (`src/game/escmenu.js`): playing
-together, the controls and the music. Respawning has no touch control yet.
+together and the settings (music, volumes, keys). Respawning has no touch control yet.

@@ -1,6 +1,6 @@
-// The quick bar: six slots along the bottom of the screen, on keys 1-6 (or a click). A slot
-// points at a bag item (core/inventory.js assignBar): a weapon is equipped, a usable item used
-// (the town and room portal scrolls start their casts, game/townportal.js, roomportal.js; a
+// The quick bar: six slots along the bottom of the screen, on keys 1-6 (or the ones the settings
+// give, game/settings.js; or a click). A slot points at a bag item (core/inventory.js
+// assignBar): a weapon is equipped, a usable item used (the town and room portal scrolls start their casts, game/townportal.js, roomportal.js; a
 // potion is drunk, core/potions.js; a flask is taken in hand to throw, or put away again,
 // game/equipment.js). With the inventory open, 1-6 or a click puts the selected bag item on that slot instead (again on
 // the same slot: off; the bar pulses while such an item is selected). A potion's slot fills
@@ -19,6 +19,7 @@ import { useTownPortal } from './townportal.js';
 import { useRoomPortal } from './roomportal.js';
 import { assignSelectedToBar, toggleInventory, setInventoryOpen, barReady } from './inventory.js';
 import { toggleMenu } from './escmenu.js';
+import { keyLabel, onSettingsChange } from './settings.js';
 
 const bar = document.getElementById('quickbar');
 bar.innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button class="qb-slot" data-bar="${i}" tabindex="-1">`
@@ -29,6 +30,16 @@ bar.innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button class="qb-sl
   + '<path d="M4 6h16v2.2H4zm0 4.9h16v2.2H4zm0 4.9h16V18H4z"/></svg></button>';
 const buttons = [...bar.querySelectorAll('[data-bar]')];
 let signature = '', shown = null;   // shown: the inventory drawn (a new run has a new one)
+// each slot shows its key (game/settings.js), the bag and menu buttons theirs in the title
+const slotKey = i => keyLabel(`bar${i + 1}`, { both: false });
+function showKeys() {
+  buttons.forEach((b, i) => { b.querySelector('.qb-key').textContent = slotKey(i); });
+  const bag = keyLabel('inventory', { both: false });
+  bar.querySelector('[data-bag]').title = bag ? `Inventory (${bag})` : 'Inventory';
+  signature = '';   // the titles too
+}
+showKeys();
+onSettingsChange(showKeys);
 
 // use the bag item (from the bar or the inventory's Use button)
 export function useItem(instanceId) {
@@ -80,7 +91,7 @@ export function useBarSlot(i) {
   return useItem(e.slot.instanceId);
 }
 
-// keys 1-6: use the slot, or assign to it while the inventory is open
+// the quick bar keys (1-6): use the slot, or assign to it while the inventory is open
 export function barKey(i) {
   if (state.inventoryOpen) assignSelectedToBar(i);
   else useBarSlot(i);
@@ -109,7 +120,8 @@ function draw() {
     b.classList.toggle('in-hand', !!e && e.itemId === inv.readied);
     b.classList.toggle('none-left', !!e && !e.slot);
     b.querySelector('.qb-count').textContent = def && def.stackLimit > 1 ? String(e.count) : '';
-    b.title = def ? `${e.slot ? displayName(e.slot) : def.name} (${i + 1})` : `Empty (${i + 1}): select a bag item in the inventory and press ${i + 1}`;
+    const k = slotKey(i), key = k ? ` (${k})` : '';
+    b.title = def ? `${e.slot ? displayName(e.slot) : def.name}${key}` : `Empty${key}: select a bag item in the inventory and ${k ? `press ${k}` : 'click here'}`;
   });
 }
 

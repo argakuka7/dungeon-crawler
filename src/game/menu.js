@@ -1,8 +1,8 @@
 // The main menu: before the game starts, and after "Save and quit" in the Esc menu
 // (game/escmenu.js). The dev tools and ?seed= skip it (state.js mode; ?menu=1 shows it after all).
 //   title       Continue (the chosen hero in its world), Choose World, Join Game, Choose
-//               Character, the controls, the guide. No hero yet: it says so, and OK goes to
-//               make one.
+//               Character, the settings (game/settingsmenu.js), the guide. No hero yet: it
+//               says so, and OK goes to make one.
 //   worlds      the chosen hero's world: one of the saved ones, a new random one, or a known one
 //               (a world name or a number, core/names.js). Back to the title: Continue plays it.
 //               Each world's name can be copied (to share it) and the world deleted here too.
@@ -16,7 +16,8 @@
 // hero, with the weapon in its hand (render/portrait.js, in the box heroBox gives): a click on
 // it is Choose Character. No hero, or one without a world: random cubes.
 import { state, view, player } from './state.js';
-import { setHelpOpen, helpOpen } from './help.js';
+import { setHelpOpen } from './help.js';
+import { openSettings, closeSettings } from './settingsmenu.js';
 import { fadeOut } from './hud.js';
 import { endWorld } from './flow.js';
 import { startShowcase, stopShowcase, showcaseCubes, park } from './showcase.js';
@@ -80,7 +81,7 @@ function closeMainMenu() {
   fadeOut();
   overlay.hidden = true;
   document.body.classList.remove('in-menu');
-  setHelpOpen(false);
+  setHelpOpen(false); closeSettings();
   stopShowcase();
   showPortrait(false); $('title-hero').hidden = true;
   view.yaw = view.yawTarget = -Math.PI / 4; view.zoom = view.zoomTarget = DEFAULT_ZOOM;
@@ -102,7 +103,7 @@ function heroPick(h, isChosen = false) {
 const screens = {
   title() {
     const hero = chosen();
-    const more = '<button class="title-item" data-act="controls">Controls</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">The guide</a>';
+    const more = '<button class="title-item" data-act="settings">Settings</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">The guide</a>';
     if (!hero) return `<div class="title-list">${noHero}${more}</div>`;
     const world = store.heroWorld(hero.id);
     const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : 'not been there yet'}`;
@@ -265,7 +266,7 @@ const actions = {
   'join-game'() { screen = 'join'; },
   characters() { from = 'title'; screen = 'characters'; form = store.heroes().length ? null : 'hero'; },
   'first-hero'() { from = screen; screen = 'characters'; form = 'hero'; },
-  controls() { setHelpOpen(!helpOpen()); },
+  settings() { openSettings(); },
   back() {
     form = null;
     if (screen === 'join') { invite = null; code = ''; }
@@ -351,12 +352,11 @@ panel.addEventListener('input', e => {
   if (e.target.id === 'title-seed') updatePreview();
   if (e.target.id === 'title-code') code = e.target.value;   // (kept when the screen draws again)
 });
-// Esc: the controls closed, the form given up, else back a screen
+// Esc: the form given up, else back a screen (open, the settings take it: game/settingsmenu.js)
 addEventListener('keydown', e => {
   if (state.mode !== 'menu' || e.key !== 'Escape') return;
   e.preventDefault();
-  if (helpOpen()) setHelpOpen(false);
-  else if (form) act('cancel');
+  if (form) act('cancel');
   else if (screen === 'joining') act('cancel-join');
   else if (screen !== 'title') act('back');
 });

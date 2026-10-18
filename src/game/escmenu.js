@@ -1,7 +1,7 @@
-// The Esc menu (Esc, O, or the menu button on the touch quick bar): resume, play together,
-// the controls, the music, and save and quit to the main menu (game/menu.js). Alone it pauses
-// the world (state.js worldPaused); playing together the world goes on, only your own input
-// stops.
+// The Esc menu (Esc, the menu key O, or the menu button on the touch quick bar): resume, play
+// together, the settings (game/settingsmenu.js: music, volumes, keys), and save and quit to the
+// main menu (game/menu.js). Alone it pauses the world (state.js worldPaused); playing together
+// the world goes on, only your own input stops.
 //
 // Play together: host this world (friends come in with a four letter room code, or a link
 // with ?join=CODE, and drop out as they like), stop hosting, leave a friend's game (back to the
@@ -15,7 +15,7 @@ import { clearMouseInput } from './orders.js';
 import { setHelpOpen } from './help.js';
 import { savedHero } from './save.js';
 import { quitToMenu } from './menu.js';
-import { musicEnabled, toggleMusic } from '../audio/music.js';
+import { openSettings, closeSettings } from './settingsmenu.js';
 import { online, together, playerColor } from '../net/online.js';
 import { hostGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
 
@@ -36,7 +36,10 @@ export function setMenuOpen(open) {
     clearInput(); clearMouseInput();   // nothing walks on by itself while the menu is open
     confirmUntil = quitUntil = 0;
     render();
-  } else document.activeElement?.blur?.();   // back to the game: keys play again
+  } else {
+    closeSettings();
+    document.activeElement?.blur?.();   // back to the game: keys play again
+  }
 }
 export const toggleMenu = () => setMenuOpen(!state.menuOpen);
 
@@ -87,7 +90,6 @@ function render() {
   leave.textContent = phase === 'opening' || phase === 'joining' ? 'Cancel'
     : host ? asking ? 'Stop hosting? Your friends drop out' : 'Stop hosting'
     : 'Leave the game';
-  $('menu-music').textContent = `Music: ${musicEnabled() ? 'on' : 'off'}`;
   const quit = $('menu-quit'), sure = performance.now() < quitUntil;
   quit.classList.toggle('confirm', sure);
   quit.textContent = sure ? 'Quit? Your friends drop out' : savedHero() ? 'Save and quit to the menu' : 'Quit to the menu';
@@ -137,7 +139,6 @@ $('menu-copy').onclick = async () => {
   catch { $('menu-copy').textContent = link(online.code); }
   setTimeout(() => { $('menu-copy').textContent = 'Copy link'; }, 1600);
 };
-$('menu-controls').onclick = () => { setMenuOpen(false); setHelpOpen(true); };
-$('menu-music').onclick = () => { toggleMusic(); render(); };
+$('menu-settings').onclick = () => openSettings();
 // a clicked button lets go of the focus: Space and Enter belong to the game again
 overlay.addEventListener('click', e => { if (e.target.tagName === 'BUTTON') e.target.blur(); });

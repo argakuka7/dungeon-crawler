@@ -1,6 +1,6 @@
 // The game's real music player (src/audio/music.js) and score reader (src/audio/score.js):
 // pick a song and a mood, and hear voices join and leave like they do in the game.
-import { playSong, setMood, musicEnabled, toggleMusic, musicInfo } from '../../src/audio/music.js';
+import { playSong, setMood, setMusicEnabled, musicInfo } from '../../src/audio/music.js';
 import { loadScore, MOODS } from '../../src/audio/score.js';
 import { SONGS } from '../../src/themes/index.js';
 import { loop, html, t as tr } from '../deck.js';
@@ -31,12 +31,8 @@ export default function mount(el) {
     row.querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   }
   $('.play').onclick = async () => {
-    // switch the player on without touching the game's saved music setting
-    if (!musicEnabled()) {
-      const saved = localStorage.getItem('crawler.music');
-      toggleMusic();
-      if (saved === null) localStorage.removeItem('crawler.music'); else localStorage.setItem('crawler.music', saved);
-    }
+    // switch the player on (the game's saved music setting is game/settings.js's: untouched)
+    setMusicEnabled(true);
     await load($('.song').value);
     playSong($('.song').value); setOn(mood); playing = true;
   };

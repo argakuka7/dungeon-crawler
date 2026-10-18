@@ -35,6 +35,10 @@ docs that explain how the game works, from the big ideas down to the real code:
   - Saves (`src/core/save.js`, `src/game/save.js`): up to three heroes and eight worlds,
     apart, in `localStorage`; each hero remembers its world, goes into any other, a friend's too;
     every seed has its own name (`src/core/names.js`, `docs/saves.md`).
+  - Settings (`src/game/settings.js`, the menu in `src/game/settingsmenu.js`, from the Esc menu
+    and the main menu): music on / off, the music's and the sounds' volume, and the keys. Every
+    control is an action with a primary and a secondary key (`src/core/keybinds.js`: codes, so
+    WASD keeps its place on any layout); kept in `localStorage` as `crawler.settings`.
   - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
     chat when playing together, and commands after a `/` that complete the game's items and
     enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).

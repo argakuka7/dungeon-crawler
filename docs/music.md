@@ -8,8 +8,9 @@ vendored in `vendor/scrimshaw/` (Apache-2.0, from Simon Willison's tools).
 **Writing a song?** Start with `music/README.md`: the game's musical style, how to build the
 layers, a format cheat sheet and a full example score.
 
-Music is off by default; M turns it on and off (remembered in `crawler.music`). Sound effects
-are not affected.
+Music is off by default; the settings (in the Esc menu and the main menu) or M turn it on and
+off, and set its volume apart from the sound effects' (`src/game/settings.js`, kept in
+`crawler.settings`; the music plays into its own bus of `src/audio/context.js`).
 
 | File | Role |
 |---|---|

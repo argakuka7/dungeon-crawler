@@ -87,8 +87,9 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #help-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #8a96a8; font-size: 11px; }
 #help-panel h1 { margin: 0 0 10px; color: #fff; font-size: 15px; letter-spacing: 3px; }
 #help-panel h2 { margin: 14px 0 6px; color: #c5cdbc; font-size: 12px; }
-#help-panel .keys { display: grid; grid-template-columns: 9.5em 1fr; gap: 5px 14px; margin: 0; }
-#help-panel dt { color: #e6e9ef; white-space: nowrap; }
+#help-panel .keys { display: grid; grid-template-columns: 11em 1fr; gap: 5px 14px; margin: 0; }
+#help-panel dt { color: #e6e9ef; }
+#help-panel kbd { white-space: nowrap; margin-bottom: 2px; }
 #help-panel dd { margin: 0; color: #aab3c2; }
 /* the Esc menu (game/escmenu.js): over the game, dimmed; alone the game waits meanwhile */
 #menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: 16px; background: #080c1399; }
@@ -118,7 +119,35 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-status { min-height: 1.4em; color: #cfe2ff !important; }
 #menu-panel .menu-note { margin-top: 14px; font-size: 11px; color: #6f7a8c; }
 #menu-panel .menu-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid #2a2f3a; }
-.menu-more button { flex: 1; }
+#menu-settings { display: block; width: 100%; }
+#help-panel .help-note { margin: 10px 0 0; color: #6f7a8c; font-size: 11px; }
+#help-panel dt i { color: #6f7a8c; }
+/* the settings (game/settingsmenu.js): over the Esc menu or the main menu */
+#settings-overlay { position: fixed; inset: 0; z-index: 27; display: grid; place-items: center; padding: 16px; background: #080c1399; }
+#settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 16px 20px; background: #12161ef5; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
+#settings-panel header { display: flex; align-items: baseline; gap: 12px; }
+#settings-panel h1 { margin: 0 0 4px; color: #fff; font-size: 15px; letter-spacing: 3px; }
+#settings-panel h2 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; padding-top: 12px; border-top: 1px solid #2a2f3a; color: #c5cdbc; font-size: 12px; }
+#settings-panel h3 { margin: 12px 0 4px; color: #8a96a8; font-size: 11px; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; }
+#settings-panel button { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+#settings-panel button:hover { background: #364052; color: #fff; }
+#settings-panel :is(button, input):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
+#settings-close { margin-left: auto; color: #8a96a8 !important; background: none !important; border: none !important; padding: 0 !important; font-size: 11px !important; }
+#settings-reset { margin-left: auto; padding: 2px 8px !important; font-size: 11px !important; color: #aab3c2 !important; }
+#settings-reset.confirm { color: #ffd0c4 !important; border-color: #b0563f !important; background: #3a2420 !important; }
+.settings-sound { display: grid; grid-template-columns: 9em 1fr 3.5em; align-items: center; gap: 8px 12px; color: #e6e9ef; }
+.settings-sound button { justify-self: start; min-width: 5em; }
+#settings-music.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }
+.settings-sound input[type=range] { width: 100%; margin: 0; accent-color: #ffcf7a; }
+.settings-sound output { color: #aab3c2; text-align: right; }
+.settings-note { margin: 0 0 4px; color: #6f7a8c; font-size: 11px; }
+.settings-key { display: grid; grid-template-columns: 1fr 8.5em 8.5em; align-items: center; gap: 6px; padding: 2px 0; color: #e6e9ef; }
+.settings-key span { color: #aab3c2; }
+#settings-keys button { padding: 3px 6px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#settings-keys button.empty { color: #5a6678; }
+#settings-keys button.waiting { color: #1a1408; background: #ffcf7a; border-color: #ffcf7a; }
+#settings-feedback { min-height: 1.4em; margin: 12px 0 0; color: #cfe2ff; }
 #legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; color: #aab3c2; }
 #legend div { display: flex; align-items: center; gap: 6px; }
 #legend i { display: inline-block; width: 11px; height: 11px; border: 1px solid #0006; }

@@ -100,7 +100,7 @@ test('the game modules the demos and live values import still export what they u
       assert.ok(existsSync(file), `${demo}: ${from} does not exist`);
       // the audio player needs a browser; check its exports by reading the source
       const text = readFileSync(file, 'utf8');
-      const mod = /\bwindow\b|\blocalStorage\b|addEventListener/.test(text) ? null : await import(pathToFileURL(file));
+      const mod = /\bwindow\b|\bdocument\b|\blocalStorage\b|addEventListener/.test(text) ? null : await import(pathToFileURL(file));
       for (const name of names.split(',').map(n => n.trim().split(/\s+as\s+/)[0]).filter(Boolean)) {
         const ok = mod ? name in mod : new RegExp(`export\\s+(?:const|let|function|class|async function)\\s+${name}\\b`).test(text);
         assert.ok(ok, `${demo}: ${from} does not export ${name}`);
