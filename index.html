@@ -97,17 +97,19 @@
 <div id="loot-labels"></div>
 <div id="inventory-overlay" hidden>
   <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title" tabindex="-1">
-    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><button id="inventory-close" aria-label="Close inventory">Close · Esc</button></header>
-    <div id="inventory-equipped"></div>
-    <div id="inventory-currency" aria-label="Currency"></div>
+    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><div id="inventory-currency" aria-label="Currency"></div><button id="inventory-close" aria-label="Close inventory">Close · Esc</button></header>
     <div class="inventory-body">
-      <div id="inventory-floor-col" hidden><h2>Floor · within reach</h2><div id="inventory-floor" role="listbox" aria-label="Items on the floor"></div></div>
-      <div id="inventory-shop-col" hidden><h2 id="inventory-shop-title">For sale</h2><div id="inventory-shop" role="listbox" aria-label="Wares for sale"></div></div>
-      <div><h2>Bag · 24 slots</h2><div id="inventory-grid"></div></div>
-      <aside id="inventory-details"><img id="inventory-item-icon" alt="" hidden><h2 id="inventory-item-name">Select an item</h2>
-        <div id="inventory-item-base"></div><p id="inventory-item-stats"></p><ul id="inventory-item-affixes"></ul><p id="inventory-item-compare"></p>
-        <div id="inventory-bar" hidden><span>Quick bar</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot"></div><small id="inventory-bar-hint"></small></div>
-        <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div></aside>
+      <div id="inventory-hero-col"><h2>Hero</h2><canvas id="inventory-hero" data-live-hero aria-hidden="true"></canvas><div id="inventory-equipped"></div></div>
+      <div id="inventory-floor-col" hidden><h2 title="Within reach">Floor</h2><div id="inventory-floor" class="inventory-scroll" role="listbox" aria-label="Items on the floor"></div></div>
+      <div id="inventory-shop-col" hidden><h2 id="inventory-shop-title">For sale</h2><div id="inventory-shop" class="inventory-scroll" role="listbox" aria-label="Wares for sale"></div></div>
+      <div id="inventory-bag-col"><h2>Bag · 24 slots</h2><div id="inventory-grid"></div>
+        <div id="inventory-act" aria-label="Actions">
+          <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div>
+          <div id="inventory-bar" style="visibility: hidden"><span>Quick bar:</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot"></div></div>
+        </div></div>
+      <aside id="inventory-details"><div class="inventory-details-inner">
+        <canvas id="inventory-item-view" aria-hidden="true"></canvas><h2 id="inventory-item-name">Select an item</h2>
+        <div id="inventory-item-base"></div><p id="inventory-item-stats"></p><ul id="inventory-item-affixes"></ul><div id="inventory-item-compare"></div></div></aside>
     </div>
     <p id="inventory-feedback" role="status"></p><footer>Game paused · Enter or double-click takes a floor item, equips or uses a bag item · <span id="inventory-bar-keys-text">1-6</span> (or the Quick bar buttons) put the selected item on the quick bar · 10 copper = 1 silver · 100 silver = 1 gold</footer>
   </section>

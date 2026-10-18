@@ -180,7 +180,7 @@ export async function runWeaponLootChecks() {
       press('KeyV');
       check(state.inventoryOpen && !$('inventory-floor-col').hidden && floorItems().length === 1, 'V (like I) opens the inventory with the floor beside it');
       check(document.querySelectorAll('#inventory-floor [data-floor]').length === 1, 'The floor column lists the weapons in reach');
-      check(/Damage per second \d+/.test($('inventory-item-stats').textContent) && /damage per second/.test($('inventory-item-compare').textContent),
+      check(/Damage per second \d+/.test($('inventory-item-stats').textContent) && /Damage per second\s*\d+\s*→\s*\d+/.test($('inventory-item-compare').textContent),
         'A weapon shows its damage per second and compares by it');
       const before = player.inventory.slots.filter(Boolean).length;
       document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }));

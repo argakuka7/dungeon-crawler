@@ -8,6 +8,10 @@
 // same slot: off; game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
 // uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
 // of their own (core/shops.js): Buy, Enter or a double-click buys one.
+// The layout keeps its size whatever is selected: the hero with what it holds on the left
+// (render/itemviews.js draws it), the bag with the selected item's actions underneath it, the
+// details on the right (scrolling when long). Items show as their models (pictures rendered
+// once, render/itemviews.js); the selected one turns.
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS, COINS } from '../core/items.js';
@@ -25,6 +29,8 @@ import { cancelCast } from './townportal.js';
 import { useItem } from './quickbar.js';
 import { log } from './log.js';
 import { keyLabel, barKeysText, onSettingsChange } from './settings.js';
+import { itemPicture, itemModelReady, onItemPictures, drawLiveViews } from '../render/itemviews.js';
+import { readiedFlask, equippedWeapon } from '../core/combat.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -35,7 +41,6 @@ let selected = null, signature = '', shown = null, previousFocus = null, floorMo
 // the details' Quick bar row: one button per slot
 $('inventory-bar-keys').innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button data-bar-key="${i}" aria-pressed="false">${i + 1}</button>`).join('');
 const barButtons = [...$('inventory-bar-keys').querySelectorAll('[data-bar-key]')];
-const touchOn = () => document.body.classList.contains('touch');
 
 export const inventoryFloor = () => state.inventoryOpen && floorMode;
 // villager: open with their wares (a villager with a shop) instead of the floor
@@ -123,17 +128,23 @@ function weaponText(item) {
   if (s.burst) lines.push(`Bursts for ${Math.round(BURST_SHARE * 100)}% damage within ${s.burst.toFixed(2)} cells`);
   return lines.join('\n');
 }
+// against the equipped weapon, stat by stat: what you have now -> this one
 function compareText(item) {
   const eq = equippedItem(player.inventory);
-  if (!eq) return 'You have no weapon equipped.';
+  if (!eq) return '<p>You have no weapon equipped.</p>';
   if (selected?.from === 'bag' && selected.id === eq.instanceId) return '';
-  const a = swung(item), b = swung(eq);
-  const diff = (label, d, fmt) => d ? `<span class="${d > 0 ? 'up' : 'down'}">${label} ${d > 0 ? '+' : '−'}${fmt(Math.abs(d))}</span>` : null;
-  const parts = [diff('damage per second', Math.round(weaponDps(a)) - Math.round(weaponDps(b)), n => n),
-    diff('damage', a.damage - b.damage, n => n),
-    diff('attacks per second', Math.round(a.speed * 100) - Math.round(b.speed * 100), n => (n / 100).toFixed(2)),
-    diff(a.ranged ? 'range' : 'reach', Math.round(a.range * 100) - Math.round(b.range * 100), n => (n / 100).toFixed(2))].filter(Boolean);
-  return `Compared with ${esc(displayName(eq))}:\n${parts.join('\n') || 'same damage, speed and reach'}`;
+  const now = swung(eq), next = swung(item);
+  const row = (label, f, digits = 0) => {
+    const a = f(now), b = f(next), d = Number(b.toFixed(digits)) - Number(a.toFixed(digits));
+    return `<span>${label}</span><span>${a.toFixed(digits)}</span><span class="arrow">→</span><span class="${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${b.toFixed(digits)}</span>`;
+  };
+  const reach = s => s.ranged ? 'Range' : 'Reach';
+  return `<p>Current (${esc(displayName(eq))}) → this</p><div class="compare-grid">${[
+    row('Damage per second', s => Math.round(weaponDps(s))),
+    row('Damage', s => s.damage),
+    row('Attacks per second', s => s.speed, 2),
+    row(reach(now) === reach(next) ? reach(next) : 'Reach / range', s => s.range, 2),
+    row('Critical chance %', s => Math.round(s.crit * 100))].join('')}</div>`;
 }
 
 export function updateInventory() {
@@ -144,60 +155,74 @@ export function updateInventory() {
   if (selected && !selectedItem()) selected = null;
   const item = selectedItem(), sel = selected ? `${selected.from}:${selected.id}` : '';
   const next = `${inv.version}:${sel}:${floorMode}:${trader?.name}:${floor.map(p => p.id)}:${allowed}:${state.equipping}:${player.hp}:${player.xp}:${state.statusMsg}`;
-  if (next === signature && inv === shown) return;   // (another hero's bag: game/save.js)
+  if (next !== signature || inv !== shown) draw(next, inv, equipped, allowed, floor, item);
+  // the hero and the selected item turning (render/itemviews.js; real time: the game is paused)
+  drawLiveViews($('inventory-panel'), (readiedFlask(player) ?? equippedWeapon(player))?.id ?? null, performance.now() / 1000);
+}
+function draw(next, inv, equipped, allowed, floor, item) {
   signature = next; shown = inv;
   const xp = xpProgress(player), shop = shopOf(trader);
   $('inventory-panel').classList.toggle('with-floor', floorMode || !!shop);
   $('inventory-floor-col').hidden = !floorMode;
   $('inventory-shop-col').hidden = !shop;
   $('inventory-progress').textContent = `Level ${player.level} · XP ${xp.current}/${xp.required} · HP ${Math.ceil(player.hp)}/${player.maxHp}`;
-  $('inventory-equipped').textContent = `Equipped: ${equipped ? displayName(equipped) : 'None (you cannot attack)'}${inv.readied ? ` · in hand: ${ITEMS[inv.readied].name}` : ''} · level bonus +${Math.round((levelDamage(player.level || 1) - 1) * 100)}% damage`;
-  $('inventory-currency').innerHTML = COINS.map((c, i) => `<div class="coin-slot"><img src="${c.icon}" alt=""><div><small>${c.name}</small><b>${inv.currency[i].count}</b></div></div>`).join('');
+  // the loadout under the hero
+  const color = equipped?.gen ? ` style="color:${rarityOf(equipped).css}"` : '';
+  $('inventory-equipped').innerHTML = `<small>Weapon</small><b${color}>${equipped ? esc(displayName(equipped)) : 'None (you cannot attack)'}</b>`
+    + `<small>In hand</small><b>${esc(inv.readied ? ITEMS[inv.readied].name : equipped ? displayName(equipped) : 'Nothing')}</b>`
+    + `<small>Level bonus</small><b>+${Math.round((levelDamage(player.level || 1) - 1) * 100)}% damage</b>`;
+  $('inventory-currency').innerHTML = COINS.map((c, i) => `<div class="coin-slot" title="${c.name}"><img src="${itemPicture(c.id)}" alt=""><div><small>${c.name}</small><b>${inv.currency[i].count}</b></div></div>`).join('');
   const focus = document.activeElement?.dataset;
   const focusSlot = focus?.slot, focusFloor = focus?.floor, focusWare = focus?.ware;
+  // the floor and the wares: a strip of square slots beside the bag (a row over it on a phone)
+  const picture = (itemId, on) => on && itemModelReady(itemId) ? `<canvas data-live-item="${itemId}"></canvas>` : `<img src="${itemPicture(itemId)}" alt="">`;
   if (shop) {
     const copper = copperTotal(inv);
-    $('inventory-shop-title').textContent = `${shop.title} · ${shop.trade}`;
+    $('inventory-shop-title').textContent = shop.title;
+    $('inventory-shop-title').title = `${shop.title} · ${shop.trade}`;
     $('inventory-shop').innerHTML = shop.wares.map(id => {
       const def = ITEMS[id], on = selected?.from === 'shop' && selected.id === id, price = priceOf(id);
-      return `<button class="floor-item${on ? ' selected' : ''}${copper < price ? ' poor' : ''}" role="option" aria-selected="${on}" data-ware="${id}" title="${esc(def.name)}"><img src="${def.icon}" alt=""><span>${esc(def.name)}</span><span class="price">${formatCoins(price)}</span></button>`;
+      return `<button class="inventory-slot side-slot${on ? ' selected' : ''}${copper < price ? ' poor' : ''}" role="option" aria-selected="${on}" data-ware="${id}" aria-label="${esc(def.name)}, ${formatCoins(price)}" title="${esc(def.name)} · ${formatCoins(price)}">${picture(id, on)}<span class="price">${formatCoins(price)}</span></button>`;
     }).join('');
     if (focusWare !== undefined) $('inventory-shop').querySelector(`[data-ware="${focusWare}"]`)?.focus();
   }
   if (floorMode) $('inventory-floor').innerHTML = floor.length ? floor.map(p => {
-    const def = ITEMS[p.itemId], on = selected?.from === 'floor' && selected.id === p.id, color = p.gen ? rarityOf(p).css : '';
-    return `<button class="floor-item${on ? ' selected' : ''}" role="option" aria-selected="${on}" data-floor="${p.id}"${color ? ` style="--rarity:${color};color:${color}"` : ''} title="${esc(displayName(p))}"><img src="${def.icon}" alt=""><span>${esc(displayName(p))}${p.count > 1 ? ` ×${p.count}` : ''}</span></button>`;
-  }).join('') : '<div class="floor-empty">Nothing on the floor within reach.</div>';
+    const on = selected?.from === 'floor' && selected.id === p.id, color = p.gen && rarityOf(p).glow ? rarityOf(p).css : '';
+    return `<button class="inventory-slot side-slot${on ? ' selected' : ''}" role="option" aria-selected="${on}" data-floor="${p.id}"${color ? ` style="--rarity:${color}"` : ''} aria-label="${esc(displayName(p))}${p.count > 1 ? `, ${p.count}` : ''}" title="${esc(displayName(p))}">${picture(p.itemId, on)}${p.count > 1 ? `<span class="count">${p.count}</span>` : ''}</button>`;
+  }).join('') : '<div class="floor-empty">Nothing here</div>';
   $('inventory-grid').innerHTML = inv.slots.map((s, i) => {
     const def = s && ITEMS[s.itemId], on = !!s && selected?.from === 'bag' && s.instanceId === selected.id;
     const rarity = s?.gen && rarityOf(s).glow ? ` style="--rarity:${rarityOf(s).css}"` : '';
     const key = s ? barIndexOf(inv, s) : -1;
     const worn = s && (s.instanceId === inv.equipped || s.itemId === inv.readied);
-    return `<button class="inventory-slot${on ? ' selected' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(displayName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? displayName(s) : 'Empty')}">${s ? `<img src="${def.icon}" alt="">${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
+    // the border says how it is used (equipped or in hand: light blue; on the quick bar: dark
+    // blue), the backdrop its rarity
+    return `<button class="inventory-slot${on ? ' selected' : ''}${worn ? ' worn' : key >= 0 ? ' on-bar' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(displayName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? displayName(s) : 'Empty')}">${s ? `${picture(s.itemId, on)}${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
   }).join('');
   if (focusSlot !== undefined) $('inventory-grid').querySelector(`[data-slot="${focusSlot}"]`)?.focus();
   if (focusFloor !== undefined) ($('inventory-floor').querySelector(`[data-floor="${focusFloor}"]`)
     || $('inventory-floor').querySelector('[data-floor]') || $('inventory-grid').querySelector('[data-slot]'))?.focus();
-  const def = item && ITEMS[item.itemId], image = $('inventory-item-icon');
-  image.hidden = !def;
-  if (def) image.src = def.icon;
+  const def = item && ITEMS[item.itemId], view = $('inventory-item-view');
+  // the selected item turning (render/itemviews.js), once its model is in
+  if (def) itemPicture(def.id);
+  view.style.visibility = def && itemModelReady(def.id) ? '' : 'hidden';
+  if (def) view.dataset.liveItem = def.id; else delete view.dataset.liveItem;
   $('inventory-item-name').textContent = item ? displayName(item) : 'Select an item';
   $('inventory-item-name').style.color = item?.gen ? rarityOf(item).css : '';
   $('inventory-item-base').textContent = item ? baseLine(item) ?? '' : '';
   // the Quick bar row: the slot it is on lit (again: off)
-  const barKey = selected?.from === 'bag' ? barIndexOf(inv, item) : -1;
-  $('inventory-bar').hidden = !item || selected?.from !== 'bag' || !barAllowed(item.itemId);
+  const barKey = selected?.from === 'bag' ? barIndexOf(inv, item) : -1, barShown = !!item && selected?.from === 'bag' && barAllowed(item.itemId);
+  $('inventory-bar').style.visibility = barShown ? '' : 'hidden';   // (its room stays: the dialog keeps its size)
   barButtons.forEach((b, i) => {
     b.classList.toggle('on', i === barKey);
     b.setAttribute('aria-pressed', String(i === barKey));
     b.title = i === barKey ? `Take it off quick bar slot ${i + 1}` : `Put it on quick bar slot ${i + 1}`;
   });
-  $('inventory-bar-hint').textContent = barKey >= 0 ? 'Again to take it off'
-    : touchOn() ? 'Or tap a slot of the bar above' : `Or press ${barKeysText()}`;
   $('inventory-item-stats').textContent = (def?.weapon ? weaponText(item)
     : def?.effect || def?.flask ? potionText(item, selected?.from)
     : def?.use ? `${def.stackLimit > 1 ? `Count ${item.count}\n` : ''}${def.description}${def.bound ? '\nBound: it cannot be dropped' : ''}`
     : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\nNo use action yet` : selected ? '' : 'Select a bag slot to inspect it.');
+  $('inventory-item-compare').hidden = !def?.weapon;
   $('inventory-item-affixes').innerHTML = item ? affixLines(item).map(l => `<li>${esc(l)}</li>`).join('') : '';
   $('inventory-item-compare').innerHTML = def?.weapon ? compareText(item) : '';
   const inBag = selected?.from === 'bag', isEquipped = inBag && item?.instanceId === inv.equipped;
@@ -220,9 +245,10 @@ export function updateInventory() {
   drop.hidden = !inBag || !item;
   drop.disabled = isEquipped && !allowed || !!def?.bound;
   drop.title = def?.bound ? 'Bound: it cannot be dropped' : '';
-  $('inventory-feedback').textContent = state.equipping ? 'Loading weapon…' : !allowed ? 'Finish your current action before changing weapons.' : state.statusMsg;
+  $('inventory-feedback').title = $('inventory-feedback').textContent = state.equipping ? 'Loading weapon…' : !allowed ? 'Finish your current action before changing weapons.' : state.statusMsg;
 }
 const refresh = () => { signature = ''; updateInventory(); };
+onItemPictures(() => { signature = ''; });   // a model's picture is in: show it instead of the icon
 
 // move the selected item across: floor -> bag, bag -> floor
 function take() {

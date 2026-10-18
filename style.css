@@ -155,76 +155,109 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #legend div { display: flex; align-items: center; gap: 6px; }
 #legend i { display: inline-block; width: 11px; height: 11px; border: 1px solid #0006; }
 #inventory-overlay { position: fixed; inset: 0; z-index: 20; background: #080c13b8; display: grid; place-items: center; padding: 16px 16px 84px; }
-#inventory-panel { box-sizing: border-box; width: min(760px, 100%); max-height: calc(100dvh - 100px); overflow: auto; padding: 22px;
+/* game/inventory.js: the hero | (floor or shop) | the bag and the actions underneath | the details. Nothing in it changes
+   its size with the selection: the details scroll inside their column, the actions keep their rows. */
+#inventory-panel { box-sizing: border-box; width: min(1100px, 100%); max-height: calc(100dvh - 100px); overflow: auto; padding: 18px 22px;
   background: #202631; border: 1px solid #68715e; border-radius: 8px; box-shadow: 0 16px 80px #0009; }
-#inventory-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#inventory-panel.with-floor { width: min(1200px, 100%); }
+#inventory-panel header { display: flex; align-items: center; gap: 18px; }
+#inventory-panel header > div:first-child { flex: none; }
 #inventory-panel h1 { margin: 0 0 5px; color: #ffe4ae; font-size: 22px; letter-spacing: 2px; }
-#inventory-panel h2 { font-size: 13px; margin: 12px 0 8px; color: #c5cdbc; }
+#inventory-panel h2 { font-size: 13px; margin: 12px 0 8px; color: #c5cdbc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #inventory-panel button, #inventory-panel select { font: inherit; color: #e7dfcf; background: #343d46; border: 1px solid #69746d; border-radius: 4px; padding: 7px 10px; cursor: pointer; }
 #inventory-panel button:hover:not(:disabled) { background: #465249; }
 #inventory-panel button:focus-visible, #inventory-panel select:focus-visible { outline: 2px solid #ffcf7a; outline-offset: 2px; }
 #inventory-panel button:disabled { opacity: .5; cursor: default; }
-#inventory-equipped { margin-top: 12px; color: #ffcf7a; }
-#inventory-currency { display: flex; gap: 12px; margin: 14px 0 6px; }
-.coin-slot { flex: 1; display: flex; align-items: center; gap: 8px; background: #181e28; border: 1px solid #444e5e; padding: 4px 10px; border-radius: 4px; }
-.coin-slot img { width: 42px; height: 42px; object-fit: contain; }
-.coin-slot small { display: block; color: #a4b0ba; }
-.inventory-body { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 18px; }
-#inventory-panel.with-floor { width: min(1000px, 100%); }
-#inventory-panel.with-floor .inventory-body { grid-template-columns: 230px minmax(0, 1fr) 210px; }
-#inventory-floor, #inventory-shop { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; padding: 5px; margin: -5px; }
+#inventory-close { flex: none; }
+#inventory-currency { flex: 1; display: flex; justify-content: flex-end; gap: 8px; min-width: 0; }
+.coin-slot { flex: 0 1 120px; min-width: 0; display: flex; align-items: center; gap: 6px; background: #181e28; border: 1px solid #444e5e; padding: 2px 8px 2px 2px; border-radius: 4px; }
+.coin-slot img { width: 34px; height: 34px; object-fit: contain; flex: none; }
+.coin-slot small { display: block; color: #a4b0ba; font-size: 11px; }
+.inventory-body { display: grid; gap: 18px; grid-template-columns: 240px minmax(0, 1fr) 260px; grid-template-areas: "hero bag details"; }
+#inventory-panel.with-floor .inventory-body { grid-template-columns: 220px 86px minmax(0, 1fr) 250px; grid-template-areas: "hero floor bag details"; }
+#inventory-hero-col { grid-area: hero; } #inventory-floor-col, #inventory-shop-col { grid-area: floor; }
+#inventory-bag-col { grid-area: bag; min-width: 0; } #inventory-details { grid-area: details; }
+/* the hero (render/itemviews.js) fills its column; it does not make the column taller */
+#inventory-hero-col, #inventory-floor-col, #inventory-shop-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+#inventory-hero-col[hidden], #inventory-floor-col[hidden], #inventory-shop-col[hidden] { display: none; }
+#inventory-hero { flex: 1 1 0; min-height: 120px; width: 100%; height: 0; border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 70%, #2f3a4a, #181e28 72%); }
+#inventory-equipped { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; margin-top: 8px; font-size: 12px; align-items: baseline; }
+#inventory-equipped small { color: #8f9aaa; font-size: 11px; }
+#inventory-equipped b { font-weight: normal; color: #ffcf7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the floor or the wares: one strip of square slots (about four in view, the rest scroll), a row over the bag on a phone */
+.inventory-scroll { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;
+  padding: 5px; margin: -5px; scrollbar-width: thin; }
+#inventory-panel .side-slot { flex: none; width: 100%; }
+.side-slot .price { position: absolute; left: 0; right: 0; bottom: 1px; color: #e6c35a; font-size: 10px; text-align: center; text-shadow: 0 1px 2px #000; }
+.side-slot.poor .price { color: #9a6a5a; }
 #inventory-shop-title { color: #e6c35a !important; }
-.floor-item .price { margin-left: auto; color: #e6c35a; font-size: 11px; flex: none; }
-.floor-item.poor .price { color: #9a6a5a; }
-#inventory-panel .floor-item { display: flex; align-items: center; gap: 8px; text-align: left; background: #181e28; padding: 3px 8px 3px 3px;
-  border-color: var(--rarity, #444e5e); }
-.floor-item img { width: 34px; height: 34px; object-fit: contain; flex: none; }
-.floor-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the selected item: a thick gold ring outside its (rarity) border */
-#inventory-panel :is(.floor-item, .inventory-slot).selected { box-shadow: 0 0 0 1px #10141c, 0 0 0 4px #ffcf7a, 0 0 12px 2px #ffcf7a66; }
-.floor-empty { color: #8b95a3; font-size: 12px; }
+#inventory-panel .inventory-slot.selected { box-shadow: 0 0 0 1px #10141c, 0 0 0 4px #ffcf7a, 0 0 12px 2px #ffcf7a66; }
+.floor-empty { color: #8b95a3; font-size: 11px; }
 #inventory-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-#inventory-panel .inventory-slot { aspect-ratio: 1; position: relative; background: #181e28; padding: 2px; min-width: 0; overflow: hidden;
-  border-color: var(--rarity, #69746d); }
-#inventory-panel .inventory-slot[style*="--rarity"] { background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--rarity) 22%, transparent), #181e28 70%); }
-.inventory-slot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* the border: how the item is used (gray: in the bag, light blue: equipped or in hand, dark blue: on the quick bar);
+   the backdrop: its rarity (from uncommon up) */
+#inventory-panel .inventory-slot { aspect-ratio: 1; position: relative; background: #181e28; padding: 1px; min-width: 0; overflow: hidden;
+  border: 2px solid #5b636b; }
+#inventory-panel .inventory-slot.worn { border-color: #8fd8ff; }
+#inventory-panel .inventory-slot.on-bar { border-color: #2f5fd0; }
+#inventory-panel button.inventory-slot[style*="--rarity"] { background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--rarity) 70%, #181e28) 0%,
+  color-mix(in srgb, var(--rarity) 38%, #181e28) 45%, color-mix(in srgb, var(--rarity) 16%, #181e28) 100%); }
+#inventory-panel button.inventory-slot[style*="--rarity"]:hover { filter: brightness(1.15); }
+.inventory-slot :is(img, canvas) { width: 100%; height: 100%; object-fit: contain; display: block; }
 .inventory-slot .count { position: absolute; right: 5px; bottom: 2px; color: #fff; text-shadow: 0 1px 3px #000; }
-.inventory-slot .equipped { position: absolute; left: 4px; top: 2px; color: #ffcf7a; font-size: 10px; }
-.inventory-slot .bar-key { position: absolute; right: 4px; top: 2px; color: #b98cff; font-size: 10px; text-shadow: 0 1px 2px #000; }
-#inventory-details { padding: 6px 12px; background: #181e28; border-radius: 4px; }
-#inventory-item-icon { width: 100%; height: 120px; object-fit: contain; }
+.inventory-slot .equipped { position: absolute; left: 4px; top: 2px; color: #8fd8ff; font-size: 10px; text-shadow: 0 1px 2px #000; }
+.inventory-slot .bar-key { position: absolute; right: 4px; top: 2px; color: #7ea2ff; font-size: 10px; text-shadow: 0 1px 2px #000; }
+/* under the bag, in one row: the selected item's actions, and on the right its quick bar slot */
+#inventory-act { margin-top: 12px; padding: 8px 10px; background: #181e28; border-radius: 4px; display: flex; align-items: center; gap: 12px; }
+.inventory-actions { display: flex; gap: 6px; height: 34px; flex: none; }
+#inventory-panel .inventory-actions button { height: 34px; padding: 0 14px; }
+#inventory-bar { display: flex; align-items: center; gap: 8px; height: 34px; margin-left: auto; min-width: 0; font-size: 12px; color: #c5cdbc; white-space: nowrap; }
+#inventory-bar-keys { display: grid; grid-template-columns: repeat(6, minmax(26px, 34px)); gap: 4px; }
+#inventory-panel #inventory-bar-keys button { height: 34px; padding: 0; text-align: center; }
+#inventory-panel #inventory-bar-keys button.on { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
+/* the details: their own scroll, so a long text never makes the dialog taller */
+#inventory-details { position: relative; min-height: 500px; background: #181e28; border-radius: 4px; }
+.inventory-details-inner { position: absolute; inset: 0; overflow-y: auto; padding: 6px 12px; }
+#inventory-item-view { display: block; width: 100%; height: 110px; }
 #inventory-item-stats { color: #b8c2d0; white-space: pre-line; font-size: 12px; margin: 6px 0; }
 #inventory-item-name { margin-bottom: 2px !important; }
 #inventory-item-base { color: #8f9aaa; font-size: 12px; }
 #inventory-item-affixes { margin: 4px 0; padding: 0; list-style: none; color: #8fb6ff; font-size: 12px; }
-#inventory-item-compare { font-size: 12px; color: #9ea9b6; white-space: pre-line; margin: 6px 0; }
+#inventory-item-compare { font-size: 12px; color: #9ea9b6; margin: 8px 0; padding-top: 6px; border-top: 1px solid #2c3442; }
+#inventory-item-compare p { margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 1px 6px; }
+.compare-grid span { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.compare-grid span:nth-child(4n+1) { text-align: left; color: #b8c2d0; overflow: hidden; text-overflow: ellipsis; }
+.compare-grid .arrow { color: #5f6b7b; }
 #inventory-item-compare .up { color: #7fd87a; } #inventory-item-compare .down { color: #ff7a6a; }
-.inventory-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
-/* the Quick bar row (game/inventory.js): a button per slot, the one it is on lit */
-#inventory-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 8px 0 4px; font-size: 12px; color: #c5cdbc; }
-#inventory-bar[hidden] { display: none; }
-#inventory-bar-keys { flex-basis: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
-#inventory-panel #inventory-bar-keys button { height: 30px; padding: 0; text-align: center; }
-body.touch #inventory-panel #inventory-bar-keys button { height: 38px; }
-#inventory-panel #inventory-bar-keys button.on { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
-#inventory-bar-hint { flex-basis: 100%; color: #8f9aaa; font-size: 11px; }
 #loot-labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
 .loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 12px/1.25 monospace; padding: 2px 6px; white-space: nowrap;
   background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 3px; cursor: pointer; text-shadow: 0 1px 2px #000; }
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }
 .loot-label[data-rarity="legendary"], .loot-label[data-rarity="mythic"], .loot-label[data-rarity="ancient"] { font-weight: bold; }
 #inventory-panel footer { font-size: 11px; color: #9ea9b6; }
-#inventory-feedback { min-height: 18px; color: #ffcf7a; }
+#inventory-feedback { height: 18px; margin: 10px 0 6px; color: #ffcf7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* smaller screens: the details under the bag, the hero beside both (with a floor or shop: under it) */
+@media (max-width: 1000px) {
+  .inventory-body { grid-template-columns: 170px minmax(0, 1fr); grid-template-areas: "hero bag" "hero details"; }
+  #inventory-panel.with-floor .inventory-body { grid-template-columns: 170px 80px minmax(0, 1fr); grid-template-areas: "hero floor bag" "hero details details"; }
+  #inventory-details { height: 240px; min-height: 0; }
+}
 @media (max-width: 540px) {
   #inventory-panel { padding: 12px; }
-  .inventory-body, #inventory-panel.with-floor .inventory-body { grid-template-columns: 1fr; }
-  #inventory-details { display: grid; grid-template-columns: 60px 1fr; column-gap: 10px; }
-  #inventory-item-icon { grid-row: 1 / 4; height: 70px; }
-  #inventory-details :is(#inventory-bar, .inventory-actions) { grid-column: 1 / -1; }
-  #inventory-details h2, #inventory-details p { margin: 4px 0; }
-  #inventory-currency { gap: 4px; }
-  .coin-slot { padding: 3px; gap: 3px; }
-  .coin-slot img { width: 28px; height: 28px; }
+  #inventory-panel header { flex-wrap: wrap; gap: 8px; }
+  #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
+  #inventory-panel header > div:first-child { flex: 1; }
+  .coin-slot { flex: 1; }
+  .inventory-body, #inventory-panel.with-floor .inventory-body { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "floor" "bag" "details"; }
+  #inventory-hero { flex: none; height: 180px; }
+  .inventory-scroll { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+  #inventory-panel .side-slot { width: 64px; }
+  #inventory-panel h2 { margin: 8px 0 6px; }
+  #inventory-act { flex-wrap: wrap; }
+  #inventory-bar { margin-left: 0; }
 }
 
 /* quick bar (game/quickbar.js): above the inventory's dimmed backdrop, so items can be assigned */

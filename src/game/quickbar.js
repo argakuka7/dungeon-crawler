@@ -20,6 +20,7 @@ import { useRoomPortal } from './roomportal.js';
 import { assignSelectedToBar, toggleInventory, setInventoryOpen, barReady } from './inventory.js';
 import { toggleMenu } from './escmenu.js';
 import { keyLabel, onSettingsChange } from './settings.js';
+import { itemPicture, onItemPictures } from '../render/itemviews.js';
 
 const bar = document.getElementById('quickbar');
 bar.innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button class="qb-slot" data-bar="${i}" tabindex="-1">`
@@ -40,6 +41,7 @@ function showKeys() {
 }
 showKeys();
 onSettingsChange(showKeys);
+onItemPictures(() => { signature = ''; });   // a picture is in: instead of the icon
 
 // use the bag item (from the bar or the inventory's Use button)
 export function useItem(instanceId) {
@@ -112,7 +114,8 @@ function draw() {
   buttons.forEach((b, i) => {
     const e = barEntry(inv, i), def = e && ITEMS[e.itemId], img = b.querySelector('img');
     img.hidden = !def;
-    if (def && img.getAttribute('src') !== def.icon) img.src = def.icon;
+    const src = def && itemPicture(def.id);   // its model's picture (render/itemviews.js), made once
+    if (def && img.getAttribute('src') !== src) img.src = src;
     const glow = e?.slot?.gen && rarityOf(e.slot).glow;
     b.style.setProperty('--rarity', glow ? rarityOf(e.slot).css : 'transparent');
     b.classList.toggle('rare', !!glow);
