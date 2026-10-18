@@ -46,6 +46,8 @@ click.
 - **Beds:** water, waterfalls, lava (plus pops), acid by the distance to the nearest fluid
   surface or fall (falls carry further); wind under an open sky by theme and height; cave air
   and random drips below ground (drip rates per theme). Levels glide over about 0.4 s.
+- Each bed and drone is built when it is first wanted and taken apart after 3 s at level 0:
+  the audio thread works on every running node, heard or not.
 
 ## Levels
 

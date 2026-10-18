@@ -5,6 +5,9 @@
 // sixteenth), picking up notes already under way, leaving ones fade out from the next beat.
 // Off until turned on (game/settings.js keeps that: the settings menu, or M). Turned on, the
 // song starts from the top. It plays into the music bus (context.js), with its own volume.
+// The synth (compressors, a long reverb) is built for the first song and only hangs on the bus
+// while a song plays or rings out: the audio thread works on every node it can reach from the
+// speakers, heard or not, and with the music off that was most of the game's sound work.
 import { createSynth } from '../../vendor/scrimshaw/synth.js';
 import { loadScore } from './score.js';
 import { onAudioStart } from './context.js';
@@ -16,19 +19,34 @@ const GAP = 0.8;                            // seconds between one song fading a
 const JOIN_MARGIN = 0.04;                   // s: a joining voice comes in on the first step after this
 const MIN_HELD = 0.15;                      // s: a held note joined with less than this left stays out
 
-let ctx = null, syn = null;
+const RING_OUT = 4;                         // s after a song stops before the synth leaves the bus (the reverb's tail)
+
+let ctx = null, syn = null, output = null, attached = false, idleAt = 0;
 const scores = new Map();                   // name -> score once loaded (null if it failed)
 let want = null, mood = 'explore';
 let enabled = false;
 let cur = null;                             // the song playing
 let nextAt = 0;                             // the next song may start from here
 
-onAudioStart((ac, sounds, output) => {
-  ctx = ac;
-  syn = createSynth(ctx, output);
-  syn.out.gain.value = VOLUME;
+onAudioStart((ac, sounds, music) => {
+  ctx = ac; output = music;
   setInterval(tick, 25);
 });
+
+// the synth, on the music bus (built on first use)
+function attach() {
+  if (!syn) {
+    syn = createSynth(ctx, output);
+    syn.out.gain.value = VOLUME;
+    syn.out.disconnect(syn.analyser);   // nothing reads it, and an analyser is worked on even when unheard
+    attached = true;
+  }
+  if (!attached) { syn.out.connect(output); attached = true; }
+}
+function detach() {
+  syn.out.disconnect(output);
+  attached = false;
+}
 
 function fetchScore(name) {
   if (scores.has(name)) return;
@@ -72,10 +90,12 @@ function tick() {
   const score = name && scores.get(name);
   if (!cur && score && ctx.currentTime >= nextAt) startSong(score);
   if (cur) schedule();
+  else if (attached && ctx.currentTime >= idleAt) detach();
 }
 
 function startSong(score) {
   const { song, moods } = score;
+  attach();
   const sess = syn.session(song);
   syn.warm(song);
   const voices = sess.ch.map((c, i) => ({ gain: c.input.gain.value, on: moods[mood].has(i), at: 0 }));
@@ -88,6 +108,7 @@ function stopSong() {
   cur.sess.stop(FADE);
   cur = null;
   nextAt = ctx.currentTime + GAP;
+  idleAt = ctx.currentTime + RING_OUT;
 }
 
 // a voice joining plays from its switch time on, one leaving plays up to it
