@@ -11,7 +11,9 @@ export function voidAllowed(world, k) {
   const [X, Y, Z] = parse(k), d = -Y;
   return !isClearing(k, world.seed) && !world.layout(d).guardians.has(k) && !world.layout(d).spanCells?.has(k)
     && !world.layout(d).heightCells?.has(k) && !world.layout(d).areaCells?.has(k) && world.layout(d).peak !== k && world.layout(d).lake !== k
-    && d < MAX_DEPTH && world.layout(d).theme.void > 0 && world.layout(d + 1).exists.has(key(X, Y - 1, Z));
+    && d < MAX_DEPTH && world.layout(d).theme.void > 0 && world.layout(d + 1).exists.has(key(X, Y - 1, Z))
+    // a trial room (world/trials.js) has no void, and nothing falls into one from above
+    && !world.layout(d).trialCells?.has(k) && !world.layout(d + 1).trialCells?.has(key(X, Y - 1, Z));
 }
 
 // is the world-space cell centre (wx, wz) at depth d open? a: how much its theme opens (void)

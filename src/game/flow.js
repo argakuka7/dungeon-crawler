@@ -287,10 +287,11 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   state.cubes?.dispose();
   const params = new URLSearchParams(location.search);
   // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths,
-  // ?bridge=chain / ?ladder=vine one bridge / ladder style wherever it fits
+  // ?bridge=chain / ?ladder=vine one bridge / ladder style wherever it fits, ?trial=flood a trial on every depth
   state.cubes = new WorldClient(seed, { load: cubeAssets, warm: warmCube, arche: state.dev && params.get('arche'),
     themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [],
-    bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder') });
+    bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder'),
+    trial: state.dev && params.get('trial') || null });   // ?trial=flood: every depth gets one (world/trials.js)
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
   state.transitioning = true;
   cancelSword(true);

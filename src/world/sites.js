@@ -43,6 +43,7 @@ export function planSites(seed, layout, distance) {
   const open = k => { const a = layout.areaCells?.get(k); return !a || (a.i === 0 || (a.piece.kind === 'hairpin' && a.i === 5)); };
   const candidates = [...layout.exists].filter(k => k !== layout.up && k !== layout.down && !layout.guardians?.has(k) && !layout.hordes?.has(k)
     && k !== layout.annex?.key   // (a quest's room behind a sealed portal: world/layout.js)
+    && !layout.trialCells?.has(k)   // (a trial room: world/trials.js)
     && layout.spanCells?.get(k)?.role !== 'gorge' && open(k))
     .map(key => ({ key, score: (distance.get(key) || 0) * 2 + R() - (layout.areaCells?.has(key) ? 100 : 0) }));
   candidates.sort((a, b) => b.score - a.score);
@@ -57,6 +58,11 @@ export function planSites(seed, layout, distance) {
     if (!c) break;
     plans.set(c.key, [siteIntent(seed, c.key, biome, prestige, 0, i ? null : landmark)]);
     roles.set(c.key, i ? 'discovery' : 'landmark');
+  }
+  // a puzzle in a branch (world/trials.js) guards the branch's reward site: a vault of its own
+  for (const t of layout.trials || []) if (t.role === 'branch') {
+    plans.set(t.key, [siteIntent(seed, t.key, biome, 'rare', 0)]);
+    roles.set(t.key, 'vault');
   }
   return { plans, roles };
 }

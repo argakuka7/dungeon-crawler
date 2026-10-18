@@ -15,6 +15,7 @@ export function spout(world, fk, f, base) {
   const R = world.wfc.rng(fk, 0x5b07), [a, d] = fk.split('/'), b = step(a, +d);
   const L = world.layout(-parse(a)[1]);
   if (R() > CHANCE || !L.exists.has(a) || !L.exists.has(b)) return null;
+  if (L.trialCells?.has(a) || L.trialCells?.has(b)) return null;   // nothing pours into a trial room (world/trials.js)
   const maxL = Math.min(world.wfc.tiles.get(a).K, world.wfc.tiles.get(b).K) - 1;
   if (maxL < 1) return null;
   const layer = 1 + Math.floor(R() * maxL), from = R() < 0.5 ? a : b, cands = [];

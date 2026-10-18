@@ -98,7 +98,8 @@ export function planHeights(seed, d, theme, spine, K, blocked, tableland) {
 export function planSetPiece(layout, slots) {
   const out = { pinnacle: null, peak: null, lake: null };
   if (!slots.small) return out;
-  const busy = k => layout.heightCells.has(k) || layout.spanCells.has(k) || layout.areaCells?.has(k) || k === layout.annex?.key;
+  const busy = k => layout.heightCells.has(k) || layout.spanCells.has(k) || layout.areaCells?.has(k) || k === layout.annex?.key
+    || layout.trialCells?.has(k);
   const near = k => [0, 1, 2, 3].some(d => busy(step(k, d)));
   const discovery = [...layout.sitePlans].filter(([k, intents]) => !busy(k) && intents.every(i => !i.landmark)).map(([k]) => k).sort();
   const options = {
@@ -184,7 +185,7 @@ export function shaftOf(world, piece) {
   if (d + 1 >= MAX_DEPTH) return null;
   const below = key(X, Y - 1, Z), L = world.layout(d + 1);
   if (!L.exists.has(below) || L.guardians.has(below) || L.hordes.has(below) || L.spanCells?.has(below) || L.heightCells?.has(below)
-    || L.areaCells?.has(below) || L.peak === below || L.lake === below) return null;
+    || L.areaCells?.has(below) || L.peak === below || L.lake === below || L.trialCells?.has(below)) return null;
   if (world.wfc) { world.wfc.collapseDepth(d + 1); if (world.wfc.tiles.get(below).sock.includes('W')) return null; }
   return below;
 }

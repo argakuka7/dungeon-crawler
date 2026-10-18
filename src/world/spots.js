@@ -43,7 +43,8 @@ export function planSpots(seed, layout) {
   // world/areas.js)
   const open = k => { const a = layout.areaCells?.get(k); return !a || a.i === 0 || (a.piece.kind === 'hairpin' && a.i === 5); };
   const rooms = layout.cells.map(([x, z]) => key(x, -d, z)).filter(k => !isClearing(k, seed) && !layout.guardians.has(k)
-    && layout.spanCells?.get(k)?.role !== 'gorge' && open(k) && k !== layout.annex?.key);   // (an annex has only its outpost)
+    && layout.spanCells?.get(k)?.role !== 'gorge' && open(k) && k !== layout.annex?.key   // (an annex has only its outpost)
+    && !layout.trialCells?.has(k));   // (nor a trial room, world/trials.js)
   const info = rooms.map(k => {
     const at = layout.routeIndex.get(k) ?? 0, branch = route.indexOf(k) < 0;
     const tier = Math.min(MAX_TIER, obstacles.filter(i => i < at).length + (branch ? 1 : 0)

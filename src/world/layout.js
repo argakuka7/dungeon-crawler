@@ -13,6 +13,8 @@ import { planArenas } from './arenas.js';
 import { planSpans, indexSpans } from './spans.js';
 import { planHeights, planSetPiece, planSlots, indexHeights, near } from './heights.js';
 import { AREA_SIZE, templateCells, planArea, indexAreas } from './areas.js';
+import { planTrials, planPuzzles, indexTrials } from './trials.js';
+import { TRIALS } from '../core/trials.js';
 
 // [first depth, fewest, most] rooms on the route. The core always walks all nine rooms of
 // its 3x3, so the route above it ends on a corner (an edge start cannot reach the centre
@@ -99,7 +101,7 @@ function areaStarts(length, size, first) {
 export const guardianDepth = (_seed, d) => d >= 0 && d < MAX_DEPTH;
 
 // learn: world.html#backtracking #route (see learn/README.md)
-function build(seed, d, above, theme) {
+function build(seed, d, above, theme, opts = {}) {
   const R = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x9e3779b1))), Y = -d, r = RADIUS(d);
   const K = c => key(c[0], Y, c[1]);
   const candidates = [];
@@ -184,6 +186,10 @@ function build(seed, d, above, theme) {
   const heightPlan = planHeights(seed, d, theme, spine, K, c => guardians.has(K(c)) || hordes.has(K(c)) || near(c, spanned)
     || id(c) === id(spine[0]) || id(c) === id(spine.at(-1)), slots.big === 'tableland' || (!!slots.big && !area));
   const plateaus = [...heightPlan.cells].filter(([, h]) => h.role === 'plateau').map(([k]) => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
+  // trials (world/trials.js): the event slot on the route, before the branches (none attach to it)
+  const pinnedCell = c => spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c)) || inArea(c);
+  const trialBlocked = c => guardians.has(K(c)) || hordes.has(K(c)) || pinnedCell(c) || nearArea(c) || nearSpan(c);
+  const trialPlan = planTrials({ seed, d, theme, force: opts.trial, spine, K, blocked: trialBlocked, pinned: pinnedCell });
   for (const span of spanPlan.spans) if (span.island) {
     const line = span.keys.map(k => { const [x, , z] = k.split(',').map(Number); return [x, z]; });
     for (let j = 1; j < line.length; j++) {
@@ -196,7 +202,7 @@ function build(seed, d, above, theme) {
     if (cells.length >= spine.length + branchBudget) break;
     if (guardians.has(K(c)) || spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c)) || inArea(c)) continue;
     const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n) && !near(n, plateaus) && !nearArea(n));
-    if (!options.length || R() < .4) continue;
+    if (!options.length || R() < .4 || trialPlan.cells.has(K(c))) continue;
     const n = options[Math.floor(R() * options.length)];
     cells.push(n); used.add(id(n)); link(c, n); exit.set(K(n), direction(n, c));
     routeIndex.set(K(n), routeIndex.get(K(c))); distance.set(K(n), 1);
@@ -209,6 +215,7 @@ function build(seed, d, above, theme) {
     for (let j = rooms.length - 1; j > 0; j--) { const k = Math.floor(AR() * (j + 1)); [rooms[j], rooms[k]] = [rooms[k], rooms[j]]; }
     for (const c of rooms) {
       if (guardians.has(K(c)) || hordes.has(K(c)) || spanPlan.cells.has(K(c)) || heightPlan.cells.has(K(c)) || inArea(c)) continue;
+      if (trialPlan.cells.has(K(c))) continue;
       const options = nb(c).filter(n => allowed.has(id(n)) && !used.has(id(n)) && !nearSpan(n) && !near(n, plateaus) && !nearArea(n));
       if (!options.length) continue;
       const n = options[Math.floor(AR() * options.length)];
@@ -219,6 +226,12 @@ function build(seed, d, above, theme) {
       break;
     }
   }
+  // the puzzle slots: in a branch room where one fits (not an island's, nor the annex), else on the route
+  const branches = cells.filter(c => distance.get(K(c)) === 1 && !spanPlan.cells.has(K(c)) && K(c) !== annex?.key)
+    .map(c => ({ cell: c, parent: nb(c).find(n => routeIndex.has(K(n)) && distance.get(K(n)) === 0 && portals.has(faceKey(K(n), direction(n, c)))) })).filter(b => b.parent);
+  planPuzzles(trialPlan, { spine, K, blocked: trialBlocked, pinned: pinnedCell, branches, busy: k => k === annex?.parent || k === annex?.key });
+  // a trial on the route holds its exit shut until it is resolved (like a side guardian's gate)
+  for (const t of trialPlan.list) if (t.exit != null) gateFaces.set(faceKey(t.key, t.exit), t.gate);
   const layout = { depth: d, theme, cells, start, end, spine: spine.length, route: spine.map(K), routeIndex, annex,
     annexes: annexes + (annex ? 1 : 0),
     exists: new Set(cells.map(K)), portals, exit, guardians, gateFaces, hordes,
@@ -226,6 +239,7 @@ function build(seed, d, above, theme) {
   indexSpans(layout, spanPlan.spans, spanPlan.cells);
   indexHeights(layout, heightPlan);
   indexAreas(layout, areaPlan ? [areaPlan] : []);
+  indexTrials(layout, trialPlan);
   const sites = planSites(seed, layout, distance);
   layout.sitePlans = sites.plans; layout.roles = sites.roles;
   Object.assign(layout, planSetPiece(layout, slots));
@@ -235,6 +249,8 @@ function build(seed, d, above, theme) {
     const i = layout.route.indexOf(k), before = layout.route[i - 1];
     if (i > (d === 0 ? 4 : 2) && !guardians.has(before)) layout.populationScale.set(before, .5);
   }
+  // a trial room: its kind says how many live there (core/trials.js)
+  for (const t of trialPlan.list) { layout.roles.set(t.key, 'trial'); layout.populationScale.set(t.key, TRIALS[t.kind].population ?? 1); }
   // a gorge is mostly air and valley floor: fewer enemies down there
   for (const [k, s] of spanPlan.cells) if (s.role === 'gorge') { layout.roles.set(k, 'span'); layout.populationScale.set(k, .5); }
   // places kept free for whoever or whatever the quests put there (world/spots.js)
@@ -246,9 +262,10 @@ function build(seed, d, above, theme) {
 // themes: the world's theme picks (themes/depth.js worldThemes). A depth's theme (layout.theme)
 // decides its gorge spans (and with them where the branches may go) and what its reward sites are
 // like; the route, its guardians and hordes depend on the seed alone.
-export function makeLayouts(seed, themes = worldThemes(seed)) {
+// opts.trial: a trial kind every depth gets wherever it fits (dev, tests: ?trial=, world/trials.js)
+export function makeLayouts(seed, themes = worldThemes(seed), opts = {}) {
   const cache = [];
-  const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null, themeAt(d, themes))));
+  const get = d => cache[d] || (cache[d] = planArenas(seed, build(seed, d, d ? get(d - 1) : null, themeAt(d, themes), opts)));
   get.themes = themes;
   return get;
 }

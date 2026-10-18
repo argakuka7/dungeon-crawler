@@ -15,6 +15,7 @@ import { spanSpec } from './spans.js';
 import { heightSpec, heightsOf, shaftAbove } from './heights.js';
 import { areaSpec } from './areas.js';
 import { bridgesOf } from '../themes/builds.js';
+import { trialFaces } from './trials.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
 const LEAN = { highland: { mesa: 2, spire: 2, archipelago: 0.3 }, lake: { archipelago: 3, crater: 2 }, gorge: { chasm: 3 },
@@ -34,7 +35,7 @@ export class World {
   constructor(seed, opts = {}) {
     this.seed = seed;
     this.opts = opts;
-    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // depth -> which cubes exist and how they connect
+    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []), { trial: opts.trial });   // depth -> which cubes exist and how they connect
     this.themes = this.layout.themes;   // the world's themes, by stretches of depths
     this.wfc = new WFC(seed, this.layout);
     this.noise = worldNoise(seed);
@@ -67,7 +68,8 @@ export class World {
       if (f?.portal) portals.push({ dir: d, ...f.portal });
     }
     const outflow = this.faces.get(faceKey(k, 4))?.fall || null, inflow = this.faces.get(faceKey(k, 5))?.fall || null;
-    const special = isClearing(k, this.seed) || L.guardians.has(k) || span || height || area;
+    const trial = L.trialCells?.get(k) || null;   // a trial room (world/trials.js, cubegen/trials/)
+    const special = isClearing(k, this.seed) || L.guardians.has(k) || span || height || area || trial;
     // a needle with a reward site on top (heights.js), where no river runs
     const R = this.wfc.rng(k, 0x9e1d7), top = heightsOf(theme).top;
     const pinnacle = L.pinnacle === k && !special && !t.sock.includes('W')
@@ -100,7 +102,10 @@ export class World {
       // islands without pillars: lakes, the sky islands near the top and the abyss
       floating: !isClearing(k, this.seed) && (t.kind === 'lake' || ((-Y <= 3 || -Y >= 19) && this.wfc.rng(k, 0xf10a7)() < 0.5)),
       seed: hash32(this.seed ^ hashKey(k)),
-      archetype: span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 || annex ? 'plain'
+      trial: trial && { id: trial.id, key: trial.key, kind: trial.kind, role: trial.role, from: trial.from, fromDir: trial.fromDir,
+        exit: trial.exit, gate: trial.gate, stages: trial.stages || null, depth: trial.depth, entry: trial.fromDir ^ 1 },
+      trialFaces: trialFaces(L, k),   // the kind of trial behind each side face (the warning on its portal)
+      archetype: trial ? 'trial' : span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 || annex ? 'plain'
         : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
       forceBridge: this.opts.bridge || null, forceLadder: this.opts.ladder || null,
     };

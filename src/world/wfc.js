@@ -13,6 +13,7 @@ import { TOWN_KEY, merchantCampKey } from './town.js';
 import { spanPins } from './spans.js';
 import { heightPins } from './heights.js';
 import { areaPins } from './areas.js';
+import { trialPins } from './trials.js';
 
 // tile weight at cube k: the base weight scaled by the depth's theme (layout: depth -> layout)
 const weightAt = (layout, k) => { const m = layout(depthOf(k)).theme.tiles; return t => t.weight * (m[t.kind] ?? 1); };
@@ -54,6 +55,11 @@ export class WFC {
     for (const [k, sock] of [...spanPins(L), ...heightPins(L), ...areaPins(L), ...peak]) {
       const tile = TILES.find(t => t.sock.every((s, i) => s === sock[i]));
       if (!this.tiles.has(k)) this.tiles.set(k, { ...tile, K: 1 });
+    }
+    // trial rooms (world/trials.js): flat all round, no river across them, their own layers
+    for (const [k, { sock, K }] of trialPins(L)) {
+      const tile = TILES.find(t => t.sock.every((s, i) => s === sock[i]));
+      if (!this.tiles.has(k)) this.tiles.set(k, { ...tile, K });
     }
     for (const k of L.exists) { region.add(k); for (let i = 0; i < 4; i++) region.add(step(k, i)); }
     this.collapse([...region].sort());

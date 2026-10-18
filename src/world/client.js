@@ -15,7 +15,7 @@ export class WorldClient {
     this.seed = seed;
     this.load = load; this.warm = warm;
     this.start = key(0, 0, 0);
-    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // which cubes exist (cheap, also needed here)
+    this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []), { trial: opts.trial });   // which cubes exist (cheap, also needed here)
     this.cubes = new Map();
     this.waiting = new Map();   // key -> { list: [resolve, reject][], urgent }
     this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
