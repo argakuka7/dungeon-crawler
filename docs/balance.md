@@ -100,12 +100,21 @@ their cube is entered, and every life rolls its drops anew
 ([progression.md](progression.md#enemies-come-back)). So bad luck is never final: a player who
 wants a bow or more levels can clear the road again. The XP falloff keeps that from paying far
 below the player's level; the loot keeps its item level (the depth's), so farming shallow ground
-finds the kinds of weapon, not stronger ones. The simulation does not farm.
+finds the kinds of weapon, not stronger ones. The main simulation does not farm;
+`node tools/balance.mjs farm [respawns] [seeds]` farms the road out of town with the Old Sword:
+clearing it once (41 enemies in seed 1), about half the runs have seen a bow, crossbow or staff
+drop, 80% after one respawn (5 minutes), 91% after two, 96% after three; the level stops at 3–4.
+Without farming, three quarters of the runs see one before Gusto (the side guardian's weapon
+helps most).
 
 ## Tuning
 
 Change a number, then run `node tools/balance.mjs` and `npm test`. Useful checks:
 
+- *The unlucky tenth* (`p10`: the level and damage per second only 10% of the runs arrive
+  below): close to the average; a wide gap means luck decides too much.
+- *Ranged weapons seen* (`rng%`, and before Gusto under the table): the runs that could switch
+  to one if they wanted; Gusto must be fair to both ([bosses.md](bosses.md)).
 - *Player level − depth* on arrival (`plvl` vs `elvl`): about 2. If it drifts, adjust the XP
   curve (`XP_BASE`, `XP_STEP`, `XP_CURVE`) or enemy XP, not the level formula.
 - *xp%* (the share of XP that counted): about 85–100%. Lower means the falloff is doing the
