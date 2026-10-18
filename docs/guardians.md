@@ -6,10 +6,12 @@ has an up portal but no further descent or guardians.
 
 ## Pacing and topology
 
-`world/layout.js` builds a **7–14-room route**, counting the entry and descent
-rooms, on every stratum, including the surface. The core's entry-to-centre route
-is 7–9 rooms. Optional one-room branches fit inside a maximum of 14 total rooms
-per stratum. The safe town → merchant camp → countryside prefix is preserved.
+`world/layout.js` builds a route on every stratum, including the surface,
+counting the entry and descent rooms: **18–24 rooms** near the surface, shorter
+further down, down to **9–16** at depths 16–19 (`ROUTE_ROOMS`). The core's
+entry-to-centre route is always 9 rooms. Optional one-room branches fit inside
+the band's most rooms per stratum. The safe town → merchant camp → countryside
+prefix is preserved.
 
 Side arenas have one entrance and one onward side gate; descent arenas have one
 entrance and a well. There are no portal loops around arenas. Discovered adjacent

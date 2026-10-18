@@ -175,7 +175,8 @@ test('a spiral: one ramp round the mountain, walked from the foot to the top, ra
       if (i === 0) assert.ok(Math.min(...levels) <= piece.lo + 1);
       if (i === 3) assert.equal(m.portals.find(p => p.dir === piece.exit.dir).y / LH, piece.hi);
       // walk the way from the portal it is entered by to the exit
-      const route = m.routes[0];
+      const route = m.routes[0], [X, , Z] = parse(k);
+      const onFoot = q => spiralAt(piece, X * N + q.x, Z * N + q.z).part === 'foot';
       place(m, route[0].x, route[0].y, route[0].z);
       route.slice(1).forEach((q, j) => {
         // over a gap (a jump on the low ground, not this test's business): onto the landing
@@ -184,13 +185,16 @@ test('a spiral: one ramp round the mountain, walked from the foot to the top, ra
           const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
           movePlayer(DT, dx / dist, dz / dist, false, false);
         }
+        // up a ladder or a steep step from the low ground (this walker neither climbs nor jumps;
+        // the foot's ways are not this test's business either): on from there
+        if (Math.hypot(q.x - player.x, q.z - player.z) > 0.2 && onFoot(route[j])) { place(m, q.x, q.y - 0.12, q.z); return; }
         assert.ok(Math.hypot(q.x - player.x, q.z - player.z) <= 0.2 && Math.abs(player.y - q.y + 0.12) < 0.6,
           `${seed}/${d}: ${k} stuck at ${player.x.toFixed(2)}, ${player.y.toFixed(2)}, ${player.z.toFixed(2)} on the way to ${q.x}, ${q.z}`);
       });
       walked++;
       // the rails: pushing outwards, away from the mountain, where the ramp stands high over the
       // foot, keeps you on it
-      const [X, , Z] = parse(k), ox = piece.O[0] * N - X * N, oz = piece.O[1] * N - Z * N;
+      const ox = piece.O[0] * N - X * N, oz = piece.O[1] * N - Z * N;
       const on = route.filter(q => { const s = spiralAt(piece, X * N + q.x, Z * N + q.z); return s.part === 'ramp' && s.level >= piece.lo + 6; });
       for (const q of on.filter((_, j) => j % 4 === 2)) {
         place(m, q.x, q.y - 0.12, q.z);

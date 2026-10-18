@@ -12,12 +12,12 @@ import { planSpans, indexSpans } from './spans.js';
 import { planHeights, planSetPiece, planSlots, indexHeights, near } from './heights.js';
 import { AREA_SIZE, templateCells, planArea, indexAreas } from './areas.js';
 
-// learn: world.html#route (see learn/README.md)
 // [first depth, fewest, most] rooms on the route. The core always walks all nine rooms of
 // its 3x3, so the route above it ends on a corner (an edge start cannot reach the centre
 // in nine).
 export const ROUTE_ROOMS = [[0, 18, 24], [4, 16, 22], [8, 14, 20], [12, 12, 18], [16, 9, 16], [MAX_DEPTH, 9, 9]];
 export const routeRooms = d => ROUTE_ROOMS.findLast(([from]) => d >= from).slice(1);
+// learn: world.html#route (see learn/README.md)
 export const MIN_ROUTE_ROOMS = Math.min(...ROUTE_ROOMS.map(b => b[1])), MAX_ROUTE_ROOMS = Math.max(...ROUTE_ROOMS.map(b => b[2]));
 const RADIUS = d => d >= MAX_DEPTH ? 0 : d <= 5 ? 3 : d <= 12 ? 2 : 1;
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];

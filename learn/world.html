@@ -39,16 +39,16 @@
   <h2 lang="de">Der Planer: ein Weg aus Räumen</h2>
   <div class="cols wide-right">
     <div>
-      <p lang="en">Every depth has a <b>route</b> of <b data-val="src/world/layout.js#MIN_ROUTE_ROOMS">7</b> to <b data-val="src/world/layout.js#MAX_ROUTE_ROOMS">14</b> rooms. It starts right under the well of the depth above, and ends at the next well down.</p>
-      <p lang="de">Jede Tiefe hat eine <b>Route</b> aus <b data-val="src/world/layout.js#MIN_ROUTE_ROOMS">7</b> bis <b data-val="src/world/layout.js#MAX_ROUTE_ROOMS">14</b> Räumen. Sie fängt direkt unter dem Brunnen der Tiefe darüber an und endet am nächsten Brunnen nach unten.</p>
+      <p lang="en">Every depth has a <b>route</b> of <b data-val="src/world/layout.js#MIN_ROUTE_ROOMS">9</b> to <b data-val="src/world/layout.js#MAX_ROUTE_ROOMS">24</b> rooms: long routes near the top, shorter ones the deeper you go. It starts right under the well of the depth above, and ends at the next well down.</p>
+      <p lang="de">Jede Tiefe hat eine <b>Route</b> aus <b data-val="src/world/layout.js#MIN_ROUTE_ROOMS">9</b> bis <b data-val="src/world/layout.js#MAX_ROUTE_ROOMS">24</b> Räumen: lange Routen oben, kürzere, je tiefer du kommst. Sie fängt direkt unter dem Brunnen der Tiefe darüber an und endet am nächsten Brunnen nach unten.</p>
       <p lang="en">Before the well there is always a strong <b>descent guardian</b> (gold), and on the way one or two <b>side guardians</b> (pink) block gates. Beat them to open the way.</p>
       <p lang="de">Vor dem Brunnen steht immer ein starker <b>Brunnenwächter</b> (gold), und unterwegs versperren ein oder zwei <b>Torwächter</b> (pink) die Tore. Besiege sie, um den Weg zu öffnen.</p>
       <p lang="en">Some rooms get a side room with a treasure chest.</p>
       <p lang="de">Manche Räume bekommen einen Nebenraum mit einer Schatztruhe.</p>
       <p lang="en">And in one room on the route waits a <b>horde</b>: a big pack of monsters that attack together (red dot).</p>
       <p lang="de">Und in einem Raum auf der Route wartet eine <b>Horde</b>: ein großes Rudel Monster, die zusammen angreifen (roter Punkt).</p>
-      <p lang="en">Move the depth slider: deeper down, the ring gets smaller, until the core at depth 20.</p>
-      <p lang="de">Beweg den Tiefen-Regler: Je tiefer, desto kleiner wird der Ring, bis zum Kern in Tiefe 20.</p>
+      <p lang="en">Move the depth slider: deeper down, the ring gets smaller and the route shorter, until the core at depth 20, where the route walks all 9 of its rooms.</p>
+      <p lang="de">Beweg den Tiefen-Regler: Je tiefer, desto kleiner wird der Ring und desto kürzer die Route, bis zum Kern in Tiefe 20, wo die Route durch alle 9 seiner Räume geht.</p>
     </div>
     <div class="demo real" data-demo="layout"></div>
   </div>
@@ -59,8 +59,8 @@
   <h2 lang="de">Wie der Planer einen Weg findet: probieren, zurückgehen, nochmal probieren</h2>
   <div class="cols">
     <div>
-      <p lang="en">The planner has a ring of possible cubes around the middle of the world. It wants a path of, say, 11 rooms that ends on the inner edge of the ring.</p>
-      <p lang="de">Der Planer hat einen Ring aus möglichen Würfeln rund um die Mitte der Welt. Er will einen Weg aus, sagen wir, 11 Räumen, der am inneren Rand des Rings endet.</p>
+      <p lang="en">The planner has a ring of possible cubes around the middle of the world. It wants a path of, say, 18 rooms that ends on the inner edge of the ring.</p>
+      <p lang="de">Der Planer hat einen Ring aus möglichen Würfeln rund um die Mitte der Welt. Er will einen Weg aus, sagen wir, 18 Räumen, der am inneren Rand des Rings endet.</p>
       <ol class="steps">
         <li lang="en">Start at the room under the last well.</li>
         <li lang="de">Fang im Raum unter dem letzten Brunnen an.</li>
@@ -82,8 +82,8 @@
         <li lang="de"><b>Wächter:</b> Der Raum mit dem Brunnen bekommt immer den Brunnenwächter. Ein oder zwei Räume unterwegs bekommen Torwächter.</li>
         <li lang="en"><b>A big place:</b> on many depths the planner lays a whole shape into the path: four rooms round one mountain, or six rooms in a hairpin bend with two bridges (see <a href="#heights">the heights</a>). When the path gets to the chosen step, it puts down all the shape's rooms at once, any way round. If the shape does not fit, it backs up, like at any other dead end. Guardians never stand in it.</li>
         <li lang="de"><b>Ein großer Ort:</b> In vielen Tiefen legt der Planer eine ganze Form in den Weg: vier Räume rund um einen Berg, oder sechs Räume in einer Haarnadelkurve mit zwei Brücken (siehe <a href="#heights">die Höhen</a>). Wenn der Weg beim gewählten Schritt ankommt, legt er alle Räume der Form auf einmal hin, egal wie herum. Passt die Form nicht, geht er zurück, wie bei jeder anderen Sackgasse. Wächter stehen nie darin.</li>
-        <li lang="en"><b>Side rooms:</b> some rooms get one extra room next to them, never more than 14 rooms per depth in total.</li>
-        <li lang="de"><b>Nebenräume:</b> Manche Räume bekommen einen zusätzlichen Raum daneben, aber nie mehr als 14 Räume pro Tiefe insgesamt.</li>
+        <li lang="en"><b>Side rooms:</b> some rooms get one extra room next to them, but a depth never gets more rooms than its longest route may have.</li>
+        <li lang="de"><b>Nebenräume:</b> Manche Räume bekommen einen zusätzlichen Raum daneben, aber eine Tiefe bekommt nie mehr Räume, als ihre längste Route haben darf.</li>
         <li lang="en"><b>Bridges:</b> on almost every depth, a straight row of rooms may become a gorge with one long bridge across it, or a bridge out to a lonely island. How often is up to the depth's theme (see <a href="#bridges">the bridges</a>).</li>
         <li lang="de"><b>Brücken:</b> In fast jeder Tiefe kann eine gerade Reihe von Räumen zu einer Schlucht mit einer langen Brücke darüber werden, oder zu einer Brücke hinaus zu einer einsamen Insel. Wie oft, bestimmt das Thema der Tiefe (siehe <a href="#bridges">die Brücken</a>).</li>
         <li lang="en"><b>No shortcuts:</b> side rooms never connect to other rooms, so you cannot sneak around a guardian.</li>

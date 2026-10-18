@@ -24,12 +24,16 @@ function decide(world, up) {
   const [X, Y, Z] = parse(up), d = -Y, R = world.wfc.rng(faceKey(up, 4), 0xfa11);
   if (Y > 0 || !world.layout(d).exists.has(up) || !voidAllowed(world, up) || R() > CHANCE) return null;
   const low = step(up, 4), avoid = [], inflow = Y < 0 && cascade(world, step(up, 5));
-  if (world.layout(d + 1).spanCells?.has(low)) return null;   // nothing pours across a span's bridge
-  if (world.layout(d + 1).areaCells?.has(low) || world.layout(d + 1).peak === low) return null;   // nor onto a ramp or a peak
+  if (world.layout(d).pinnacle === up) return null;   // its pool and hole would cut into the needle's ramp
+  const below = world.layout(d + 1);
+  if (below.spanCells?.has(low)) return null;   // nothing pours across a span's bridge
+  if (below.areaCells?.has(low) || below.peak === low || below.pinnacle === low) return null;   // nor onto a ramp, a peak or a pinnacle
+  // nor into a tableland's descent: its plunge's soft landing (a shaft may become a plunge)
+  if (below.heightCells?.get(low)?.role === 'descent') return null;
   if (inflow) avoid.push([inflow.x, inflow.z]);   // its catch pool
   if (world.layout(d).down === up) avoid.push(portalAt(world, faceKey(up, 4)));    // the well here = the ring below
   if (world.layout(d).up === up) avoid.push(portalAt(world, faceKey(up, 5)));      // the ring here
-  if (world.layout(d + 1).down === low) avoid.push(portalAt(world, faceKey(low, 4)));   // the well below
+  if (below.down === low) avoid.push(portalAt(world, faceKey(low, 4)));   // the well below
   const theme = world.layout(d).theme, open = (x, z) => isVoid(world.noise, X * N + x + 0.5, Z * N + z + 0.5, d, theme.void);
   const cands = [];
   for (let z = 4; z <= 11; z++) for (let x = 4; x <= 11; x++) {

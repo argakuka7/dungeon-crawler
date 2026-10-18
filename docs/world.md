@@ -232,14 +232,17 @@ Which faces carry portals is decided by the depth's layout (see below), not per 
 
 Which cubes exist and how they connect depends only on the world seed:
 
-- **Depth 0:** the town (0,0,0) and safe merchant camp start a 7–14-room route to the first well.
-- **Depths 1–19:** seeded routes through a two-cube-wide ring around the axis. Each route
-  contains 7–14 rooms, including the up ring and well. The next route starts below the well.
-- **Ring size:** the radius still shrinks with depth (3 → 2 → 1), but route length no
-  longer shrinks with it. Bounded path search preserves the room budget on small rings.
-- **Depth 20:** the core, with a 7–9-room entry-to-centre route and no further descent.
-- **Branches:** optional one-room detours fit within 14 total rooms per depth. No portal
-  loops or discovered-face shortcuts can bypass undiscovered route rooms or guardians.
+- **Depth 0:** the town (0,0,0) and safe merchant camp start an 18–24-room route to the first well.
+- **Depths 1–19:** seeded routes through a two-cube-wide ring around the axis. Each route's
+  length, counting the up ring and well, comes from its band in `ROUTE_ROOMS`: 18–24 rooms
+  at depths 0–3, 16–22 at 4–7, 14–20 at 8–11, 12–18 at 12–15 and 9–16 at 16–19. The next
+  route starts below the well; depth 19's ends on a corner of its ring (see the core).
+- **Ring size:** the radius shrinks with depth (3 → 2 → 1). Bounded path search keeps the
+  long routes on the small rings.
+- **Depth 20:** the core, whose entry-to-centre route walks all 9 rooms of its 3x3 (only
+  possible from a corner) and has no further descent.
+- **Branches:** optional one-room detours fit within the band's most rooms per depth. No
+  portal loops or discovered-face shortcuts can bypass undiscovered route rooms or guardians.
 - **Guardians:** every well has a stronger descent guardian (future boss placeholder),
   with one or two mandatory side guardian arenas on its approach. They stand at evenly
   spaced rooms, moved to the nearest free one off a large area (and the room after it).
@@ -280,7 +283,10 @@ that gives L0 54%, L1 28%, L2 15%, L3 4%.
 - **Decision:** the shared vertical face decides it from world data only (void field,
   layout, the face's own random stream), so either cube may be generated first. A fall
   needs:
-  - void allowed in the upper cube;
+  - void allowed in the upper cube, and that cube not a pinnacle's (its pool and hole would
+    cut into the needle's ramp);
+  - a lower cube that is no span, large area, peak, pinnacle or tableland descent (the
+    catch pool would flood a bridge, a ramp or a plunge's soft landing);
   - a void cell inside the inner 8×8 with solid ground on the side it flows from;
   - a cell at least 5 away from the wells and rings of both cubes and from the upper
     cube's own catch pool.
@@ -313,6 +319,8 @@ that gives L0 54%, L1 28%, L2 15%, L3 4%.
   inside, and open air between them.
 - **Matching edges:** spout slabs are pad-like (`prot` 99: flat, kept, no structures
   through them), so the layer lines up across the face just as at upper-layer portal pads.
+  A well or ring (`cubegen/portals.js`) moves off a spout's strip, lip and catch pool,
+  as off another portal's pad.
   Over 3 worlds, no upper-layer edge cell differs on any of 1943 faces.
 - **How many:** about one cube in ten gets one.
 
@@ -359,7 +367,8 @@ often on the sky islands, the peaks and the badlands, now and then in the caves.
   bridge runs straight.
 - **Generator:** gorge cubes and islands have their own archetypes (`shapeGorge`,
   `shapeIsland`). The valley floor ramps up to low room ends, so falling off never leaves you
-  in a pit, and is kept a head's height under the deck. Where a river's bank has to come up
+  in a pit, and is kept a head's height under the deck; no random slope climbs out of it
+  (`smooth.js`), or its corners could join a pad's at the deck's height. Where a river's bank has to come up
   under a low deck anyway, no way of the route search leads onto or off it. The bridge is not
   searched for: `spanBridge` hands the route search a ready move from pad to pad (both ways),
   12 cells long and as steep as the levels say. It is placed like any bridge, in one style for
@@ -460,7 +469,9 @@ Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or s
     and before the rails exist the reach graph allows no drop off them (`reach.js`). So the foot
     of the later cubes is out of reach in the cube, gets no escapes and no ways up (`ctx.foot`),
     decor keeps off the ramp and an area's rims, and escapes never climb onto a rim. Walking the
-    foot through the faces once they are open leads nowhere: the way up is the ramp.
+    foot through the faces once they are open leads nowhere: the way up is the ramp. No random
+    slope joins a railed ramp cell to the foot (`smooth.js`), or it could pull a pad's corner
+    down with it, too steep to walk.
   - **The route walks it** (`areaRoute`): every move but a walk that starts or ends on the ramp
     costs 40 more, and no drop or jump leaves it over the side.
   - **The mountain** stands three levels over the top of the ramp: never walked onto.
@@ -480,7 +491,7 @@ Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or s
   walked in order no face opens towards a cube not yet visited, and once walked all of its inner
   faces are open), matching ground on every
   face of every area cube whichever cube decided it, one layer, the spiral's route walked from
-  the foot to the top, pushing off the ramp where it is high keeps you on it, no structure from
+  the foot to the top (on the foot, past a ladder or a steep step the walker cannot take), pushing off the ramp where it is high keeps you on it, no structure from
   the foot onto the ramp, the hairpin's two bridges, summit and foot, and the same cubes whatever
   the exploration order.
 
@@ -497,7 +508,8 @@ a quarter of the props and nothing in the way, `render/propplace.js`). Enemies c
   one layer (its sockets as the WFC made them). Water of the depth's river fluid from three cells
   in (four in places), at the rivers' level, so a river coming in runs into it and ends there. The
   route keeps to the shore (every fluid is deadly; no jumps in a lake cube). A discovery there
-  waits on an islet (level with the shore, water all round it) reached by a bridge. A fall from
+  waits on an islet (level with the shore, water all round it) reached by a bridge (a stair onto
+  or off it costs 40 more, `setPieceRoute`). A fall from
   the cube above lands in the lake (it is its catch pool).
 - **Dev:** `/height peak`, `/height lake`.
 - **Checks:** `tests/areas.test.js`: the peak's discovery on top and only a ladder onto it, the

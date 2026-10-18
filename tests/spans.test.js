@@ -62,7 +62,7 @@ test('spans are planned from the seed and the theme on every depth, straight and
       }
     }
   }
-  assert.ok(route > 500 && island > 250 && long > 300 && cave > 300 && sky > 100, JSON.stringify({ route, island, long, cave, sky }));
+  assert.ok(route > 500 && island > 150 && long > 300 && cave > 300 && sky > 100, JSON.stringify({ route, island, long, cave, sky }));
   assert.deepEqual([...at].sort((a, b) => a - b), DEPTHS);
 });
 

@@ -31,10 +31,12 @@ export function shapePeak(ctx) {
 }
 
 // the way up the peak is its ladder: stairs, bridges and jumps onto or off the top cost more; over
-// the lake's water nothing jumps (a missed jump is a fall into it: the islet's way is a bridge)
+// the lake's water nothing jumps (a missed jump is a fall into it: the islet's way is a bridge,
+// a stair onto or off it costs more)
 export function setPieceRoute(ctx) {
-  const movesFrom = ctx.movesFrom;
-  if (ctx.spec.lake) ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => m.kind !== 'jump');
+  const movesFrom = ctx.movesFrom, isle = f => ctx.islet?.has(f.c);
+  if (ctx.spec.lake) ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => m.kind !== 'jump')
+    .map(m => m.kind === 'stair' && isle(m.to) !== isle(f) ? { ...m, cost: m.cost + 40 } : m);
   if (!ctx.peakTop?.size) return;
   const on = f => ctx.peakTop.has(f.c);
   // (both ways: a stair down off the top would be a way up too)

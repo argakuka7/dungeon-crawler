@@ -17,8 +17,14 @@ export function placePortals(ctx) {
   const solid = c => { if (spec.span?.sky) return; const x = c % N, z = (c / N) | 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, nz = z + dz; if (nx > 0 && nz > 0 && nx < N - 1 && nz < N - 1) ctx.void0[idx(nx, nz)] = 0; } };
   const add = p => { p.id = portals.length + 1; portals.push(p); if (!p.layer) for (const c of p.cells) { lvl0[c] = p.level; prot0[c] = p.id; solid(c); } };
   const groundLevel = cells => clamp(Math.max(...cells.map(c => lvl0[c])), 3, 14);
-  // a free 3x3 spot (with a cell of margin) as close as possible to (x, z)
-  const taken = () => new Set(portals.flatMap(p => p.cells));
+  // a free 3x3 spot (with a cell of margin) as close as possible to (x, z); a spout's slab, or the
+  // open air and pool under its lip (cubegen/spouts.js), would take a well's or a ring's floor
+  const spouts = spec.faces.flatMap((f, d) => {
+    const s = f.spout, out = [];
+    if (s) for (let j = 0; j < 5; j++) for (let t = Math.max(0, s.pos - 2); t <= Math.min(N - 1, s.pos + 2); t++) out.push(edgeCell(d, t, j));
+    return out;
+  });
+  const taken = () => new Set([...spouts, ...portals.flatMap(p => p.cells)]);
   const near = (x, z) => {
     const t = taken();
     for (let r = 0; r < N; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
