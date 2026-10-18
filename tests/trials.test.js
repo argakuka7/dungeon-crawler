@@ -5,7 +5,8 @@ import { World } from '../src/world/world.js';
 import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
-import { TRIALS, trialGate } from '../src/core/trials.js';
+import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK } from '../src/core/trials.js';
+import { checkDeadlines } from '../src/cubegen/trials/timing.js';
 import { N } from '../src/core/constants.js';
 
 const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
@@ -123,4 +124,70 @@ test('every flood room generates: a summit, the highest ground, reached from eve
   }
   assert.ok(n > 150, `${n} floods`);
   assert.ok(attempts / n < 4, `${(attempts / n).toFixed(2)} attempts a room`);
+});
+
+test('the flood rises in pulses, never falls, and stops at its mark', () => {
+  const tl = { kind: 'flood', from: 2, to: 15, step: 2, rise: 3, pulses: [3, 10, 17, 24, 31, 38, 45] };
+  let last = -Infinity;
+  for (let t = 0; t <= 80; t += 0.05) {
+    const l = floodLevel(tl, t);
+    assert.ok(l >= last - 1e-9, `falls at ${t}`);
+    assert.ok(l <= tl.to + 1e-9);
+    last = l;
+  }
+  assert.equal(floodLevel(tl, 0), 2); assert.equal(floodLevel(tl, 3), 2);
+  assert.equal(floodLevel(tl, 4.5), 3);   // half way up the first pulse
+  assert.equal(floodLevel(tl, 6), 4); assert.equal(floodLevel(tl, 9.9), 4);   // holding
+  assert.equal(floodLevel(tl, 80), 15);
+  // floodTime is its inverse
+  for (const h of [2.5, 3, 4.2, 9, 14.9]) assert.ok(Math.abs(floodLevel(tl, floodTime(tl, h)) - h) < 1e-9, `${h}`);
+  assert.equal(floodTime(tl, 15), null);
+  assert.equal(nextPulse(tl, 4), 10); assert.equal(nextPulse(tl, 46), null);
+  assert.equal(drainLevel(tl, 10, 0), 10); assert.equal(drainLevel(tl, 10, DRAIN_TIME), 2);
+});
+
+test('fitting a flood: pulses wait for a slow player, last 50 to 70 s, and a way too long fails', () => {
+  const easy = fitFlood(2, 16, []);
+  assert.ok(floodEnd(easy) >= 50 && floodEnd(easy) <= 70, `${floodEnd(easy)}`);
+  assert.ok(easy.pulses[0] >= ARM_TIME);
+  for (let j = 1; j < easy.pulses.length; j++) assert.ok(easy.pulses[j] - easy.pulses[j - 1] >= FLOOD.rise + FLOOD.hold - 1e-9);
+  // a need holds its pulse (and the ones after it) back
+  const held = fitFlood(2, 16, [20, undefined, 30]);
+  assert.ok(held.pulses[0] >= 20 && held.pulses[2] >= 30);
+  assert.ok(floodEnd(held) <= 70);
+  assert.equal(fitFlood(2, 16, [, , , , , , 69]), null);
+});
+
+test('the deadline check: a synthetic way up passes a fitted flood and fails a too fast one', () => {
+  // a straight way up: node i at level 3 + i, reached after 1.5 s each
+  const path = Array.from({ length: 12 }, (_, i) => ({ id: i, x: i, z: 0, top: 3 + i, landing: true }));
+  const arr = { time: new Map(path.map((n, i) => [n.id, i * 1.5])) };
+  const to = 13, needs = [];
+  path.forEach((n, i) => { if (i + 1 < path.length && n.top < to) { const j = Math.floor((n.top - 2) / 2); needs[j] = Math.max(needs[j] ?? 0, arr.time.get(i + 1) * SLACK + ARM_TIME); } });
+  const tl = fitFlood(2, to, needs), deadline = tl => n => n.top >= to ? null : floodTime(tl, n.top);
+  assert.ok(checkDeadlines(path, arr, deadline(tl)).ok);
+  const fast = { ...tl, pulses: tl.pulses.map((_, j) => ARM_TIME + j * 2) };
+  const res = checkDeadlines(path, arr, deadline(fast));
+  assert.ok(!res.ok && res.slack < 0, JSON.stringify(res.fail));
+  // ending on a floor that floods fails
+  assert.ok(!checkDeadlines(path.slice(0, 5), arr, deadline(tl)).ok);
+});
+
+test('every generated flood room passes its own timing check', () => {
+  let n = 0;
+  for (const { seed, d, m } of floods(SEEDS.slice(0, 6))) {
+    n++;
+    const { timeline: tl, check } = m.trial;
+    assert.ok(check.slack >= 0, `${seed}/${d}: slack ${check.slack}`);
+    assert.ok(floodEnd(tl) >= FLOOD.min - 1e-6 && floodEnd(tl) <= FLOOD.max + 1e-6, `${seed}/${d}: ${floodEnd(tl)} s`);
+    assert.equal(tl.to, m.trial.summit.level - 2);
+    // every floor of the checked path is left in time, again from the stored numbers
+    check.path.forEach((p, i) => {
+      if (p.dl == null) return;
+      assert.ok(i + 1 < check.path.length, `${seed}/${d}: the path ends under water`);
+      assert.ok(check.path[i + 1].t * SLACK + ARM_TIME <= p.dl + 1e-6, `${seed}/${d}: node ${i}`);
+    });
+    assert.equal(check.path.at(-1).dl, null);
+  }
+  assert.ok(n > 90);
 });

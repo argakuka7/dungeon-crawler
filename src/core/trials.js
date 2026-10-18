@@ -64,3 +64,62 @@ export function parseForce(s) {
   if (!TRIALS[kind]) return null;
   return { kind, stages: rest ? rest.split(',').filter(k => isPuzzle(k)) : null };
 }
+
+// --- timing (docs/trials.md "Timing check") -----------------------------------------------------
+
+export const ARM_TIME = 3;   // s of telegraph between arming and the clock running
+export const SLACK = 1.5;    // a slow player: every arrival times this
+export const DRAIN_TIME = 5;   // s for the water to drain back once resolved
+
+// The flood's timeline: the water starts at `from` (levels) and rises in pulses of `step` levels,
+// each over `rise` s, the j-th starting at pulses[j] s (the trial's clock: from arming), never over
+// `to`. Pure data: physics, render and tests all read the same thing.
+//   { kind: 'flood', from, to, step, rise, pulses: [s, ...] }
+export const FLOOD = { step: 2, rise: 3, hold: 4, min: 50, max: 70 };
+
+// the water's level (in levels, fractional) at time t of the trial's clock
+export function floodLevel(tl, t) {
+  let level = tl.from;
+  for (let j = 0; j < tl.pulses.length; j++) {
+    const p = tl.pulses[j];
+    if (t <= p) break;
+    level = tl.from + tl.step * j + tl.step * Math.min(1, (t - p) / tl.rise);
+  }
+  return Math.min(level, tl.to);
+}
+
+// the first time the water stands over level h (null: never)
+export function floodTime(tl, h) {
+  if (h < tl.from) return 0;
+  if (h >= tl.to) return null;
+  const j = Math.floor((h - tl.from) / tl.step);
+  if (j >= tl.pulses.length) return null;
+  return tl.pulses[j] + tl.rise * (h - tl.from - tl.step * j) / tl.step;
+}
+
+// when the next pulse starts after time t (null: no more), for the HUD's countdown
+export const nextPulse = (tl, t) => tl.pulses.find(p => p > t) ?? null;
+// the time the water is up (the last pulse done)
+export const floodEnd = tl => (tl.pulses.at(-1) ?? 0) + tl.rise;
+
+// draining back: from level `at` down to `from` over DRAIN_TIME, s seconds after resolving
+export const drainLevel = (tl, at, s) => at - (at - tl.from) * Math.min(1, s / DRAIN_TIME);
+
+// Fit a flood's pulses to the way up: needs[j] is the earliest the j-th pulse may start (a slow
+// player has left every floor it floods by then). Pulses come one per rise + hold at the most,
+// later where a need says so, stretched to last FLOOD.min s at least. null: it cannot be done
+// within FLOOD.max s (the way up is too long).
+export function fitFlood(from, to, needs = []) {
+  const { step, rise, hold, min, max } = FLOOD, n = Math.max(1, Math.ceil((to - from) / step));
+  const place = gap => {
+    const out = [];
+    for (let j = 0; j < n; j++) out.push(Math.max(needs[j] ?? 0, ARM_TIME, j ? out[j - 1] + gap : 0));
+    return out;
+  };
+  let pulses = place(rise + hold);
+  const end = () => pulses.at(-1) + rise;
+  if (end() < min && n > 1) pulses = place(rise + hold + (min - end()) / (n - 1));
+  if (end() < min) pulses = pulses.map(p => p + min - end());
+  if (end() > max) return null;
+  return { kind: 'flood', from, to, step, rise, pulses: pulses.map(p => Math.round(p * 100) / 100) };
+}

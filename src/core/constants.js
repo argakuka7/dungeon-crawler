@@ -42,6 +42,7 @@ export const CHAR_R = 0.22;     // collision radius
 export const CHAR_H = 0.85;     // collision height
 // learn: animation.html#mixing, code.html#names, physics.html#adding (see learn/README.md)
 export const WALK_SPEED = 1.9, RUN_SPEED = 2.8, SWIM_SPEED = 0.9;
+export const CLIMB_SPEED = 1.7;   // up and down ladders (physics/climb.js)
 // on the ground speed builds up linearly: standing to a full run in RUN_RAMP s (walking pace
 // after about 70% of it, so short taps stay precise); stopping brakes at BRAKE units/s²
 // learn: physics.html#feel (see learn/README.md)

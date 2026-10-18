@@ -2,11 +2,11 @@
 // column (map.ladders). You get on by pushing into the wall at its foot, or by walking over the
 // edge right above it; on the ladder, pushing towards the wall climbs, pulling away climbs down,
 // jumping lets go. At the top you step onto the upper floor, at the foot back onto the ground.
-import { DIRS, CHAR_R } from '../core/constants.js';
+import { DIRS, CHAR_R, CLIMB_SPEED } from '../core/constants.js';
 import { groundAt } from './collide.js';
 import { player, state } from '../game/state.js';
 
-const SPEED = 1.7, REACH = 0.36;   // climbing speed; how far to the side of the ladder you can grab it
+const SPEED = CLIMB_SPEED, REACH = 0.36;   // climbing speed; how far to the side of the ladder you can grab it
 
 // wall point W (centre of the ladder on the wall), n = normal out of the wall (into the lower cell)
 const frame = l => {

@@ -11,6 +11,8 @@ import { floorY } from '../../core/surfaces.js';
 import { search, take } from '../route.js';
 import { reachFrom, reachTo } from '../reach.js';
 import { shapeFlood, floodGoal } from './flood.js';
+import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
+import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal },
@@ -60,8 +62,39 @@ export function finishTrial(ctx, pathPoints) {
     // the summit is the highest ground (but for the rock walls round a cave or a canyon)
     const inside = g => Math.min(g.x, g.z, N - 1 - g.x, N - 1 - g.z) >= 2;
     if (ctx.floors.some(g => !g.fluid && inside(g) && g.top > s.level)) return null;
+    const timed = fitFloodRoom(ctx, entry, goal, s.level);
+    if (!timed) return null;
     Object.assign(out, { summit: { c: s.c, level: s.level, x: s.x + 0.5, z: s.z + 0.5, cells: s.cells }, lo: t.lo,
-      button: { x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 } });
+      button: { x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 }, ...timed });
+  }
+  // enemies keep off the checked path and its 2-cell band
+  if (out.check?.path) {
+    const band = out.check.path.map(p => [Math.floor(p.x), Math.floor(p.z)]);
+    for (const g of ctx.floors) if (band.some(([x, z]) => Math.max(Math.abs(g.x - x), Math.abs(g.z - z)) <= 2)) g.noSpawn = true;
   }
   return { trial: out, reservations: t.keep.map(c => ({ c, layer: 0 })) };
+}
+
+// The flood's timeline, fitted to the fastest way up for a slow player, then checked on its own:
+// { timeline, check: { path: [{ x, y, z, t (arrival), dl (deadline) }], slack } }, or null
+function fitFloodRoom(ctx, entry, goal, summit) {
+  const arr = arrivals(ctx, entry), path = pathOf(arr, goal);
+  if (!path) return null;
+  const ground = ctx.floors.filter(f => !f.fluid && f.layer === 0);
+  const from = Math.min(...ground.map(f => f.top)) - 1, to = summit - 2;
+  // each pulse no earlier than a slow player has left every floor of the path it floods
+  const needs = [];
+  path.forEach((n, i) => {
+    const h = floorLevel(n);
+    if (i + 1 >= path.length || h >= to) return;
+    const j = Math.max(0, Math.floor((h - from) / FLOOD.step)), need = arr.time.get(path[i + 1].id) * SLACK + ARM_TIME;
+    needs[j] = Math.max(needs[j] ?? 0, need);
+  });
+  const timeline = fitFlood(from, to, needs);
+  if (!timeline) return null;
+  const deadline = n => floorLevel(n) >= to ? null : floodTime(timeline, floorLevel(n));
+  const check = checkDeadlines(path, arr, deadline);
+  if (!check.ok) return null;
+  return { timeline, check: { slack: Math.round(check.slack * 100) / 100, path: path.map(n => ({ x: n.x + 0.5, y: n.top * 0.5, z: n.z + 0.5,
+    t: Math.round(arr.time.get(n.id) * 100) / 100, dl: deadline(n) })) } };
 }
