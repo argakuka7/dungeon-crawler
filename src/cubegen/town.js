@@ -81,7 +81,7 @@ export function generateClearing(spec) {
     safe: Uint8Array.from(floors, f => prev.has(f.c) ? 1 : 0),
     kind: 'meadow', archetype: 'plain', key: spec.key, depth: 0, cave: false, enemyFree: true, biome: 'meadow',
     staticBlockers, blockers: staticBlockers, occluders: plan.occluders, authoredProps: plan.placements, doors: plan.doors,
-    villagers: plan.villagers,
+    villagers: plan.villagers, spots: [],
     ...(camp ? { merchantCamp: clearing } : { town: clearing }),
     routes: paths.map(path => path.map(f => ({ x: f.x + .5, y: TOWN_LEVEL * LH + .12, z: f.z + .5 }))),
   };

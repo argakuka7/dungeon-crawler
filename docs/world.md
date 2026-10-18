@@ -495,6 +495,14 @@ Each area cube has one layer (the WFC pins it) and no void, cascade, tunnel or s
   the foot onto the ramp, the hairpin's two bridges, summit and foot, and the same cubes whatever
   the exploration order.
 
+## Spots for the quests (`world/spots.js`, `cubegen/spots.js`)
+
+Every depth keeps some places free for the quests' people and things: hiding places, seats and,
+every third depth, a camp with a fire near where the depth begins. Planned from the seed with the
+layout, placed by the cube's generator level, dry and reachable both ways, with nothing built or
+put on them; the camp's fire is the only thing they show. See
+[quests.md](quests.md#spots-planned-from-the-seed).
+
 ## Set pieces: lone peak and great lake (`cubegen/setpieces.js`)
 
 Mostly empty rooms built round one thing (`spec.sparse`: one layer, no cave pillars, no decor,

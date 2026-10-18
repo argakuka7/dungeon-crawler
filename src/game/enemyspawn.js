@@ -32,7 +32,7 @@ export function enemySpots(map, profile) {
   // room for the biggest kind the pack could draw
   const drawn = Object.keys(spec.kinds ?? {}).map(k => ENEMY_KINDS[k]).filter(Boolean);
   const height = Math.max(profile.height, ...drawn.map(k => k.height)), radius = Math.max(profile.radius, ...drawn.map(k => k.radius));
-  const cand = map.floors.filter(f => !f.siteAnchor && !f.siteAccess && walkable(f, height)
+  const cand = map.floors.filter(f => !f.siteAnchor && !f.siteAccess && !f.spot && walkable(f, height)
     && f.x > 0 && f.z > 0 && f.x < N - 1 && f.z < N - 1
     && map.portals.every(p => Math.hypot(f.x - p.x, f.z - p.z) >= 4)
     && neighbors(f, height).length >= 2

@@ -12,7 +12,8 @@ import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
-import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, FEATURES } from './dev.js';
+import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, FEATURES } from './dev.js';
+import { SPOT_KINDS } from '../world/spots.js';
 import { BRIDGE_STYLES, LADDER_STYLES } from '../themes/builds.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
@@ -88,6 +89,12 @@ dev({
   name: 'height', help: 'the next of the big height pieces: a tableland\'s ascent, plateau or descent, a great shaft, a pinnacle, a spiral or hairpin (in at its foot), a lone peak, a great lake, a tunnel',
   args: [{ name: 'kind', type: 'feature' }],
   async run({ kind }) { await goFeature(kind); },
+});
+addType(commands, { name: 'spotkind', values: () => SPOT_KINDS.map(k => ({ value: k, label: k })) });
+dev({
+  name: 'spot', help: 'stand at the next spot the quests keep free (a hiding place, a seat, a camp) from this depth (or that one) on down',
+  args: [{ name: 'kind', type: 'spotkind', optional: true }, { name: 'depth', type: 'depth', optional: true }],
+  async run({ kind, depth }) { await goSpot(kind, depth === undefined ? undefined : Number(depth)); },
 });
 addType(commands, { name: 'arena', values: () => Object.keys(ARENA_WEIGHTS.descent).map(t => ({ value: t, label: t })) });
 dev({

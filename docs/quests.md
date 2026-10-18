@@ -159,6 +159,43 @@ like the villagers' places in `tests/town.test.js`). What stands on it is decide
 the quests: an NPC (its figure from `render/figure.js`, its collider added then), a quest item, a
 thing to defend, or nothing. An unused spot is just open ground.
 
+**Built** (hiding places, seats, camps; outposts are still to come): `world/spots.js` plans them
+with each depth's layout (`layout.spots`, `layout.spotList`), on a random stream of their own, so
+nothing else in the world changes:
+
+- per depth 6–8 hiding places, 2 seats, and on depths 1, 4, 7, ..., 19 a camp in the first room of
+  the route (where the depth begins). Only in rooms the ordinary generator makes: not the town and
+  the merchant camp, not guardian arenas, not a span's gorge cubes, not a large area's rooms but
+  its foot and a hairpin's summit. The spots spread over the rooms (fewest first).
+- each has a `tier`, how hard it is to get to, 0 to 4: one for every side guardian or the horde
+  the way to it leads past, one for a branch room, one for a room with a reward site, two for the
+  high places (a tableland, a pinnacle, a lone peak, a great lake, a large area's foot or summit, a
+  span's island). The hiding places of a depth spread from its lowest tier to its highest.
+
+`cubegen/spots.js` finds each its place in its cube once the route, the reward sites' ways and the
+horde's are in, before the structures:
+
+- **hide** one cell, **seat** two (where the NPC stands, and in front where you stand to talk),
+  **camp** a fire and the four cells beside it (three places for people, the fourth side the
+  approach; the corners level with it too). The camp gets its fire and a pack (site placements).
+- the floors: level, dry, enough headroom, off portal pads (and the cells round them), reward
+  sites, the horde's patch, ramps, the cube's rim and the cells structures run through. Hiding
+  places away from the way and the portals (the high tiers as high up as they go), seats beside the
+  way, the camp about four cells from where you come in.
+- first where you get to and back from anyway (walking, stepping up, dropping, the route's own
+  structures), else where a way can be built (searched like a reward site's).
+- then they claim their room against structures, smoothing keeps them level, ambient props and
+  enemies keep off them.
+- checked at the end with the final slopes and fences: reachable both ways, level, nothing built
+  on them, and somebody standing on them (a seat's NPC, a hidden person, a camp's three) never
+  blocks the way between the portals. One that fails is tried again for like a reward site; over
+  eight worlds every planned spot is placed.
+- the map carries them as `spots`: `{ id, kind, tier, depth, seed, layer, cells, floor,
+  accessFloor, anchor, approach, places }` (`anchor` and `approach` with a facing `yaw`).
+
+`tests/spots.test.js` checks the plan and every spot of two worlds; `/spot [kind] [depth]` (dev)
+stands you at the next one.
+
 ### Who they are
 
 An NPC out in the world has a seeded identity: a role (hermit, explorer, miner, pilgrim, a lost

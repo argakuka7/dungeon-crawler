@@ -99,8 +99,8 @@
     "src/core/util.js#mulberry32": "940792b6",
     "src/cubegen/heights.js#shapePinnacle": "611834f5",
     "src/cubegen/heights.js#shapeShaft": "1184ee1d",
-    "src/cubegen/index.js#generate": "ad2742df",
-    "src/cubegen/index.js#tryGenerate": "3e6e5dd3",
+    "src/cubegen/index.js#generate": "ee1656ca",
+    "src/cubegen/index.js#tryGenerate": "31453e4b",
     "src/cubegen/reach.js#reachTo": "f03a56c3",
     "src/cubegen/route.js#search": "cdae09bf",
     "src/cubegen/setpieces.js#shapeLake": "563ed8c1",
@@ -211,7 +211,7 @@
     "src/world/heights.js#planHeights": "16c2be39",
     "src/world/heights.js#planSetPiece": "65028d41",
     "src/world/heights.js#planSlots": "b6eedccd",
-    "src/world/layout.js#build": "2960ffeb",
+    "src/world/layout.js#build": "87abd06c",
     "src/world/layout.js#MAX_ROUTE_ROOMS": "6530660c",
     "src/world/layout.js#MIN_ROUTE_ROOMS": "6530660c",
     "src/world/layout.js#route": "55722423",
@@ -223,7 +223,7 @@
     "src/world/worker.js": "c256536c",
     "src/world/world.js#archetype": "7f631674",
     "src/world/world.js#prepare": "a88aec54",
-    "src/world/world.js#spec": "b27e083b"
+    "src/world/world.js#spec": "8b5eb488"
   },
   "outdated": {}
 }

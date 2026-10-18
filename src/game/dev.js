@@ -196,6 +196,29 @@ export async function goFeature(kind) {
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 
+// Stand at the next spot (world/spots.js: a hiding place, a seat, a camp; of a kind, or any) from
+// this depth on down (or from `from`), the easy ones of a depth first: where the quests will put
+// their people and things.
+const lastSpot = {};
+export async function goSpot(kind, from) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, here = from ?? state.map?.depth ?? 0, all = [];
+  for (let d = here; d <= 20; d++) all.push(...cubes.layout(d).spotList.filter(s => !kind || s.kind === kind).sort((a, b) => a.tier - b.tier));
+  if (!all.length) { setStatus(`No ${kind ?? ''} spot from here down`); return; }
+  const plan = all[(all.findIndex(s => s.id === lastSpot[kind]) + 1) % all.length];
+  lastSpot[kind] = plan.id;
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(plan.key));
+    if (state.cubes !== cubes) return;
+    if (c.key !== state.cubeKey) enterCube(c, c.map.portals.find(p => p.kind === 'side')?.dir ?? c.map.portals[0].dir);
+    const spot = (c.map.spots ?? []).find(s => s.id === plan.id);
+    if (!spot) { setStatus(`${plan.kind} · tier ${plan.tier} · depth ${plan.depth}: not placed in ${plan.key}`); return; }
+    spawnAt(spot.approach.x, spot.approach.y, spot.approach.z);
+    setStatus(`${plan.kind} · tier ${plan.tier} · depth ${plan.depth} · ${plan.key}${spot.places.length ? ` · ${spot.places.length} places` : ''}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
 // Jump into a guardian arena of a kind (world/arenas.js), the nearest depth first; with no
 // kind, this depth's way down. The gate stays locked: it is the real arena.
 export async function goArena(type, depth = state.map?.depth ?? 0) {

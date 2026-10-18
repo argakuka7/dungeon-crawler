@@ -7,6 +7,7 @@ import { bossAt } from '../core/bosses.js';
 import { key, faceKey } from './coords.js';
 import { MAX_DEPTH, themeAt, worldThemes } from '../themes/depth.js';
 import { planSites } from './sites.js';
+import { planSpots } from './spots.js';
 import { planHordes } from './hordes.js';
 import { planArenas } from './arenas.js';
 import { planSpans, indexSpans } from './spans.js';
@@ -210,6 +211,9 @@ function build(seed, d, above, theme) {
   }
   // a gorge is mostly air and valley floor: fewer enemies down there
   for (const [k, s] of spanPlan.cells) if (s.role === 'gorge') { layout.roles.set(k, 'span'); layout.populationScale.set(k, .5); }
+  // places kept free for whoever or whatever the quests put there (world/spots.js)
+  const spots = planSpots(seed, layout);
+  layout.spots = spots.spots; layout.spotList = spots.list;
   return layout;
 }
 

@@ -90,6 +90,7 @@ export class World {
       routeIndex: this.layout(-Y).routeIndex.get(k), route: this.layout(-Y).route,
       gateKeys: [0, 1, 2, 3].map(d => this.layout(-Y).gateFaces.get(faceKey(k, d)) || null),
       roomRole: this.layout(-Y).roles.get(k), rewardSites: this.layout(-Y).sitePlans.get(k) || [],
+      spots: L.spots.get(k) || [],   // places kept free for the quests (world/spots.js, cubegen/spots.js)
       fluid: theme.river, fluidMix: theme.fluids, voidOK: voidAllowed(this, k), fallIn: fallMask(this, k),
       outflow, inflow, relief: theme.relief, height, pinnacle, tunnel, shaftBottom: special ? null : shaftAbove(this, k),
       area, peak, lake, sparse: !!(peak || lake),   // sparse: mostly empty (few props, render/propplace.js)

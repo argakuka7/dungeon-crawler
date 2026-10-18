@@ -27,6 +27,7 @@ import { generateClearing } from './town.js';
 import { generateGuardian } from './guardian.js';
 import { reserveSites, prepareSites, routeSites, finishSites } from './sites.js';
 import { reserveHorde, routeHorde, finishHorde } from './hordes.js';
+import { placeSpots, finishSpots } from './spots.js';
 import { spanBridge } from './span.js';
 import { descentRoute, pinnacleRoute } from './heights.js';
 import { areaRoute } from './areas.js';
@@ -95,6 +96,7 @@ function tryGenerate(seed, spec) {
   if (!findRoute(ctx)) return null;
   routeSites(ctx);
   if (!routeHorde(ctx)) return null;
+  placeSpots(ctx);
   addAccess(ctx);
   addEscapes(ctx);
   finishRoute(ctx);
@@ -109,11 +111,17 @@ function tryGenerate(seed, spec) {
   if (ctx.moves.some(m => isCramped(ctx, m.from) || isCramped(ctx, m.to))) return null;   // a route squeezes under a slab
   const sites = finishSites(ctx), horde = finishHorde(ctx, sites.staticBlockers);
   if (horde === null) return null;
+  // the spots (cubegen/spots.js): kept like the reward sites (no props on them, the camp's fire
+  // among the site placements); one that failed is tried again for like a site
+  const spots = finishSpots(ctx);
+  sites.sitePlacements.push(...spots.spotPlacements);
+  sites.siteReservations.push(...spots.spots.flatMap(s => s.cells.map(c => ({ c, layer: s.layer }))));
+  sites.siteFailures.push(...spots.spotFailures);
   const { K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves } = ctx;
   const portals = ctx.portals.map(p => ({ id: p.id, kind: p.kind, dir: p.dir, layer: p.layer, cells: p.cells,
     x: p.c % N, z: (p.c / N) | 0, y: p.level * LH, floor: p.floor }));
   return {
-    seed, K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves, portals, ...sites, horde,
+    seed, K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves, portals, ...sites, horde, spots: spots.spots,
     roomRole: spec.roomRole, biome: spec.biome, populationScale: spec.populationScale,
     ladders: ctx.ladders.map(l => ladderInfo(l, ladderStyle(spec, l))), exit: spec.exit,
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
@@ -139,7 +147,7 @@ export function generate(spec) {
     if (m) {
       m.seed = spec.seed; m.attempts = a + 1;
       if (!m.siteFailures.length) return m;
-      if (!best || m.rewardSites.length > best.rewardSites.length) best = m;
+      if (!best || m.rewardSites.length + m.spots.length > best.rewardSites.length + best.spots.length) best = m;
     }
     // Optional destinations cannot make an otherwise valid cube fail indefinitely.
     if (best && a >= 23) { best.siteAttempts = a + 1; return best; }

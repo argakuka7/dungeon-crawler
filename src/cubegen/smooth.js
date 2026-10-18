@@ -44,7 +44,7 @@ export function smooth(ctx) {
     for (const f of floors) if (f.layer === 0 && [f.x === N - 1, f.x === 0, f.z === N - 1, f.z === 0][d])
       for (const [X, Z] of edgePts(f.x, f.z, d)) pins.set(f.id + ':' + X + ',' + Z, face.profile[d < 2 ? f.z : f.x] * LH);
   });
-  for (const f of floors) if (f.siteAnchor || f.siteAccess || f.siteDressing)
+  for (const f of floors) if (f.siteAnchor || f.siteAccess || f.siteDressing || f.spot)
     for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) pins.set(f.id + ':' + (f.x + ox) + ',' + (f.z + oz), f.top * LH);
   for (const r of runs) if (r.kind !== 'landing') for (const [f, side] of [[r.from, r.d], [r.to, OPP[r.d]]])
     if (!f.landing) for (const [X, Z] of edgePts(f.x, f.z, side)) pins.set(f.id + ':' + X + ',' + Z, f.top * LH);
@@ -63,7 +63,7 @@ export function smooth(ctx) {
     for (const g of group) mean += g.top;
     mean = mean / group.length * LH;
     // a little jitter for the low-poly look (identical for every floor sharing the corner)
-    if (!group.some(g => g.prot || g.fluid || g.covered || g.site))
+    if (!group.some(g => g.prot || g.fluid || g.covered || g.site || g.spot))
       mean += ((hash32(X * 7919 + Z * 104729 + Math.round(mean * 8) * 31337) % 1000) / 1000 - 0.5) * 0.08;
     return mean;
   }
