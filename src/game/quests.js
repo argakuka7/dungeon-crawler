@@ -20,7 +20,8 @@ import { dropAtFeet } from './loot.js';
 import { giverOf, giverName, meet, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
-import { pickUpQuestItems, questWorldChanged } from './questworld.js';
+import { pickUpQuestItems, questWorldChanged, bountiesHere } from './questworld.js';
+import { allEnemies, addEnemies, mirroring } from './enemies.js';
 import { rebuildWorld } from './flow.js';
 
 const CHECK_EVERY = 0.5;   // s (real time): the gates looked at, offers brought up to date, a landmark looked for
@@ -32,9 +33,10 @@ const granted = new Set();
 export const questLog = () => state.run.quests;
 // do we decide about the quests (alone, or the host), or does the host (a guest)?
 export const questAuthority = () => online.role !== 'guest';
-const ctx = () => ({ seed: state.cubes.seed, layout: state.cubes.layout, gates: state.run.unlockedGates, chests: state.run.chests, now: Date.now() });
+const ctx = () => ({ seed: state.cubes.seed, layout: state.cubes.layout, gates: state.run.unlockedGates, chests: state.run.chests,
+  defeated: state.run.defeated, now: Date.now() });
 // what the goals are checked against (core/quests.js goalDone)
-const facts = () => ({ gates: state.run.unlockedGates, chests: state.run.chests });
+const facts = () => ({ gates: state.run.unlockedGates, chests: state.run.chests, defeated: state.run.defeated });
 const live = () => state.mode === 'play' && !!state.cubes && !!state.run?.quests;
 
 // --- what happens ---------------------------------------------------------------------------------
@@ -170,6 +172,11 @@ export function updateQuests(dt) {
     }
     // somebody lost found, a chest opened, a quest taken: the cube as it is now
     if (state.map && !state.transitioning && questWorldChanged()) rebuildWorld();
+    // a bounty waiting here (where we run the enemies): on its hiding place
+    if (state.map && !state.transitioning && !mirroring()) {
+      const here = new Set(allEnemies().map(e => e.id)), missing = bountiesHere().filter(e => !here.has(e.id));
+      if (missing.length) addEnemies(missing);
+    }
   }
   pickUpQuestItems(questEvent);
   share();

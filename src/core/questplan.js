@@ -17,7 +17,7 @@ export const perDepth = d => d === 0 ? 4 : d <= 3 ? 7 : d <= 11 ? 5 : d <= 19 ? 
 export const MIX = { find: 13, treasure: 5, rescue: 10, bounty: 15, delivery: 14, gather: 10, scout: 10, defense: 9, pieces: 8, prisoners: 6 };
 export const SCOUTS = ['reach', 'landmark', 'guardian', 'horde'];
 // the kinds there are so far; a planned kind that is not yet stands in as one of these
-export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout']);
+export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout', 'bounty']);
 const STAND_IN = [['find', 6], ['treasure', 1], ['scout', 3]];
 // how many of a depth's quests the villagers give (the rest: the people out in the world)
 const townShare = d => d <= 3 ? 0.7 : d <= 7 ? 0.45 : d <= 11 ? 0.3 : 0.1;

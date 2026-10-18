@@ -41,6 +41,7 @@ import { bossAt } from './bosses.js';
 import { PROP_METADATA } from './propmetadata.js';
 import { ROLES, residentOf, isNpcGiver, spotOfGiver, keyOfSpot } from './npcs.js';
 import { questPlan, clueOf, lostPerson, campOf, SCOUTS } from './questplan.js';
+import { pickBounty, bountyKind } from './bounties.js';
 
 const MAX_DEPTH = 20;   // themes/depth.js MAX_DEPTH
 export const STATES = ['offered', 'active', 'ready', 'done', 'failed'];
@@ -83,7 +84,8 @@ export const giverTitle = q => q.from?.title ?? GIVERS[q.giver]?.title ?? 'Giver
 //   used:   the plan's slots offered (or passed over: core/questplan.js)
 //   living: the people found and come to live at a camp: [{ id, name, tint, outfit, camp }]
 export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], used: [], living: [], version: 0 });
-const factsOf = f => f instanceof Set ? { gates: f, chests: new Set() } : { gates: f?.gates ?? new Set(), chests: f?.chests ?? new Set() };
+const factsOf = f => f instanceof Set ? { gates: f, chests: new Set(), defeated: new Set() }
+  : { gates: f?.gates ?? new Set(), chests: f?.chests ?? new Set(), defeated: f?.defeated ?? new Set() };
 // talked to giver g for the first time: from now on it makes offers (refreshOffers)
 export function meet(log, g) {
   if (GIVERS[g] || !isNpcGiver(g) || log.met.includes(g)) return false;
@@ -252,6 +254,25 @@ const KINDS = {
     },
   },
 };
+// beat a named, stronger enemy that waits on a hiding place (core/bounties.js)
+KINDS.bounty = {
+  payout: 'return',
+  targets: (ctx, log, depths) => hidingPlaces(ctx, log, depths).filter(t => t.depth > 0 || t.tier > 0),
+  quest(t, ctx, R, { id }) {
+    const b = pickBounty(t.depth, hash32(ctx.seed ^ hashString(id))), kind = bountyKind(b.enemy, b.name), where = depthName(t.depth);
+    const clue = clueOf(ctx.layout, t.plan, landmarkName), title = kind.label.replace(/^./, c => c.toUpperCase());
+    return {
+      title: `Wanted: ${b.name}`,
+      text: pick(R, [
+        `${title} has been seen on ${where}, ${clue}. It is bigger and meaner than the others of its kind. Beat it, and come back for the reward.`,
+        `There is a reward on ${b.name}! A ${ENEMY_KINDS[b.enemy].label.toLowerCase()} the size of a cart, on ${where}, ${clue}. Bring me word it is gone.`,
+      ]),
+      target: { spot: t.spot, enemy: b.enemy },
+      stages: [{ goal: 'bounty', depth: t.depth, key: t.key, spot: t.spot, enemy: b.enemy, name: b.name, enemyId: `q:${id}`,
+        text: `Defeat ${b.name} on ${where}` }],
+    };
+  },
+};
 // the things a giver may have lost (core/items.js QUEST_ITEMS)
 const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], groom: ['quest_compass', 'quest_map_scrap'],
   smith: ['quest_ring', 'quest_journal'], keeper: ['quest_toy_rabbit'], alchemist: ['quest_journal', 'quest_locket'],
@@ -264,7 +285,7 @@ function hidingPlaces(ctx, log, depths) {
     .map(plan => ({ id: `spot:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: plan.tier, plan })));
 }
 // what a goal is, by name (the kinds' stages)
-export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open'];
+export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty'];
 export const QUEST_KINDS = Object.keys(KINDS);
 
 const range = (a, b) => Array.from({ length: Math.max(0, Math.min(b, MAX_DEPTH) - a + 1) }, (_, i) => a + i);
@@ -282,6 +303,7 @@ export function goalDone(stage, log, facts) {
     case 'guardian': return f.gates.has(stage.key);
     case 'horde': return log.broken.includes(stage.key);
     case 'open': return f.chests.has(stage.chest);
+    case 'bounty': return f.defeated.has(stage.enemyId);
     default: return false;   // landmark, find, rescue: only by being there (events)
   }
 }
@@ -314,7 +336,7 @@ const weighted = (R, list, weight) => {
 // again once its quest is done)
 const takenTargets = log => new Set(log.list.filter(q => q.state !== 'done' || !q.target?.spot).map(q => q.target?.id).filter(Boolean));
 // the kinds to try for a slot of the plan: its own (a scout as the giver leans), then the others
-const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'] };
+const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'], bounty: ['find'] };
 function kindsFor(slot, g, R) {
   const scouts = () => {
     const left = SCOUTS.map(k => [k, g.kinds[k] ?? 0.3]), out = [];
@@ -337,7 +359,7 @@ export function makeQuest(log, ctx, giver, slot) {
       && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, f));
     if (!options.length) continue;
     const t = options[Math.floor(R() * options.length)];
-    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' ? 1 : 0) + ((t.tier ?? 0) >= 3 ? 1 : 0)));
+    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' || kind === 'bounty' ? 1 : 0) + ((t.tier ?? 0) >= 3 ? 1 : 0)));
     const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R, { id, giver, difficulty });
     const rewards = questRewards(R, t.depth, difficulty);
     return { id, giver, n: Number(slot.id.split(':')[1]) || 0, slot: slot.id, from: { name: g.name, title: g.title, where: g.where },
@@ -548,7 +570,11 @@ function checkStage(s) {
   if (s.goal === 'find' && ITEMS[s.item]?.category !== 'quest') return null;
   if (s.goal === 'find') out.item = s.item;
   if (s.goal === 'rescue') { const p = checkPerson(s.person); if (!p) return null; out.person = p; }
-  if ((s.goal === 'find' || s.goal === 'rescue' || s.goal === 'open') && !out.spot) return null;
+  if (s.goal === 'bounty') {
+    if (!ENEMY_KINDS[s.enemy] || typeof s.name !== 'string' || typeof s.enemyId !== 'string') return null;
+    Object.assign(out, { enemy: s.enemy, name: text(s.name, 30), enemyId: s.enemyId.slice(0, 90) });
+  }
+  if (['find', 'rescue', 'open', 'bounty'].includes(s.goal) && !out.spot) return null;
   return out;
 }
 // somebody (lost, or living at a camp): their name, how they are related, how they look

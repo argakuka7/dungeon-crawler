@@ -15,6 +15,8 @@ import { loadPropSets } from '../render/props.js';
 import { propSetsOf } from '../render/propplace.js';
 import { themeOf } from '../themes/depth.js';
 import { sfx } from '../audio/sfx.js';
+import { makeEnemy, coinRange } from '../core/enemies.js';
+import { bountyKind, bountyLevel } from '../core/bounties.js';
 
 const FIND_REACH = 0.75;   // cells: walking this close to a thing picks it up
 
@@ -99,12 +101,30 @@ export function pickUpQuestItems(found) {
 // a death put the cube back: what was picked up there may be picked up again
 export const forgetPicked = () => picked.clear();
 
+// the bounties waiting here (core/bounties.js), as enemies (game/quests.js adds them), but those
+// defeated: on their hiding place, facing where you come from
+export function bountiesHere() {
+  const map = state.map, log = state.run?.quests;
+  if (!map || !log || map.interior) return [];
+  const out = [];
+  for (const { stage } of questGoalsIn(log, map.key)) {
+    if (stage.goal !== 'bounty' || state.run.defeated.has(stage.enemyId)) continue;
+    const s = spotOf(map, stage.spot), f = s && map.floors[s.floor];
+    if (!f) continue;
+    const kind = bountyKind(stage.enemy, stage.name), level = bountyLevel(stage.depth), [lo, hi] = coinRange(kind, level);
+    out.push(makeEnemy({ id: stage.enemyId, level, coinDrop: Math.round((lo + hi) / 2), kind, f,
+      x: s.anchor.x, y: s.anchor.y, z: s.anchor.z, yaw: Math.atan2(s.approach.x - s.anchor.x, s.approach.z - s.anchor.z) }, kind, 0));
+  }
+  return out;
+}
+
 // What there is to notice coming into a cube with a quest's goal in it: said once a visit
 export function noticeQuestGoals() {
   const log = state.run?.quests;
   if (!log || !state.map) return;
   const goals = questGoalsIn(log, state.map.key).map(g => g.stage.goal);
-  if (goals.includes('rescue')) setStatus('You hear somebody calling for help!');
+  if (goals.includes('bounty')) setStatus('Something big is prowling about here...');
+  else if (goals.includes('rescue')) setStatus('You hear somebody calling for help!');
   else if (goals.includes('find')) setStatus('Something glints somewhere here...');
   else if (goals.includes('open')) setStatus('The cross on the map must be here somewhere!');
 }

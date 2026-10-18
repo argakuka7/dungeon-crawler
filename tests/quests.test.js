@@ -257,3 +257,24 @@ test('a giver whose slots are used up offers nothing more', () => {
   assert.equal(log.list.length, n);
   assert.ok(!log.list.some(q => q.state === 'offered'));
 });
+
+test('a bounty: a named, stronger enemy of the depth waits on a hiding place; beating it is the goal', async () => {
+  const { pickBounty, bountyKind, BOUNTY } = await import('../src/core/bounties.js');
+  const { DEPTH_SPAWNS } = await import('../src/core/spawns.js');
+  const { ENEMY_KINDS } = await import('../src/core/enemies.js');
+  for (let d = 0; d <= 20; d++) for (let i = 0; i < 5; i++) {
+    const b = pickBounty(d, i * 7919 + d);
+    const species = ENEMY_KINDS[b.enemy].species;
+    assert.ok(DEPTH_SPAWNS[d].roster.some(r => ENEMY_KINDS[r.type].species === species), `a ${b.enemy} at depth ${d}`);
+    const k = bountyKind(b.enemy, b.name), base = ENEMY_KINDS[b.enemy];
+    assert.ok(k.bounty && k.label.startsWith(b.name) && k.hp >= base.hp * (BOUNTY.hp - 0.1));
+  }
+  const ctx = ctxOf(17), { log, q } = questOf(17, 'bounty', 3);
+  const s = q.stages[0];
+  assert.ok(s.enemyId === `q:${q.id}` && s.spot);
+  accept(log, q.id, ctx);
+  assert.equal(q.state, 'active');
+  settle(log, { ...ctx, defeated: new Set([s.enemyId]) });
+  assert.equal(q.state, 'ready', 'beaten');
+  assert.deepEqual(checkQuestLog(roundTrip(packQuestLog(log))).list[0].stages, q.stages);
+});

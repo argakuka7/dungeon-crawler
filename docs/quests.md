@@ -18,7 +18,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   in as built ones (`BUILT`, `STAND_IN`). Somebody lost is always asked for by whoever lives at a
   camp at or up to two above the depth (they will wait there together); the rest by the villagers
   (a share falling with depth) or the people of the depth and the one above.
-- **Seven kinds:**
+- **Eight kinds:**
   - the scouting kinds, about what the world has anyway: `reach` (get down to a depth nobody has
     been to, one or two below the deepest), `landmark` (stand beside a depth's landmark, within
     `LANDMARK_REACH` cells of its chest), `guardian` (beat a side or descent guardian: done once
@@ -30,6 +30,12 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     (`spot`); they go to live at the giver's camp (`log.living`);
   - `treasure`: a map scrap; a chest stands on a hiding place, opened like a reward site's, its
     loot the reward (`self`: the quest only adds XP). It stays, open.
+  - `bounty` (`core/bounties.js`): a named enemy of one of the depth's kinds (as likely as they
+    are there) waits on a hiding place, golden, four times the health, a third more damage, a
+    level over the depth's, worth four times the XP and coins. Its id is `q:<quest id>`, so its
+    death is remembered like any other (`run.defeated`, and it comes back with a death in its
+    cube); the quest is done once it is defeated, paid back at the giver. Whoever runs the
+    cube's enemies puts it there (`game/questworld.js bountiesHere`, `game/quests.js`).
 
   The scouting kinds and `find` are paid back at the giver (`return`).
 - **Givers** (the villagers, and the people out in the world once met) each have one offer at a
@@ -73,7 +79,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
 - **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
   and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
   villagers, about their own depth and the one below.
-- **Not yet:** the other kinds (bounty, delivery, gather, scattered pieces, prisoners, defense),
+- **Not yet:** the other kinds (delivery, gather, scattered pieces, prisoners, defense),
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want
