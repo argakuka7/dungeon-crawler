@@ -91,7 +91,9 @@ function place(list, item, id, source, at, from, extra = {}) {
 // leaning towards our weapons (we killed it)
 export function dropLoot(e, copper) {
   const source = `e:${e.id}`;
-  if (!state.run.dropped.has(source)) spill(source, e, copper, enemyDrops(e, state.map?.seed ?? 0, favoredKind(player)));
+  if (state.run.dropped.has(source)) return;
+  const items = enemyDrops(e, state.map?.seed ?? 0, favoredKind(player));
+  if (copper || items.length) spill(source, e, copper, items);   // (nothing at all: a Custo triangle, mostly)
 }
 // coins and items of drop `source` bursting out of a body (or a chest: `from`) and landing
 // around `at`; extra: what every pickup carries; delay: seconds before the first one comes out

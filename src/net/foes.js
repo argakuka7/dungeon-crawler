@@ -59,6 +59,7 @@ function replica(entry, profile, i) {
   return { id: entry.id, profile, type: profile.type, level: entry.level, coinDrop: entry.coinDrop, kind: entry.kind,
     guardian: entry.guardian, guardianRole: entry.guardianRole, bossPlaceholder: entry.bossPlaceholder,
     guardianGate: entry.guardianGate, hordeId: entry.hordeId,
+    boss: entry.boss, proxy: !!entry.proxy, summoned: !!entry.summoned, noReward: !!entry.noReward,
     x: entry.x, y: entry.y, z: entry.z, yaw: entry.yaw, hp: entry.hp, mode: entry.mode === 'dead' ? 'dead' : 'idle',
     t: 0, attacks: 0, attack: 0, speed: 0, deadT: entry.mode === 'dead' ? 1e9 : 0, hurtT: 0, stun: 0, cool: 0,
     phase: (i * 0.37) % 1, shownHp: entry.hp };
@@ -124,7 +125,8 @@ export class Viewer {
       if (e.mode === 'dead') { e.deadT += dt; return; }   // dead stays dead (also a death we saw first)
       if (!B) return;
       const b = B.get(i), a = A.get(i) ?? b;
-      if (!b) { e.mode = 'dead'; e.hp = 0; e.deadT = 1e9; return; }   // the runner let it go
+      // the runner let it go: no reward for that (a boss's proxies and minions he took along)
+      if (!b) { e.mode = 'dead'; e.hp = 0; e.deadT = 1e9; e.noReward = true; return; }
       const mix = j => a[j] + (b[j] - a[j]) * k;
       e.x = mix(1); e.y = mix(2); e.z = mix(3); e.yaw = lerpAngle(a[4], b[4], k);
       e.mode = MODES[b[5]] ?? 'idle';

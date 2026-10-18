@@ -12,6 +12,7 @@ import { fireShot } from './shots.js';
 import { throwFlask } from './throws.js';
 import { cooldownLeft } from '../core/potions.js';
 import { relay } from '../net/online.js';
+import { absent } from '../core/enemies.js';
 
 const BUFFER = 0.3;   // s a queued attack waits for the current swing to allow the next
 // the critical-hit roll of each blade hit, in 0..1 (browser checks pin it to keep numbers exact)
@@ -35,7 +36,7 @@ export function updateSword(dt) {
   advanceSwing(player, dt);
   const s = player.sword;
   // a drawn shot follows its target until it goes, then flies
-  if (s.active && s.stats?.ranged && !s.fired && s.target?.profile && s.target.mode !== 'dead') s.yaw = aimYaw(s.target);
+  if (s.active && s.stats?.ranged && !s.fired && s.target?.profile && !absent(s.target)) s.yaw = aimYaw(s.target);
   if (shotDue(player)) {
     s.fired = true; s.reloading = s.stats.kind === 'crossbow';
     if (s.stats.kind === 'throw') throwFlask(player, s.stats, s.target, s.yaw);
@@ -74,7 +75,7 @@ export function hitEnemy(e, hit, before, dx, dz, knockback = 1, by = player) {
 // learn: architecture.html#swing-journey (see learn/README.md)
 export function hitWithSword(list) {
   const p = player;
-  if (state.inventoryOpen || state.transitioning || p.ragdoll || p.stun > 0 || p.hp <= 0) return;
+  if (state.inventoryOpen || state.transitioning || p.ragdoll || p.held || p.stun > 0 || p.hp <= 0) return;
   for (const e of list) {
     if (!inSwordArc(p, e)) continue;
     const y = Math.max(e.y + 0.1, Math.min(p.y + 0.4, e.y + e.profile.bodyHeight - 0.05));

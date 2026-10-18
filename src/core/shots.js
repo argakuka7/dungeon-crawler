@@ -12,6 +12,7 @@
 // BURST_SHARE of its damage. Walls, props and the weapon's range stop them all (a spell bursts
 // there too).
 import { KINDS } from './combat.js';
+import { absent } from './enemies.js';
 
 // speed (cells/s), radius (cells, for hitting), and how long the drawn shot takes to catch up
 // from the weapon to its true line
@@ -76,7 +77,7 @@ export function stepShot(shot, dt, enemies, solid) {
     shot.x += shot.vx * h; shot.y += shot.vy * h; shot.z += shot.vz * h;
     shot.travelled += shot.spec.speed * h;
     for (const e of enemies) {
-      if (e.mode === 'dead' || shot.hits.has(e) || !touchesEnemy(shot, e)) continue;
+      if (absent(e) || shot.hits.has(e) || !touchesEnemy(shot, e)) continue;
       shot.hits.add(e); hits.push(e);
       if (shot.left-- <= 0) return { hits, end: 'hit' };
     }
@@ -91,7 +92,7 @@ export function stepShot(shot, dt, enemies, solid) {
 export function burstTargets(shot, enemies) {
   const b = shot.stats.burst ?? 0;
   if (!b) return [];
-  return enemies.filter(e => e.mode !== 'dead' && !shot.hits.has(e)
+  return enemies.filter(e => !absent(e) && !shot.hits.has(e)
     && Math.hypot(shot.x - e.x, shot.z - e.z) < b + e.profile.radius
     && shot.y > e.y - b && shot.y < e.y + e.profile.bodyHeight + b);
 }

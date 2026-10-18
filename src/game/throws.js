@@ -21,6 +21,7 @@ import { controls } from './inputstate.js';
 import { screenToWorld, aimReach } from '../core/stick.js';
 import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
+import { absent } from '../core/enemies.js';
 
 export let flasks = [], areas = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -104,7 +105,7 @@ export function updateThrows(dt, enemies) {
   for (const a of areas) {
     a.t += dt;
     if (!a.ghost) for (const e of enemies)
-      if (!e[a.status] && e.mode !== 'dead' && inArea(a, e.x, e.y, e.z, e.profile.radius)) afflictEnemy(e, a.status, a.spec);
+      if (!e[a.status] && !absent(e) && inArea(a, e.x, e.y, e.z, e.profile.radius)) afflictEnemy(e, a.status, a.spec);
   }
   if (areas.some(a => a.t >= a.time)) {
     removeAreaViews(areas.filter(a => a.t >= a.time));

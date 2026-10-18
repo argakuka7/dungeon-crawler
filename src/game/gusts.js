@@ -4,7 +4,8 @@
 // pushed back (blowOf's `push`, carried out by physics/move.js; a friend's body gets it sent
 // over). Only the game that runs the enemies hurts anyone (`hurt`); shown another player's
 // enemies, the storm is seen and heard here all the same, from the clock the runner sends.
-// A stagger or death ends the attack and with it the storm.
+// A stagger or death ends the attack and with it the storm. Gusto's vortex is a gust too (kind
+// 'vortex'): no storm cloud, but it breathes in from the gust's `inhale` time to the blow.
 import { player } from './state.js';
 import { party, alive } from './party.js';
 import { attackOf, blowOf } from '../core/enemies.js';
@@ -21,6 +22,7 @@ export function updateGusts(list, dt, hurt = true) {
     if (e.storm?.attacks !== e.attacks) e.storm = { attacks: e.attacks, t: e.t - dt, hit: new Set() };
     const s = e.storm, t0 = s.t, t = s.t = e.t;
     g.thunder.forEach((at, i) => { if (t0 < at && t >= at) stormFx(e, g, 'thunder', i); });
+    if (g.inhale !== undefined && t >= g.inhale && t < a.hitAt) stormFx(e, g, 'inhale', dt);
     if (t0 < a.hitAt && t >= a.hitAt) stormFx(e, g, 'blow');
     if (t < a.hitAt || t >= a.hitAt + g.time) continue;
     stormFx(e, g, 'gust', dt);

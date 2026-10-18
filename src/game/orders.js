@@ -19,6 +19,7 @@ import { lootHere, takePickup, canReachPickup } from './loot.js';
 import { canReachChest, openChest } from './chests.js';
 import { TRADE_REACH } from '../core/shops.js';
 import { openShop } from './inventory.js';
+import { absent } from '../core/enemies.js';
 
 // kind: 'move' (to x, z) | 'attack' (enemy) | 'pickup' (a pickup) | 'chest' (a reward site) |
 // 'trade' (a villager); path: floors to follow, i: the next one
@@ -137,7 +138,7 @@ export function followOrder(dt) {
   let tx = order.x, tz = order.z;
   if (order.kind === 'attack') {
     const e = order.enemy;
-    if (!e || e.mode === 'dead') { clearOrder(); return null; }
+    if (!e || absent(e)) { clearOrder(); return null; }
     // a blade needs the enemy in reach at about our height; a shot, in range and in sight
     const stats = combatStats(player), reach = (stats?.range ?? 0.85) + e.profile.radius - 0.08;
     const near = Math.hypot(e.x - player.x, e.z - player.z) <= reach;

@@ -8,6 +8,7 @@ import { holdPointer, followOrder, clearOrder } from './orders.js';
 import { canMoveCancel, cancelSwing, LUNGE_REACH } from '../core/combat.js';
 import { checkPortals } from './portals.js';
 import { knockDown, stepRagdoll, tickGetUp } from './ragdoll.js';
+import { tickHeld } from './grab.js';
 import { movePlayer, updateLayer, landingSpeed } from '../physics/move.js';
 import { applyHazards } from '../physics/hazards.js';
 import { climb } from '../physics/climb.js';
@@ -15,12 +16,13 @@ import { unstick } from '../physics/unstuck.js';
 import { landFall } from './fall.js';
 import { tickCast, cancelCast } from './townportal.js';
 import { tickEffects, effectMod } from '../core/potions.js';
+import { absent } from '../core/enemies.js';
 
 // during the wind-up, step in towards an enemy that is just out of reach
 // learn: combat.html#chain (see learn/README.md)
 function lunge(s) {
   const e = s.target, stats = s.stats;
-  if (!e?.profile || stats.ranged || e.mode === 'dead' || s.t >= stats.activeStart) return [0, 0];
+  if (!e?.profile || stats.ranged || absent(e) || s.t >= stats.activeStart) return [0, 0];
   const d = Math.hypot(e.x - player.x, e.z - player.z);
   return d > (stats.range + e.profile.radius) * 0.7 && d < stats.range + e.profile.radius + LUNGE_REACH
     ? [Math.sin(s.yaw), Math.cos(s.yaw)] : [0, 0];
@@ -34,6 +36,8 @@ export function updatePlayer(dt) {
   const charge = state.portalCharge;
   state.portalCharge = null;
   if (player.ragdoll) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); stepRagdoll(dt); return; }
+  // in a boss's hands (game/grab.js): carried, then thrown
+  if (player.held) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); tickHeld(dt); return; }
   if (player.getUp) tickGetUp(dt);
   // keys win over mouse orders
   const keys = inputDir();

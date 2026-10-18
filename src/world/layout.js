@@ -3,6 +3,7 @@
 // further down; small optional branches fit inside the band's most. The core has no
 // further descent. Adjacent, non-linked route sections stay sealed.
 import { mulberry32, hash32 } from '../core/util.js';
+import { bossAt } from '../core/bosses.js';
 import { key, faceKey } from './coords.js';
 import { MAX_DEPTH, themeAt, worldThemes } from '../themes/depth.js';
 import { planSites } from './sites.js';
@@ -142,7 +143,8 @@ function build(seed, d, above, theme) {
   const inArea = c => areaRooms.some(a => id(a) === id(c)), nearArea = c => near(c, areaRooms);
   const guardians = new Map(), gateFaces = new Map();
   if (d < MAX_DEPTH) {
-    guardians.set(K(end), { role: 'descent', exit: 4, bossPlaceholder: true });
+    const boss = bossAt(d);   // a real boss in place of the placeholder (core/bosses.js)
+    guardians.set(K(end), { role: 'descent', exit: 4, bossPlaceholder: !boss, ...boss && { boss } });
     const count = 1 + Math.floor(R() * 2), first = d === 0 ? 3 : 2;
     const skip = new Set(area ? Array.from({ length: area.size + 1 }, (_, j) => area.at + j) : []);
     for (const index of guardianIndices(spine.length, count, first, skip)) {

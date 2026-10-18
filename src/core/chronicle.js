@@ -24,7 +24,7 @@ export const KINDS = {
   down: { group: 'events' },     // { cause, by }: lying downed, a friend can help (game/downed.js)
   up: { group: 'events' },       // { by }: helped up again
   level: { group: 'events' },    // { level }
-  guardian: { group: 'events' }, // { label, level, depth }: a guardian defeated, its gate open
+  guardian: { group: 'events' }, // { label, level, depth, boss }: a guardian (boss: a real boss) defeated, its gate open
   depth: { group: 'events' },    // { depth, place }: the first time down there in this world
   loot: { group: 'events' },     // { name, rarity }: a rare (or better) weapon picked up
   kill: { group: 'events' },     // { count, xp }: enemies defeated (merged, MERGE_TIME)
@@ -101,7 +101,7 @@ export function describe({ kind, data: d = {}, who }) {
     case 'down': return who ? `${S} is down: ${d.cause}${lv(d.by)}. Stand next to them to help them up` : `You are down: ${d.cause}${lv(d.by)}`;
     case 'up': return who ? `${S} is back on their feet` : d.by ? `${d.by} helped you up` : 'You are back on your feet';
     case 'level': return `${S} reached level ${d.level}`;
-    case 'guardian': return `${S} defeated the ${d.label}${lv(d)} on depth ${d.depth}: its gate is open`;
+    case 'guardian': return `${S} defeated ${d.boss ? '' : 'the '}${d.label}${lv(d)} on depth ${d.depth}: its gate is open`;
     case 'depth': return `${S} reached depth ${d.depth}: ${d.place}`;
     case 'loot': return `${S} found ${d.name}${RARITY[d.rarity] ? ` (${RARITY[d.rarity].name})` : ''}`;
     case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
@@ -146,7 +146,7 @@ export function cleanNews(kind, d) {
     case 'level': { const level = int(d.level, 1, 999); return level === null ? null : { level }; }
     case 'guardian': {
       const depth = int(d.depth, 0, 999);
-      return depth === null || !text(d.label) ? null : { label: text(d.label), level: int(d.level, 1, 999), depth };
+      return depth === null || !text(d.label) ? null : { label: text(d.label), level: int(d.level, 1, 999), depth, boss: !!d.boss };
     }
     case 'depth': { const depth = int(d.depth, 1, 999); return depth === null ? null : { depth, place: text(d.place, 30) }; }
     case 'loot': return text(d.name) && Object.hasOwn(RARITY, d.rarity) ? { name: text(d.name), rarity: d.rarity } : null;

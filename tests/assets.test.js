@@ -7,7 +7,7 @@ import { readdirSync } from 'node:fs';
 import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } from '../src/core/combat.js';
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, fireAt } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -32,6 +32,7 @@ const BUDGETS = {
   character: { Character: 6000 }, spider: { Spider: 6000 }, stunder: { Stunder: 6000 }, snake: { Snake: 6000 },
   octonaut: { Octonaut: 6000 }, fireface: { FireFace: 6000, FireFaceBall: 1500 }, triangle: { Triangle: 6000, TrianglePunch: 1500 },
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
+  gusto: { Gusto: 8000 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -335,4 +336,33 @@ test('standalone sword is a small untextured, unskinned prop', () => {
   assert.equal(j.animations?.length || 0, 0);
   const triangles = j.meshes[0].primitives.reduce((n, p) => n + j.accessors[p.indices].count / 3, 0);
   assert.ok(triangles < 500);
+});
+
+test('Gusto: his clips match his attacks, the grip and the muzzles come from them, and he flails eight tentacles', () => {
+  const { json: j, duration } = glb('gusto'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['GustoBlow', 'GustoDeath', 'GustoFloat', 'GustoGrab', 'GustoSummon']);
+  assert.equal(a.GustoFloat.extras.loop, true);
+  assert.ok(Math.abs(duration(a.GustoDeath) - GUSTO.deathTime) < 1e-5); assert.equal(a.GustoDeath.extras.hold_last_frame, true);
+  const clip = { grab: 'GustoGrab', summon: 'GustoSummon', blow: 'GustoBlow' };
+  for (const at of GUSTO_SPLIT.attacks) {
+    const x = a[clip[at.clip]].extras;
+    assert.equal(x.hit_frame / 30, at.hitAt, at.name);
+    assert.ok(Math.abs(duration(a[clip[at.clip]]) - at.attackTime) < 1e-5, at.name);
+  }
+  const grab = GUSTO.attacks.find(t => t.grab).grab, g = a.GustoGrab.extras;
+  assert.equal(g.throw_frame / 30, grab.throwAt);
+  assert.deepEqual(g.grip.map(p => p.map(v => Math.abs(v) < 1e-9 ? 0 : v)), grab.grip.map(p => p.map(v => v || 0)));
+  assert.deepEqual(a.GustoSummon.extras.muzzle, GUSTO.attacks.find(t => t.summon).summon.muzzle);
+  const vortex = GUSTO_SPLIT.attacks.find(t => t.gust).gust, b = a.GustoBlow.extras;
+  assert.deepEqual(b.muzzle, vortex.muzzle);
+  assert.equal(b.inhale_frame / 30, vortex.inhale);
+  assert.ok(Math.abs((b.gust_end - b.hit_frame) / 30 - vortex.time) < 1e-9);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(GUSTO.parts).flat()) assert.ok(names.has(m), m);
+  const tentacles = j.nodes.filter(n => /^tentacle\d+_\d+$/.test(n.name));
+  assert.equal(tentacles.length, 24);
+  const body = j.materials.find(m => m.name === 'GustoBody').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(Math.max(...body.slice(0, 3)) - Math.min(...body.slice(0, 3)) < 0.12 && body[0] > 0.45, 'white-grey');
+  const eye = j.materials.find(m => m.name === 'GustoEyes_glow').emissiveFactor;
+  assert.ok(eye[0] > 0.8 && eye[1] < 0.2, 'red eyes');
 });

@@ -240,11 +240,14 @@ function decide(e) {
 }
 // a thrown attack (or a beam) needs a free line from its muzzle height to the player's chest
 const clearShot = (e, a, p = foe(e)) => clearLine(e.x, e.y + shotOf(a).muzzle[1], e.z, p.x, p.y + p.h * 0.55, p.z);
-// the attacks e could start now (indices into profile.attacks; [0] for a single attack)
+// the attacks e could start now (indices into profile.attacks; [0] for a single attack); `barred`
+// (attack names) are not to be started now: a boss's summon while its minions are about
+// (game/gusto.js)
 function ready(e, d) {
   const p = foe(e), list = e.profile.attacks ?? [e.profile];
-  if (p.ragdoll) return [];
-  return attacksInReach(e.profile, d, Math.abs(p.y - e.y)).filter(i => !shotOf(list[i]) || clearShot(e, list[i]));
+  if (p.ragdoll || p.held) return [];
+  return attacksInReach(e.profile, d, Math.abs(p.y - e.y))
+    .filter(i => !e.barred?.has(list[i].name) && (!shotOf(list[i]) || clearShot(e, list[i])));
 }
 // where a wind-up turns to: the player, or for a throw a little ahead of where they run
 function aim(e, a) {
@@ -340,8 +343,9 @@ function act(e, dt) {
     if (a.retreat) backOff(e, a.retreat, t0);
     if (!e.bit && e.t >= fireAt(a)) {
       e.bit = true;
-      // (a gust blows on from here by itself: game/gusts.js)
-      if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a); else if (!a.gust) strikePlayer(e);
+      // (a gust blows on from here by itself: game/gusts.js; a summon is its boss's, game/gusto.js)
+      if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a);
+      else if (a.summon) e.summon?.(a); else if (!a.gust) strikePlayer(e);
     }
     if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = cfg.cooldown * (0.8 + Math.random() * 0.4); e.side = side(); }
     return;

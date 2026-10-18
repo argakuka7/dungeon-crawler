@@ -8,6 +8,7 @@ import { makeLayouts, guardianDepth } from '../src/world/layout.js';
 import { faceKey, step } from '../src/world/coords.js';
 import { voidAllowed } from '../src/world/voids.js';
 import { guardianColor, guardianTitle } from '../src/core/guardians.js';
+import { bossAt } from '../src/core/bosses.js';
 import { parseColor } from '../src/core/oklch.js';
 import { ENEMY_PROFILES, ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, GUARDIAN_TIERS, enemyProfile, makeEnemy, threat, guardianLevel, depthLevel } from '../src/core/enemies.js';
 import { guardianId, gateLocked, portalLocked, restoreDefeated } from '../src/core/guardians.js';
@@ -36,7 +37,9 @@ test('every descent is guarded, with one or two mandatory seeded side guardians'
       if (L.guardian) {
         assert.ok(d >= 0 && d < 20);
         assert.equal(L.guardians.get(L.down).role, 'descent');
-        assert.equal(L.guardians.get(L.down).bossPlaceholder, true);
+        // a real boss takes the first descent guardian's place (core/bosses.js); the rest are placeholders
+        assert.equal(L.guardians.get(L.down).bossPlaceholder, !bossAt(d));
+        assert.equal(L.guardians.get(L.down).boss, bossAt(d) ?? undefined);
         const side = [...L.guardians].filter(([, g]) => g.role === 'side');
         assert.ok(side.length >= 1 && side.length <= 2);
         for (const [k, g] of side) {
@@ -76,7 +79,8 @@ test('guardian arenas have dry, connected floors, shared ground entrances and no
       assert.equal(m.portals.length, 2);
       assert.deepEqual(m.portals.map(p => p.kind), ['side', g.role === 'side' ? 'side' : 'down']);
       assert.equal(m.K, 1); assert.equal(m.exit, g.exit); assert.equal(m.roomRole, `${g.role}-guardian`);
-      assert.equal(m.guardian.role, g.role); assert.equal(m.guardian.bossPlaceholder, g.role === 'descent');
+      assert.equal(m.guardian.role, g.role); assert.equal(m.guardian.bossPlaceholder, g.role === 'descent' && !g.boss);
+      assert.equal(m.guardian.boss, g.boss ?? null);
       assert.equal(voidAllowed(w, m.key), false);
       assert.equal(m.floors.length, 256);
       assert.ok(m.floors.every(f => !f.fluid && !f.covered));
@@ -105,6 +109,7 @@ test('double the full local roster with exactly one promoted guardian, without o
   for (let seed = 0; seed < 30; seed++) {
     const w = new World(seed);
     for (let d = 0; d < 20; d++) for (const [key, g] of w.layout(d).guardians) {
+      if (g.boss) continue;   // a boss stands alone (tests/gusto.test.js)
       const map = state.map = w.cube(key).map, spots = guardianSpots(map);
       const ordinary = population({ ...map, guardian: null }), pop = population(map);
       assert.deepEqual(signature(spots), signature(guardianSpots(map)));

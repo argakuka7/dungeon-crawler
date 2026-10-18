@@ -127,6 +127,17 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         clicks(t + 0.9, 2, 0.06, 1600 * p, 0.3, out);
       },
     },
+    gusto: {    // the boss: a big, mean laugh, a growl through the teeth, a long wail as he sinks
+      alert: (t, out, p) => {
+        for (let i = 0; i < 3; i++) bend(t + i * 0.16, 0.14, 160 * p, 190 * p, 140 * p, 700 * p, 0.45, out);   // "ha-ha-ha"
+        noise(t, 0.5, filter('bandpass', 500 * p, 1, amp(t, 0.05, 0.08, 0.4, out)));
+      },
+      windup: (t, out, p) => { bend(t, 0.45, 90 * p, 120 * p, 80 * p, 520 * p, 0.4, out); clicks(t + 0.05, 4, 0.05, 2600 * p, 0.2, out); },
+      death: (t, out, p) => {
+        bend(t, 1.4, 260 * p, 200 * p, 70 * p, 600 * p, 0.5, out);
+        noise(t + 0.95, 0.35, filter('lowpass', 380 * p, 0.8, amp(t + 0.95, 0.01, 0.6, 0.33, out)));   // the flop onto the floor
+      },
+    },
   };
   const out = {};
   for (const [species, kinds] of Object.entries(V)) for (const k of VOICE_KINDS) out[`${species}_${k}`] = kinds[k];

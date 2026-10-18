@@ -13,6 +13,7 @@ import { shraps, resetShraps, updateShraps, detachShraps } from './shraps.js';
 import { spicies, resetSpicies, updateSpicies, detachSpicies } from './spicy.js';
 import { wollas, resetWollas, updateWollas, detachWollas } from './wolla.js';
 import { wolks, resetWolks, updateWolks, detachWolks } from './wolk.js';
+import { gustos, resetGustos, updateGustos, detachGustos } from './gusto.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
 import { removeEnemyViews } from '../render/enemies.js';
@@ -68,13 +69,13 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...gustos, ...spawned];
 export function resetEnemies() {
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetGustos();
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
   coordinateDefence(state.map, state.run, allEnemies(), player);
@@ -93,7 +94,7 @@ function awardKills(list) {
       if (droppedHere(e)) dropLoot(e, reward.coins);
       if (e.guardianGate) {
         unlocked = true;
-        log('guardian', { label: e.profile.label, level: e.level, depth: state.map.depth }, { share: true });
+        log('guardian', { label: e.profile.label, level: e.level, depth: state.map.depth, boss: !!e.boss }, { share: true });
       }
       relay.defeated?.(e);
     }
@@ -166,7 +167,7 @@ export function updateEnemies(dt) {
   if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateGustos(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
   updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
@@ -189,5 +190,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachGustos(), ...detachSpawned()];
 }

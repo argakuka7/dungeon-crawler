@@ -30,6 +30,11 @@ export function cameraKick(dx, dz, amount, dy = 0) {
 // learn: architecture.html#swing-journey, combat.html#juice, loop.html#pause (see learn/README.md)
 export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   const l = Math.hypot(dx, dz) || 1, nx = dx / l, nz = dz / l;
+  if (e.proxy) {   // a boss's proxy: no blood, no number, it goes up in a cloud (render/enemies.js)
+    floatText('Poof!', { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z }, { color: '#e8eef8', size: 0.3, life: 0.9, rise: 0.8, pop: 1 });
+    if (felt) { hitstop(0.07); cameraKick(nx, nz, 0.1); }
+    return;
+  }
   const x = e.x - nx * e.profile.radius * 0.5, y = e.y + Math.min(e.profile.bodyHeight * 0.6, 0.7), z = e.z - nz * e.profile.radius * 0.5;
   const [c1, c2] = e.profile.ichor ?? ['#a6d84e', '#5f8f22'], n = killed ? 16 : 9;
   emit(glow, x, y, z, { life: 0.14, size: killed ? 0.8 : 0.55, grow: 0.8, color: '#ffc870', alpha: 0.9 });
@@ -188,6 +193,7 @@ export function zappedFx() {
 const WIND = ['#ffffff', '#e2f1ff', '#c4e2ff'];
 const BOLTS = [[0.25, 1.0, 0.04], [-0.23, 1.0, 0.04]];   // where they end (blender/wolla.py)
 export function stormFx(e, g, what, arg = 0) {
+  if (g.kind === 'vortex') { vortexFx(e, g, what, arg); return; }
   const size = e.profile.size ?? 1, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), dt = arg;
   if (what === 'thunder') {
     const at = muzzleAt(e, BOLTS[arg % 2].map(v => v * size));
@@ -231,6 +237,56 @@ export function stormFx(e, g, what, arg = 0) {
   }
 }
 
+// Gusto's vortex (a gust of kind 'vortex', game/gusts.js), blown through his hands: he breathes
+// in ('inhale', for a frame of dt: air spiralling into his hands), blows ('blow'), and while it
+// blows ('gust', dt) three strands of air whirl out along its cone, with wisps drifting along.
+const SWIRL = ['#ffffff', '#d9e8ff', '#b4cdf2'];
+function vortexFx(e, g, what, dt) {
+  const o = muzzleAt(e, g.muzzle), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), sx = fz, sz = -fx;
+  if (what === 'inhale') {
+    for (let n = Math.floor(45 * dt + Math.random()); n > 0; n--) {
+      const a = rand(0, Math.PI * 2), r = rand(0.5, 1.1), ahead = rand(0.3, 1.2), life = rand(0.3, 0.45);
+      const x = o.x + fx * ahead + sx * Math.cos(a) * r, y = o.y + Math.sin(a) * r * 0.8, z = o.z + fz * ahead + sz * Math.cos(a) * r;
+      const ux = -Math.sin(a) * sx, uy = Math.cos(a) * 0.8, uz = -Math.sin(a) * sz;   // round the axis
+      emit(soft, x, y, z, { v: [(o.x - x) / life + ux * 1.5, (o.y - y) / life + uy * 1.5, (o.z - z) / life + uz * 1.5], life,
+        size: rand(0.04, 0.07), color: SWIRL[n % 3], alpha: 0.75 });
+    }
+    return;
+  }
+  if (what === 'blow') {
+    sfx('vortex', { at: o });
+    emit(glow, o.x, o.y, o.z, { life: 0.2, size: 0.8, grow: 1.4, color: '#ffffff', alpha: 0.6 });
+    if (Math.hypot(o.x - player.x, o.z - player.z) < 6) cameraKick(fx, fz, 0.07, 0.02);
+    return;
+  }
+  const spin = e.t * 14, speed = g.range / 0.5;
+  for (let n = Math.floor(320 * dt + Math.random()); n > 0; n--) {
+    const s = rand(0.1, g.range), a = spin - s * 3.2 + (n % 3) * Math.PI * 2 / 3 + rand(-0.15, 0.15), r = 0.12 + s * g.spread * 0.8;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const x = o.x + fx * s + sx * ca * r, y = o.y + sa * r - s * 0.1, z = o.z + fz * s + sz * ca * r;
+    const t = r * 14;   // whirling round the axis
+    emit(soft, x, y, z, { v: [fx * speed * 0.3 - sx * sa * t, ca * t, fz * speed * 0.3 - sz * sa * t], life: rand(0.12, 0.2),
+      size: rand(0.08, 0.13) * (1 + s * 0.2), color: SWIRL[n % 3], alpha: 0.95 });
+  }
+  for (let n = Math.floor(30 * dt + Math.random()); n > 0; n--) {
+    const u = rand(-1, 1), v = speed * rand(0.45, 0.7);
+    emit(soft, o.x + sx * u * 0.2, o.y + rand(-0.15, 0.15), o.z + sz * u * 0.2, { v: [(fx + sx * u * g.spread) * v, rand(-0.25, 0.1), (fz + sz * u * g.spread) * v],
+      life: rand(0.45, 0.7), size: rand(0.3, 0.45), grow: 1.8, color: '#dce6f4', alpha: 0.4, drag: 0.7 });
+  }
+}
+
+// Gusto spits his Custo triangles (game/gusto.js): a burst at his mouth and a light blue streak
+// to each of them (they appear there in a puff, render/enemies.js)
+export function summonFx(mouth, list) {
+  sfx('summon', { at: mouth });
+  emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: '#9fdcff', alpha: 0.9 });
+  for (const m of list) for (let i = 0; i < 10; i++) {
+    const k = i / 10, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
+    emit(glow, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
+      size: rand(0.08, 0.13), color: i % 2 ? '#e0f6ff' : '#7fd0ff', drag: 2 });
+  }
+}
+
 // poison ticking while the player is poisoned (core/status.js)
 export function poisonHurtFx(dmg) {
   floatText('-' + Math.ceil(dmg), q => q.set(player.x, player.visY + 1.15, player.z), { color: '#9be05a', size: 0.2, life: 0.7, rise: 0.8,
@@ -240,6 +296,7 @@ export function poisonHurtFx(dmg) {
 // a burn or poison tick on enemy e (game/statuses.js); killed: that was the last of its health
 const STATUS_COLOR = { burning: '#ffa040', toxic: '#9be05a' };
 export function statusHurtFx(e, dmg, status, killed) {
+  if (e.proxy) return;
   const top = { x: e.x, y: e.y + e.profile.bodyHeight + 0.2, z: e.z };
   floatText(String(dmg), top, { color: STATUS_COLOR[status], size: killed ? 0.26 : 0.19, life: 0.7, rise: 0.8, drift: rand(-0.3, 0.3), pop: 0.4 });
   if (killed) { sfx('kill', { at: e, pitch: e.profile.pitch ?? 1.1 }); hitstop(0.05); }

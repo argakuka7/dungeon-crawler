@@ -5,12 +5,13 @@ import { damageEnemy } from '../core/combat.js';
 import { STATUSES, afflict, enemyTick, statusOver, immuneTo } from '../core/status.js';
 import { statusHurtFx } from './juice.js';
 import { relay } from '../net/online.js';
+import { absent } from '../core/enemies.js';
 
 // set enemy e burning or poisoned (status: 'burning' | 'toxic') by `spec`; false when it is
 // dead or fire does not hurt it. Ours on enemies another player
 // runs go to that player too (net/online.js relay).
 export function afflictEnemy(e, status, spec) {
-  if (!spec || e.mode === 'dead' || immuneTo(e, status)) return false;
+  if (!spec || absent(e) || immuneTo(e, status)) return false;
   e[status] = afflict(spec);
   e.lastHit = null;   // ours (the session says when it was a friend's)
   relay.afflict?.(e, status, spec);

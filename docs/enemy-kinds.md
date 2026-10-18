@@ -109,6 +109,9 @@ attack clip's hit frame. `?bg=%23202020` sets the backdrop colour.
 | Storm wolla | Wolla | `oklch(0.56 0.20 300)` purple | ×1.3 | ×1.3 | ×1.1 | 1.08 | ×1.3 | 13–15, 19 |
 | Ember wolla | Wolla | `oklch(0.72 0.17 52)` orange | ×1.45 | ×1.4 | ×1.1 | 1.12 | ×1.42 | 18–19 |
 
+Gusto's Custo triangle (half size, light blue, 1.9× as fast, `minion`: in no roster, only he
+summons it) is a Triangle kind too; see [bosses.md](bosses.md).
+
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red
 one bites 40% harder and moves 20% faster than the green one. The mamba bites 60% harder and

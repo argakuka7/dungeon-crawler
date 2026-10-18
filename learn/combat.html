@@ -176,8 +176,8 @@
       <p lang="en">Line by line:</p>
       <p lang="de">Zeile für Zeile:</p>
       <ol class="steps">
-        <li lang="en">Only during the hit window (<code>activeStart</code> to <code>activeEnd</code>), only for a blade (not <code>stats.ranged</code>: bows, crossbows and staffs shoot instead), not a dead monster, and not one this swing already hit (<code>s.hits</code>).</li>
-        <li lang="de">Nur während des Trefferfensters (<code>activeStart</code> bis <code>activeEnd</code>), nur für eine Klinge (nicht <code>stats.ranged</code>: Bögen, Armbrüste und Stäbe schießen stattdessen), kein totes Monster, und keins, das dieser Hieb schon getroffen hat (<code>s.hits</code>).</li>
+        <li lang="en">Only during the hit window (<code>activeStart</code> to <code>activeEnd</code>), only for a blade (not <code>stats.ranged</code>: bows, crossbows and staffs shoot instead), not a monster that is dead or gone (<code>absent</code>: a boss that vanished for a moment), and not one this swing already hit (<code>s.hits</code>).</li>
+        <li lang="de">Nur während des Trefferfensters (<code>activeStart</code> bis <code>activeEnd</code>), nur für eine Klinge (nicht <code>stats.ranged</code>: Bögen, Armbrüste und Stäbe schießen stattdessen), kein Monster, das tot oder weg ist (<code>absent</code>: ein Boss, der kurz verschwunden ist), und keins, das dieser Hieb schon getroffen hat (<code>s.hits</code>).</li>
         <li lang="en"><code>Math.hypot</code>: the distance, by Pythagoras.</li>
         <li lang="de"><code>Math.hypot</code>: der Abstand, mit Pythagoras.</li>
         <li lang="en"><code>atan2</code> gives the direction to the monster. Subtract the way we face (<code>yaw</code>): if the cosine of that angle is smaller than the cosine of the arc, it's outside.</li>
@@ -197,8 +197,10 @@
   <div class="cols wide-left">
     <pre data-code="src/core/combat.js#HEAVY_HIT,damageEnemy"></pre>
     <div>
-      <p lang="en"><code>Math.max(0, ...)</code> stops health from going below zero.</p>
-      <p lang="de"><code>Math.max(0, ...)</code> verhindert, dass die Gesundheit unter null geht.</p>
+      <p lang="en">The first lines are a boss's own rules: nothing hurts a monster that is gone or <code>shield</code>ed, and any hit at all fells a boss's <code>proxy</code> (Gusto's look-alikes).</p>
+      <p lang="de">Die ersten Zeilen sind Regeln für Bosse: Einem Monster, das weg oder geschützt (<code>shield</code>) ist, tut nichts weh, und jeder Treffer fällt einen Doppelgänger (<code>proxy</code>) eines Bosses (Gustos Doppelgänger).</p>
+      <p lang="en"><code>Math.max(...)</code> stops health from going below zero, or below a boss's <code>hpFloor</code>: Gusto cannot be taken below half his health before he splits in three.</p>
+      <p lang="de"><code>Math.max(...)</code> verhindert, dass die Gesundheit unter null geht, oder unter den Boden eines Bosses (<code>hpFloor</code>): Gusto kann nicht unter die Hälfte seiner Gesundheit geschlagen werden, bevor er sich dreiteilt.</p>
       <p lang="en"><code>hurtT = 0.22</code>: the monster flashes for 0.22 seconds (the drawing code looks at this).</p>
       <p lang="de"><code>hurtT = 0.22</code>: Das Monster blinkt 0,22 Sekunden lang (der Malcode schaut darauf).</p>
       <p lang="en"><code>stagger = false</code>: for fire and poison from a thrown flask. Their little ticks hurt, but they never stop the monster.</p>

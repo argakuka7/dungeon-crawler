@@ -141,7 +141,8 @@ export function generateGuardian(spec) {
     x: p.c % N, z: Math.floor(p.c / N), y: level * LH, floor: floors[p.c] }));
   const gate = portals[1], entrance = portals[0];
   const guardFloor = floors[idx(...U)];
-  const guardian = { role, bossPlaceholder: role === 'descent', exit,
+  const boss = role === 'descent' ? spec.guardian.boss ?? null : null;
+  const guardian = { role, bossPlaceholder: role === 'descent' && !boss, boss, exit,
     floor: guardFloor, x: guardFloor.x + .5, z: guardFloor.z + .5,
     y: floorY(guardFloor, .5, .5), yaw: Math.atan2(dx, dz), approach: [dx, dz], portalId: portals[1].id };
   const prev = new Map([[entrance.floor, null]]), queue = [entrance.floor];

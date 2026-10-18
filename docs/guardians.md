@@ -35,7 +35,9 @@ silver cloud. The HP bar and the label keep the tier's colour.
 
 `map.guardian.role` and `.bossPlaceholder`, spawn/enemy fields, kind profiles, and
 onward marker `userData` expose these identifiers. The descent tier is explicitly
-reserved for later replacement by a custom boss; no boss-specific AI exists yet.
+reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
+instead, alone and with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names
+him and `bossPlaceholder` is false there.
 
 Each tier sets level-1 floors (`GUARDIAN_TIERS` in `core/enemies.js`), so the promoted
 species decides how a guardian fights, not how strong it is:
@@ -56,7 +58,8 @@ Rewards scale with level.
 
 ## Encounter and persistence
 
-- Double the ordinary seeded local population and promote exactly one member.
+- Double the ordinary seeded local population and promote exactly one member (a real boss
+  stands alone instead, [bosses.md](bosses.md)).
   Shared arena placement keeps bodies separate and fits the whole roster.
 - The guardian stands two cells before its exit, facing inward. Defenders intercept
   advances, rally when it is hurt, and cannot all be lured towards the entrance.

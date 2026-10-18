@@ -165,7 +165,8 @@ export function isMe(m) {
 // --- the enemies (net/foes.js) --------------------------------------------------------------------
 
 // (new modes go at the end: an older game reads one it does not know as idle)
-export const MODES = ['idle', 'walk', 'home', 'alert', 'chase', 'attack', 'search', 'defend', 'dead', 'hide'];
+// ('gone' and 'split': a boss away, or splitting, game/gusto.js)
+export const MODES = ['idle', 'walk', 'home', 'alert', 'chase', 'attack', 'search', 'defend', 'dead', 'hide', 'gone', 'split'];
 export const BURNING = 1, TOXIC = 2;
 const r2 = x => Math.round(x * 100) / 100;
 
@@ -177,8 +178,9 @@ export function rosterOf(list, cube, seed) {
     const key = JSON.stringify(e.profile);
     if (!seen.has(key)) { seen.set(key, profiles.length); profiles.push(e.profile); }
     return { id: e.id, p: seen.get(key), level: e.level, coinDrop: e.coinDrop,
-      kind: e.kind && { xp: e.kind.xp, dropXP: e.kind.dropXP, dropScale: e.kind.dropScale },
+      kind: e.kind && { xp: e.kind.xp, dropXP: e.kind.dropXP, dropScale: e.kind.dropScale, drops: e.kind.drops },
       guardian: e.guardian, guardianRole: e.guardianRole, bossPlaceholder: e.bossPlaceholder, guardianGate: e.guardianGate,
+      boss: e.boss, proxy: e.proxy, summoned: e.summoned, noReward: e.noReward,
       hordeId: e.hordeId, x: r3(e.x), y: r3(e.y), z: r3(e.z), yaw: r3(e.yaw), hp: e.hp, mode: e.mode };
   });
   return { t: 'roster', cube, seed, profiles, list: entries };

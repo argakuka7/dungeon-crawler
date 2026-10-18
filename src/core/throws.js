@@ -8,6 +8,7 @@
 // thing it touches: an enemy's body, a wall, a prop or the floor (past the target it keeps
 // falling, so a throw off a ledge comes down below). The aiming arc is the very same flight.
 import { MUZZLES } from './shots.js';
+import { absent } from './enemies.js';
 
 export const LOB_GRAVITY = 16;    // cells/s², heavier than the world's for a snappy arc
 export const FLASK_R = 0.09;      // the flask's radius, for touching bodies
@@ -32,7 +33,7 @@ export function launchFlask(from, to, stats = null) {
     vy: (to.y - from.y + 0.5 * LOB_GRAVITY * T * T) / T, t: 0, T, spin: 0 };
 }
 // does flask f touch the body of living enemy e?
-export const touchesBody = (f, e) => e.mode !== 'dead' && Math.hypot(f.x - e.x, f.z - e.z) < e.profile.radius + FLASK_R
+export const touchesBody = (f, e) => !absent(e) && Math.hypot(f.x - e.x, f.z - e.z) < e.profile.radius + FLASK_R
   && f.y > e.y && f.y < e.y + e.profile.bodyHeight;
 // Advance by dt in small steps. Returns null (still flying), 'hit' (an enemy's body; f.hit says
 // which), 'blocked' (solid(x, y, z): the level; the flask stays just outside) or 'lost'.
@@ -65,7 +66,7 @@ export function arcOf(from, to, enemies, solid, step = 1 / 30) {
 export function burstVictims(at, radius, enemies) {
   const out = [];
   for (const e of enemies) {
-    if (e.mode === 'dead' || e.y > at.y + 1.2 || e.y + e.profile.bodyHeight < at.y - 1) continue;
+    if (absent(e) || e.y > at.y + 1.2 || e.y + e.profile.bodyHeight < at.y - 1) continue;
     const d = Math.max(0, Math.hypot(e.x - at.x, e.z - at.z) - e.profile.radius);
     if (d <= radius) out.push({ e, share: 1 - 0.5 * d / radius });
   }

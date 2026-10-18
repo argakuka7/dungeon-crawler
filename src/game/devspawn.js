@@ -9,6 +9,7 @@ import { walkable, floorAt, groundY } from '../physics/enemynav.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { player, state } from './state.js';
 import { addEnemies, allEnemies, detachEnemies } from './enemies.js';
+import { addGustos } from './gusto.js';
 import { pickFloor, pointer } from './pointer.js';
 
 const SPREAD = 1.1;   // the least distance between enemies of one spawn
@@ -45,17 +46,17 @@ export function spawnEnemies(type, { level = null, n = 1, at = null } = {}) {
     return makeEnemy({
       id: `dev:${++serial}`, level: lv, coinDrop: lo + Math.floor(Math.random() * (hi - lo + 1)),
       kind, f, x: ex, y, z: ez, yaw: Math.atan2(player.x - ex, player.z - ez),
-      ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder }),
+      ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, boss: kind.boss }),
     }, kind, i);
   });
-  addEnemies(list);
+  if (kind.boss) addGustos(list); else addEnemies(list);   // a boss fights its own fight (game/gusto.js)
   return list;
 }
 
 // every living enemy dies (and pays out as if slain)
 export function killEnemies() {
   let n = 0;
-  for (const e of allEnemies()) if (damageEnemy(e, e.hp)) n++;
+  for (const e of allEnemies()) { e.hpFloor = 0; e.shield = 0; if (damageEnemy(e, e.hp)) n++; }
   return n;
 }
 

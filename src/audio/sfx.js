@@ -333,6 +333,29 @@ const SOUNDS = {
     sweep(t + 0.05, 0.55, 1400 * p, 2600 * p, 900 * p, 6, 0.12, out, 0.08);   // the howl
     noise(t, 0.6, filter('lowpass', 180 * p, 1, amp(t, 0.04, 0.5, 0.55, out)));
   },
+  vortex(t, out, p) {    // Gusto's vortex: a deep roar that whirls (the band swinging up and down) and howls away
+    const f = filter('bandpass', 400 * p, 1.4, amp(t, 0.05, 1.1, 0.75, out));
+    for (let i = 0; i < 6; i++) f.frequency.setValueAtTime((i % 2 ? 380 : 900) * p, t + i * 0.12);
+    noise(t, 0.8, f);
+    sweep(t + 0.05, 0.7, 1200 * p, 2800 * p, 700 * p, 7, 0.1, out, 0.1);   // the howl
+    noise(t, 0.7, filter('lowpass', 160 * p, 1, amp(t, 0.05, 0.7, 0.65, out)));
+  },
+  summon(t, out, p) {    // Gusto spitting his triangles: a wet hork, then a glassy sparkle
+    noise(t, 0.12, filter('bandpass', 700 * p, 2, amp(t, 0.01, 0.6, 0.11, out)));
+    tone('sine', 320 * p, 120 * p, t, 0.14, amp(t, 0.005, 0.4, 0.14, out));
+    for (const [i, hz] of [1568, 2093, 2637].entries()) {
+      const at = t + 0.1 + i * 0.05;
+      tone('triangle', hz * p, hz * p * 1.03, at, 0.2, amp(at, 0.003, 0.08, 0.2, out));
+    }
+  },
+  grab(t, out, p) {      // caught: a quick swish of claws and a squeeze
+    sweep(t, 0.16, 900 * p, 2400 * p, 1200 * p, 2, 0.4, out, 0.01);
+    tone('sine', 180 * p, 110 * p, t + 0.08, 0.12, amp(t + 0.08, 0.004, 0.6, 0.12, out));
+  },
+  poof(t, out, p) {      // a proxy (or a summoned triangle) going up in a cloud: a soft puff and a sparkle
+    noise(t, 0.3, filter('lowpass', 1300 * p, 0.8, amp(t, 0.01, 0.7, 0.28, out)));
+    tone('sine', 880 * p, 1760 * p, t + 0.02, 0.18, amp(t + 0.02, 0.005, 0.12, 0.18, out));
+  },
   cloud(t, out, p) {     // the cloud bridge puffing out of the gate
     noise(t, 0.6, filter('lowpass', 900 * p, 0.7, amp(t, 0.08, 0.45, 0.5, out)));
   },

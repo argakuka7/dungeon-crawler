@@ -63,7 +63,8 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     for (const { k, share } of cubes) {
       if (enemyFreeAt(k) || !share) continue;
       const g = L.guardians.get(k), map = { seed: hash32(seed * 31 + serial * 977), depth, key: k, guardian: g ?? null, horde: L.hordes.get(k), populationScale: L.populationScale.get(k) ?? 1 };
-      for (const [, spec] of population(map)) for (let i = 0; i < spec.count; i++) {
+      // a real boss (core/bosses.js) stands alone: it is the guardian, below
+      if (!g?.boss) for (const [, spec] of population(map)) for (let i = 0; i < spec.count; i++) {
         const base = pick(spec.kinds, R()), kind = spec.swarm ? swarmKind(base, spec.rewardScale) : base;
         const level = enemyRoll(map, kind, i * 13 + 1).level;
         const k2 = row.kinds.get(kind.type) ?? { kind, level: 0, n: 0 };
@@ -72,7 +73,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
       }
       if (g) {
         const species = [...population(map).keys()], chosen = species[Math.floor(R() * species.length)];
-        const kind = (g.role === 'descent' ? DESCENT_GUARDIAN_KINDS : GUARDIAN_KINDS)[chosen];
+        const kind = g.boss ? ENEMY_KINDS[g.boss] : (g.role === 'descent' ? DESCENT_GUARDIAN_KINDS : GUARDIAN_KINDS)[chosen];
         const level = guardianLevel(depth, g.role), prof = enemyProfile(kind, level), hit = combatStats(p).damage;
         const ttk = prof.hp / dps(p);
         row.guards[g.role].push({ type: chosen, level, hp: prof.hp, ttk, php: p.maxHp,

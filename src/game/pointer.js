@@ -9,6 +9,7 @@ import { solidTop } from '../physics/collide.js';
 import { mapInfo } from './cutinfo.js';
 import { player, state } from './state.js';
 import { allEnemies } from './enemies.js';
+import { absent } from '../core/enemies.js';
 
 const canvas = renderer.domElement;
 // mode: what the held button does ('move' | 'attack')
@@ -65,7 +66,7 @@ function pickEnemy() {
   const unit = innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));   // px per unit at depth 1
   let best = null, bestD = 1;
   for (const e of allEnemies()) {
-    if (e.mode === 'dead') continue;
+    if (absent(e)) continue;
     const h = e.profile.bodyHeight;
     v.set(e.x, e.y + h / 2, e.z).applyMatrix4(camera.matrixWorldInverse);
     const depth = -v.z;

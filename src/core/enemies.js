@@ -257,6 +257,53 @@ export const WOLK = {
   seedSalt: 0x6c1d2f5, spacing: 4,
 };
 export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK];
+
+// Gusto, the first real boss (blender/gusto.py), in place of the first descent guardian
+// (core/bosses.js). A round white-grey head with red eyes and jagged teeth, two long arms with
+// claws and tentacles it floats on (`flail`: the game shakes them like crazy, render/enemies.js).
+// game/gusto.js runs his fight, core/gusto.js holds its rules: two phases, proxies, summons.
+// A `grab` catches the player at the hit frame (within hitReach, inside the arc), holds them in
+// its hands along `grip` (where they are held, model space as for a muzzle, every `step` s from
+// the hit frame; `hold`: how far below the grip the feet hang) and throws them down in front of
+// it at `throwAt` (`throw` cells/s forward): the blow lands then, and knocks them down
+// (game/grab.js). A `summon` spits minions of kind `summon.kind` from its mouth at the hit frame
+// (game/gusto.js). The `vortex` is a gust (the Wolla's, core/gusts.js) blown through its hands; it
+// breathes in from `inhale` on (only the look).
+const GUSTO_GRAB = {
+  name: 'grab', clip: 'grab', weight: 2, reach: 1.6, hitAt: 22 / 30, trackUntil: 0.6, attackTime: 66 / 30, hitReach: 1.8,
+  arc: 0.35, power: 1.4, knock: 0, knockDown: true, hop: 2.5, reason: 'Thrown by Gusto!',
+  grab: { throwAt: 46 / 30, step: 2 / 30, hold: 0.55, throw: 4.5,
+    grip: [[0, 0.973, 1.378], [0, 0.948, 1.378], [0, 0.923, 1.376], [0, 1.06, 1.295], [0, 1.389, 1.143], [0, 1.801, 0.969],
+      [0, 2.107, 0.831], [0, 2.182, 0.796], [0, 2.182, 0.796], [0, 2.182, 0.796], [0.002, 2.18, 0.793], [0, 1.836, 0.944],
+      [0, 1.018, 1.319]] },
+};
+const GUSTO_SUMMON = {
+  name: 'summon', clip: 'summon', weight: 3, reach: 8, hitAt: 27 / 30, trackUntil: 0.6, attackTime: 48 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto',
+  summon: { kind: 'custotriangle', muzzle: [0.02, 1.131, 0.795] },
+};
+const GUSTO_VORTEX = {
+  name: 'vortex', clip: 'blow', weight: 3, reach: 4.4, hitAt: 30 / 30, trackUntil: 0.85, attackTime: 63 / 30, hitReach: 0,
+  arc: 0.5, power: 0.5, knock: 3, knockDown: false, hop: 3, reason: 'Blown away by Gusto!',
+  gust: { kind: 'vortex', time: 18 / 30, range: 5, width: 0.45, spread: 0.4, push: 10, pushTime: 0.7,
+    muzzle: [0, 1.36, 1], thunder: [], inhale: 9 / 30 },
+};
+export const GUSTO = {
+  type: 'gusto', species: 'gusto', label: 'Gusto', hp: 1000, damage: 24, knock: 4,
+  xp: 650, coins: [120, 220],
+  radius: 0.62, height: 2.3, bodyHeight: 2.1, mass: 8, hover: true, flail: 1,
+  aggro: 7, giveUp: 14, chase: 1.45, wander: 0.4, homeSpeed: 0.9,
+  ...GUSTO_GRAB, reach: GUSTO_SUMMON.reach, cooldown: 1.2, ichor: ['#f2f3f6', '#8a8f99'], pitch: 0.7,
+  attacks: [GUSTO_GRAB, GUSTO_SUMMON], phase: 1,
+  poise: 2, hitStun: 0.25, deathTime: 2.2, corpseTime: 5,
+  parts: { body: ['GustoBody', 'GustoLimbs', 'GustoTentacles'], eyes: ['GustoEyes_glow'] },
+  light: '#ff3020', sparks: ['#ff8070', '#ffffff'],
+  style: 'brute', guardian: true, guardianRole: 'descent', boss: 'gusto',
+  seedSalt: 0x6057a0, spacing: 6,
+};
+// from half his health on: the three of him blow vortexes too
+export const GUSTO_SPLIT = { ...GUSTO, attacks: [GUSTO_GRAB, GUSTO_VORTEX, GUSTO_SUMMON], phase: 2 };
+export const BOSS_PROFILES = [GUSTO];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -456,9 +503,23 @@ export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base
   poise: Math.max(base.poise, GUARDIAN_TIERS.descent.poise), mods: guardianMods(base, GUARDIAN_TIERS.descent),
   ...base.guardianLooks?.descent,
 })]));
+// Gusto's minions (game/gusto.js summons them): half a Triangle, light blue and much faster,
+// whose punches do not knock the player over. Never in a roster (`minion`); a little XP, no
+// coins and no weapons, now and then a minor health potion (`drops`, core/gear/drops.js).
+export const CUSTO_TRIANGLE = enemyKind(TRIANGLE, {
+  type: 'custotriangle', label: 'Custo triangle', reason: 'Punched by a Custo triangle!', minion: true,
+  colors: { glow: 'oklch(0.84 0.11 225)', eyes: 'oklch(0.97 0.03 220)' }, light: '#7fd0ff', sparks: ['#e0f6ff', '#7fd0ff'],
+  ichor: ['#c4ecff', '#4f8fbf'], aggro: 9, giveUp: 14, knockDown: false, cooldown: 1.6, poise: 0, coins: [0, 0],
+  projectile: { ...TRIANGLE.projectile, speed: 9.5, radius: 0.2, muzzle: TRIANGLE.projectile.muzzle.map(v => v * 0.5) },
+  drops: { weapons: false, potion: 0.08, potions: ['item_potion_health_minor'] },
+  mods: { hp: 0.17, damage: 0.25, speed: 1.9, size: 0.5, xp: 0.1 },
+});
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
-  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA].map(k => [k.type, k]));
+  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, ...BOSS_PROFILES, CUSTO_TRIANGLE].map(k => [k.type, k]));
+// gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js): it
+// cannot be seen, hit or touched, like the dead
+export const absent = e => e.mode === 'dead' || e.mode === 'gone';
 
 // the attack e is performing (or about to perform): one of profile.attacks, else the profile
 export const attackOf = e => e.profile.attacks?.[e.attack] ?? e.profile;

@@ -7,6 +7,8 @@
 //   side guardians: one weapon, at least Uncommon (Rare from level 10), and a potion
 //   descent guardians: two weapons, at least Uncommon (Rare from level 5, Epic from 14), and two
 //     potions
+//   a kind with its own `drops` ({ weapons: false, potion: chance, potions: [item ids] }: Gusto's
+//     Custo triangles) drops no weapons and one of `potions` at that chance
 // Guardians also roll with luck (rarer results) and are the only source of Ancient items.
 // Which potion is drawn by the enemy's level (core/potions.js potionTable): mostly health
 // potions, the stronger ones and the rest deeper down.
@@ -41,6 +43,7 @@ const stream = (enemy, seed, salt) => mulberry32(hash32(hashString(String(enemy.
 export function weaponDrops(enemy, seed = 0, favor = null) {
   const R = stream(enemy, seed, 0x10075);
   const level = Math.max(1, enemy.level || 1);
+  if (enemy.kind?.drops?.weapons === false) return [];
   if (!enemy.guardian) return R() < dropChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? [rollWeapon(R, level, { favor })] : [];
   const g = guardianDrops(enemy.guardianRole ?? 'descent', level), out = [];
   for (let i = 0; i < g.count; i++) out.push(rollWeapon(R, level, { ...g, favor }));
@@ -48,7 +51,8 @@ export function weaponDrops(enemy, seed = 0, favor = null) {
 }
 // potions, on a stream of their own (so weapon drops do not depend on them)
 export function potionDrops(enemy, seed = 0) {
-  const R = stream(enemy, seed, 0x9071), level = Math.max(1, enemy.level || 1);
+  const R = stream(enemy, seed, 0x9071), level = Math.max(1, enemy.level || 1), own = enemy.kind?.drops;
+  if (own?.potions) return R() < own.potion ? [{ itemId: own.potions[Math.floor(R() * own.potions.length)], count: 1 }] : [];
   const n = enemy.guardian ? guardianDrops(enemy.guardianRole ?? 'descent', level).potions
     : R() < potionChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? 1 : 0;
   return rollPotions(R, level, n);

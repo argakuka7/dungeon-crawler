@@ -12,8 +12,10 @@ import { attackOf, blowOf } from '../core/enemies.js';
 import { ignite, burnStep, burntOut, chillFrom, chillStep } from '../core/projectiles.js';
 import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
+import { absent } from '../core/enemies.js';
+import { grabPlayer } from './grab.js';
 
-export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.shocked = 0; };
+export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.shocked = 0; player.held = null; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
 export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
@@ -28,9 +30,13 @@ export function poisonPlayer(toxin, reason, by = null) {
 export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
 // a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz); a gust's
 // blow (its `push`) goes on blowing the player that way for a moment (physics/move.js), and a
-// bolt's (its `shock`) stuns: no moving, jumping or striking for that long (render/shocked.js)
+// bolt's (its `shock`) stuns: no moving, jumping or striking for that long (render/shocked.js).
+// A grab's (its `grab`: the id of the enemy that caught us) is carried out by game/grab.js; held
+// in its hands, nothing else hurts us.
 export function hitPlayer(blow, fx, fz, nx, nz) {
   const p = player;
+  if (p.held) return;
+  if (typeof blow.grab === 'string') { grabPlayer(blow, fx, fz); return; }
   p.vx = nx * blow.knock; p.vz = nz * blow.knock;
   playerHurtFx(Math.min(blow.damage, p.hp), fx, fz);
   // fire thaws a chill and ice puts a fire out
@@ -58,9 +64,10 @@ export function hitBody(p, blow, fx, fz, nx, nz) {
 }
 export function strikePlayer(e) {
   const p = e.target?.here ? e.target : player, a = attackOf(e), dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
-  if (p.ragdoll || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return;
+  if (p.ragdoll || p.held || p.hp <= 0 || d > a.hitReach || Math.abs(p.y - e.y) > 0.85) return;
   if (d > 0.01 && Math.cos(Math.atan2(dx, dz) - e.yaw) < a.arc) return;
-  hitBody(p, { ...blowOf(e.profile, a), by: attacker(e) }, e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
+  const blow = { ...blowOf(e.profile, a), by: attacker(e), ...a.grab && { grab: e.id } };   // a grab catches (game/grab.js)
+  hitBody(p, blow, e.x, e.z, d ? dx / d : Math.sin(e.yaw), d ? dz / d : Math.cos(e.yaw));
 }
 // On fire: the burn ticks away (also while knocked down); water puts it out. A lethal
 // tick knocks the player down for good.
@@ -105,7 +112,7 @@ function pushPlayer(dx, dz) {
 export function contactEnemies(list, dt, moveEnemies = true) {
   const p = player;
   for (const e of list) {
-    if (e.mode === 'dead' || p.ragdoll) continue;
+    if (absent(e) || p.ragdoll || p.held) continue;
     const dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz), body = p.r + e.profile.radius;
     if (d >= body || p.y >= e.y + e.profile.bodyHeight || p.y + p.h <= e.y) continue;
     const nx = d ? dx / d : 1, nz = d ? dz / d : 0, depth = body - d;
@@ -116,7 +123,7 @@ export function contactEnemies(list, dt, moveEnemies = true) {
   if (!moveEnemies) return;
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
     const a = list[i], b = list[j];
-    if (a.mode === 'dead' || b.mode === 'dead' || Math.abs(a.y - b.y) > 0.6) continue;
+    if (absent(a) || absent(b) || Math.abs(a.y - b.y) > 0.6) continue;
     const dx = a.x - b.x, dz = a.z - b.z, d = Math.hypot(dx, dz), r = a.profile.radius + b.profile.radius;
     if (d >= r) continue;
     const nx = d ? dx / d : 1, nz = d ? dz / d : 0, push = Math.min(r - d, dt * 1.5);

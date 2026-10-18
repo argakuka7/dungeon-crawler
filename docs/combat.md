@@ -144,6 +144,11 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   `physics/move.js`; walls stop it, ledges and fluids do not), with little steering meanwhile.
   It stops turning at 0.5 s, so stepping out of the cone then dodges it. A stagger ends the
   storm. Kinds: Bog wolla (green), Storm wolla (purple), Ember wolla (orange).
+- Gusto (`blender/gusto.py`), the first real boss, in place of the first descent guardian: a
+  big floating white-grey head with red eyes, jagged teeth, long clawed arms and eight frantic
+  tentacles. He grabs and throws, spits Custo triangles (half-size, light blue, fast Triangles),
+  splits into three at half health (two proxies that any hit dispels) and blows a vortex through
+  his hands. See [bosses.md](bosses.md).
 - Wolk (`blender/wolk.py`): a sad little light blue cloud with a tear on its cheek, walking on
   two long stick legs, two thin arms with three-fingered hands hanging from its belly. It
   fights from afar (`style: 'ranged'`, 2.6–4.2 cells, from 4.5 cells). To strike it closes its

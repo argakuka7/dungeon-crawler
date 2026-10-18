@@ -22,6 +22,12 @@
 // Gloom (a species with `gloom`: the Wolk): the materials of its `gloom.parts` darken towards
 // `gloom.color` while it gathers its lightning, flicker with it inside and flash at the strike,
 // then lighten again, and as it dies.
+// Tentacles (bones named tentacle<i>_<j>, a species that `flail`s: Gusto) shake like crazy on
+// top of whatever clip plays, each its own way, the tips most; they calm down as it dies. Its
+// eyes flare while it winds up an attack (`flare` in GLOW).
+// Clouds: a boss's proxy that is felled, and a body that goes away (mode 'gone') or comes back,
+// jumps across the level or first turns up as a proxy or a summoned minion, does so in a puff
+// of cloud (game/gusto.js). While it splits (mode 'split') it shudders, steaming.
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
 import { spiderModel } from './spidermodel.js';
@@ -35,8 +41,10 @@ import { shrapsModel } from './shrapsmodel.js';
 import { spicyModel } from './spicymodel.js';
 import { wollaModel } from './wollamodel.js';
 import { wolkModel } from './wolkmodel.js';
+import { gustoModel } from './gustomodel.js';
+import { sfx } from '../audio/sfx.js';
 import { trackLight, untrackLight } from './lightpool.js';
-import { glow, emit, rand } from './particles.js';
+import { glow, soft, emit, rand } from './particles.js';
 import { wetTrail, removeTrail } from './trails.js';
 import { dressEnemy, paintParts } from './enemymodel.js';
 import { attackOf } from '../core/enemies.js';
@@ -46,7 +54,7 @@ import { player } from '../game/state.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
-  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel };
+  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -57,6 +65,7 @@ const GLOW = {
   triangle: { light: [0xa45cff, 2.6, 3.5, 0.85], pulse: 0.7 },
   firecat: { light: [0xff7a2a, 1.6, 2.6, 0.75], flicker: 1, embers: { rate: 5, from: 'flame_tail', spread: 0.06 } },
   fireshraps: { light: [0xff6a20, 2.4, 3.5, 1.35], flicker: 1, embers: { rate: 6, from: 'flame0_a', spread: 0.15 } },
+  gusto: { light: [0xff3020, 1.8, 3.5, 1.75], flare: 1.6 },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -171,6 +180,50 @@ function glints(v, e, dt) {
 }
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
+// the tentacles' own frantic shaking, on top of the clip (life: 1 alive, down to 0 dead)
+const flailAxis = new THREE.Vector3(1, 0, 0), flailAxis2 = new THREE.Vector3(0, 0, 1);
+function flail(v, e, life) {
+  if (!v.tentacles.length || life <= 0) return;
+  const t = clock + v.seed, k = (e.profile.flail ?? 1) * life * (e.mode === 'split' ? 1.8 : 1);
+  for (const { bone, i, j } of v.tentacles) {
+    const amp = k * (0.2 + 0.14 * j);
+    const a = amp * (Math.sin(t * (11 + i * 1.3) + i * 2.1 + j * 0.9) + 0.5 * Math.sin(t * (23 + i * 0.7) + i));
+    const b = amp * (Math.sin(t * (13 + i * 0.9) + i * 1.3 + j * 1.4) + 0.4 * Math.sin(t * (29 - i) + 2 * i));
+    bone.quaternion.multiply(wobble.setFromAxisAngle(flailAxis, a)).multiply(wobble.setFromAxisAngle(flailAxis2, b));
+  }
+}
+// a puff of cloud where e is (a proxy felled, a body gone or come back)
+const PUFF = { colors: ['#ffffff', '#e8edf5', '#cdd3de'], size: 1 }, MINION_PUFF = { colors: ['#e0f6ff', '#9fdcff', '#ffffff'], size: 0.5 };
+function poof(e, look = PUFF, x = e.x, z = e.z) {
+  const s = look.size, h = e.profile.height * 0.5, y = e.y + h, c = look.colors;
+  if (Math.hypot(x - player.x, z - player.z) > 18) return;
+  emit(glow, x, y, z, { life: 0.25, size: 1.4 * s, grow: 1.5, color: '#ffffff', alpha: 0.6 });
+  for (let i = 0; i < 26 * s + 6; i++) {
+    const a = rand(0, Math.PI * 2), r = rand(0.3, 1) * s, up = rand(-0.4, 1);
+    emit(soft, x + Math.cos(a) * r * 0.4, y + up * h * 0.6, z + Math.sin(a) * r * 0.4, { v: [Math.cos(a) * rand(1, 2.6) * s, rand(0.2, 1.6), Math.sin(a) * rand(1, 2.6) * s],
+      life: rand(0.5, 0.9), size: rand(0.25, 0.45) * s, grow: 1.4, color: c[i % c.length], alpha: 0.75, drag: 2.2 });
+  }
+  for (let i = 0; i < 10 * s + 4; i++)
+    emit(glow, x, y, z, { v: [rand(-2.5, 2.5) * s, rand(-0.5, 2.5), rand(-2.5, 2.5) * s], life: rand(0.25, 0.5), size: rand(0.05, 0.09),
+      color: i % 2 ? '#ffffff' : c[1], gravity: 3, drag: 2 });
+  sfx('poof', { at: { x, y, z }, pitch: s < 1 ? 1.5 : 1 });
+}
+// what changed since the last frame that shows as a cloud: gone, back, or a jump (not a cube's slide:
+// positions are the cube's own)
+function clouds(v, e) {
+  const w = v.was, gone = e.mode === 'gone';
+  if (gone !== (w.mode === 'gone') && w.mode !== 'dead') poof(e, e.summoned ? MINION_PUFF : PUFF, gone ? w.x : e.x, gone ? w.z : e.z);
+  else if (!gone && Math.hypot(e.x - w.x, e.z - w.z) > 1.5) { poof(e, PUFF, w.x, w.z); poof(e); }
+  w.mode = e.mode; w.x = e.x; w.z = e.z;
+}
+// splitting: shaking, steaming
+function shudder(v, e, dt) {
+  const k = 0.06 * v.size;
+  v.group.position.x += rand(-k, k); v.group.position.z += rand(-k, k);
+  if (Math.random() < dt * 30) emit(soft, e.x + rand(-0.6, 0.6), e.y + rand(0.8, 2.2), e.z + rand(-0.6, 0.6),
+    { v: [rand(-0.4, 0.4), rand(0.4, 1.2), rand(-0.4, 0.4)], life: rand(0.5, 0.8), size: rand(0.2, 0.35), grow: 1.4, color: '#eef2f8', alpha: 0.5, drag: 1 });
+}
+
 function makeView(e, prefab) {
   const group = new THREE.Group(), { model, mesh, material, parts } = dressEnemy(prefab, e.profile), size = e.profile.size ?? 1;
   model.scale.multiplyScalar(size);
@@ -203,9 +256,9 @@ function makeView(e, prefab) {
     weights[name] = name === 'walk' ? 1 : 0;
   }
   const color = guardianColor(e.guardianRole);
-  const hpBar = makeBar(e.guardian ? { color, w: e.bossPlaceholder ? 1.2 : .9 } : {}), bar = hpBar.group;
+  const hpBar = makeBar(e.guardian ? { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } : {}), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, e.guardian ? { color, title: guardianTitle(e.guardianRole) } : {});
+  const label = makeLevelLabel(e.level, e.guardian ? { color, title: guardianTitle(e.guardianRole, e.boss && e.profile.label) } : {});
   label.position.y = e.profile.height + .33; group.add(label);
   const mark = makeAlertMark(); mark.position.y = e.profile.height + .62; group.add(mark);
   const fx = GLOW[e.profile.fx ?? e.profile.species] ?? (e.guardian ? { light: [color, 2, 3, .5], pulse: .35 } : null), flames = [];
@@ -217,7 +270,10 @@ function makeView(e, prefab) {
     trackLight(light, group);
   }
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
-  return { group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
+  const tentacles = [];
+  if (e.profile.flail) model.traverse(o => { const m = o.isBone && /^tentacle(\d+)_(\d+)$/.exec(o.name); if (m) tentacles.push({ bone: o, i: +m[1], j: +m[2] }); });
+  if (e.proxy || e.summoned) poof(e, e.summoned ? MINION_PUFF : PUFF);   // it turns up
+  return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0 };
 }
@@ -233,6 +289,11 @@ function glowFx(v, e, dt, life) {
   const swing = fx.pulse ? 1 + fx.pulse * (beat(v.phase) - 0.3) : 0.82 + 0.18 * Math.sin(t * 23) * Math.sin(t * 7.1);
   if (v.light) v.light.intensity = fx.light[1] * swing * life;
   if (fx.pulse) v.material.emissiveIntensity = (0.6 + 0.4 * life) * swing;   // every part's glow (times its own strength)
+  if (fx.flare) {   // eyes flaring up to the strike
+    const a = e.mode === 'attack' ? attackOf(e) : null, up = a ? Math.min(1, e.t / Math.max(0.1, a.hitAt)) : 0;
+    v.material.emissiveIntensity = life * (1 + fx.flare * up * up);
+    if (v.light) v.light.intensity *= 1 + fx.flare * up * up;
+  }
   if (fx.embers && life > 0.3 && Math.hypot(e.x - player.x, e.z - player.z) < 12)
     for (let i = Math.floor(fx.embers.rate * dt * life + Math.random()); i > 0; i--) {
       const s = fx.embers.spread;
@@ -242,6 +303,11 @@ function glowFx(v, e, dt, life) {
     }
 }
 function dying(v, e, dt, off) {
+  if (e.proxy) {   // up in a cloud, nothing left
+    if (!v.dead) { v.dead = true; if (v.was.mode !== 'gone') poof(e); }
+    v.group.visible = false;
+    return;
+  }
   if (!v.dead) {
     v.dead = true;
     for (const a of Object.values(v.actions)) a.setEffectiveWeight(0);
@@ -258,6 +324,7 @@ function dying(v, e, dt, off) {
   v.group.visible = fade > 0;
   v.mixer.update(0);
   spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
+  flail(v, e, Math.max(0, 1 - e.deadT / (e.profile.deathTime * 0.5)));
   glowFx(v, e, 0, Math.max(0, 1 - e.deadT / e.profile.deathTime) * fade);   // the glow dies with it
 }
 export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
@@ -271,6 +338,10 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.group.position.set(e.x + off.x, e.y + off.y, e.z + off.z);
     v.group.rotation.y = v.yaw;
     if (e.mode === 'dead') { dying(v, e, dt, off); continue; }
+    clouds(v, e);
+    v.group.visible = e.mode !== 'gone';
+    if (e.mode === 'gone') { if (v.light) v.light.intensity = 0; continue; }
+    if (e.mode === 'split') shudder(v, e, dt);
     const attack = e.mode === 'attack', strike = A[attackOf(e).clip ?? 'attack'];
     if (attack && v.attacks !== e.attacks) {
       v.attacks = e.attacks; strike.reset().play(); strike.timeScale = 0;
@@ -304,7 +375,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mark.visible = v.markT > 0;
     v.mark.scale.setScalar(0.5 * (e.mode === 'alert' ? 1 + 0.35 * Math.sin(Math.PI * v.markT) : v.markT));
     v.mixer.update(0);
-    spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
+    spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
     glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }

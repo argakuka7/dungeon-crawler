@@ -154,7 +154,7 @@ TRIANGLE_BUDGET = {
     "Character": 6000,
     "Spider": 6000, "Stunder": 6000, "Snake": 6000, "Octonaut": 6000, "FireFace": 6000,
     "Triangle": 6000, "Spicy": 6000, "Wolk": 6000,
-    "FireCat": 8000, "Shraps": 8000, "Wolla": 8000,     # many parts
+    "FireCat": 8000, "Shraps": 8000, "Wolla": 8000, "Gusto": 8000,     # many parts
     "FireFaceBall": 1500, "ShrapsIceBall": 1500, "TrianglePunch": 1500,   # projectiles
 }
 # How much the collapse spares material borders (joints: 1, kept outright). Fully kept, the

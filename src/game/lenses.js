@@ -18,6 +18,7 @@ import { groundY } from '../physics/enemynav.js';
 import { overlay, fan, tube, pin, label, tint, fade, dispose } from '../render/overlay.js';
 import { player, state } from './state.js';
 import { allEnemies } from './enemies.js';
+import { absent } from '../core/enemies.js';
 import { AHEAD, BEHIND, HEAR, WARY, notices } from './enemyai.js';
 
 export const LENSES = ['sword', 'awareness', 'paths', 'grid', 'route'];
@@ -56,7 +57,7 @@ function bar(id, a, b, color, width = 0.04, opacity = 0.85) {
 const MOOD = { idle: '#7dffa0', walk: '#7dffa0', home: '#7dd3ff', search: '#c49cff', alert: '#ffb347', chase: '#ff5a4a',
   attack: '#ff2a2a', defend: '#ffd34a', hide: '#5ad1c4' };
 const UNAWARE = new Set(['idle', 'walk', 'home', 'search']);
-const living = () => allEnemies().filter(e => e.mode !== 'dead');
+const living = () => allEnemies().filter(e => !absent(e));
 const chosen = name => { const of = on.get(name)?.of; return living().filter(e => !of || of.has(e)); };
 
 function sword() {

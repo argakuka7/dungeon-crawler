@@ -175,14 +175,14 @@
       <p lang="en"><code>awardKill</code> runs for every monster, every frame (it's in the loop you read in the code room):</p>
       <p lang="de"><code>awardKill</code> läuft für jedes Monster, in jedem Bild (es steht in der Schleife, die du im Code-Raum gelesen hast):</p>
       <ol class="steps">
-        <li lang="en">Not dead, or already counted? <code>return null</code>: nothing to pay.</li>
-        <li lang="de">Nicht tot, oder schon gezählt? <code>return null</code>: nichts auszuzahlen.</li>
+        <li lang="en">Not dead, already counted, or worth nothing (<code>noReward</code>: a boss's look-alikes)? <code>return null</code>: nothing to pay.</li>
+        <li lang="de">Nicht tot, schon gezählt, oder nichts wert (<code>noReward</code>: die Doppelgänger eines Bosses)? <code>return null</code>: nichts auszuzahlen.</li>
         <li lang="en">The XP: the monster's XP times the farming rule, rounded.</li>
         <li lang="de">Die XP: die XP des Monsters mal die Farm-Regel, gerundet.</li>
         <li lang="en"><code>awardXP</code> adds it, works out your new level, and grows your maximum health. You also get the health the new level added.</li>
         <li lang="de"><code>awardXP</code> zählt sie dazu, rechnet deine neue Stufe aus und vergrößert deine maximale Gesundheit. Die Gesundheit, die die neue Stufe dazugibt, bekommst du auch.</li>
-        <li lang="en">The monster's name goes into <code>defeated</code>, so it is never paid twice.</li>
-        <li lang="de">Der Name des Monsters kommt in <code>defeated</code>, damit es nie zweimal bezahlt wird.</li>
+        <li lang="en">The monster's name goes into <code>defeated</code>, so it is never paid twice. A monster a boss called in (<code>summoned</code>) only gets marked <code>awarded</code>: it never comes back anyway.</li>
+        <li lang="de">Der Name des Monsters kommt in <code>defeated</code>, damit es nie zweimal bezahlt wird. Ein Monster, das ein Boss gerufen hat (<code>summoned</code>), bekommt nur ein <code>awarded</code>: Es kommt sowieso nie wieder.</li>
         <li lang="en">A guardian? Its gate opens for good.</li>
         <li lang="de">Ein Wächter? Sein Tor geht für immer auf.</li>
       </ol>

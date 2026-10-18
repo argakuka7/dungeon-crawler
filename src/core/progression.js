@@ -79,14 +79,16 @@ export function awardXP(p, amount) {
   if (p.hp > 0) p.hp = Math.min(p.maxHp, p.hp + p.maxHp - oldMax);
   return p.level - oldLevel;
 }
-// XP is granted at once; the coins are only returned: they drop as loot to be picked up
+// XP is granted at once; the coins are only returned: they drop as loot to be picked up. Some
+// pay nothing (`noReward`: a boss's proxies, those that left); a boss's summoned minions pay once
+// (`awarded`) but are never remembered as defeated (they never come back anyway).
 // learn: stronger.html#xp-code (see learn/README.md)
 export function awardKill(p, run, enemy) {
-  if (enemy.mode !== 'dead' || enemy.hp !== 0 || !enemy.id || run.defeated.has(enemy.id)) return null;
+  if (enemy.mode !== 'dead' || enemy.hp !== 0 || !enemy.id || enemy.noReward || enemy.awarded || run.defeated.has(enemy.id)) return null;
   const xp = whole(Math.round(enemy.profile.xp * xpScale(p.level, enemy.level || 1))), coins = whole(enemy.coinDrop);
   whole(p.xp + xp);   // validate before mutating any state
   const levels = awardXP(p, xp);
-  run.defeated.add(enemy.id);
+  if (enemy.summoned) enemy.awarded = true; else run.defeated.add(enemy.id);
   if (enemy.guardian && enemy.guardianGate) run.unlockedGates.add(enemy.guardianGate);
   return { xp, coins, levels };
 }

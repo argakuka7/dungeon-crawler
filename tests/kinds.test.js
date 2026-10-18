@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { assets } from './paths.js';
 import { flatMap } from './fixtures.js';
 import { toOklch, fromOklch, parseColor, recolorFn, recolorTable, toHex, toLinear } from '../src/core/oklch.js';
-import { ENEMY_KINDS, ENEMY_PROFILES, SNAKE, SAND_VIPER, BLOOD_VIPER, SHADOW_MAMBA, OCTONAUT, SHRAPS, SPICY, enemyKind, enemyRoll, makeEnemy, GROWTH } from '../src/core/enemies.js';
+import { ENEMY_KINDS, ENEMY_PROFILES, BOSS_PROFILES, SNAKE, SAND_VIPER, BLOOD_VIPER, SHADOW_MAMBA, OCTONAUT, SHRAPS, SPICY, enemyKind, enemyRoll, makeEnemy, GROWTH } from '../src/core/enemies.js';
 import { DEPTH_SPAWNS } from '../src/core/spawns.js';
 import { enemySpots, pickKind } from '../src/game/enemyspawn.js';
 
@@ -58,8 +58,8 @@ test('a recolour table touches only the listed materials, emissive included', ()
 
 test('every kind recolours materials its species model has, and only those', () => {
   assert.equal(new Set(Object.values(ENEMY_KINDS).map(k => k.type)).size, Object.keys(ENEMY_KINDS).length);
-  const species = new Map(ENEMY_PROFILES.map(p => [p.type, p]));
-  for (const p of ENEMY_PROFILES) {
+  const species = new Map([...ENEMY_PROFILES, ...BOSS_PROFILES].map(p => [p.type, p]));
+  for (const p of [...ENEMY_PROFILES, ...BOSS_PROFILES]) {
     const m = materials(p.species);
     for (const [role, names] of Object.entries(p.parts)) for (const name of names) assert.ok(m[name], `${p.type} ${role}: ${name}`);
     for (const name of Object.keys(m)) if (/Teeth|Fangs|Pupils|Mouth/.test(name) && name !== 'StunderMouth')
@@ -122,7 +122,8 @@ test('every roster draws real kinds of its own species, and every ordinary kind 
     assert.equal(ENEMY_KINDS[type]?.species, e.type, `depth ${depth}: ${type}`);
     assert.ok(w > 0); used.add(type);
   }
-  assert.deepEqual([...used].sort(), Object.values(ENEMY_KINDS).filter(k => !k.guardian).map(k => k.type).sort());
+  // (guardians, bosses and a boss's minions live in no roster)
+  assert.deepEqual([...used].sort(), Object.values(ENEMY_KINDS).filter(k => !k.guardian && !k.minion).map(k => k.type).sort());
   assert.equal(pickKind({ snake: 1, bloodviper: 3 }, 0.2), SNAKE);
   assert.equal(pickKind({ snake: 1, bloodviper: 3 }, 0.3), BLOOD_VIPER);
 });
