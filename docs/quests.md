@@ -119,7 +119,11 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   (`game/questworld.js questTarget`), on the depth shown and only in a cube somebody has been to:
   a pin on the person to talk to or hand in to, or on an outpost's cart; a dashed frame round the
   cube when the place has to be looked for (a hiding place, a landmark, a guardian, a horde: the
-  clue says where in it); an arrow on the rim when it is off the map.
+  clue says where in it); an arrow on the rim when it is off the map. Wherever the goal is, even
+  in a cube nobody has been to, a gold arrow on the minimap sits by the gate of the cube you are
+  in that leads towards it (`questWay`): the shortest way on the depth's plan (its portals and the
+  faces discovery opened), or the way down (up) when the goal is deeper (higher up). Only that
+  one gate shows, so the map past it stays unknown.
 - **Dev:** `/quest <kind> [depth]` makes a quest of that kind there and takes it; `/spot`.
 - **Not yet:** the other kinds (gather, scattered pieces, beacons, prisoners, pet chase): their
   slots in the plan stand in as built kinds.

@@ -18,7 +18,8 @@ import { sfx } from '../audio/sfx.js';
 import { makeEnemy, coinRange } from '../core/enemies.js';
 import { bountyKind, bountyLevel } from '../core/bounties.js';
 import { residentsOf, spotOfGiver, keyOfSpot } from '../core/npcs.js';
-import { TOWN_KEY } from '../world/town.js';
+import { TOWN_KEY, isInterior } from '../world/town.js';
+import { parse, step, faceKey } from '../world/coords.js';
 
 const FIND_REACH = 0.75;   // cells: walking this close to a thing picks it up
 
@@ -137,27 +138,57 @@ export function bountiesHere() {
 // where they stand; what has to be looked for (a hiding place, a landmark, a guardian, a horde)
 // only by its cube: the clue says the rest.
 export function questTarget(q, cubes = state.cubes) {
-  if (!q || q.archived || !cubes) return null;
-  const visited = k => { const c = k && cubes.cubes.get(k); return c?.visits ? c : null; };
-  const resident = (giver, k) => {
-    const id = spotOfGiver(giver), c = visited(k ?? keyOfSpot(id ?? ''));
-    if (!c) return null;
-    const who = residentsOf((c.map.spots ?? []).filter(s => s.id === id))[0];
-    return { key: c.key, at: who ? { x: who.x, z: who.z } : null };
-  };
-  if (q.state === 'ready') {
-    if (spotOfGiver(q.giver)) return resident(q.giver);
-    const c = visited(TOWN_KEY), v = c?.map.villagers?.find(x => x.name === q.giver);
-    return c ? { key: c.key, at: v ? { x: v.x, z: v.z } : null } : null;
-  }
+  const goal = questGoal(q), c = goal?.key && cubes?.cubes.get(goal.key);
+  if (!c?.visits) return null;
+  let at = null;
+  if (goal.resident) at = residentsOf((c.map.spots ?? []).filter(s => s.id === goal.resident))[0];
+  else if (goal.villager) at = c.map.villagers?.find(x => x.name === goal.villager);
+  else if (goal.cart) at = spotOf(c.map, goal.cart)?.anchor;
+  return { key: c.key, at: at ? { x: at.x, z: at.z } : null };
+}
+// what quest q wants now, wherever that is: { key (the cube; null: only a depth to get to),
+// depth, and who or what to pin there: resident (a spot's id), villager (a name), cart (a spot's
+// id) }; null: nothing (offered, done, archived)
+function questGoal(q) {
+  if (!q || q.archived) return null;
+  const resident = giver => { const id = spotOfGiver(giver), key = id && keyOfSpot(id); return key && { key, depth: -parse(key)[1], resident: id }; };
+  if (q.state === 'ready') return spotOfGiver(q.giver) ? resident(q.giver) : { key: TOWN_KEY, depth: 0, villager: q.giver };
   if (q.state !== 'active' && q.state !== 'failed') return null;
   const stage = q.stages[q.stage];
-  if (!stage?.key) return null;
-  if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to?.resident) return resident(stage.to.resident, stage.key);
-  const c = visited(stage.key);
-  if (!c) return null;
-  const at = stage.goal === 'defend' && spotOf(c.map, stage.spot)?.anchor;   // the cart
-  return { key: c.key, at: at ? { x: at.x, z: at.z } : null };
+  if (!stage) return null;
+  if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to?.resident) return resident(stage.to.resident);
+  return { key: stage.key ?? null, depth: stage.key ? -parse(stage.key)[1] : stage.depth, cart: stage.goal === 'defend' ? stage.spot : null };
+}
+
+// Which way out of cube `from` leads towards quest q's goal (for the minimap's arrow on that
+// gate): 0-3 a side, 4 down, 5 up; null: the goal is here, or there is no way known. Deeper: the
+// way to the depth's way down, higher up: to its way up, on the depth: the shortest way to the
+// goal's cube, through the portals of the depth's plan (world/layout.js) and the faces discovery
+// opened. Only ever the gate of the cube one is in, which the minimap shows anyway: the way past
+// it is not given away.
+export function questWay(q, from = state.cubeKey, cubes = state.cubes) {
+  const goal = questGoal(q);
+  if (!goal || !from || !cubes || isInterior(from) || from === goal.key) return null;
+  const depth = -parse(from)[1], L = cubes.layout(depth);
+  if (goal.depth > depth) return from === L.down ? 4 : wayOnDepth(L, from, L.down);
+  if (goal.depth < depth) return from === L.up ? 5 : wayOnDepth(L, from, L.up);
+  return goal.key ? wayOnDepth(L, from, goal.key) : null;
+}
+function wayOnDepth(L, from, to, opened = state.openedFaces ?? new Set()) {
+  if (!to || !L.exists.has(from) || !L.exists.has(to)) return null;
+  const prev = new Map([[from, null]]), queue = [from];
+  for (let i = 0; i < queue.length && !prev.has(to); i++) {
+    const k = queue[i];
+    for (let d = 0; d < 4; d++) {
+      const n = step(k, d), f = faceKey(k, d);
+      if (prev.has(n) || !L.exists.has(n) || !(L.portals.has(f) || opened.has(f))) continue;
+      prev.set(n, [k, d]); queue.push(n);
+    }
+  }
+  if (!prev.has(to)) return null;
+  let k = to;
+  while (prev.get(k)[0] !== from) k = prev.get(k)[0];
+  return prev.get(k)[1];
 }
 
 // What there is to notice coming into a cube with a quest's goal in it: said once a visit

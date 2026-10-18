@@ -6,7 +6,8 @@
 // playing alone). The quest followed (game/questpanel.js followedQuest) shows in gold where it
 // wants you, once that cube has been visited (game/questworld.js questTarget): a pin on the person
 // or cart, a dashed frame round the cube when the place has to be looked for, an arrow on the rim
-// when it is off the map. Inside a house it shows the cube outside, centred on the house's door. Below:
+// when it is off the map. Wherever the goal is (questWay), an arrow on the gate of our cube that
+// leads towards it: out through a portal or an open face, or on the way down or up. Inside a house it shows the cube outside, centred on the house's door. Below:
 // the cube we are in and its depth. Asked for every frame (main.js), drawn when the camera or a
 // player moved, else REFRESH times a second (for the rest: faces opening, portals, friends' lines).
 import { KIND_COLOR } from '../world/tiles.js';
@@ -19,7 +20,7 @@ import { TOWN_KEY, isInterior } from '../world/town.js';
 import { online, playerColor, together } from '../net/online.js';
 import { truePosition } from './travel.js';
 import { followedQuest } from './questpanel.js';
-import { questTarget } from './questworld.js';
+import { questTarget, questWay } from './questworld.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
@@ -61,13 +62,17 @@ function pin([x, y]) {
   g.moveTo(x, y - 6); g.lineTo(x + 4.5, y); g.lineTo(x, y + 6); g.lineTo(x - 4.5, y); g.closePath();
   g.fill(); g.stroke();
 }
-// the quest off the map: an arrow on the rim towards [x, y] (canvas)
-function rimArrow([x, y]) {
-  const a = Math.atan2(y - C, x - C), r = R * CELL - 8, fx = Math.cos(a), fy = Math.sin(a);
-  const at = (f, s) => [C + fx * (r + f) - fy * s, C + fy * (r + f) + fx * s];
+// the quest's arrow: centred on [x, y] (canvas), pointing along [fx, fy] (a unit vector)
+function pointer([x, y], [fx, fy]) {
+  const at = (f, s) => [x + fx * f - fy * s, y + fy * f + fx * s];
   g.fillStyle = QUEST; g.strokeStyle = OUTLINE; g.lineWidth = 1.5; g.lineJoin = 'round'; g.beginPath();
   g.moveTo(...at(6, 0)); g.lineTo(...at(-5, 6)); g.lineTo(...at(-5, -6)); g.closePath();
   g.fill(); g.stroke();
+}
+// the quest off the map: an arrow on the rim towards [x, y] (canvas)
+function rimArrow([x, y]) {
+  const a = Math.atan2(y - C, x - C), r = R * CELL - 8, fx = Math.cos(a), fy = Math.sin(a);
+  pointer([C + fx * r, C + fy * r], [fx, fy]);
 }
 
 // a friend's place on this map (turned frame), or null (another depth, in a house, far away);
@@ -177,6 +182,18 @@ export function drawMinimap() {
   // is off the map
   if (goalOn && goal.at) pin(screen(goalAt[0] * CELL, goalAt[1] * CELL));
   else if (goalAt && !goalOn) rimArrow(screen(goalAt[0] * CELL, goalAt[1] * CELL));
+  // the gate of our cube that leads towards it: out through it, or down or up
+  const way = questWay(followedQuest(), key(X0, Y, Z0)), faces = W.cubes.get(key(X0, Y, Z0))?.info?.faces;
+  if (way !== null && faces) {
+    const px = -fx * CELL, pz = -fz * CELL;
+    if (way >= 4) pointer(screen(px + CELL / 2 + (way === 4 ? -5 : 5), pz + CELL / 2), [0, way === 4 ? 1 : -1]);
+    else {
+      // just outside the gate, so that our own arrow does not hide it
+      const p = faces[way]?.portal, [ux, uy] = [[1, 0], [-1, 0], [0, 1], [0, -1]][way];
+      const [ex, ey] = edgePt(px, pz, way, p && !isFaceOpen(state.openedFaces, key(X0, Y, Z0), way) ? (p.pos + 0.5) / 16 : 0.5);
+      pointer(screen(ex + ux * 7, ey + uy * 7), [ux * cos - uy * sin, ux * sin + uy * cos]);
+    }
+  }
   // the players: the friends here, then us on top (in a house: a dot at its door)
   for (const b of friends) {
     const at = spot(b, cx, Y, cz);
