@@ -123,7 +123,10 @@ An optional site must be reachable from its designated approach and permit retur
 or continuation to the main route. Existing `safe` flags alone prove only that a
 floor can reach the exit. Preserve the portal-to-exit guarantee and fall escapes.
 Include structural dressing blockers in validation; do not introduce them after
-reachability checks. Never require a reward, key or interaction to finish a run.
+reachability checks. Never require a reward or key to finish a run. The one exception are the
+trial rooms ([trials.md](trials.md)): a trial on the route gates the way on until it is met, on
+purpose. Only events whose timing is checked against a slow player, and puzzles proven solvable
+with no way to soft-lock, may go on the route.
 
 Retries preserve site identity and prestige. Try compatible templates/arrangements
 rather than rerolling rewards or silently downgrading exceptional sites. Bound

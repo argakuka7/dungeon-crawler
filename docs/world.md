@@ -250,6 +250,13 @@ Which cubes exist and how they connect depends only on the world seed:
   the search lays its rooms down whole at a chosen step (a template, any way round) and
   backtracks as usual where it does not fit. On its own random stream, so a depth without
   one keeps its route.
+- **Trial rooms:** rooms built round one goal, an event (the water rises, the room is sealed)
+  or a puzzle ([trials.md](trials.md), `world/trials.js`), planned on their own random stream
+  after the hordes, spans, heights and the area and before the branches. A trial on the route
+  holds its exit shut like a side guardian's gate (`gateFaces`, `trial:<key>`). Never in a
+  guardian's, the horde's, a span's, a height piece's or the area's room, next to a cube the
+  WFC pins, or under a void or a shaft; pinned `LLLL` with its own layers (no river crosses it).
+  Entered only by its portals; the portal into it warns of it.
 
 Layer counts are part of the WFC state. A collapsing cube's count is drawn towards its
 neighbours' counts, so tall regions form. A face's portal sits on any layer both cubes
@@ -502,6 +509,13 @@ every third depth, a camp with a fire near where the depth begins. Planned from 
 layout, placed by the cube's generator level, dry and reachable both ways, with nothing built or
 put on them; the camp's fire is the only thing they show. See
 [quests.md](quests.md#spots-planned-from-the-seed).
+
+## Trial rooms (`world/trials.js`, `cubegen/trials/`, `game/trials.js`)
+
+Rooms built round a goal that is more than walking to the exit: events (the flood: climb the
+summit before the water) and puzzles. Planned from the seed (see the layout above), built by the
+kind's generator in `cubegen/trials/`, checked (an event's timing against a slow player,
+`cubegen/trials/timing.js`), run by `game/trials.js`. See [trials.md](trials.md).
 
 ## Set pieces: lone peak and great lake (`cubegen/setpieces.js`)
 

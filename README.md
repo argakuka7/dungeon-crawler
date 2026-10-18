@@ -20,7 +20,9 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/core/`: pure rules and data (constants, combat, items, inventory, ...);
     `src/core/gear/` is the weapon generator (rarities, affixes, names, drops; `docs/loot.md`).
   - `src/world/`: the world graph and everything shared between cubes (layout, WFC, faces,
-    falls across faces, sites, town plan), plus the worker that owns it.
+    falls across faces, sites, town plan, the trial rooms' plan), plus the worker that owns it.
+    Trial rooms (`docs/trials.md`): planned in `src/world/trials.js`, built in `src/cubegen/trials/`,
+    run by `src/game/trials.js` (rules in `src/core/trials.js`).
   - `src/cubegen/`: builds one cube's map from the spec `world/` hands it. Files named like
     a `world/` file (`cascades`, `spouts`, `sites`, `town`) carve that shared decision into the cube.
   - `src/themes/`: per-depth data: palettes, lighting, generator settings, structure materials;
@@ -93,7 +95,8 @@ docs that explain how the game works, from the big ideas down to the real code:
 npm run serve            # uv run --no-project tools/serve.py [port]
 # http://localhost:8000/            the main menu: your hero, its world, joining a friend
 # http://localhost:8000/?seed=123   straight into that world, nothing saved
-#   (?dev=1 for dev tools: ` opens their commands; it skips the menu too, ?menu=1 shows it)
+#   (?dev=1 for dev tools: ` opens their commands; it skips the menu too, ?menu=1 shows it;
+#    ?trial=flood puts a trial of that kind on every depth, docs/trials.md)
 # ?touch=1 forces the touch controls (docs/touch.md)
 # with RADIUS_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY set, the guide's tutor uses it through the server
 npm test

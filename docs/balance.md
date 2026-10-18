@@ -39,6 +39,11 @@ chests, combat stats) and prints where the player stands on arrival at every dep
   five depths later. Guardians and chests pay out the good stuff, ordinary enemies now and then.
   Legendary and better stay finds (under 4% of deep weapon drops).
 
+- **Trial rooms take their time.** A trial room ([trials.md](trials.md)) is a few minutes of a run
+  that are not fights: the simulation counts them per depth (`trials`: how many on the way, and
+  their minutes, `core/trials.js trialTime`) and over the whole run. A flood room has half the
+  usual enemies, and the water takes those it reaches without a reward.
+
 ## The model
 
 **Enemies** (`src/core/enemies.js`): every species has level-1 values and the same growth per

@@ -11,6 +11,7 @@ import { createRun } from '../src/core/progression.js';
 function rooms(L) {
   return new Map([...L.exists].map(k => [k, { key: k, visits: 1, map: {
     key: k, exit: L.exit.get(k), guardian: L.guardians.get(k), routeIndex: L.routeIndex.get(k), route: L.route, annexRoom: L.annex?.key === k,
+    trialRoom: !!L.trialCells?.has(k),
     gateKeys: [0, 1, 2, 3].map(d => L.gateFaces.get(faceKey(k, d))),
     portals: [0, 1, 2, 3].filter(d => L.portals.has(faceKey(k, d))).map(dir => ({ dir, kind: 'side' })),
   } }]));
@@ -47,6 +48,7 @@ test('all depths have routes within their band, the core all nine rooms; discove
       }
       if (d < 20) assert.equal(goal, L.down);
       for (const k of L.guardians.keys()) run.unlockedGates.add(k);
+      for (const t of L.trials) run.unlockedGates.add(t.gate);   // (trial rooms, world/trials.js: resolved)
       // an annex (a quest's room beside the way) is sealed until a quest opens it
       if (L.annex) {
         assert.equal(distances(L, cubes, run, entry).has(L.annex.key), false, `seed ${seed}, depth ${d}: the annex is sealed`);
@@ -54,9 +56,11 @@ test('all depths have routes within their band, the core all nine rooms; discove
       }
       const forward = distances(L, cubes, run, entry), back = distances(L, cubes, run, goal);
       assert.equal(forward.size, L.exists.size); assert.equal(back.size, L.exists.size);
-      // Fully explored and unlocked, every pair of neighbouring rooms is joined.
+      // Fully explored and unlocked, every pair of neighbouring rooms is joined (an annex and a trial
+      // room only through their own portals).
+      const apart = (a, b) => a.annexRoom || b.annexRoom || a.trialRoom || b.trialRoom;
       for (const c of cubes.values()) for (let dir = 0; dir < 4; dir++)
-        if (cubes.has(step(c.key, dir)) && !((c.map.annexRoom || cubes.get(step(c.key, dir)).map.annexRoom) && !L.portals.has(faceKey(c.key, dir))))
+        if (cubes.has(step(c.key, dir)) && !(apart(c.map, cubes.get(step(c.key, dir)).map) && !L.portals.has(faceKey(c.key, dir)) && !L.portals.has(faceKey(step(c.key, dir), dir ^ 1))))
           assert.ok(discoveredFaces(cubes, c, run).includes(faceKey(c.key, dir)), `seed ${seed}, depth ${d}: ${c.key} ${dir} sealed`);
       // An undiscovered route room cannot be skipped, whatever else was discovered
       // (rooms beyond it reached by a fall or the town portal).
@@ -72,6 +76,12 @@ test('all depths have routes within their band, the core all nine rooms; discove
         const c = cubes.get(k);
         assert.equal(discoveredFaces(cubes, c, run).includes(faceKey(k, g.exit)), false);
         run.unlockedGates.add(k);
+      }
+      // ... and so does every trial on the route until it is resolved
+      for (const t of L.trials) if (t.exit != null) {
+        run.unlockedGates.delete(t.gate);
+        assert.equal(distances(L, cubes, run, entry).has(goal), false, `seed ${seed}, depth ${d}: past the trial in ${t.key}`);
+        run.unlockedGates.add(t.gate);
       }
       if (L.down) {
         run.unlockedGates.delete(L.down);

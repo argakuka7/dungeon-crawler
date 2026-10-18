@@ -6,7 +6,8 @@
 // and visits half of the branch cubes (killing the same share and opening their chests). It
 // equips the best weapon by damage per second. Numbers are averages over the seeds; `p10` is the
 // unluckiest tenth of the runs (the level and damage per second only 10% arrive below), and
-// `rng%` the runs that have seen a bow, crossbow or staff drop by then (kept or not).
+// `rng%` the runs that have seen a bow, crossbow or staff drop by then (kept or not). `trials`:
+// the trial rooms on the way (docs/trials.md) and the minutes they take (core/trials.js trialTime).
 //   node tools/balance.mjs farm [respawns, default 6] [seeds, default 200]
 // Farming the road out of town before Gusto: every ordinary enemy of depth 0 (not the side
 // guardian's arena) is killed once a life, as often as they come back (core/respawn.js: every
@@ -28,6 +29,7 @@ const { addInstance, equipItem, takeItem, equippedItem } = await import('../src/
 const { mulberry32, hash32 } = await import('../src/core/util.js');
 const { RESPAWN } = await import('../src/core/respawn.js');
 const { ITEMS } = await import('../src/core/items.js');
+const { trialTime } = await import('../src/core/trials.js');
 
 const ranged = item => ITEMS[item.itemId]?.weapon?.kind !== 'sword';
 const SEEDS = Number(process.argv[2] || 8), SHARE = Number(process.argv[3] || 0.6);
@@ -67,7 +69,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     const L = layouts(depth), s = combatStats(p);
     row = rows[depth] ??= { depth, n: 0, level: 0, hp: 0, hit: 0, dps: 0, interval: 0, kills: 0, xp: 0, xpShare: 0, potions: 0, chests: 0,
       upgrades: { enemy: 0, guardian: 0, chest: 0 }, weapons: new Map(), kinds: new Map(), guards: { side: [], descent: [] },
-      levels: [], dpss: [], ranged: 0 };
+      levels: [], dpss: [], ranged: 0, trials: 0, trialTime: 0 };
     row.n++; row.level += p.level; row.hp += p.maxHp; row.hit += s.damage; row.dps += dps(p); row.interval += s.interval;
     row.levels.push(p.level); row.dpss.push(dps(p)); row.ranged += seenRanged;
     const w = equippedItem(p.inventory), wl = `${w.gen.rarity} ${w.itemId.replace('weapon_', '').replace('_', ' ')} i${w.gen.ilvl}`;
@@ -75,6 +77,8 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     const xp0 = p.xp, potions0 = potions;
     const cubes = [...L.route.map(k => ({ k, share: L.guardians.has(k) ? 1 : SHARE })),
       ...[...L.exists].filter(k => !L.route.includes(k)).map(k => ({ k, share: R() < 0.5 ? SHARE : 0 }))];
+    // the trial rooms on the way (and those in the branches visited): their time
+    for (const t of L.trials) if (t.role === 'route' || R() < 0.5) { row.trials++; row.trialTime += trialTime(t.kind); }
     for (const { k, share } of cubes) {
       if (enemyFreeAt(k) || !share) continue;
       const g = L.guardians.get(k), map = { seed: hash32(seed * 31 + serial * 977), depth, key: k, guardian: g ?? null, horde: L.hordes.get(k), populationScale: L.populationScale.get(k) ?? 1 };
@@ -106,11 +110,13 @@ const f = (n, d = 0) => n.toFixed(d);
 // the value only a tenth of `list` falls below
 const p10 = list => [...list].sort((a, b) => a - b)[Math.floor((list.length - 1) * 0.1)];
 console.log(`${SEEDS} seeds, ${SHARE * 100}% of each ordinary cube killed. On arrival at each depth:\n`);
-console.log('depth elvl plvl  p10 maxHP  hit   int   DPS  p10  rng%  kills  XP got  xp%  potions chests  upgrades e/g/c  weapon (most common)');
+console.log('depth elvl plvl  p10 maxHP  hit   int   DPS  p10  rng%  kills  XP got  xp%  potions chests  trials  upgrades e/g/c  weapon (most common)');
 for (const r of rows) {
   const w = [...r.weapons].sort((a, b) => b[1] - a[1])[0][0], n = r.n;
-  console.log(`${String(r.depth).padStart(5)} ${String(depthLevel(r.depth)).padStart(4)} ${f(r.level / n, 1).padStart(4)} ${String(p10(r.levels)).padStart(4)} ${f(r.hp / n).padStart(5)} ${f(r.hit / n).padStart(4)} ${f(r.interval / n, 2).padStart(5)} ${f(r.dps / n).padStart(5)} ${f(p10(r.dpss)).padStart(4)} ${f(r.ranged / n * 100).padStart(5)} ${f(r.kills / n).padStart(6)} ${f(r.xp / n).padStart(7)} ${f(r.xpShare / r.kills * 100).padStart(4)} ${f(r.potions / n, 1).padStart(8)} ${f(r.chests / n, 1).padStart(6)}  ${[r.upgrades.enemy, r.upgrades.guardian, r.upgrades.chest].map(x => f(x / n, 1)).join('/').padStart(14)}  ${w}`);
+  console.log(`${String(r.depth).padStart(5)} ${String(depthLevel(r.depth)).padStart(4)} ${f(r.level / n, 1).padStart(4)} ${String(p10(r.levels)).padStart(4)} ${f(r.hp / n).padStart(5)} ${f(r.hit / n).padStart(4)} ${f(r.interval / n, 2).padStart(5)} ${f(r.dps / n).padStart(5)} ${f(p10(r.dpss)).padStart(4)} ${f(r.ranged / n * 100).padStart(5)} ${f(r.kills / n).padStart(6)} ${f(r.xp / n).padStart(7)} ${f(r.xpShare / r.kills * 100).padStart(4)} ${f(r.potions / n, 1).padStart(8)} ${f(r.chests / n, 1).padStart(6)} ${`${f(r.trials / n, 1)}/${f(r.trialTime / n / 60, 1)}m`.padStart(7)}  ${[r.upgrades.enemy, r.upgrades.guardian, r.upgrades.chest].map(x => f(x / n, 1)).join('/').padStart(14)}  ${w}`);
 }
+const trialMinutes = rows.reduce((s, r) => s + r.trialTime / r.n, 0) / 60;
+console.log(`\nTrial rooms take about ${f(trialMinutes, 1)} minutes of a run (their own time, on top of the walking and the fights).`);
 console.log(`\nBefore Gusto, ${f(beforeBoss / SEEDS * 100)}% of the runs have seen a ranged weapon drop (node tools/balance.mjs farm: when farming).`);
 console.log('\nOrdinary kinds on arrival: level, the hits it takes, the blows it needs to kill the player');
 for (const r of rows) {

@@ -89,6 +89,7 @@ Developer (`?dev=1`):
 | `/ladder [style] [depth]` | the foot of the next ladder (of that style) from this depth (or that one) on down (docs/world.md) |
 | `/height <kind>` | the next tableland ascent, plateau or descent, great shaft, pinnacle, spiral or hairpin (in at its foot), lone peak, great lake or tunnel (docs/world.md) |
 | `/quest <kind> [depth]` | a quest of that kind on that depth (default: this one), from somebody who could give it, taken at once; says where its goal is (docs/quests.md) |
+| `/trial [kind\|win\|fail\|reset\|solve\|list] [depth]` | stand in the room before the next trial of a kind (from this depth or that one on down), facing its portal; none in this world: the page comes again with `?trial=<kind>` (same seed) and goes there. `win`, `fail`, `reset`: this room's trial; `solve`: what the generator proved, drawn over the room; no argument or `list`: this world's trials by depth (docs/trials.md) |
 | `/spot [kind] [depth]` | stand at the next spot the quests keep free (`hide`, `seat`, `camp`; the easy ones of a depth first) from this depth (or that one) on down (docs/quests.md) |
 | `/newworld [seed]` | a new world (N), not saved; a saved hero comes along as it is |
 | `/menu` | save and quit to the main menu |

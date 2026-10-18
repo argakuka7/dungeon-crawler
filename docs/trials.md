@@ -1,7 +1,8 @@
 # Trials: events and puzzles in a cube
 
-Status: planned, nothing implemented yet. This is the list of what to build, kind by kind,
-until done (see "Implementation order" at the end).
+Status: step 1 is done: the framework and `flood` are planned, built, checked, playable (alone
+and together) and on in every world (45% of the depths from 1 to 19). The rest is the list of
+what to build, kind by kind, until done (see "Implementation order" at the end).
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -542,7 +543,7 @@ fits (`themes/builds.js`).
 Each step is done when its kind is planned, generated, checked, playable, reachable with
 `/trial`, tested and documented here (status line updated).
 
-1. [ ] **Framework + `flood`:** plan, the warning on the portal, states, sealing, death to
+1. [x] **Framework + `flood`:** plan, the warning on the portal, states, sealing, death to
    `from`, the trial fluid level (physics and render), the timing check (deadlines),
    `/trial`, playing together. In phases: "Step 1 in phases" below.
 2. [ ] **`collapse`:** crust, wave, keystone; shares the deadlines.
@@ -559,6 +560,20 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
     trial time and rewards.
 
 ## Step 1 in phases
+
+All done (1.1 to 1.8). Notes on how it came out:
+
+- The trial's clock (`trial.t`) runs from arming: armed is its first `ARM_TIME` s, so a flood's
+  pulses and every deadline are times on that one clock (`core/trials.js floodLevel`,
+  `floodTime`). The timing Dijkstra keeps off floors a body cannot stand on (a stair crossing a
+  column over its floor), and the checked path is kept free of props, so the walker test (the
+  real character walking it, the real water rising) holds.
+- The flood's summit is climbed by its ramp: decorative stairs keep off it, and every structure
+  onto or off the needle costs the route search a lot more (`cubegen/trials/flood.js floodRoute`).
+- A sealed open face (the entry, once walked through) shows a red barrier where its portal was.
+- Playing together: `net/trials.js` (pure) holds the owner's messages and the viewers' following;
+  a resolved trial goes to everyone with its gate. A player sealed in refuses being teleported to.
+- `/trial` reloads with `?trial=<kind>&at=trial` and goes there once the world is in.
 
 Each phase lands on its own (one commit, `npm test` green) and leaves the game playable.
 Trials stay off in real worlds until the last phase: the planner's chance is 0 unless

@@ -21,11 +21,25 @@ import { N, LH, CHAR_R, CHAR_H } from '../src/core/constants.js';
 const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
 const forced = (seed, trial) => makeLayouts(seed, worldThemes(seed), { trial });
 
-test('no trials in a world unless they are forced (until they are on)', () => {
-  for (let seed = 0; seed < 40; seed++) {
+test('trials come with the seed: an event on about 45% of the depths from 1 to 19, a kind that fits each', () => {
+  let events = 0, depths = 0;
+  for (let seed = 0; seed < 200; seed++) {
     const L = makeLayouts(seed);
-    for (let d = 0; d <= MAX_DEPTH; d++) assert.equal(L(d).trials.length, 0, `${seed}/${d}`);
+    for (let d = 0; d <= MAX_DEPTH; d++) {
+      const list = L(d).trials;
+      if (d === 0 || d === MAX_DEPTH) { assert.equal(list.length, 0); continue; }
+      depths++;
+      const ev = list.filter(t => TRIALS[t.kind].family === 'event');
+      assert.ok(ev.length <= 1, `${seed}/${d}: one event slot`);
+      events += ev.length;
+      for (const t of list) {
+        assert.ok(TRIALS[t.kind].built && d >= TRIALS[t.kind].depths[0] && d <= TRIALS[t.kind].depths[1], `${seed}/${d}: ${t.kind}`);
+        const th = TRIALS[t.kind].themes, theme = L(d).theme;
+        assert.ok(!th || (th === 'walled' ? theme.cave || theme.walls : th.includes(theme.props)), `${seed}/${d}: ${t.kind} in ${theme.props}`);
+      }
+    }
   }
+  assert.ok(events / depths > 0.38 && events / depths < 0.47, `events on ${(100 * events / depths).toFixed(1)}% of the depths`);
 });
 
 test('forced floods: one per depth where a room fits, the same plan whatever the order, never in an excluded room', () => {

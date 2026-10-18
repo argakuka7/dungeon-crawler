@@ -53,14 +53,15 @@ test('the spots do not depend on the order the depths are made', () => {
 
 function checkSpots(world, map, plans) {
   assert.deepEqual(map.spots.map(s => s.id).sort(), plans.map(s => s.id).sort(), `${map.key}: every spot placed`);
-  const used = new Set(), sites = new Set(map.rewardSites.flatMap(s => s.cells));
+  // (a place is a cell on a layer: a site up on a slab may stand over a spot on the ground)
+  const used = new Set(), sites = new Set(map.rewardSites.flatMap(s => s.cells.map(c => `${c}:${s.layer}`)));
   const props = placeProps(map, themeOf(map));
   for (const s of map.spots) {
     const f = map.floors[s.floor], access = map.floors[s.accessFloor];
     assert.equal(map.safe[f.id], 1, 'it leads on to the exit');
     assert.equal(map.safe[access.id], 1);
     for (const c of s.cells) {
-      assert.ok(!used.has(c) && !sites.has(c), 'spots and reward sites never share a cell');
+      assert.ok(!used.has(c) && !sites.has(`${c}:${s.layer}`), 'spots and reward sites never share a cell');
       used.add(c);
       const g = map.cols[c].find(h => h.spot === s.id);
       assert.ok(g && !g.fluid && !g.prot && !g.hordeReserved, 'dry, off pads and the horde');

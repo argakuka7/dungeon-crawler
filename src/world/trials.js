@@ -21,7 +21,7 @@ import { MAX_DEPTH } from '../themes/depth.js';
 import { TRIALS, TRIAL_KINDS, trialGate, trialFits, trialWeight, parseForce, isEvent, isPuzzle } from '../core/trials.js';
 
 // the chances of the slots (docs/trials.md "Planning"); 0 until the kinds are on (step by step)
-export const EVENT_CHANCE = 0;
+export const EVENT_CHANCE = 0.45;
 export const PUZZLE_CHANCES = [0, 0];
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];

@@ -173,3 +173,8 @@ export function trialFluidLevel(m, s) {
 }
 
 export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has to be to use it (cells)
+
+// About how long a trial room takes a player who knows what to do (s): the balance simulation's
+// estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
+export const TRIAL_TIME = { flood: 45 };
+export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
