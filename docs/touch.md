@@ -32,6 +32,9 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   an item is selected); the same slot again takes it off.
   The potions at work show below it; the minimap gets smaller.
 - The stick and buttons hide while the inventory is open.
+- A hold never sticks: the browser does not always report a finger lifted, so a new touch on
+  the stick or the action button replaces the old one, a hold whose pointer capture is gone is
+  released each frame, and leaving the page (blur, hidden tab) releases everything.
 
 ## On the game
 

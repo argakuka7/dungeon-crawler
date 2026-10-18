@@ -54,12 +54,27 @@ if (forced === '1' || coarse.matches) enable();
 coarse.addEventListener('change', () => { if (coarse.matches) enable(); });
 addEventListener('pointerdown', e => { if (e.pointerType === 'touch') enable(); }, true);
 
+// A finger let go is not always told: now and then no pointerup, pointercancel or
+// lostpointercapture comes (seen around falls, maybe the long hitch of loading the cube below;
+// or the system taking the touch: an edge swipe, the app switcher). Without a word the stick (or the action
+// button) stayed held, pushing on, and took no new touch. So a hold whose pointer the element no
+// longer has captured is let go (every frame, updateTouch), a new touch on the stick or the
+// button takes over from an old one, and leaving the page lets go of everything.
+const captured = (el, id) => { try { return el.hasPointerCapture(id); } catch { return false; } };
+const release = (el, id) => { try { el.releasePointerCapture(id); } catch { /* already gone */ } };
+
 // --- the stick ----------------------------------------------------------------------------------
 
 let stick = null;   // { id, x, y (where it landed), t0, moved }
+function dropStick() {
+  if (!stick) return;
+  release(zone, stick.id);
+  stick = null; ring.hidden = true;
+  Object.assign(controls.stick, { x: 0, y: 0, m: 0 });
+}
 zone.addEventListener('pointerdown', e => {
-  if (stick) return;
   e.preventDefault();
+  dropStick();   // a second thumb there, or one whose end never came: the new touch is the stick
   zone.setPointerCapture(e.pointerId);
   stick = { id: e.pointerId, x: e.clientX, y: e.clientY, t0: now(), moved: false };
   place(ring, e.clientX, e.clientY); place(knob, 0, 0);
@@ -75,8 +90,7 @@ zone.addEventListener('pointermove', e => {
 function endStick(e) {
   if (e.pointerId !== stick?.id) return;
   const s = stick;
-  stick = null; ring.hidden = true;
-  Object.assign(controls.stick, { x: 0, y: 0, m: 0 });
+  dropStick();
   // a quick touch that pushed nothing: a tap on the game under it
   if (e.type === 'pointerup' && !s.moved && now() - s.t0 < TAP_TIME) tapGame(e.clientX, e.clientY);
 }
@@ -85,9 +99,19 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.ad
 // --- the action button: attack, or aim the flask in hand ------------------------------------------
 
 let press = null;   // { id, x, y (the button's middle), t0, aimed }
+// the button let go without a throw
+function dropPress() {
+  if (!press) return;
+  release(action, press.id);
+  press = null;
+  action.classList.remove('down'); place(aimKnob, 0, 0);
+  controls.attackHeld = false;
+  Object.assign(controls.aim, { active: false, x: 0, y: 0, m: 0 });
+}
 action.addEventListener('pointerdown', e => {
-  if (press || state.inventoryOpen) return;
+  if (state.inventoryOpen) return;
   e.preventDefault();
+  dropPress();   // a touch whose end never came: the new one presses
   action.setPointerCapture(e.pointerId);
   const r = action.getBoundingClientRect();
   press = { id: e.pointerId, x: r.left + r.width / 2, y: r.top + r.height / 2, t0: now(), aimed: false };
@@ -105,14 +129,12 @@ action.addEventListener('pointermove', e => {
 function endPress(e) {
   if (e.pointerId !== press?.id) return;
   const p = press, aim = controls.aim;
-  press = null;
-  action.classList.remove('down'); place(aimKnob, 0, 0);
-  controls.attackHeld = false;
-  if (!aim.active) return;
   // let go out on the stick: throw there; a tap: at the best enemy; back in the middle: not at all
-  if (e.type === 'pointerup' && aim.m > 0) { const t = throwTarget(); if (t) queueAttack(t.enemy ?? t); }
-  else if (e.type === 'pointerup' && !p.aimed && now() - p.t0 < TAP_TIME) quickThrow();
-  Object.assign(aim, { active: false, x: 0, y: 0, m: 0 });
+  if (aim.active && e.type === 'pointerup') {
+    if (aim.m > 0) { const t = throwTarget(); if (t) queueAttack(t.enemy ?? t); }
+    else if (!p.aimed && now() - p.t0 < TAP_TIME) quickThrow();
+  }
+  dropPress();
 }
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) action.addEventListener(type, endPress);
 
@@ -164,9 +186,16 @@ function stopHold() {
   hold.classList.remove('on');
 }
 
+// fingers whose end never came (no longer captured) are forgotten, else no tap counted again
+function pruneFingers() {
+  for (const id of fingers.keys()) if (!captured(canvas, id)) fingers.delete(id);
+  if (fingers.size < 2) gesture = null;
+  if (!fingers.size) stopHold();
+}
 canvas.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'touch') return;
   e.preventDefault();
+  pruneFingers();
   canvas.setPointerCapture(e.pointerId);
   const f = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now(), tap: true };
   fingers.set(e.pointerId, f);
@@ -195,6 +224,16 @@ function endFinger(e) {
 }
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, endFinger);
 
+// leaving the page (another app, the tab hidden, the window unfocused): every finger let go
+function dropAll() {
+  dropStick(); dropPress();
+  for (const id of fingers.keys()) release(canvas, id);
+  fingers.clear(); gesture = null; stopHold();
+}
+addEventListener('blur', dropAll);
+addEventListener('pagehide', dropAll);
+document.addEventListener('visibilitychange', () => { if (document.hidden) dropAll(); });
+
 // --- every frame -------------------------------------------------------------------------------
 
 let shown = '', useShown = '';
@@ -204,6 +243,10 @@ const showPicture = (img, id) => { img.dataset.itemPicture = id; img.src = itemP
 // the use button what the action key would do, or nothing
 export function updateTouch() {
   if (!on) return;
+  // a hold the browser let go of without telling (see captured above)
+  if (stick && !captured(zone, stick.id)) dropStick();
+  if (press && !captured(action, press.id)) dropPress();
+  if (fingers.size) pruneFingers();
   root.hidden = state.inventoryOpen;
   updateUse();
   const flask = readiedFlask(player), weapon = equippedItem(player.inventory), def = flask || (weapon && ITEMS[weapon.itemId]);
