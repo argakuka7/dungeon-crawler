@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeLayouts, MIN_ROUTE_ROOMS, MAX_ROUTE_ROOMS } from '../src/world/layout.js';
+import { makeLayouts, routeRooms } from '../src/world/layout.js';
 import { key, faceKey, step } from '../src/world/coords.js';
 import { discoveredFaces } from '../src/core/boundaries.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -30,13 +30,15 @@ function distances(L, cubes, run, from, avoid = null) {
   return dist;
 }
 
-test('all depths have 7–14-room routes; discovery joins neighbours only over explored, unguarded ground', () => {
+test('all depths have routes within their band, the core all nine rooms; discovery joins neighbours only over explored, unguarded ground', () => {
   for (let seed = 0; seed < 1000; seed++) {
     const get = makeLayouts(seed);
     for (let d = 0; d <= 20; d++) {
       const L = get(d), run = createRun(), cubes = rooms(L);
-      assert.ok(L.spine >= MIN_ROUTE_ROOMS && L.spine <= MAX_ROUTE_ROOMS);
-      assert.ok(L.cells.length <= MAX_ROUTE_ROOMS);
+      const [min, max] = routeRooms(d);
+      assert.ok(L.spine >= min && L.spine <= max, `seed ${seed}, depth ${d}: ${L.spine} rooms`);
+      assert.ok(L.cells.length <= max);
+      if (d === 20) assert.equal(L.spine, 9);
       assert.equal(L.route.length, L.spine);
       const entry = key(L.start[0], -d, L.start[1]), goal = L.route.at(-1);
       if (d) {

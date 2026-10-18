@@ -1,6 +1,7 @@
-// Seeded, bounded routes between vertical portals. Each stratum has 7–14 rooms
-// including its endpoints; small optional branches fit inside the same room budget.
-// The core has no further descent. Adjacent, non-linked route sections stay sealed.
+// Seeded, bounded routes between vertical portals. Each stratum's route has a room count
+// from its band in ROUTE_ROOMS, including its endpoints: long near the surface, shorter
+// further down; small optional branches fit inside the band's most. The core has no
+// further descent. Adjacent, non-linked route sections stay sealed.
 import { mulberry32, hash32 } from '../core/util.js';
 import { key, faceKey } from './coords.js';
 import { MAX_DEPTH, themeAt, worldThemes } from '../themes/depth.js';
@@ -12,7 +13,12 @@ import { planHeights, planSetPiece, planSlots, indexHeights, near } from './heig
 import { AREA_SIZE, templateCells, planArea, indexAreas } from './areas.js';
 
 // learn: world.html#route (see learn/README.md)
-export const MIN_ROUTE_ROOMS = 7, MAX_ROUTE_ROOMS = 14;
+// [first depth, fewest, most] rooms on the route. The core always walks all nine rooms of
+// its 3x3, so the route above it ends on a corner (an edge start cannot reach the centre
+// in nine).
+export const ROUTE_ROOMS = [[0, 18, 24], [4, 16, 22], [8, 14, 20], [12, 12, 18], [16, 9, 16], [MAX_DEPTH, 9, 9]];
+export const routeRooms = d => ROUTE_ROOMS.findLast(([from]) => d >= from).slice(1);
+export const MIN_ROUTE_ROOMS = Math.min(...ROUTE_ROOMS.map(b => b[1])), MAX_ROUTE_ROOMS = Math.max(...ROUTE_ROOMS.map(b => b[2]));
 const RADIUS = d => d >= MAX_DEPTH ? 0 : d <= 5 ? 3 : d <= 12 ? 2 : 1;
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const cheb = ([x, z]) => Math.max(Math.abs(x), Math.abs(z));
@@ -101,17 +107,18 @@ function build(seed, d, above, theme) {
     for (let z = -r - 1; z <= r + 1; z++) for (let x = -r - 1; x <= r + 1; x++)
       if (d === MAX_DEPTH || cheb([x, z]) === r || cheb([x, z]) === r + 1) candidates.push([x, z]);
   }
-  const goal = c => d === MAX_DEPTH ? id(c) === '0,0' : cheb(c) === (d ? r : 3);
-  const max = d === MAX_DEPTH ? 9 : MAX_ROUTE_ROOMS;
-  const desired = MIN_ROUTE_ROOMS + Math.floor(R() * (max - MIN_ROUTE_ROOMS + 1));
-  const lengthAt = i => MIN_ROUTE_ROOMS + (desired - MIN_ROUTE_ROOMS + i) % (max - MIN_ROUTE_ROOMS + 1);
+  const goal = c => d === MAX_DEPTH ? id(c) === '0,0'
+    : cheb(c) === (d ? r : 3) && (d < MAX_DEPTH - 1 || Math.abs(c[0]) === Math.abs(c[1]));
+  const [min, max] = routeRooms(d);
+  const desired = min + Math.floor(R() * (max - min + 1));
+  const lengthAt = i => min + (desired - min + i) % (max - min + 1);
   // the depth's large area (areas.js) is built into the route, on a stream of its own (a depth
   // without one keeps its route); where it does not fit the depth may get a tableland instead
   const slots = planSlots(seed, d, theme);
   let spine = null, area = null;
   if (AREA_SIZE[slots.big]) {
     const TR = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x7f4a7c15) ^ 0xa4ea)), size = AREA_SIZE[slots.big];
-    for (let i = 0; i <= max - MIN_ROUTE_ROOMS && !spine; i++) {
+    for (let i = 0; i <= max - min && !spine; i++) {
       const length = lengthAt(i), starts = areaStarts(length, size, 2);
       for (let j = starts.length - 1; j > 0; j--) { const k = Math.floor(TR() * (j + 1)); [starts[j], starts[k]] = [starts[k], starts[j]]; }
       for (const at of starts) {
@@ -120,7 +127,7 @@ function build(seed, d, above, theme) {
       }
     }
   }
-  for (let i = 0; i <= max - MIN_ROUTE_ROOMS && !spine; i++) spine = route(candidates, prefix, lengthAt(i), goal, R);
+  for (let i = 0; i <= max - min && !spine; i++) spine = route(candidates, prefix, lengthAt(i), goal, R);
   if (!spine) throw new Error(`No bounded route at depth ${d}`);
   const start = spine[0], end = spine.at(-1), cells = [...spine], portals = new Set();
   const link = (a, b) => portals.add(faceKey(K(a), direction(a, b)));
@@ -148,7 +155,7 @@ function build(seed, d, above, theme) {
   // One-room branches only, never attached to arenas or the safe surface prefix.
   // No loops: all sideways guardians are articulation points on the required route.
   const used = new Set(cells.map(id)), allowed = new Set(candidates.map(id));
-  const branchBudget = Math.min(4, MAX_ROUTE_ROOMS - cells.length);
+  const branchBudget = Math.min(4, max - cells.length);
   // gorge spans (spans.js): on the route, and maybe a lonely island branch over a bridge
   const free = c => !used.has(id(c)) && !(d === 0 && cheb(c) <= 1);
   const spanPlan = planSpans(seed, d, theme.spans, spine, K, k => guardians.has(k) || hordes.has(k)
