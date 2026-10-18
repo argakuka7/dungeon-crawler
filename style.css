@@ -129,7 +129,11 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #settings-panel header { display: flex; align-items: baseline; gap: 12px; }
 #settings-panel h1 { margin: 0 0 4px; color: #fff; font-size: 15px; letter-spacing: 3px; }
 #settings-panel h2 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; padding-top: 12px; border-top: 1px solid #2a2f3a; color: #c5cdbc; font-size: 12px; }
-#settings-panel h3 { margin: 12px 0 4px; color: #8a96a8; font-size: 11px; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; }
+#settings-tabs { display: flex; gap: 2px; margin: 10px 0 0; border-bottom: 1px solid #444c5c; }
+#settings-panel #settings-tabs button { flex: 1; margin-bottom: -1px; padding: 6px 4px; color: #8a96a8; background: none; border: 1px solid transparent; border-radius: 4px 4px 0 0; }
+#settings-panel #settings-tabs button:hover { color: #e6e9ef; background: #1e2430; }
+#settings-panel #settings-tabs button.on { color: #ffe4ae; background: #12161e; border-color: #444c5c #444c5c #12161e; }
+#settings-keys { display: grid; align-content: start; gap: 4px; min-height: calc(var(--rows, 9) * 30px - 4px); padding-top: 10px; }
 #settings-panel button { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
 #settings-panel button:hover { background: #364052; color: #fff; }
 #settings-panel :is(button, input):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
@@ -142,7 +146,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .settings-sound input[type=range] { width: 100%; margin: 0; accent-color: #ffcf7a; }
 .settings-sound output { color: #aab3c2; text-align: right; }
 .settings-note { margin: 0 0 4px; color: #6f7a8c; font-size: 11px; }
-.settings-key { display: grid; grid-template-columns: 1fr 8.5em 8.5em; align-items: center; gap: 6px; padding: 2px 0; color: #e6e9ef; }
+.settings-key { display: grid; grid-template-columns: 1fr 8.5em 8.5em; align-items: center; gap: 6px; height: 26px; color: #e6e9ef; }
 .settings-key span { color: #aab3c2; }
 #settings-keys button { padding: 3px 6px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #settings-keys button.empty { color: #5a6678; }

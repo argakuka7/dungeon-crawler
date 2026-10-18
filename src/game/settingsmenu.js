@@ -2,7 +2,8 @@
 // music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
-// A click on a key waits for the new one: the next key pressed takes the place (taken from the
+// The keys come in tabs, one per kind of control (core/keybinds.js GROUPS; Left and Right go
+// through them too). A click on a key waits for the new one: the next key pressed takes the place (taken from the
 // control that had it, which the line at the bottom names), Esc keeps the old one, Backspace
 // or Delete leaves the place empty. While the settings are open the game gets no keys.
 import { ACTIONS, ACTION, GROUPS, UNBINDABLE } from '../core/keybinds.js';
@@ -13,9 +14,10 @@ import {
 import { sfx } from '../audio/sfx.js';
 
 const $ = id => document.getElementById(id);
-const overlay = $('settings-overlay'), keysBox = $('settings-keys'), feedback = $('settings-feedback');
+const overlay = $('settings-overlay'), keysBox = $('settings-keys'), tabs = $('settings-tabs'), feedback = $('settings-feedback');
 const CONFIRM_MS = 4000;
 let waiting = null;    // { id, slot }: the key place waiting for a key
+let tab = GROUPS[0];   // the kind of controls shown
 let resetUntil = 0;    // the reset button asks again until then
 let opener = null;     // what had the focus before (it gets it back)
 
@@ -57,9 +59,14 @@ function keyButton(a, slot) {
   return `<button data-id="${a.id}" data-slot="${slot}" class="${on ? 'waiting' : k === null ? 'empty' : ''}"`
     + ` aria-label="${esc(`${a.label}, ${which} key: ${k === null ? 'none' : nameOf(k)}`)}">${on ? 'Press a key\u2026' : k === null ? '\u2014' : esc(nameOf(k))}</button>`;
 }
+// the tabs keep the height of the longest, so the panel does not jump between them
+keysBox.style.setProperty('--rows', String(Math.max(...GROUPS.map(g => ACTIONS.filter(a => a.group === g).length))));
 function renderKeys() {
-  keysBox.innerHTML = GROUPS.map(g => `<h3>${g}</h3>` + ACTIONS.filter(a => a.group === g)
-    .map(a => `<div class="settings-key"><span>${esc(a.label)}</span>${keyButton(a, 0)}${keyButton(a, 1)}</div>`).join('')).join('');
+  tabs.innerHTML = GROUPS.map(g => `<button role="tab" id="settings-tab-${g}" data-tab="${g}" aria-selected="${g === tab}"`
+    + ` tabindex="${g === tab ? 0 : -1}" class="${g === tab ? 'on' : ''}">${g}</button>`).join('');
+  keysBox.setAttribute('aria-labelledby', `settings-tab-${tab}`);
+  keysBox.innerHTML = ACTIONS.filter(a => a.group === tab)
+    .map(a => `<div class="settings-key"><span>${esc(a.label)}</span>${keyButton(a, 0)}${keyButton(a, 1)}</div>`).join('');
   const reset = $('settings-reset'), sure = performance.now() < resetUntil;
   reset.classList.toggle('confirm', sure);
   reset.textContent = sure ? 'Sure? Click again' : 'Reset keys';
@@ -68,9 +75,16 @@ function render() {
   if (!settingsOpen()) return;
   const focused = document.activeElement?.closest?.('#settings-keys [data-id]');
   const place = focused && { id: focused.dataset.id, slot: focused.dataset.slot };
+  const onTab = document.activeElement?.closest?.('#settings-tabs');
   renderSound(); renderKeys();
-  // the focus stays on the key place it was on (it was drawn anew)
+  // the focus stays on the key place or the tab it was on (they were drawn anew)
   if (place) keysBox.querySelector(`[data-id="${place.id}"][data-slot="${place.slot}"]`)?.focus();
+  else if (onTab) tabs.querySelector('.on')?.focus();
+}
+function showTab(g) {
+  if (g === tab) return;
+  tab = g; waiting = null; say('');
+  render();
 }
 onSettingsChange(render);
 
@@ -103,9 +117,20 @@ addEventListener('keydown', e => {
   if (!settingsOpen()) return;
   e.stopImmediatePropagation();
   if (waiting) { e.preventDefault(); if (!e.repeat) take(e); return; }
-  if (e.code === 'Escape') { e.preventDefault(); closeSettings(); }
+  if (e.code === 'Escape') { e.preventDefault(); closeSettings(); return; }
+  // on the tabs: Left and Right go to the one before and after
+  if (e.target?.closest?.('#settings-tabs') && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+    e.preventDefault();
+    const i = GROUPS.indexOf(tab) + (e.code === 'ArrowLeft' ? -1 : 1);
+    showTab(GROUPS[(i + GROUPS.length) % GROUPS.length]);
+    tabs.querySelector('.on')?.focus();
+  }
 }, true);
 
+tabs.addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]');
+  if (b) showTab(b.dataset.tab);
+});
 keysBox.addEventListener('click', e => {
   const b = e.target.closest('[data-id]');
   if (b) wait(b.dataset.id, Number(b.dataset.slot));
