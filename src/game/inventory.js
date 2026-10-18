@@ -37,7 +37,7 @@ import { keyLabel, barKeysText, onSettingsChange } from './settings.js';
 import { itemPicture, itemModelReady, onItemPictures, drawLiveViews } from '../render/itemviews.js';
 import { readiedFlask, equippedWeapon } from '../core/combat.js';
 import { GIVERS, giverQuests } from '../core/quests.js';
-import { talkQuests, questLog } from './quests.js';
+import { talkQuests, questLog, rescue } from './quests.js';
 import { openQuests, closeQuests, drawQuests, onQuestChange } from './questpanel.js';
 
 const $ = id => document.getElementById(id);
@@ -91,6 +91,7 @@ function showTab(view) {
 const seenOffers = new Set();
 export function talkTo(v) {
   if (state.inventoryOpen) return;
+  if (v?.lost) { rescue(v); return; }   // somebody a quest is looking for (game/questworld.js)
   const giver = talkQuests(v), shop = shopOf(v);
   if (!giver && !shop) return;
   const mine = giver ? giverQuests(questLog(), giver) : [];

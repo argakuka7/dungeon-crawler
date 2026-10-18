@@ -32,7 +32,7 @@ import { isInterior } from '../world/town.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 import { questEvent, questMark, restoreQuests } from './quests.js';
-import { npcsIn } from './npcs.js';
+import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
 
@@ -82,6 +82,7 @@ function restoreVisit(v) {
   restoreDefeated(state.run, v.defeated);
   forgetLoot(v.key, v.loot);
   restoreQuests(v.quests);   // a horde broken since comes back, and so do the quests' goals (game/quests.js)
+  forgetPicked();
 }
 
 // died: back to where you came in, in the cube as it was then (after a fall through cubes:
@@ -192,7 +193,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   const k = c.key;
   if (!back) discover(c);
   state.cubeKey = k; state.map = c.map; state.lookDepth = c.map.depth;
-  c.map.npcs = npcsIn(c.map);   // the people living here (game/npcs.js)
+  questWorld(c.map);   // the people living here, and what the quests put here (game/questworld.js)
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(k, c.map), c.geo, openedSides(state.openedFaces, k), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
   if (back) {
@@ -216,6 +217,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   player.hp = hp;
   settleIn();
   fadeIn();
+  noticeQuestGoals();
 }
 
 // HUD and neighbours for the cube we are in now
@@ -260,11 +262,16 @@ export function updateNeighbors() {
 // The props' colliders come from the catalog, so they stay where they were.
 onPropSet(set => {
   if (!state.world?.missingSets.includes(set) || state.transitioning) return;
+  rebuildWorld();
+});
+// the cube we are in, built again as it is now (its props, the quests' part: game/questworld.js)
+export function rebuildWorld() {
   const c = state.cubes.cubes.get(state.cubeKey);
   if (c?.map !== state.map) return;
+  questWorld(c.map);
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(state.cubeKey, c.map), c.geo, openedSides(state.openedFaces, state.cubeKey), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
-});
+}
 
 // keepPlayer: the player keeps their character (level, bag, gear); joining a friend's world
 // (src/net/session.js), or a saved hero (game/save.js). restore: a saved world's progress

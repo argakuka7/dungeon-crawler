@@ -33,6 +33,7 @@ import { displayName } from '../core/gear/stats.js';
 import { groundAt } from '../physics/collide.js';
 import { inFluid } from '../physics/fluid.js';
 import { drawLoot, lootLanded } from '../render/loot.js';
+import { questItemsHere } from './questworld.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { online, relay } from '../net/online.js';
@@ -231,7 +232,7 @@ export function updateLoot(dt, time) {
     if (p.claim === 'mine') receive(p);
   }
   announce(dt);
-  drawLoot(list, state.world, time, dt);
+  drawLoot([...list, ...questItemsHere()], state.world, time, dt);   // (and the quests' things to find: game/questworld.js)
 }
 
 // a weapon hit the floor: the better it is, the more it announces itself

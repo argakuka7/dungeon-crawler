@@ -63,7 +63,8 @@
 // The world's quests are shared and the host decides (game/quests.js, core/quests.js):
 //   quests  { log }                    host -> guests: the quest log, whenever it changed
 //   quest   { act, id?, ev? }          guest -> host: we did `act` with quest `id` (accept, archive,
-//                                      unarchive, restart, handIn), or event `ev` happened here
+//                                      unarchive, restart, handIn, meet), or event `ev` happened here
+//                                      (visit, horde, landmark, found, rescued)
 //   questReward { id, rewards, title }  host -> guests: quest `id` was handed in: take your reward
 // and between a guest and the host only:
 //   ping    {}                         both ways, every second, also from a background tab

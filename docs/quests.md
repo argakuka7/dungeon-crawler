@@ -9,23 +9,44 @@ the kinds of quests we want, and what is still open. Complements [world.md](worl
 
 ## What is built
 
-The first step of "Order of work" below, but for the quest plan ("The numbers"):
+Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the people on them, Find.
 
 - **The rules** (`core/quests.js`, pure, `tests/quests.test.js`): the quest log, the kinds, making
   offers, what players do with a quest, events, checks for saves and the network.
-- **Four kinds**, all about what the world has anyway, so nothing new in the world:
-  - `reach`: get down to a depth nobody has been to (one or two below the deepest);
-  - `landmark`: stand beside the landmark of a depth (its grand reward site; within
-    `LANDMARK_REACH` cells of its chest);
-  - `guardian`: beat a side or descent guardian (done once its gate is open);
-  - `horde`: break a depth's horde (every member defeated).
+- **The plan** (`core/questplan.js questPlan`): exactly the numbers of "Per depth" below (100
+  slots), each with its kind and giver, from the seed and the layouts. Kinds not built yet stand
+  in as built ones (`BUILT`, `STAND_IN`). Somebody lost is always asked for by whoever lives at a
+  camp at or up to two above the depth (they will wait there together); the rest by the villagers
+  (a share falling with depth) or the people of the depth and the one above.
+- **Seven kinds:**
+  - the scouting kinds, about what the world has anyway: `reach` (get down to a depth nobody has
+    been to, one or two below the deepest), `landmark` (stand beside a depth's landmark, within
+    `LANDMARK_REACH` cells of its chest), `guardian` (beat a side or descent guardian: done once
+    its gate is open), `horde` (break a depth's horde: every member defeated); a scouting slot
+    takes the one its giver leans to that fits;
+  - `find`: a quest item (`core/items.js QUEST_ITEMS`) lies on a hiding place; walking onto it
+    picks it up (the quest carries it, not a bag), back to the giver;
+  - `rescue`: somebody lost stands on a hiding place; talking to them ends it there and pays
+    (`spot`); they go to live at the giver's camp (`log.living`);
+  - `treasure`: a map scrap; a chest stands on a hiding place, opened like a reward site's, its
+    loot the reward (`self`: the quest only adds XP). It stays, open.
 
-  All are paid back at the giver (`return`); the engine knows `spot` too.
-- **Givers:** the six villagers (`GIVERS`), each leaning to some kinds. Each has one offer at a
-  time (`MAX_OFFERS`), made when it has none: the `n`-th from `hash(seed, giver, n)`, about a
-  depth from one above the deepest anyone got to two below it, never about something another
-  quest is about or already done. An offer whose goal got done meanwhile goes. When nothing is
-  left to ask, a giver offers nothing. There is no plan of about 100 yet.
+  The scouting kinds and `find` are paid back at the giver (`return`).
+- **Givers** (the villagers, and the people out in the world once met) each have one offer at a
+  time (`MAX_OFFERS`): their next slot of the plan down to two below the deepest anyone got,
+  filled in from `hash(seed, giver, slot)` with a target of the slot's depth that no quest going
+  on is about and that is not done yet; a slot that nothing fits tries the other kinds
+  (`FALLBACK`) and is otherwise passed over (`log.used`). An offer whose goal got done meanwhile
+  goes. When its slots are used up, a giver offers nothing more.
+- **Clues** (`clueOf`): where a hiding place is, in words from what the layout knows of its room
+  (on the needle of rock, by the great lake, near the windmill, where the horde gathers, off the
+  main way, past the guardian's gate, not far from where the depth begins ...), never on a map.
+  Coming into the cube, the game says so ("Something glints somewhere here...", "You hear
+  somebody calling for help!"); the thing then has a label.
+- **In the world** (`game/questworld.js`): what a quest going on (not archived) has as its goal
+  shows on its spot only then: the thing (drawn with the loot), the lost person (a figure to talk
+  to), the treasure's chest; and the people found stand at their camp. The cube is built again
+  when that changes.
 - **Difficulty** by how far below the deepest the quest is (a descent guardian one harder);
   **rewards** made with the offer and shown in it (`questRewards`, "Rewards" below).
 - **Progress:** goals are checked against the world (the deepest depth, the open gates, the
@@ -35,7 +56,7 @@ The first step of "Order of work" below, but for the quest plan ("The numbers"):
   is true in the world by then counts (a guardian beaten meanwhile stays beaten), standing at a
   landmark does not.
 - **A death** that puts the cube back takes back the quest progress made since coming in
-  (`progressOf` / `restoreProgress`): a horde broken comes back.
+  (`progressOf` / `restoreProgress`): a horde broken comes back, a thing picked up lies there again.
 - **Talking** (`game/inventory.js talkTo`): a click on a villager, or the action key beside one.
   The panel opens on the Quests tab with what that villager has on top: offers to accept, quests
   to hand in. The alchemist opens on her wares unless she has news (a quest to hand in, an offer
@@ -52,7 +73,7 @@ The first step of "Order of work" below, but for the quest plan ("The numbers"):
 - **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
   and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
   villagers, about their own depth and the one below.
-- **Not yet:** the quest plan, the other kinds,
+- **Not yet:** the other kinds (bounty, delivery, gather, scattered pieces, prisoners, defense),
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want

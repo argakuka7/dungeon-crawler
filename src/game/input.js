@@ -21,7 +21,7 @@ import { toggleInventory, toggleQuests, setInventoryOpen } from './inventory.js'
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
-import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade } from './orders.js';
+import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk } from './orders.js';
 import { hoveredPickup, hoveredChest, hoveredVillager, toggleLabels, updateLootLabels } from './lootlabels.js';
 import { queueAttack } from './sword.js';
 import { softTarget, combatStats, readiedFlask } from '../core/combat.js';
@@ -187,7 +187,7 @@ function click(walk) {
   const villager = hoveredVillager();
   if (villager) { pointer.mode = null; orderTrade(villager); return; }
   const item = hoveredPickup();
-  if (item) { pointer.mode = null; orderPickup(item); return; }
+  if (item) { pointer.mode = null; if (item.questItem) orderWalk(item.x, item.y, item.z); else orderPickup(item); return; }
   const chest = hoveredChest();
   if (chest) { pointer.mode = null; orderChest(chest); return; }
   if (!walk) { pointer.mode = null; return; }

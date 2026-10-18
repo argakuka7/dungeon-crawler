@@ -89,6 +89,12 @@ export function orderMove(hit) {
   Object.assign(order, { x: hit.x, z: hit.z, floor: floorOf(hit.s), enemy: null, pickup: null, repath: 1e9 });
   plan(order.floor);
 }
+// walk to (x, y, z) (a quest's thing to find, game/questworld.js: walking onto it picks it up)
+export function orderWalk(x, y, z) {
+  begin('move');
+  Object.assign(order, { x, z, floor: floorOf(groundAt(x, z, y + 0.3, 0).s), enemy: null, pickup: null, repath: 1e9 });
+  plan(order.floor);
+}
 export function orderAttack(e) {
   begin('attack');
   Object.assign(order, { enemy: e, pickup: null, path: null, repath: 0 });

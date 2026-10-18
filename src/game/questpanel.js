@@ -9,7 +9,7 @@ import { ITEMS } from '../core/items.js';
 import { formatCoins } from '../core/inventory.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { displayName } from '../core/gear/stats.js';
-import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName, giverName, giverTitle } from '../core/quests.js';
+import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName, giverName, carried } from '../core/quests.js';
 import { questLog, questAct } from './quests.js';
 
 const $ = id => document.getElementById(id);
@@ -78,7 +78,8 @@ export function drawQuests() {
 function details(q) {
   const atGiver = !!talker && giverOf(talker) === q.giver, r = q.rewards, who = giverName(q), where = q.from?.where ?? GIVERS[q.giver]?.where ?? '';
   const goals = q.stages.map((s, i) => `<li class="${s.done ? 'done' : i === q.stage && q.state === 'active' ? 'now' : ''}">${esc(s.text)}</li>`).join('');
-  const rewards = [`<li>+${r.xp} XP</li>`, r.copper ? `<li>${formatCoins(r.copper)}</li>` : '', ...r.items.map(itemLine)].join('');
+  const rewards = [`<li>+${r.xp} XP</li>`, r.copper ? `<li>${formatCoins(r.copper)}</li>` : '', ...r.items.map(itemLine),
+    q.payout === 'self' ? '<li>and whatever the treasure holds</li>' : ''].join('');
   const back = q.payout === 'return' ? `Go back to ${who}${where ? ` (${where})` : ''} to hand it in.` : '';
   const hint = q.archived ? 'Archived: put away. It counts nothing until you bring it back.'
     : q.state === 'ready' && !atGiver ? `Done! ${back}`
@@ -96,6 +97,7 @@ function details(q) {
     + `<div class="quest-meta">From ${esc(who)} · ${esc(depthName(q.depth))} · ${q.difficulty}</div>`
     + `<p class="quest-text">${esc(q.text)}</p>`
     + `<h3>Goal</h3><ul class="quest-goals">${goals}</ul>`
+    + (carried(q).length ? `<h3>Carrying</h3><ul class="quest-rewards">${carried(q).map(id => `<li>${esc(ITEMS[id].name)}</li>`).join('')}</ul>` : '')
     + `<h3>Reward</h3><ul class="quest-rewards">${rewards}</ul>`
     + (hint ? `<p class="quest-hint">${esc(hint)}</p>` : '')
     + (buttons ? `<div class="quest-actions">${buttons}</div>` : '');

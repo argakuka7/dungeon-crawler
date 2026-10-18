@@ -15,7 +15,8 @@ import { displayName } from '../core/gear/stats.js';
 import { state } from './state.js';
 import { lootHere } from './loot.js';
 import { pointer, hoveredEnemy } from './pointer.js';
-import { orderPickup, orderChest, orderTrade } from './orders.js';
+import { orderPickup, orderChest, orderTrade, orderWalk } from './orders.js';
+import { questItemsHere } from './questworld.js';
 import { shopOf } from '../core/shops.js';
 import { GIVERS, giverOf, giverMark } from '../core/quests.js';
 import { talkative } from './action.js';
@@ -43,7 +44,7 @@ const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + 
 const traders = () => peopleHere().filter(talkative);
 // what a villager's label says: the quest mark, their name, their trade
 function villagerText(v) {
-  const shop = shopOf(v), mark = giverOf(v) && state.run?.quests ? giverMark(state.run.quests, v.name) : '';
+  const shop = shopOf(v), mark = v.lost ? '!' : giverOf(v) && state.run?.quests ? giverMark(state.run.quests, giverOf(v)) : '';
   const name = v.title ?? GIVERS[v.name]?.title ?? shop?.title ?? v.name;
   return `${mark ? `${mark} ` : ''}${name}${shop ? ` · ${shop.trade}` : ''}`;
 }
@@ -55,13 +56,14 @@ function label(p) {
   const el = document.createElement('button');
   el.className = 'loot-label'; el.tabIndex = -1;
   const shop = shopOf(p);
-  el.textContent = isVillager(p) ? villagerText(p) : p.prestige ? 'Treasure chest' : displayName(p) + (p.count > 1 ? ` (${p.count})` : '');
-  el.style.color = isVillager(p) ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
+  el.textContent = isVillager(p) ? villagerText(p) : p.prestige ? 'Treasure chest' : p.questItem ? `${displayName(p)} · quest`
+    : displayName(p) + (p.count > 1 ? ` (${p.count})` : '');
+  el.style.color = isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
   if (p.gen) el.dataset.rarity = rarityOf(p).id;
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0 || state.inventoryOpen || state.transitioning) return;
     e.preventDefault(); e.stopPropagation();
-    if (isVillager(p)) orderTrade(p); else if (p.prestige) orderChest(p); else orderPickup(p);
+    if (isVillager(p)) orderTrade(p); else if (p.prestige) orderChest(p); else if (p.questItem) orderWalk(p.x, p.y, p.z); else orderPickup(p);
   });
   el.addEventListener('pointerenter', () => { overLabel = p; });
   el.addEventListener('pointerleave', () => { if (overLabel === p) overLabel = null; });
@@ -83,7 +85,8 @@ function screen(p, off) {
 
 export function updateLootLabels() {
   const live = !state.inventoryOpen && !state.transitioning && !!state.world;
-  const list = live ? [...lootHere().filter(p => labelled(p) && p.toss >= 1 && !p.fly && lootView(p)), ...closedChests(), ...traders()] : [];
+  const list = live ? [...lootHere().filter(p => labelled(p) && p.toss >= 1 && !p.fly && lootView(p)), ...questItemsHere().filter(lootView),
+    ...closedChests(), ...traders()] : [];
   const off = state.world?.group.position ?? v.set(0, 0, 0), spots = new Map();
   for (const p of list) { const s = screen(p, off); if (s) spots.set(p, s); }
   // the item under the cursor: a label it points at, else the nearest item on screen
@@ -97,7 +100,7 @@ export function updateLootLabels() {
       if (d < Math.min(1, best)) { best = d; hovered = p; }
     }
   }
-  const show = [...spots.keys()].filter(p => state.showLabels || p === hovered || isVillager(p) && villagerText(p).match(/^[!?] /));
+  const show = [...spots.keys()].filter(p => state.showLabels || p === hovered || p.questItem || isVillager(p) && villagerText(p).match(/^[!?] /));
   // nearest to the camera first; each label goes up past any it would cover
   show.sort((a, b) => spots.get(b).y - spots.get(a).y);
   const placed = [], keep = new Set();

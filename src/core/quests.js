@@ -12,18 +12,21 @@
 // A quest:
 //   { id, giver, n, kind, depth, difficulty, target, title, text, stages, stage, payout,
 //     rewards: { xp, copper, items }, state, archived, created, finished }
-//   stages: [{ goal, depth, key?, text, done }], one after another; `stage` is the current one
-//   payout: 'return' (back to the giver, who pays) or 'spot' (paid where the last goal is done)
+//   stages: [{ goal, depth, key?, spot?, item?, person?, chest?, text, done }], one after another;
+//     `stage` is the current one
+//   payout: 'return' (back to the giver, who pays), 'spot' (paid where the last goal is done, by
+//     whoever is there) or 'self' (the quest is its own payout: a treasure's chest; only XP)
 //   state:  'offered' | 'active' | 'ready' (to hand in) | 'done' | 'failed'
 //   archived: put away by the players (a soft abandon): hidden, and it counts no progress
 //
-// What a giver offers is made from the world's seed, the giver and its number
-// (hash(seed, giver, n)), checked against the world as it is (`ctx`, below): every target is
-// one the layout has and nobody has done yet. The quest is kept whole once made, so a changed
-// generator leaves the quests taken alone.
+// What a giver offers comes from the world's quest plan (core/questplan.js: which kind, at which
+// depth, from whom), filled in from the seed and the plan's slot, checked against the world as
+// it is (`ctx`, below): every target is one the layout has and nobody has done yet. The quest is
+// kept whole once made, so a changed generator leaves the quests taken alone.
 //
 // ctx: { seed, layout: depth -> the depth's layout (world/layout.js makeLayouts), gates: the
-// guardian gates open (run.unlockedGates), now: Date.now() }
+// guardian gates open (run.unlockedGates), chests: the chests open (run.chests), now }
+// The facts goals are checked against: { gates, chests } (a Set alone: the gates).
 import { mulberry32, hash32 } from './util.js';
 import { hashString } from './gear/drops.js';
 import { rollWeapon } from './gear/generate.js';
@@ -37,6 +40,7 @@ import { xpToNext } from './progression.js';
 import { bossAt } from './bosses.js';
 import { PROP_METADATA } from './propmetadata.js';
 import { ROLES, residentOf, isNpcGiver, spotOfGiver, keyOfSpot } from './npcs.js';
+import { questPlan, clueOf, lostPerson, campOf, SCOUTS } from './questplan.js';
 
 const MAX_DEPTH = 20;   // themes/depth.js MAX_DEPTH
 export const STATES = ['offered', 'active', 'ready', 'done', 'failed'];
@@ -76,7 +80,10 @@ export function giverProfile(giver, ctx) {
 export const giverName = q => q.from?.name ?? `the ${GIVERS[q.giver]?.title ?? 'giver'}`;
 export const giverTitle = q => q.from?.title ?? GIVERS[q.giver]?.title ?? 'Giver';
 
-export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], version: 0 });
+//   used:   the plan's slots offered (or passed over: core/questplan.js)
+//   living: the people found and come to live at a camp: [{ id, name, tint, outfit, camp }]
+export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], used: [], living: [], version: 0 });
+const factsOf = f => f instanceof Set ? { gates: f, chests: new Set() } : { gates: f?.gates ?? new Set(), chests: f?.chests ?? new Set() };
 // talked to giver g for the first time: from now on it makes offers (refreshOffers)
 export function meet(log, g) {
   if (GIVERS[g] || !isNpcGiver(g) || log.met.includes(g)) return false;
@@ -187,25 +194,95 @@ const KINDS = {
       };
     },
   },
+  // find a thing somebody lost on a hiding place (world/spots.js) and bring it back
+  find: {
+    payout: 'return',
+    targets: (ctx, log, depths) => hidingPlaces(ctx, log, depths),
+    quest(t, ctx, R, { giver }) {
+      const item = pick(R, LOST_ITEMS[giver] ?? LOST_ITEMS.npc), name = ITEMS[item].name.toLowerCase(), where = depthName(t.depth);
+      const clue = clueOf(ctx.layout, t.plan, landmarkName);
+      return {
+        title: `The lost ${name}`,
+        text: pick(R, item === 'quest_toy_rabbit' ? [
+          `A little girl lost her toy rabbit on ${where}, ${clue}. She has been crying all day. Could you find it and bring it back to me?`,
+        ] : [
+          `I lost my ${name} down on ${where}, ${clue}. Could you look for it and bring it back to me?`,
+          `My ${name}! I dropped it when I ran from the monsters on ${where}, ${clue}. Please bring it back.`,
+          `Somebody left a ${name} on ${where}, ${clue}. It belongs to an old friend of mine. Would you fetch it for me?`,
+        ]),
+        target: { spot: t.spot, item },
+        stages: [{ goal: 'find', depth: t.depth, key: t.key, spot: t.spot, item, text: `Find the ${name} on ${where}` }],
+      };
+    },
+  },
+  // find somebody lost on a hiding place; they go to live at the camp of whoever asked
+  rescue: {
+    payout: 'spot',
+    targets: (ctx, log, depths, giver) => campOf(ctx.layout, giver) ? hidingPlaces(ctx, log, depths) : [],
+    quest(t, ctx, R, { id }) {
+      const person = lostPerson(hash32(ctx.seed ^ hashString(id))), where = depthName(t.depth);
+      const clue = clueOf(ctx.layout, t.plan, landmarkName), them = { daughter: 'her', sister: 'her', granddaughter: 'her' }[person.relation] ?? 'him';
+      return {
+        title: `Where is ${person.name}?`,
+        text: pick(R, [
+          `My ${person.relation} ${person.name} went down to ${where} and has not come back. Somebody saw ${them} ${clue}. Please find ${them}! I will wait here.`,
+          `${person.name}, my ${person.relation}, wanted to see ${where} and never came back. The last I heard, ${clue}. Bring ${them} home to me, please.`,
+        ]),
+        target: { spot: t.spot, person: person.name },
+        stages: [{ goal: 'rescue', depth: t.depth, key: t.key, spot: t.spot, person, text: `Find ${person.name} on ${where}` }],
+      };
+    },
+  },
+  // a treasure map: the chest on a hiding place is the reward (opened like a reward site's)
+  treasure: {
+    payout: 'self',
+    targets: (ctx, log, depths) => hidingPlaces(ctx, log, depths),
+    quest(t, ctx, R, { id, difficulty }) {
+      const where = depthName(t.depth), clue = clueOf(ctx.layout, t.plan, landmarkName);
+      return {
+        title: `A map with a cross`,
+        text: pick(R, [
+          `I found this scrap of an old map. The cross is on ${where}, ${clue}. I am too old to go digging; whatever is there is yours.`,
+          `Look at this map scrap! Treasure, on ${where}, ${clue}. Find it, and keep what is in it.`,
+        ]),
+        target: { spot: t.spot },
+        stages: [{ goal: 'open', depth: t.depth, key: t.key, spot: t.spot, chest: `q:${id}`, prestige: REWARD.chest[difficulty],
+          text: `Find the treasure on ${where}` }],
+      };
+    },
+  },
 };
+// the things a giver may have lost (core/items.js QUEST_ITEMS)
+const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], groom: ['quest_compass', 'quest_map_scrap'],
+  smith: ['quest_ring', 'quest_journal'], keeper: ['quest_toy_rabbit'], alchemist: ['quest_journal', 'quest_locket'],
+  enchanter: ['quest_locket', 'quest_ring', 'quest_journal'], npc: ['quest_compass', 'quest_journal', 'quest_locket', 'quest_ring'] };
+// the hiding places at these depths no quest going on is about
+function hidingPlaces(ctx, log, depths) {
+  // (a treasure's spot stays its: its chest stays there, open)
+  const busy = new Set(log.list.filter(q => (q.state !== 'done' || q.kind === 'treasure') && q.target?.spot).map(q => q.target.spot));
+  return depths.flatMap(depth => ctx.layout(depth).spotList.filter(s => s.kind === 'hide' && !busy.has(s.id))
+    .map(plan => ({ id: `spot:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: plan.tier, plan })));
+}
+// what a goal is, by name (the kinds' stages)
+export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open'];
 export const QUEST_KINDS = Object.keys(KINDS);
 
 const range = (a, b) => Array.from({ length: Math.max(0, Math.min(b, MAX_DEPTH) - a + 1) }, (_, i) => a + i);
 // the depths quests are about: one above how far anyone got, down to two below it
 const window = log => range(Math.max(0, log.deepest - 1), log.deepest + 2);
-// how likely each depth is, by how far below the deepest it is
-const DEPTH_WEIGHT = { '-1': 1, 0: 3, 1: 3, 2: 1 };
 
 // --- what a goal needs ----------------------------------------------------------------------------
 
 // is the stage's goal done in the world as it is? (a landmark only by being there: `done`)
-export function goalDone(stage, log, gates) {
+export function goalDone(stage, log, facts) {
   if (stage.done) return true;
+  const f = factsOf(facts);
   switch (stage.goal) {
     case 'reach': return log.deepest >= stage.depth;
-    case 'guardian': return gates.has(stage.key);
+    case 'guardian': return f.gates.has(stage.key);
     case 'horde': return log.broken.includes(stage.key);
-    default: return false;
+    case 'open': return f.chests.has(stage.chest);
+    default: return false;   // landmark, find, rescue: only by being there (events)
   }
 }
 
@@ -233,52 +310,65 @@ const weighted = (R, list, weight) => {
   for (const x of list) if ((r -= weight(x)) < 0) return x;
   return list.at(-1);
 };
-// the targets the quests have already (whatever became of them): never two quests about one thing
-const takenTargets = log => new Set(log.list.map(q => q.target?.id).filter(Boolean));
+// the targets the quests have already: never two quests about one thing (but a hiding place
+// again once its quest is done)
+const takenTargets = log => new Set(log.list.filter(q => q.state !== 'done' || !q.target?.spot).map(q => q.target?.id).filter(Boolean));
+// the kinds to try for a slot of the plan: its own (a scout as the giver leans), then the others
+const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'] };
+function kindsFor(slot, g, R) {
+  const scouts = () => {
+    const left = SCOUTS.map(k => [k, g.kinds[k] ?? 0.3]), out = [];
+    while (left.length) { const k = weighted(R, left, ([, w]) => w); out.push(k[0]); left.splice(left.indexOf(k), 1); }
+    return out;
+  };
+  return [slot.kind, ...(FALLBACK[slot.kind] ?? [])].flatMap(k => k === 'scout' ? scouts() : [k]);
+}
 
-// The next quest of `giver` (null: there is nothing for it to ask now). Its number is
-// log.next[giver]; the log is not changed (offer does that).
-export function makeQuest(log, ctx, giver) {
+// The quest of `giver` for slot `slot` of the plan (core/questplan.js), or null: nothing it
+// could be about at the slot's depth now. The log is not changed (refreshOffers does that).
+export function makeQuest(log, ctx, giver, slot) {
   const g = giverProfile(giver, ctx);
   if (!g) throw new TypeError(`Not a quest giver: ${giver}`);
-  const depths = g.depths(log);
-  const n = log.next[giver] ?? 0;
-  const R = mulberry32(hash32(ctx.seed ^ hashString(giver) ^ Math.imul(n + 1, 0x9e3779b1)));
-  const taken = takenTargets(log), kinds = Object.entries(g.kinds);
-  while (kinds.length) {
-    const [kind] = weighted(R, kinds, ([, w]) => w);
-    kinds.splice(kinds.findIndex(([k]) => k === kind), 1);
-    const options = KINDS[kind].targets(ctx, log, depths).filter(t => !taken.has(t.id)
-      && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, ctx.gates));
+  const id = `${giver}:${slot.id}`, f = factsOf(ctx);
+  const R = mulberry32(hash32(ctx.seed ^ hashString(giver) ^ hashString(slot.id)));
+  const taken = takenTargets(log);
+  for (const kind of kindsFor(slot, g, R)) {
+    const options = KINDS[kind].targets(ctx, log, [slot.depth], giver).filter(t => !taken.has(t.id)
+      && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, f));
     if (!options.length) continue;
-    const t = weighted(R, options, o => DEPTH_WEIGHT[o.depth - log.deepest] ?? 0.5);
-    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' ? 1 : 0)));
-    const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R);
-    return { id: `${giver}:${n}`, giver, n, from: { name: g.name, title: g.title, where: g.where },
+    const t = options[Math.floor(R() * options.length)];
+    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' ? 1 : 0) + ((t.tier ?? 0) >= 3 ? 1 : 0)));
+    const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R, { id, giver, difficulty });
+    const rewards = questRewards(R, t.depth, difficulty);
+    return { id, giver, n: Number(slot.id.split(':')[1]) || 0, slot: slot.id, from: { name: g.name, title: g.title, where: g.where },
       kind, depth: t.depth, difficulty, target: { id: t.id, ...made.target },
       title: made.title, text: made.text, stages: made.stages.map(s => ({ ...s, done: false })), stage: 0,
-      payout: KINDS[kind].payout, rewards: questRewards(R, t.depth, difficulty), state: 'offered', archived: false,
-      created: ctx.now ?? 0, finished: 0 };
+      payout: KINDS[kind].payout, rewards: KINDS[kind].payout === 'self' ? { xp: rewards.xp, copper: 0, items: [] } : rewards,
+      state: 'offered', archived: false, created: ctx.now ?? 0, finished: 0 };
   }
   return null;
 }
 
 // an offer that can no longer be done (its goal is done already): it goes
-const stale = (q, log, gates) => q.state === 'offered' && q.stages.some(s => goalDone(s, log, gates));
+const stale = (q, log, facts) => q.state === 'offered' && q.stages.some(s => goalDone(s, log, facts));
 
 // Every giver's offers brought up to date: those that went stale go, and each giver with fewer
-// than MAX_OFFERS makes new ones. true: something changed.
+// than MAX_OFFERS offers its next slots of the plan, as far down as two below the deepest anyone
+// got (a slot nothing fits is passed over). true: something changed.
 export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log.met]) {
-  const before = log.list.length;
-  log.list = log.list.filter(q => !stale(q, log, ctx.gates));
+  const before = log.list.length, plan = questPlan(ctx.seed, ctx.layout);
+  log.list = log.list.filter(q => !stale(q, log, ctx));
   let changed = log.list.length !== before;
   for (const giver of givers) {
-    while (log.list.filter(q => q.giver === giver && q.state === 'offered').length < MAX_OFFERS) {
-      const q = makeQuest(log, ctx, giver);
-      if (!q) break;
-      log.list.push(q);
-      log.next[giver] = q.n + 1;
+    const slots = plan.byGiver.get(giver) ?? [];
+    for (const slot of slots) {
+      if (log.list.filter(q => q.giver === giver && q.state === 'offered').length >= MAX_OFFERS) break;
+      if (log.used.includes(slot.id)) continue;
+      if (slot.depth > log.deepest + 2) break;
+      const q = makeQuest(log, ctx, giver, slot);
+      log.used.push(slot.id);
       changed = true;
+      if (q) log.list.push(q);
     }
   }
   if (changed) log.version++;
@@ -341,11 +431,17 @@ export function settle(log, gates = new Set(), now = 0) {
     let moved = false;
     while (q.stage < q.stages.length && goalDone(q.stages[q.stage], log, gates)) { q.stages[q.stage].done = true; q.stage++; moved = true; }
     if (q.stage < q.stages.length) { if (moved) log.version++; continue; }
-    q.state = q.payout === 'spot' ? 'done' : 'ready';
-    if (q.state === 'done') { q.finished = now; paid.push(q); }
+    q.state = q.payout === 'return' ? 'ready' : 'done';
+    if (q.state === 'done') { q.finished = now; paid.push(q); settled(log, q); }
     log.version++;
   }
   return paid;
+}
+// what a quest done leaves behind: somebody found goes to live at the camp of whoever asked
+function settled(log, q) {
+  const s = q.stages.find(x => x.goal === 'rescue');
+  const camp = s && spotOfGiver(q.giver);
+  if (camp && !log.living.some(p => p.id === q.id)) log.living.push({ id: q.id, ...s.person, camp });
 }
 
 // Something happened (game/quests.js):
@@ -353,6 +449,8 @@ export function settle(log, gates = new Set(), now = 0) {
 //   { kind: 'horde', key }        the horde in that cube is broken
 //   { kind: 'landmark', key }     someone stands beside the landmark in that cube
 //   { kind: 'gate', key }         a guardian's gate opened (run.unlockedGates has it already)
+//   { kind: 'found', quest }      somebody picked up the thing quest `quest` is looking for
+//   { kind: 'rescued', quest }    somebody found the person quest `quest` is looking for
 // The log takes note, and the quests move on (settle). The quests paid on the spot.
 export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'visit' && Number.isInteger(ev.depth) && ev.depth > log.deepest) { log.deepest = Math.min(MAX_DEPTH, ev.depth); log.version++; }
@@ -360,6 +458,10 @@ export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'landmark' && typeof ev.key === 'string') for (const q of log.list) {
     const s = q.stages[q.stage];
     if (q.state === 'active' && !q.archived && s?.goal === 'landmark' && s.key === ev.key && !s.done) { s.done = true; log.version++; }
+  }
+  if ((ev.kind === 'found' || ev.kind === 'rescued') && typeof ev.quest === 'string') {
+    const q = find(log, ev.quest), s = q?.stages[q.stage];
+    if (q?.state === 'active' && !q.archived && s?.goal === (ev.kind === 'found' ? 'find' : 'rescue') && !s.done) { s.done = true; log.version++; }
   }
   return settle(log, gates, now);
 }
@@ -384,6 +486,22 @@ export function restoreProgress(log, before) {
   }
   if (changed) log.version++;
   return changed;
+}
+
+// --- what the quests put in the world -------------------------------------------------------------
+
+// The quests going on whose current goal is in cube `key`: [{ quest, stage }] (a thing to find,
+// somebody lost, a treasure's chest; they show only while it is the goal)
+export const questGoalsIn = (log, key) => log.list.filter(q => q.state === 'active' && !q.archived && q.stages[q.stage]?.key === key)
+  .map(q => ({ quest: q, stage: q.stages[q.stage] }));
+// the people living at camp `campId` (a spot's id), found by the quests
+export const livingAt = (log, campId) => log.living.filter(p => p.camp === campId);
+// what a quest carries (core/items.js QUEST_ITEMS): the things found for it, a treasure's map
+export function carried(q) {
+  if (q.state === 'done') return [];
+  const out = q.stages.filter(s => s.goal === 'find' && s.done).map(s => s.item);
+  if (q.kind === 'treasure' && q.state !== 'offered') out.push('quest_map_scrap');
+  return out;
 }
 
 // --- what is shown --------------------------------------------------------------------------------
@@ -421,9 +539,24 @@ function checkItem(i) {
   return { itemId: i.itemId, count };
 }
 function checkStage(s) {
-  if (!isObj(s) || !QUEST_KINDS.includes(s.goal) || !Number.isInteger(s.depth) || s.depth < 0 || s.depth > MAX_DEPTH) return null;
+  if (!isObj(s) || !GOALS.includes(s.goal) || !Number.isInteger(s.depth) || s.depth < 0 || s.depth > MAX_DEPTH) return null;
   if (s.key !== undefined && typeof s.key !== 'string') return null;
-  return { goal: s.goal, depth: s.depth, ...(s.key !== undefined ? { key: s.key } : {}), text: text(s.text, 120), done: !!s.done };
+  const out = { goal: s.goal, depth: s.depth, ...(s.key !== undefined ? { key: s.key } : {}), text: text(s.text, 120), done: !!s.done };
+  if (typeof s.spot === 'string') out.spot = s.spot.slice(0, 60);
+  if (typeof s.chest === 'string') out.chest = s.chest.slice(0, 90);
+  if (typeof s.prestige === 'string' && CHESTS[s.prestige]) out.prestige = s.prestige;
+  if (s.goal === 'find' && ITEMS[s.item]?.category !== 'quest') return null;
+  if (s.goal === 'find') out.item = s.item;
+  if (s.goal === 'rescue') { const p = checkPerson(s.person); if (!p) return null; out.person = p; }
+  if ((s.goal === 'find' || s.goal === 'rescue' || s.goal === 'open') && !out.spot) return null;
+  return out;
+}
+// somebody (lost, or living at a camp): their name, how they are related, how they look
+function checkPerson(p) {
+  if (!isObj(p) || typeof p.name !== 'string' || !p.name) return null;
+  const outfit = Array.isArray(p.outfit) ? p.outfit.filter(id => ITEMS[id]?.slot) : [];
+  if (new Set(outfit.map(id => ITEMS[id].slot)).size !== outfit.length) return null;
+  return { name: text(p.name, 20), relation: text(p.relation, 20), tint: /^#[0-9a-f]{6}$/i.test(p.tint) ? p.tint : '#d9b48c', outfit };
 }
 // a quest's rewards as saved or told by the host
 export function checkRewards(r) {
@@ -432,14 +565,14 @@ export function checkRewards(r) {
 }
 export function checkQuest(q) {
   if (!isObj(q) || typeof q.id !== 'string' || q.id.length > 80 || !isGiver(q.giver) || !QUEST_KINDS.includes(q.kind)) return null;
-  if (!STATES.includes(q.state) || !DIFFICULTIES.includes(q.difficulty) || !['return', 'spot'].includes(q.payout)) return null;
+  if (!STATES.includes(q.state) || !DIFFICULTIES.includes(q.difficulty) || !['return', 'spot', 'self'].includes(q.payout)) return null;
   const stages = Array.isArray(q.stages) ? q.stages.map(checkStage) : [];
   if (!stages.length || stages.includes(null) || !Number.isInteger(q.depth)) return null;
   const target = isObj(q.target) && typeof q.target.id === 'string' ? structuredClone(q.target) : { id: q.id };
   const f = isObj(q.from) ? q.from : {}, town = GIVERS[q.giver];
   const from = { name: text(f.name, 60) || (town ? `the ${town.title}` : 'somebody'), title: text(f.title, 60) || town?.title || 'Somebody',
     where: text(f.where, 80) || town?.where || '' };
-  return { id: q.id, giver: q.giver, n: nat(q.n), from, kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
+  return { id: q.id, giver: q.giver, n: nat(q.n), ...(typeof q.slot === 'string' ? { slot: q.slot.slice(0, 12) } : {}), from, kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
     title: text(q.title, 80), text: text(q.text), stages, stage: Math.min(nat(q.stage), stages.length), payout: q.payout,
     rewards: checkRewards(q.rewards),
     state: q.state, archived: !!q.archived, created: nat(q.created), finished: nat(q.finished) };
@@ -455,10 +588,16 @@ export function checkQuestLog(x) {
   }
   if (isObj(x.next)) for (const [g, n] of Object.entries(x.next)) if (isGiver(g)) log.next[g] = nat(n);
   log.met = Array.isArray(x.met) ? [...new Set(x.met.filter(g => isNpcGiver(g) && g.length <= 60))] : [];
+  log.used = Array.isArray(x.used) ? [...new Set(x.used.filter(u => typeof u === 'string' && u.length <= 12))] : [];
+  log.living = (Array.isArray(x.living) ? x.living : []).map(p => {
+    const c = checkPerson(p);
+    return c && typeof p.id === 'string' && typeof p.camp === 'string' ? { id: p.id.slice(0, 80), ...c, camp: p.camp.slice(0, 60) } : null;
+  }).filter(Boolean);
   log.deepest = Math.min(MAX_DEPTH, nat(x.deepest));
   log.broken = Array.isArray(x.broken) ? [...new Set(x.broken.filter(k => typeof k === 'string'))] : [];
   log.version = nat(x.version);
   return log;
 }
 // what is saved and sent of a log (plain JSON)
-export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, met: log.met, version: log.version });
+export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, met: log.met,
+  used: log.used, living: log.living, version: log.version });

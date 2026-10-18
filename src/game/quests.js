@@ -20,6 +20,8 @@ import { dropAtFeet } from './loot.js';
 import { giverOf, giverName, meet, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
+import { pickUpQuestItems, questWorldChanged } from './questworld.js';
+import { rebuildWorld } from './flow.js';
 
 const CHECK_EVERY = 0.5;   // s (real time): the gates looked at, offers brought up to date, a landmark looked for
 // seen: the quests' states as last told (in run seenIn); sent: the log as last given out
@@ -30,7 +32,9 @@ const granted = new Set();
 export const questLog = () => state.run.quests;
 // do we decide about the quests (alone, or the host), or does the host (a guest)?
 export const questAuthority = () => online.role !== 'guest';
-const ctx = () => ({ seed: state.cubes.seed, layout: state.cubes.layout, gates: state.run.unlockedGates, now: Date.now() });
+const ctx = () => ({ seed: state.cubes.seed, layout: state.cubes.layout, gates: state.run.unlockedGates, chests: state.run.chests, now: Date.now() });
+// what the goals are checked against (core/quests.js goalDone)
+const facts = () => ({ gates: state.run.unlockedGates, chests: state.run.chests });
 const live = () => state.mode === 'play' && !!state.cubes && !!state.run?.quests;
 
 // --- what happens ---------------------------------------------------------------------------------
@@ -40,7 +44,7 @@ const live = () => state.mode === 'play' && !!state.cubes && !!state.run?.quests
 export function questEvent(ev) {
   if (!live()) return;
   if (!questAuthority()) { relay.questAct?.({ act: 'event', ev }); return; }
-  const paid = noteEvent(questLog(), ev, state.run.unlockedGates, Date.now());
+  const paid = noteEvent(questLog(), ev, facts(), Date.now());
   for (const q of paid) payEveryone(q);
   share();
 }
@@ -55,7 +59,7 @@ export function questAct(act, id) {
   return done;
 }
 function doAct(act, id) {
-  const L = questLog(), gates = state.run.unlockedGates;
+  const L = questLog(), gates = facts();
   switch (act) {
     case 'accept': return accept(L, id, gates);
     case 'archive': return archive(L, id, true, gates);
@@ -77,6 +81,7 @@ export function guestQuestAct(m) {
   if (m.act === 'event' && m.ev && typeof m.ev === 'object') {
     const { kind, depth, key } = m.ev;
     if (['visit', 'horde', 'landmark'].includes(kind)) questEvent({ kind, depth: Number.isInteger(depth) ? depth : undefined, key: typeof key === 'string' ? key : undefined });
+    if (['found', 'rescued'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
   } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet'].includes(m.act)) { doAct(m.act, m.id); share(); }
 }
 
@@ -152,7 +157,7 @@ export function updateQuests(dt) {
   if ((checkIn -= dt) <= 0) {
     checkIn = CHECK_EVERY;
     if (questAuthority()) {
-      for (const q of settle(L, state.run.unlockedGates, Date.now())) payEveryone(q);
+      for (const q of settle(L, facts(), Date.now())) payEveryone(q);
       refreshOffers(L, ctx());
     }
     // standing beside a landmark a quest wants
@@ -163,7 +168,10 @@ export function updateQuests(dt) {
       landmarkSaid = `${state.cubeKey}:${L.version}`;
       questEvent({ kind: 'landmark', key: state.cubeKey });
     }
+    // somebody lost found, a chest opened, a quest taken: the cube as it is now
+    if (state.map && !state.transitioning && questWorldChanged()) rebuildWorld();
   }
+  pickUpQuestItems(questEvent);
   share();
 }
 // what changed is told: on our screen, and (the authority) to the others
@@ -178,6 +186,14 @@ function share() {
 export const questLogPacked = () => state.run?.quests ? packQuestLog(state.run.quests) : null;
 
 // --- talking to a giver ---------------------------------------------------------------------------
+
+// talking to somebody a quest is looking for (game/questworld.js): found! They thank you
+export function rescue(v) {
+  if (!v?.lost || !live()) return false;
+  setStatus(`${v.name}: Thank you! I will go back now. Here, take this.`);
+  questEvent({ kind: 'rescued', quest: v.lost });
+  return true;
+}
 
 // what talking to villager v is about: their offers brought up to date first (the authority)
 export function talkQuests(v) {
