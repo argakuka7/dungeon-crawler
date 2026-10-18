@@ -1,5 +1,5 @@
 // The settings menu, from the Esc menu (game/escmenu.js) and the main menu (game/menu.js): the
-// frame rate cap, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
+// frame rate cap and the anti-aliasing, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
 // The keys come in tabs, one per kind of control (core/keybinds.js GROUPS; Left and Right go
@@ -8,11 +8,12 @@
 // or Delete leaves the place empty. While the settings are open the game gets no keys.
 import { ACTIONS, ACTION, GROUPS, UNBINDABLE } from '../core/keybinds.js';
 import {
-  FRAME_RATES, frameRate, setFrameRate,
+  FRAME_RATES, frameRate, setFrameRate, antialias, setAntialias,
   musicOn, setMusic, musicVolume, setMusicVolume, soundVolume, setSoundVolume,
   keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange,
 } from './settings.js';
 import { sfx } from '../audio/sfx.js';
+import { MSAA_LEVELS, msaaLevel } from '../render/msaa.js';
 
 const $ = id => document.getElementById(id);
 const overlay = $('settings-overlay'), keysBox = $('settings-keys'), tabs = $('settings-tabs'), feedback = $('settings-feedback');
@@ -50,6 +51,8 @@ function choice(box, options, current) {
 }
 function renderGraphics() {
   choice($('settings-fps'), FRAME_RATES.map(f => [f, f ? String(f) : 'Unlimited']), frameRate());
+  // the levels this GPU can do; one asked for beyond them shows as the one used
+  choice($('settings-msaa'), MSAA_LEVELS.map(n => [n, n ? `${n}x` : 'Off']), msaaLevel(antialias()));
 }
 function renderSound() {
   const on = musicOn();
@@ -151,6 +154,10 @@ overlay.addEventListener('pointerdown', e => { if (e.target === overlay) closeSe
 $('settings-fps').addEventListener('click', e => {
   const b = e.target.closest('[data-value]');
   if (b) setFrameRate(Number(b.dataset.value));
+});
+$('settings-msaa').addEventListener('click', e => {
+  const b = e.target.closest('[data-value]');
+  if (b) setAntialias(Number(b.dataset.value));
 });
 $('settings-music').onclick = () => setMusic(!musicOn());
 $('settings-music-volume').addEventListener('input', e => setMusicVolume(e.target.value / 100));

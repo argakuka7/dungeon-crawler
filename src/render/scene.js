@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { N } from '../core/constants.js';
 
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
+// no antialias: the anti-aliasing is our own, at the level of the settings (msaa.js)
+export const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.localClippingEnabled = true;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 // The canvas fills the window by CSS (style.css, #view), so it can never be wider or taller than

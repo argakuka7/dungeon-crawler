@@ -70,7 +70,8 @@ import { musicInfo } from './audio/music.js';
 import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
-import { frameRate } from './game/settings.js';
+import { frameRate, antialias, onSettingsChange } from './game/settings.js';
+import { setMsaa, beginFrame, endFrame } from './render/msaa.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
 import { updateShowcase } from './game/showcase.js';
@@ -151,7 +152,9 @@ function frame(now = performance.now()) {
   updateMusic(elapsed);
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
+  beginFrame();   // anti-aliasing: draw into the multisampled buffer (render/msaa.js)
   renderer.render(scene, camera);
+  endFrame();     // and onto the screen
   keepPrograms();   // compiled shaders stay (render/programs.js)
   tickResolution(start, frameRate());   // fewer pixels while the GPU cannot keep up (render/resolution.js)
   requestAnimationFrame(frame);
@@ -179,12 +182,18 @@ function menuFrame(dt, start) {
   applyLook(state.lookDepth, camera.position.distanceTo(menuFocus), state.cubes?.layout.themes);
   updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
+  beginFrame();
   renderer.render(scene, camera);
   drawPortrait(heroBox());
+  endFrame();
   keepPrograms();
   tickResolution(start, frameRate());
   requestAnimationFrame(frame);
 }
+
+// the anti-aliasing follows the settings (render/msaa.js)
+setMsaa(antialias());
+onSettingsChange(() => setMsaa(antialias()));
 
 // the dev tools and ?seed= start in a world, everyone else in the main menu (game/state.js mode)
 if (state.mode === 'play') {

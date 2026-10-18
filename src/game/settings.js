@@ -1,5 +1,5 @@
 // The settings (the settings menu, game/settingsmenu.js, changes them): the frame rate cap
-// (main.js), the music on or off, the music's and the sounds' volume, and the keys
+// (main.js) and the anti-aliasing (render/msaa.js), the music on or off, the music's and the sounds' volume, and the keys
 // (core/keybinds.js). Kept in localStorage
 // (crawler.settings) as soon as they change, for every hero alike; the keys only as far as they
 // differ from the defaults. The music setting of before (crawler.music) is taken over once.
@@ -19,11 +19,12 @@ function read() {
 }
 const volume = v => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1);
 export const FRAME_RATES = [30, 60, 0];       // frames a second at most; 0: as many as the screen shows
-const DEFAULT_FPS = 60;
+export const ANTIALIAS = [0, 2, 4, 8];        // MSAA samples; 0: off (the GPU may offer fewer, render/msaa.js)
+const DEFAULT_FPS = 60, DEFAULT_MSAA = 4;
 const oneOf = (list, v, fallback) => (list.includes(v) ? v : fallback);
 const stored = read();
 const settings = {
-  fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS),
+  fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS), msaa: oneOf(ANTIALIAS, stored.msaa, DEFAULT_MSAA),
   music: stored.music === true,
   musicVolume: volume(stored.musicVolume), soundVolume: volume(stored.soundVolume),
   keys: resolveBindings(stored.keys),
@@ -34,7 +35,7 @@ function changed() {
   setVolume('music', settings.musicVolume);
   setVolume('sounds', settings.soundVolume);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, music: settings.music, musicVolume: settings.musicVolume,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, music: settings.music, musicVolume: settings.musicVolume,
       soundVolume: settings.soundVolume, keys: overrides(settings.keys) }));
   } catch { /* private mode: for this page only */ }
   for (const fn of listeners) fn();
@@ -49,6 +50,8 @@ setVolume('sounds', settings.soundVolume);
 
 export const frameRate = () => settings.fps;
 export function setFrameRate(fps) { settings.fps = oneOf(FRAME_RATES, fps, DEFAULT_FPS); changed(); }
+export const antialias = () => settings.msaa;
+export function setAntialias(samples) { settings.msaa = oneOf(ANTIALIAS, samples, DEFAULT_MSAA); changed(); }
 
 // --- sound --------------------------------------------------------------------------------------
 
