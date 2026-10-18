@@ -18,7 +18,7 @@ import { glassState, glassBatch, setGlassFaces } from './glass.js';
 import { inject } from './cutshader.js';
 import { capLight } from './section.js';
 import { LAYER as GHOSTS, glassLook, glassRim } from './ghosts.js';
-import { props, whenPropsReady, propMatrix, propBatchGeometry } from './props.js';
+import { props, loadPropSets, propSetLoaded, propMatrix, propBatchGeometry } from './props.js';
 
 let current = [];   // [{ key, source, group, cull, glass, geometry, base, instances, landmarks }]
 const live = new Set(), cache = new Map();   // cache keyed by worker geometry identity
@@ -234,7 +234,9 @@ function proxy(geo, open, landmarks = []) {
   const s = geometry.scale, local = new THREE.Matrix4().makeScale(s, s, s);
   const g = { group, cull: { visible: false }, glass: glassState(open), geometry, landmarks, disposed: false,
     instances: geometry.parts.map(({ batch, id }) => ({ batch, id: batch.addInstance(id), local, at: null })) };
-  whenPropsReady(() => addLandmarks(g));   // the props library may still be loading
+  // their prop sets may still have to be loaded
+  const sets = [...new Set(landmarks.map(L => props.byName.get(L.name)?.set).filter(Boolean))];
+  if (sets.every(propSetLoaded)) addLandmarks(g); else loadPropSets(sets).then(() => addLandmarks(g));
   return g;
 }
 

@@ -3,7 +3,8 @@
 //
 // A registry holds the commands and the types of their arguments:
 //   command: { name, help, args: [{ name, type, optional?, min?, max? }], dev?, run(values, ctx) }
-//   type:    { name, values(ctx): [{ value, label, hint?, color?, icon? }] } (a list to pick from)
+//   type:    { name, values(ctx): [{ value, label, hint?, color?, picture? }] } (a list to pick from;
+//            picture: an item id, shown as its model's picture)
 //            or one of the built-in 'int' and 'text'
 // The game fills it (game/commands.js, game/devcommands.js). Here: splitting a line into words
 // (words), finding the best matches for what was typed (match, pick), completing the word

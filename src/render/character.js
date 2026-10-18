@@ -2,7 +2,7 @@
 // once for every figure (render/figure.js); the player is the figure with the clips, the
 // weapons and a silhouette. It can wear things like any figure (figure.js wear, `worn`).
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { scene } from './scene.js';
 import { prepareHeld } from './held.js';
@@ -48,7 +48,7 @@ export function mountWeapon(bones, weapon) {
 
 export async function prepareSword(url = SWORD_URL) {
   await characterReady;
-  if (!weapons.has(url)) weapons.set(url, new GLTFLoader().loadAsync(url).then(g => g.scene)
+  if (!weapons.has(url)) weapons.set(url, loadGLB(url).then(g => g.scene)
     .catch(error => { weapons.delete(url); throw error; }));
   return weapons.get(url);
 }

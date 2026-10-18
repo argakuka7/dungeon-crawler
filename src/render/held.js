@@ -8,7 +8,7 @@
 // The strings are drawn here (the GLB's own string part, as found, is hidden). Item extras
 // (blender/items.py) say where the strings run.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { clamp } from '../core/util.js';
 import { ITEMS } from '../core/items.js';
 import { crossbowLoaded, swingClipTime, swingClipFrom, SHOOT_CLIP } from '../core/combat.js';
@@ -17,7 +17,7 @@ import { glow, emit, rand } from './particles.js';
 const stringMaterial = new THREE.MeshStandardMaterial({ color: 0xefe6c8, roughness: 0.8 });
 const stringGeometry = new THREE.CylinderGeometry(0.009, 0.009, 1, 4, 1).translate(0, 0.5, 0);
 let arrowModel = null;
-new GLTFLoader().loadAsync('assets/items/weapon_arrow.glb').then(g => { arrowModel = g.scene; })
+loadGLB('assets/items/weapon_arrow.glb').then(g => { arrowModel = g.scene; })
   .catch(e => console.error('arrow model failed to load', e));
 
 const Y = new THREE.Vector3(0, 1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();

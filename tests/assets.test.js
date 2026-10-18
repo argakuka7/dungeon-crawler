@@ -1,26 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { assets } from './paths.js';
+import { readGlb, accessorValues, decoderReady, isCompressed } from '../tools/glb.mjs';
+import { readdirSync } from 'node:fs';
 import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } from '../src/core/combat.js';
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
 import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
+await decoderReady;
+// an exported GLB: its JSON, an accessor's values (decoded: the files are meshopt-compressed,
+// tools/compress-assets.mjs) and a clip's length (its samplers' input accessors' max)
 function glb(name) {
-  const b = readFileSync(resolve(assets, name + '.glb'));
-  assert.equal(b.readUInt32LE(0), 0x46546c67);
-  const size = b.readUInt32LE(12), json = JSON.parse(b.subarray(20, 20 + size));
-  const bin = b.subarray(28 + size);
-  const floats = index => {
-    const a = json.accessors[index], v = json.bufferViews[a.bufferView], components = { SCALAR: 1, VEC3: 3, VEC4: 4 }[a.type];
-    assert.equal(a.componentType, 5126);
-    return Array.from({ length: a.count * components }, (_, i) => bin.readFloatLE((v.byteOffset || 0) + (a.byteOffset || 0) + i * 4));
-  };
-  return { json, floats, duration: clip => Math.max(...clip.samplers.flatMap(s => floats(s.input))) };
+  const file = readGlb(resolve(assets, name + '.glb')), json = file.json;
+  const floats = index => accessorValues(file, index);
+  return { json, floats, duration: clip => Math.max(...clip.samplers.map(s => json.accessors[s.input].max[0])) };
 }
+test('every exported GLB is meshopt-compressed (node tools/compress-assets.mjs after exporting)', () => {
+  const all = dir => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? all(resolve(dir, e.name)) : e.name.endsWith('.glb') ? [resolve(dir, e.name)] : []);
+  const files = all(assets);
+  assert.ok(files.length > 100);
+  for (const f of files) assert.ok(isCompressed(readGlb(f).json), `${f} is not compressed`);
+});
+
 // every skinned triangle is drawn three times a frame (body, silhouette, shadow), for every
 // enemy on screen: the models keep to blender/figure.py TRIANGLE_BUDGET (mesh -> triangles)
 const BUDGETS = {
@@ -85,7 +90,8 @@ test('every weapon model says which socket it goes in, how it sits there and whi
     assert.equal(e.attack_clip, names[w.weapon.kind]);
     assert.equal(e.socket, w.weapon.kind === 'bow' ? 'hand.L' : 'hand.R');
     assert.ok(Math.abs(Math.hypot(...e.mount_quat_gltf) - 1) < 1e-3, w.id);
-    const parts = (node.children ?? []).map(c => j.nodes[c].name).sort();
+    // (compressing gives a root's own mesh an unnamed node of its own: not a part)
+    const parts = (node.children ?? []).map(c => j.nodes[c].name).filter(Boolean).sort();
     const want = { bow: ['string'], crossbow: ['bolt', 'string'] }[w.weapon.kind] ?? [];
     assert.deepEqual(parts, want.map(p => `${w.id}_${p}`), w.id);
   }

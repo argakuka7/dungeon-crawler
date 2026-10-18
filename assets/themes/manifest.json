@@ -2,7 +2,7 @@
   "units": "cells",
   "up": "Y",
   "front": "+Z",
-  "glb": "themes.glb",
+  "glb": "themes/<set>.glb",
   "sets": {
     "highlands": [
       "blue_poppy",

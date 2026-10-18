@@ -1,14 +1,17 @@
 // Items as their 3D models in the DOM (the inventory, game/inventory.js; the quick bar,
-// game/quickbar.js), drawn by a small renderer of its own, away from the game's canvas:
-//   itemPicture(id)   a picture of the item's model, standing as in its icon (blender/items.py),
-//                     rendered once when first asked for and kept (until then: its icon)
+// game/quickbar.js; and wherever else an item shows: the potions at work, the touch buttons,
+// the chat's suggestions, the heroes in the main menu), drawn by a small renderer of its own,
+// away from the game's canvas. There are no icon images: every picture is its model's.
+//   itemPicture(id)   a picture of the item's model, seen as in blender/items.py's previews,
+//                     rendered once when first asked for and kept (until then: an empty image)
+//   pictureImg(id)    an <img> of it for HTML, which shows the picture as soon as it is there
 //   drawLiveViews     every frame the inventory is open, the views that move, each a <canvas>:
 //                     [data-live-item="id"] the item turning (the selected one),
 //                     [data-live-hero] the hero as it stands, with the weapon (or the flask) in
 //                     its hand and what it wears
 // The WebGL canvas is never shown: each picture is copied out of it right after it is drawn.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { ITEMS } from '../core/items.js';
 import { rig, createFigure, poseFigure, wear, takeOff, thingLoaded, loadThing, animateWorn } from './figure.js';
 import { character, mountWeapon } from './character.js';
@@ -19,7 +22,7 @@ const SWAY = 0.3, SWAY_SPEED = 0.35, FACING = -0.3;   // the hero turns a little
 // world units that stay in view around the hero: up and down from its middle (the figure ~1.1,
 // a staff over its head), and to each side (a staff or bow held out, turning to and fro)
 const HERO_HALF_HEIGHT = 0.8, HERO_HALF_WIDTH = 0.55, HERO_MIDDLE = 0.58, HERO_FOV = 24;
-const VIEW = new THREE.Vector3(2, 3, 5).normalize();   // the icons' camera direction (blender/items.py render_previews)
+const VIEW = new THREE.Vector3(2, 3, 5).normalize();   // the camera direction of blender/items.py render_previews
 
 let renderer = null;
 function gl(w, h) {
@@ -44,23 +47,25 @@ function paint(out, scene, cam) {
   ctx.drawImage(r.domElement, 0, H - h, w, h, 0, 0, w, h);   // (in the same task: no preserveDrawingBuffer needed)
 }
 
-const loader = new GLTFLoader(), scenes = new Map();   // url -> Promise<the GLB's scene | null>
+const scenes = new Map();   // url -> Promise<the GLB's scene | null>
 const load = url => {
-  if (!scenes.has(url)) scenes.set(url, loader.loadAsync(url).then(g => g.scene)
+  if (!scenes.has(url)) scenes.set(url, loadGLB(url).then(g => g.scene)
     .catch(e => { console.error('item model failed to load', url, e); return null; }));
   return scenes.get(url);
 };
-// the scrolls are tools that never lie on the floor (core/items.js): their models only made icons
-const modelUrl = def => def.model ?? `assets/items/${def.id}.glb`;
+// what a picture shows: an item's model, or (a tool, which never lies on the floor) its
+// `picture` (core/items.js); also the treasure chest (game/action.js)
+const OTHERS = { treasure_chest: 'assets/items/treasure_chest.glb' };
+const modelUrl = id => ITEMS[id] ? ITEMS[id].model ?? ITEMS[id].picture : OTHERS[id];
 
 // itemId -> { group (centred on its box), half (half the height of a square view that fits it,
 // turning too) }; null while loading, false when it cannot be shown
 const protos = new Map(), pictures = new Map(), listeners = [];
 function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
-  const def = ITEMS[itemId];
-  protos.set(itemId, def ? null : false);
-  if (def) load(modelUrl(def)).then(root => {
+  const url = modelUrl(itemId);
+  protos.set(itemId, url ? null : false);
+  if (url) load(url).then(root => {
     if (!root) { protos.set(itemId, false); return; }
     const model = root.clone(true);
     model.updateMatrixWorld(true);
@@ -74,7 +79,7 @@ function proto(itemId) {
   return protos.get(itemId);
 }
 
-// the items' stage: lit like the icons, from the front left, the right and behind
+// the items' stage: lit like blender/items.py's previews, from the front left, the right and behind
 const stage = new THREE.Scene(), itemCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 20);
 itemCam.position.copy(VIEW).multiplyScalar(8);
 itemCam.lookAt(0, 0, 0);
@@ -102,15 +107,22 @@ function snapshot(itemId) {
   pictures.set(itemId, out.toDataURL('image/png'));
   for (const fn of listeners) fn(itemId);
 }
-// the picture of item `itemId` (a URL): its model's once rendered, its icon until then
+const EMPTY = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+// the picture of item `itemId` (a URL): its model's once rendered, an empty image until then
 export function itemPicture(itemId) {
   if (!pictures.has(itemId)) proto(itemId);
-  return pictures.get(itemId) ?? ITEMS[itemId]?.icon ?? '';
+  return pictures.get(itemId) ?? EMPTY;
 }
 // the model of itemId can be drawn (live too)
 export const itemModelReady = itemId => pictures.has(itemId);
-// fn(itemId) whenever another item's picture is ready (to show it instead of the icon)
+// fn(itemId) whenever another item's picture is ready (to show it instead of the empty image)
 export const onItemPictures = fn => { listeners.push(fn); };
+// an <img> showing item `itemId`'s picture, now or once it is rendered (an img given the
+// attribute data-item-picture by other means gets it too)
+export const pictureImg = (itemId, alt = '') => `<img data-item-picture="${itemId}" src="${itemPicture(itemId)}" alt="${alt}">`;
+onItemPictures(id => {
+  for (const img of document.querySelectorAll(`img[data-item-picture="${id}"]`)) img.src = pictures.get(id);
+});
 
 // the hero's stage, lit like the main menu's portrait (render/portrait.js)
 const heroStage = new THREE.Scene(), heroCam = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
@@ -136,7 +148,7 @@ function dressHero(itemId) {
     hero = { f: createFigure(tint), tint, url: null, weapon: null, kind: null, worn: '' };
     heroStage.add(hero.f.group);
   }
-  const url = itemId ? modelUrl(ITEMS[itemId]) : null;
+  const url = itemId ? modelUrl(itemId) : null;
   if (hero.url !== url) {
     const h = hero;
     h.url = url;

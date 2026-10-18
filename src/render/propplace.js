@@ -5,10 +5,22 @@ import { mulberry32, hash32, idx, inb } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
 import { props, signatureProp, CLUTTER } from '../core/propcatalog.js';
 
+// the prop sets ambient props come from in a theme
+const ambientSets = theme => [theme.props, 'any', ...(theme.cave ? ['relics'] : [])];
+
+// the prop sets a cube shows (render/props.js loads them before the cube is entered)
+export function propSetsOf(m, theme) {
+  const sets = new Set(), of = q => { const p = props.byName.get(q.name); if (p) sets.add(p.set); };
+  if (m.authoredProps) { m.authoredProps.forEach(of); return [...sets]; }
+  if (theme.props) ambientSets(theme).forEach(s => sets.add(s));
+  [...(m.sitePlacements || []), ...(m.arenaPlacements || [])].forEach(of);
+  return [...sets];
+}
+
 function picker(theme, R) {
   const lists = new Map();
   return (attach, allow = () => true) => {
-    if (!lists.has(attach)) lists.set(attach, [theme.props, 'any', ...(theme.cave ? ['relics'] : [])]
+    if (!lists.has(attach)) lists.set(attach, ambientSets(theme)
       .flatMap(set => props.sets.get(set + '/' + attach) || [])
       .filter(p => !signatureProp(p) && (theme.cave || !p.base.startsWith('stala'))));
     const c = lists.get(attach).filter(allow);
@@ -22,7 +34,7 @@ function picker(theme, R) {
 export function placeProps(m, theme) {
   const out = [...(m.sitePlacements || []), ...(m.arenaPlacements || [])], blockers = Array.from({ length: N * N }, () => []);
   if (m.authoredProps) return { out: m.authoredProps, blockers };
-  if (!props.ready || !theme.props) return { out, blockers };
+  if (!theme.props) return { out, blockers };
   const R = mulberry32(hash32(m.seed ^ 0x9a0b5)), pick = picker(theme, R);
   const walkCols = new Set((m.moves || []).flatMap(mv => [mv.from.c, mv.to.c, ...mv.cells]));
   for (const r of m.runs || []) for (const c of [...r.cells, r.from.c, r.to.c]) walkCols.add(c);

@@ -1,9 +1,10 @@
 // In index.html: await (await import('./tests/browser/generation.js')).runGenerationChecks()
-// Real worker, GLTFLoader, instancing, shaders and collision. Restores the active game afterward.
+// Real worker, GLB loading, instancing, shaders and collision. Restores the active game afterward.
 import * as THREE from 'three';
 import { paused } from './combat.js';
 import { state, player } from '../../src/game/state.js';
-import { props, propsReady, buildProps } from '../../src/render/props.js';
+import { props, loadPropSets, buildProps } from '../../src/render/props.js';
+import { PROP_FILES } from '../../src/core/propmetadata.js';
 import { placeProps } from '../../src/render/propplace.js';
 import { buildWorld, disposeWorld } from '../../src/render/world.js';
 import { renderer, scene, camera } from '../../src/render/scene.js';
@@ -13,7 +14,7 @@ import { themeOf } from '../../src/themes/depth.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 export async function runGenerationChecks() {
-  await propsReady;
+  await loadPropSets(Object.keys(PROP_FILES));   // every prop's geometry
   return paused(async () => {
     const oldMap = state.map, hero = { ...player }, result = [];
     const layouts = makeLayouts(state.cubes.seed);

@@ -1,5 +1,5 @@
 """
-Clutter library for Cube Crawler: a second scatter library next to props.glb.
+Clutter library for Cube Crawler: a second scatter library next to props/.
 
 Same contract as props.py: one Blender unit = one game cell, Z up, flat normals,
 linear COLOR_0, ONE mesh per prop named "<set>_<prop>_<variant>" at the origin,
@@ -26,7 +26,7 @@ Builders live in clutter_surface.py and clutter_depths.py, helpers in clutter_ge
 Headless (build, validate, export, save the showroom, render previews):
     Blender -b --python blender/clutter.py -- [output-directory] [--no-render]
 
-Default output: assets/clutter.glb + assets/clutter/manifest.json, blender/clutter.blend,
+Default output: assets/clutter/<set>.glb + assets/clutter/manifest.json, blender/clutter.blend,
 renders in blender/previews/ (clutter-preview.png, clutter/<set>.png).
 
 Inside Blender / MCP:
@@ -329,10 +329,10 @@ def export(objects, directory):
     finally:
         for obj, rotation in rotations:
             obj.rotation_euler = rotation
-    export_gltf(objects, directory / "clutter.glb")
+    props.export_sets(objects, directory / "clutter", export_gltf)
     sets = {s: sorted({r["prop"] for r in report if r["set"] == s}) for s in SETS}
     (directory / "clutter" / "manifest.json").write_text(json.dumps({
-        "units": "cells", "up": "Y", "front": "+Z", "glb": "clutter.glb", "sets": sets,
+        "units": "cells", "up": "Y", "front": "+Z", "glb": "clutter/<set>.glb", "sets": sets,
         "triangles": sum(r["triangles"] for r in report), "props": report}, indent=2) + "\n")
     return report
 

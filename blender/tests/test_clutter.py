@@ -114,7 +114,9 @@ def main():
     states = [(tuple(o.location), tuple(o.rotation_euler)) for o in objects]
     with tempfile.TemporaryDirectory(prefix='cube-clutter-test-') as directory:
         clutter.export(objects, directory)
-        check_glb(Path(directory) / 'clutter.glb', report)
+        for path in sorted((Path(directory) / 'clutter').glob('*.glb')):
+            check_glb(path, [r for r in report if r['set'] == path.stem])
+        assert sorted(p.stem for p in (Path(directory) / 'clutter').glob('*.glb')) == sorted(clutter.SETS)
         manifest = json.loads((Path(directory) / 'clutter' / 'manifest.json').read_text())
         assert [p['name'] for p in manifest['props']] == [r['name'] for r in report]
         assert manifest['triangles'] == sum(r['triangles'] for r in report)

@@ -22,7 +22,7 @@ import { merchantCampKey } from '../../src/world/town.js';
 import { updateLootLabels, hoveredChest } from '../../src/game/lootlabels.js';
 import { updatePointer } from '../../src/game/pointer.js';
 import { order } from '../../src/game/orders.js';
-import { propsReady } from '../../src/render/props.js';
+import { loadPropSets } from '../../src/render/props.js';
 import { chestAt, tickChests } from '../../src/render/chests.js';
 import { camera, scene } from '../../src/render/scene.js';
 
@@ -38,7 +38,7 @@ const press = code => { dispatchEvent(new KeyboardEvent('keydown', { code, bubbl
 // a cube with a reward site, entered with a fresh run; fn(c, entry, site, results); restores
 // the game afterwards
 async function atRewardSite(fn) {
-  await propsReady;
+  await loadPropSets(['treasure']);
   return paused(async () => {
     const saved = Object.fromEntries(['run', 'arrival', 'visit', 'portalLock', 'portalCharge', 'boundaryLock', 'transitioning', 'inventoryOpen',
       'fallFrom', 'enemyGrace', 'devPassive'].map(k => [k, state[k]]));
@@ -83,7 +83,7 @@ export const runActionKeyChecks = () => atRewardSite(async (c, entry, site, resu
   for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
   const loose = () => lootHere().filter(p => !p.gen && !p.claim);
   if (loose().length) {
-    check(pendingAction()?.kind === 'collect' && pendingAction().icon && pendingAction().count === loose().length,
+    check(pendingAction()?.kind === 'collect' && pendingAction().picture && pendingAction().count === loose().length,
       'with the chest open the use button collects, showing an item');
     press('KeyF');
     for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);

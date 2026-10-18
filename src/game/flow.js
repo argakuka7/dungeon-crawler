@@ -16,8 +16,8 @@ import { resetCut } from './cut.js';
 import { resetEnemies, mirroring, detachEnemies } from './enemies.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { cancelSword } from './sword.js';
-import { whenPropsReady } from '../render/props.js';
-import { townAssetsReady } from '../render/townassets.js';
+import { onPropSet } from '../render/props.js';
+import { cubeAssets } from '../render/cubeassets.js';
 import { villagersReady } from '../render/villagers.js';
 import { createPlayerStats, createRun, takeDamage } from '../core/progression.js';
 import { clearEffects } from '../core/potions.js';
@@ -139,7 +139,7 @@ export function discover(c) {
 // learn: network.html#apart (see learn/README.md)
 export function shareVisit(k) {
   const cubes = state.cubes;
-  cubes.get(k).then(c => {
+  cubes.map(k).then(c => {
     if (state.cubes !== cubes || c.visits) return;
     c.visits = 1;
     if (openDiscoveredFaces() && state.world) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
@@ -236,14 +236,15 @@ export function updateNeighbors() {
   if (!state.transitioning) showNeighbors(visitedNeighbors(state.cubeKey));
 }
 
-// the props library may arrive after the first cube was built: build that cube again
-whenPropsReady(() => {
-  if (!state.world || state.transitioning) return;
+// A cube is entered once the prop sets it shows are in (WorldClient.get, render/cubeassets.js).
+// One built without some (one failed to load and came later): build it again, now with them.
+// The props' colliders come from the catalog, so they stay where they were.
+onPropSet(set => {
+  if (!state.world?.missingSets.includes(set) || state.transitioning) return;
   const c = state.cubes.cubes.get(state.cubeKey);
+  if (c?.map !== state.map) return;
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(state.cubeKey, c.map), c.geo, openedSides(state.openedFaces, state.cubeKey), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
-  // Props add blockers after a late load. Re-select safe, seeded spawn sites.
-  cancelSword(); resetEnemies();
 });
 
 // keepPlayer: the player keeps their character (level, bag, gear); joining a friend's world
@@ -256,7 +257,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   const params = new URLSearchParams(location.search);
   // dev: ?arche=<archetype> everywhere, ?theme=clouds,forge picks those themes for their depths,
   // ?bridge=chain / ?ladder=vine one bridge / ladder style wherever it fits
-  state.cubes = new WorldClient(seed, { arche: state.dev && params.get('arche'),
+  state.cubes = new WorldClient(seed, { prepare: cubeAssets, arche: state.dev && params.get('arche'),
     themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [],
     bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder') });
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
@@ -271,7 +272,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   const cubes = state.cubes, spot = restore?.spot;
   const first = spot ? cubes.get(spot.cube).catch(() => cubes.get(cubes.start)) : cubes.get(cubes.start);
   // the villagers are a nicety: a failure to load them (logged) does not hold the game up
-  return whenReady(Promise.all([first, townAssetsReady, syncEquippedWeapon(),
+  return whenReady(Promise.all([first, syncEquippedWeapon(),
     villagersReady.catch(() => null)]))
     .then(([c]) => {
       if (state.cubes !== cubes) return;

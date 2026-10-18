@@ -4,7 +4,7 @@
 
 111 prop types × 2 variants = **222 meshes, 40,102 triangles**, built and inspected
 through Blender MCP. Same low-poly, flat-shaded, vertex-coloured style and contract
-as `blender/props.py` / `assets/props.glb`; this is an *addition*, not a replacement.
+as `blender/props.py` / `assets/props/`; this is an *addition*, not a replacement.
 **Hooked up to the game**, including cover, shore, fluid-surface and cliff-lip placement.
 Signature props are reserved for deliberate destination arrangements.
 
@@ -14,7 +14,8 @@ Signature props are reserved for deliberate destination arrangements.
 - `blender/clutter_geo.py`: shared geometry helpers and palette (on top of `props.Mesh`).
 - `blender/clutter_surface.py`, `blender/clutter_depths.py`: builders for any/relics/meadow/peaks/badlands/roots
   and frozen/swamp/nests/mines/ruins/volcanic/abyss.
-- `assets/clutter.glb`: the combined library, every prop a named root at the origin.
+- `assets/clutter/<set>.glb`: the library, one file per set, every prop a named root at the origin
+  (the game loads a set when a cube shows it).
 - `blender/clutter.blend`: an editable showroom with one block per set (ground props in columns,
   variant `a` in front; a cliff with wall/lip props; a pool with water props; a floating
   slab with ceiling props). The preview geometry is in `ClutterPreview_NOT_EXPORTED`.
@@ -58,8 +59,8 @@ export byte-identically.
 
 Object names are `<set>_<prop>_<a|b>`, so the existing `registerProps()` split
 (`set` = first token, `base` = the middle) works unchanged. No name collides with
-`props.glb`. `any_*` props are strictly neutral grey (validated) for the per-theme tint;
-ruins masonry is neutral as in `props.glb`; everything else, including `relics`, is coloured.
+`props/`. `any_*` props are strictly neutral grey (validated) for the per-theme tint;
+ruins masonry is neutral as in `props/`; everything else, including `relics`, is coloured.
 
 ## Contract (Blender Z up → glTF Y up, Blender +Y → glTF -Z)
 
@@ -94,8 +95,8 @@ ruins masonry is neutral as in `props.glb`; everything else, including `relics`,
   Focal assets such as altars, ritual circles and abandoned expeditions are recipe-only.
 
 `src/cubegen/sites.js` authors destination arrangements before reachability
-validation, using worker-safe bounds/collider metadata. Regenerate the metadata with
-`npm run prop-metadata` after re-exporting models. The game tests verify
+validation, using worker-safe bounds/collider metadata. `npm run compress-assets` after
+re-exporting models compresses them and regenerates the metadata. The game tests verify
 that the metadata still matches actual GLBs.
 
 Cross-biome borrowing (e.g. ice floes in peaks or meadow ferns in roots) is not yet
@@ -110,6 +111,7 @@ Blender --background --python blender/clutter.py            # build, export, pre
 Blender --background --python blender/clutter.py -- --no-render
 Blender --background --python blender/tests/test_clutter.py
 Blender --background --python blender/props.py    # unchanged library
+npm run compress-assets                            # then compress (README.md)
 ```
 
 MCP: `import clutter; clutter.main()` (see the `clutter.py` docstring for the reload order).

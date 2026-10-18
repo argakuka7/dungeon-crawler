@@ -17,8 +17,9 @@ Deliverable
 -----------
 * blender/props.py   - a script in the same style as figure.py / spider.py (module docstring
                         with usage, constants at the top, build functions, headless usage:
-                        Blender -b --python blender/props.py -- assets/props.glb)
-* assets/props.glb   - ONE glb with every prop as its own top-level mesh object.
+                        Blender -b --python blender/props.py -- assets/props)
+* assets/props/      - one glb per prop set (<set>.glb), every prop its own top-level mesh object
+                        (was: ONE assets/props.glb; split so the game loads only the sets it shows).
 
 Units, axes, pivots
 -------------------
@@ -134,6 +135,6 @@ Nice to have (later, not now)
 
 Checking your work
 ------------------
-* Open assets/props.glb in any glTF viewer: every prop is its own object, standing on the
+* Open assets/props/<set>.glb in any glTF viewer: every prop is its own object, standing on the
   ground plane (or hanging from z = 0 for ceiling props), correct names, extras present.
 * Rough size check: put the character (assets/character.glb, scaled 0.55) next to them.

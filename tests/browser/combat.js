@@ -1,5 +1,5 @@
 // Browser integration checks: run from index.html's devtools (see docs/combat.md).
-// Uses the real controller, input handlers, enemy AI, GLTFLoader, skeletons and
+// Uses the real controller, input handlers, enemy AI, GLB loading, skeletons and
 // animation mixers on a controlled floor grid. Restores the live level afterward.
 import * as THREE from 'three';
 import { N, DIRS, WALK_SPEED, RUN_SPEED, RUN_RAMP } from '../../src/core/constants.js';
@@ -129,6 +129,7 @@ function minimumY(model) {
 }
 
 export async function runCombatChecks() {
+  await Promise.all([spiderModel, stunderModel].map(m => m.load()));   // (enemy models load when first needed)
   check(character.ready && character.sword && spiderModel.ready && stunderModel.ready, 'Wait for all character / weapon assets to load');
   check(!state.transitioning && !state.inventoryOpen, 'Close inventory and wait for portal travel to finish');
   return paused(async () => {
@@ -218,6 +219,7 @@ export async function runCombatChecks() {
 // flies and hits for exactly the weapon's damage; the bow is drawn with an arrow on it, the
 // crossbow is empty until its reload, a bolt pierces, a spell bursts.
 export async function runRangedChecks() {
+  await Promise.all([stunderModel, spiderModel].map(m => m.load()));   // (enemy models load when first needed)
   check(character.ready && stunderModel.ready && spiderModel.ready, 'Wait for the character / enemy assets to load');
   check(!state.transitioning && !state.inventoryOpen, 'Close inventory and wait for portal travel to finish');
   await shotModelsReady();
@@ -287,6 +289,7 @@ export async function runRangedChecks() {
 // Snake bite, Octonaut slap and spin kick: real AI timers, damage, reach / arc and the
 // matching GLB clip for each attack.
 export async function runNewEnemyChecks() {
+  await Promise.all([snakeModel, octonautModel].map(m => m.load()));   // (enemy models load when first needed)
   check(snakeModel.ready && octonautModel.ready, 'Wait for the snake / Octonaut assets to load');
   return paused(async () => {
     const originalMap = state.map, saved = { ...player }, savedRun = state.run, results = [];
@@ -341,6 +344,7 @@ export async function runNewEnemyChecks() {
 // chase and pounce: real AI timers, projectiles flying over the level, the matching clips,
 // glow lights, and corpses.
 export async function runFireChecks() {
+  await Promise.all([fireFaceModel, triangleModel, fireCatModel].map(m => m.load()));   // (enemy models load when first needed)
   check(fireFaceModel.ready && triangleModel.ready && fireCatModel.ready, 'Wait for the Fire-face / Triangle / Fire-cat assets to load');
   return paused(async () => {
     const originalMap = state.map, saved = { ...player }, savedRun = state.run, results = [];
@@ -449,6 +453,7 @@ export async function runFireChecks() {
 // a moment, then backs off out of reach; one that can get at them comes, and so does a
 // Fire-face to the bank it can shoot from.
 export async function runTacticsChecks() {
+  await Promise.all([spiderModel, fireFaceModel].map(m => m.load()));   // (enemy models load when first needed)
   check(spiderModel.ready && fireFaceModel.ready, 'Wait for the spider / Fire-face assets to load');
   check(!state.transitioning && !state.inventoryOpen, 'Close inventory and wait for portal travel to finish');
   return paused(async () => {

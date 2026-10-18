@@ -167,7 +167,7 @@ back.
   colour, glow). The tests check the ordering.
 - A new affix: an entry in `AFFIXES` whose `stat` `itemStats` applies (add the stat there and
   in combat if it is new). Every tier is validated by `tests/gear.test.js`.
-- A new dropping weapon: the item in `core/items.js` (model, icon, kind, base stats), then a
+- A new dropping weapon: the item in `core/items.js` (model, kind, base stats), then a
   row in `BASES` with its item level; its tags (its kind, melee or ranged) come from its kind.
   Affixes roll on bases whose tags they list. A new kind also needs its timing and clip
   (`KINDS` in `core/combat.js`), a hold pose and mount (`blender/character.py`,

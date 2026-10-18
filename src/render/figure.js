@@ -11,7 +11,7 @@
 // holds the arm that carries it (`hold`: the character's Hold<Name> clip) and whether it floats
 // over the hand (`float`, the crystal ball, which bobs and turns there).
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { ITEMS, outfitOf } from '../core/items.js';
 import { cloneSkinned, cullBySphere, ownShadowDepth } from './skinned.js';
@@ -36,7 +36,7 @@ function frameOf(clip, i = 0) {
   return [...pose.values()].filter(p => p[1]);
 }
 
-export const rigReady = new GLTFLoader().loadAsync(URL).then(gltf => {
+export const rigReady = loadGLB(URL).then(gltf => {
   const extras = name => gltf.parser.json.animations.find(a => a.name === name)?.extras || {};
   const holds = {};
   for (const clip of gltf.animations) {
@@ -95,7 +95,7 @@ const things = new Map(), loading = new Map();
 export function loadThing(id) {
   const def = ITEMS[id];
   if (!def?.slot) return Promise.reject(new TypeError(`Not a wearable item: ${id}`));
-  if (!loading.has(id)) loading.set(id, new GLTFLoader().loadAsync(def.model).then(g => { things.set(id, g.scene); return g.scene; })
+  if (!loading.has(id)) loading.set(id, loadGLB(def.model).then(g => { things.set(id, g.scene); return g.scene; })
     .catch(error => { loading.delete(id); throw error; }));
   return loading.get(id);
 }

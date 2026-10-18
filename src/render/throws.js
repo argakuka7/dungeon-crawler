@@ -4,19 +4,19 @@
 // sickly pool) they leave; and while a flask is in hand, the arc a click would throw it along:
 // a dotted line from the hand to where it comes down, and a ring as wide as its burst there.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { ITEMS } from '../core/items.js';
 import { scene } from './scene.js';
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { trackLight, untrackLight } from './lightpool.js';
 
-const loader = new GLTFLoader(), models = new Map();   // item id -> { scene, scale, lift } (null while loading)
+const models = new Map();   // item id -> { scene, scale, lift } (null while loading)
 // a flask's model, loaded once: its extras say how big it is in the hand (mount_scale)
 function flaskModel(itemId) {
   if (models.has(itemId)) return models.get(itemId);
   models.set(itemId, null);
-  loader.loadAsync(ITEMS[itemId].model).then(g => {
+  loadGLB(ITEMS[itemId].model).then(g => {
     let scale = 1;
     g.scene.traverse(o => { if (o.userData.mount_scale) scale = o.userData.mount_scale; if (o.isMesh) { o.castShadow = true; o.userData.sharedGeo = true; } });
     const box = new THREE.Box3().setFromObject(g.scene);

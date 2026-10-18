@@ -43,7 +43,7 @@ function portalAt(e) {
 async function findCube(kind) {
   const seen = new Set([state.cubeKey]), queue = [state.cubeKey];
   while (queue.length && seen.size < 120) {
-    const k = queue.shift(), c = await state.cubes.get(k);
+    const k = queue.shift(), c = await state.cubes.map(k);
     if (c.map.portals.some(p => p.kind === kind)) return c;
     c.info.faces.forEach((f, d) => {
       const n = step(k, d);
@@ -113,7 +113,7 @@ export async function goStructure(kind, style, from) {
   try {
     let pick = null, passed = !last;
     for (let d = here; d < 20 && !pick; d++) for (const k of [...cubes.layout(d).exists].sort()) {
-      const c = await whenReady(cubes.get(k));
+      const c = await whenReady(cubes.map(k));   // (only its map: the one picked is loaded below)
       if (state.cubes !== cubes) return;
       list(c.map).forEach((o, i) => {
         if (pick || !fits(o)) return;
@@ -124,7 +124,8 @@ export async function goStructure(kind, style, from) {
     }
     if (!pick) { lastStructure[kind + ':' + style] = null; setStatus(`No ${style ?? ''} ${kind} found from here down`); return; }
     lastStructure[kind + ':' + style] = { key: pick.c.key, i: pick.i };
-    const { c, o } = pick;
+    const { o } = pick, c = await whenReady(cubes.get(pick.c.key));
+    if (state.cubes !== cubes) return;
     if (c.key !== state.cubeKey) enterCube(c, c.map.portals.find(p => p.kind === 'side')?.dir ?? c.map.portals[0].dir);
     if (kind === 'bridge') {
       const [dx, dz] = DIRS[o.d];
@@ -169,7 +170,7 @@ export async function goFeature(kind) {
     if (kind === 'tunnel') {
       for (let d = Math.max(1, here); d < 20 && !pick; d++) for (const k of [...cubes.layout(d).exists].sort()) {
         if (k === state.cubeKey || lastFeature.tunnel === k) continue;
-        const c = await whenReady(cubes.get(k));
+        const c = await whenReady(cubes.map(k));
         if (c.map.tunnel) { pick = { key: k }; break; }
       }
     } else if (found.length) {
@@ -180,7 +181,7 @@ export async function goFeature(kind) {
       if (kind === 'shaft') {
         pick = null;
         for (let j = 0; j < found.length && !pick; j++) {
-          const f = found[(i + j) % found.length], c = await whenReady(cubes.get(f.key));
+          const f = found[(i + j) % found.length], c = await whenReady(cubes.map(f.key));
           if (state.cubes !== cubes) return;
           if (c.map.shaft) pick = f;
         }

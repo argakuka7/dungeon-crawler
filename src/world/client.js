@@ -1,14 +1,17 @@
 // Main-thread side of the world: asks the worker for cubes and keeps the ones it got.
-// cubes: key -> { key, map, geo, info, visits }. `get` resolves when the cube is ready; asking for
-// cubes early (prefetch) makes walking through a portal instant.
+// cubes: key -> { key, map, geo, info, visits }. `get` resolves when the cube is ready to be
+// entered: its map is here and opts.prepare(cube) is done (what it shows is loaded,
+// render/cubeassets.js); `map` when only its map is. Asking for cubes early (prefetch) makes
+// walking through a portal instant.
 import { key } from './coords.js';
 import { makeLayouts } from './layout.js';
 import { worldThemes } from '../themes/depth.js';
 
 // learn: architecture.html#worker (see learn/README.md)
 export class WorldClient {
-  constructor(seed, opts = {}) {
+  constructor(seed, { prepare = null, ...opts } = {}) {
     this.seed = seed;
+    this.prepare = prepare;
     this.start = key(0, 0, 0);
     this.layout = makeLayouts(seed, worldThemes(seed, opts.themes || []));   // which cubes exist (cheap, also needed here)
     this.cubes = new Map();
@@ -28,6 +31,11 @@ export class WorldClient {
   }
 
   get(k) {
+    if (!this.prepare) return this.map(k);
+    return this.map(k).then(c => this.prepare(c).then(() => c, e => { console.error('cube assets failed', k, e); return c; }));
+  }
+
+  map(k) {
     const c = this.cubes.get(k);
     if (c) return Promise.resolve(c);
     return new Promise((res, rej) => {

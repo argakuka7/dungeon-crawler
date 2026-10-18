@@ -6,13 +6,11 @@ import { BUILDS } from '../src/themes/builds.js';
 import { PALETTES } from '../src/cubegen/arenaprops.js';
 import { RECIPES } from '../src/cubegen/sites.js';
 import { PROP_METADATA } from '../src/core/propmetadata.js';
-import { props, catalogProp } from '../src/core/propcatalog.js';
+import { props } from '../src/core/propcatalog.js';
 import { placeProps } from '../src/render/propplace.js';
 import { makeLayouts } from '../src/world/layout.js';
 import { World } from '../src/world/world.js';
 
-for (const p of PROP_METADATA) catalogProp(p);
-props.ready = true;
 
 const ids = THEMES.map(t => t.props);
 const DEPTHS = Array.from({ length: MAX_DEPTH + 1 }, (_, d) => d);

@@ -126,7 +126,7 @@ A list argument may take several words: as many as together still fit something,
 are left for the arguments that must follow (`/give health potion 2`, `/spawn fire shraps 4`).
 Completion knows this too: the next word goes on with the item while they still fit.
 
-While typing a command the box shows the suggestions (up to 50, 8 at a time, scrolling) (icon, name, dimmed id, a hint: the
+While typing a command the box shows the suggestions (up to 50, 8 at a time, scrolling) (an item's picture, name, dimmed id, a hint: the
 rarity's colour, a depth's theme), how the command goes with the argument being typed underlined,
 and greyed out after the cursor the rest of the highlighted value (or what it is). **Tab** puts
 the highlighted value (its id) in place of the word. **Enter** runs the line: an argument that

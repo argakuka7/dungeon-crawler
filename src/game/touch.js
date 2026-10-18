@@ -4,7 +4,7 @@
 // action button attacks while held (as Shift); with a flask in hand it is a stick that aims
 // the throw (core/stick.js aimReach): let go to throw, back to the middle to call it off, and a
 // tap throws at the best enemy in range. The jump button sits beside it, the use button above
-// it while there is something to do (the action key, game/action.js; its icon shows what). A
+// it while there is something to do (the action key, game/action.js; its picture shows what). A
 // turn button at each side of the screen turns the view a quarter (as Q and E). On the game
 // itself a tap does what a click does, except walking (an enemy, an item, a chest, a
 // villager), a long press collects what is around, and two fingers pinch to zoom. The quick bar moves to the top with a
@@ -15,6 +15,7 @@ import { readiedFlask } from '../core/combat.js';
 import { equippedItem } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { renderer } from '../render/scene.js';
+import { itemPicture } from '../render/itemviews.js';
 import { player, state, view } from './state.js';
 import { controls } from './inputstate.js';
 import { tapGame, quickThrow, autoAttack } from './input.js';
@@ -197,6 +198,8 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.
 // --- every frame -------------------------------------------------------------------------------
 
 let shown = '', useShown = '';
+// an <img> showing item `id`'s picture (render/itemviews.js fills it in once it is rendered)
+const showPicture = (img, id) => { img.dataset.itemPicture = id; img.src = itemPicture(id); };
 // hidden while the inventory is open; the action button shows the weapon, or the flask in hand;
 // the use button what the action key would do, or nothing
 export function updateTouch() {
@@ -204,24 +207,24 @@ export function updateTouch() {
   root.hidden = state.inventoryOpen;
   updateUse();
   const flask = readiedFlask(player), weapon = equippedItem(player.inventory), def = flask || (weapon && ITEMS[weapon.itemId]);
-  const next = `${def?.icon}:${!!flask}`;
+  const next = `${def?.id}:${!!flask}`;
   if (next === shown) return;
   shown = next;
   icon.hidden = !def;
-  if (def) icon.src = def.icon;
+  if (def) showPicture(icon, def.id);
   action.classList.toggle('flask', !!flask);
   action.classList.toggle('empty', !def);
   action.setAttribute('aria-label', flask ? `Aim and throw ${flask.name}` : 'Attack');
 }
 
 function updateUse() {
-  const a = pendingAction(), next = a ? `${a.kind}:${a.icon}:${a.count ?? 0}:${a.label}` : '';
+  const a = pendingAction(), next = a ? `${a.kind}:${a.picture}:${a.count ?? 0}:${a.label}` : '';
   if (next === useShown) return;
   useShown = next;
   use.hidden = !a;
   if (!a) return;
-  useImg.hidden = !a.icon;
-  if (a.icon) useImg.src = a.icon;
+  useImg.hidden = !a.picture;
+  if (a.picture) showPicture(useImg, a.picture);
   useSpeak.toggleAttribute('hidden', a.kind !== 'talk');   // (an svg has no .hidden)
   useCount.hidden = !(a.count > 1);
   useCount.textContent = a.count > 1 ? `${a.count}` : '';

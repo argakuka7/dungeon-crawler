@@ -7,40 +7,46 @@
 // model has, and every enemy shares one shader program. Parts keep their material names: kinds
 // recolour (recolor.js), hide and polish them by name.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cloneSkinned, cullBySphere, ownShadowDepth } from './skinned.js';
 import { kindColors } from './recolor.js';
+import { loadGLB } from './gltf.js';
 
 const MAX_PARTS = 12;
 
+// An enemy model, loaded the first time it is needed: model.load() (once; render/cubeassets.js
+// before a cube with the species is entered, render/enemies.js for any other way one turns up).
+// model.ready once it is loaded, model.error if it cannot be.
 // names.attack is one clip name, or { [attack.clip]: clip name } for several attacks.
 // names.props: standalone nodes (projectiles) taken out of the model into model.props.
 export function loadEnemyModel(url, scale, names) {
-  const model = { ready: false, scale };
-  const attackNames = typeof names.attack === 'string' ? { attack: names.attack } : names.attack;
-  new GLTFLoader().load(url, gltf => {
-    const clips = Object.fromEntries(gltf.animations.map(c => [c.name, c]));
-    if ([names.walk, names.fast, names.death, ...Object.values(attackNames)].some(n => n && !clips[n])) {
-      model.error = 'Missing enemy animation in ' + url; console.error(model.error); return;
-    }
-    const extras = n => gltf.parser.json.animations.find(a => a.name === n)?.extras || {};
-    const props = Object.fromEntries((names.props || []).map(n => [n, gltf.scene.getObjectByName(n)]));
-    if (Object.values(props).some(o => !o)) { model.error = 'Missing enemy prop in ' + url; console.error(model.error); return; }
-    for (const o of Object.values(props)) o.removeFromParent();
-    let body;
-    try { body = mergeParts(gltf.scene); } catch (e) { model.error = `${url}: ${e.message}`; console.error(model.error); return; }
-    body.mesh.castShadow = true;
-    cullBySphere(body.mesh);
-    Object.assign(model, {
-      ready: true, source: gltf.scene, props, parts: body.parts, side: body.side, geometries: new Map([['', body.mesh.geometry]]),
-      walk: clips[names.walk], fast: names.fast ? clips[names.fast] : null,
-      attacks: Object.fromEntries(Object.entries(attackNames).map(([k, n]) => [k, clips[n]])), death: clips[names.death],
-      walkSpeed: (extras(names.walk).speed || 1) * scale,
-      fastSpeed: names.fast ? extras(names.fast).speed * scale : 0,
-    });
-  }, undefined, error => { model.error = String(error); console.error('Enemy failed to load:', url, error); });
+  const model = { ready: false, scale, loading: null };
+  model.load = () => model.loading ??= loadGLB(url).then(gltf => setup(model, url, names, gltf),
+    error => { model.error = String(error); console.error('Enemy failed to load:', url, error); });
   return model;
+}
+
+function setup(model, url, names, gltf) {
+  const scale = model.scale, attackNames = typeof names.attack === 'string' ? { attack: names.attack } : names.attack;
+  const clips = Object.fromEntries(gltf.animations.map(c => [c.name, c]));
+  if ([names.walk, names.fast, names.death, ...Object.values(attackNames)].some(n => n && !clips[n])) {
+    model.error = 'Missing enemy animation in ' + url; console.error(model.error); return;
+  }
+  const extras = n => gltf.parser.json.animations.find(a => a.name === n)?.extras || {};
+  const props = Object.fromEntries((names.props || []).map(n => [n, gltf.scene.getObjectByName(n)]));
+  if (Object.values(props).some(o => !o)) { model.error = 'Missing enemy prop in ' + url; console.error(model.error); return; }
+  for (const o of Object.values(props)) o.removeFromParent();
+  let body;
+  try { body = mergeParts(gltf.scene); } catch (e) { model.error = `${url}: ${e.message}`; console.error(model.error); return; }
+  body.mesh.castShadow = true;
+  cullBySphere(body.mesh);
+  Object.assign(model, {
+    ready: true, source: gltf.scene, props, parts: body.parts, side: body.side, geometries: new Map([['', body.mesh.geometry]]),
+    walk: clips[names.walk], fast: names.fast ? clips[names.fast] : null,
+    attacks: Object.fromEntries(Object.entries(attackNames).map(([k, n]) => [k, clips[n]])), death: clips[names.death],
+    walkSpeed: (extras(names.walk).speed || 1) * scale,
+    fastSpeed: names.fast ? extras(names.fast).speed * scale : 0,
+  });
 }
 
 // the model's skinned primitives -> one skinned mesh with a `part` attribute (in place);

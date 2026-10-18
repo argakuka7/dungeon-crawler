@@ -41,7 +41,7 @@ const heightAt = (site, u, v) => {
 // The shape of a site in site-local cells: u across, v towards its back (the approach comes from
 // -v). Ordinary sites are a (2 rx + 1) x (2 rz + 1) block with the chest (anchor) in the middle of
 // the back row and its access cell in front of it. A landmark site is laid out around its landmark
-// (themes.glb, see docs/assets/themes.md) by the landmark's role, the chest at (0, 0):
+// (assets/themes/, see docs/assets/themes.md) by the landmark's role, the chest at (0, 0):
 //   shrine    the landmark right behind the chest
 //   gate      the landmark right in front of the access cell, its way through at u = 0
 //   camp      beside the chest, level with it; monument: beside it, reaching back from it

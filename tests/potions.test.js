@@ -19,14 +19,14 @@ const hero = () => ({ ...createPlayerStats(), x: 0, y: 0, z: 0, yaw: 0, stun: 0,
 const potion = id => ITEMS[id];
 const flasks = POTIONS.filter(p => p.use === 'throw'), drinks = POTIONS.filter(p => p.use === 'drink');
 
-test('every potion is a stackable with a price, an icon and a model, a cooldown and a family', () => {
+test('every potion is a stackable with a price and a model, a cooldown and a family', () => {
   assert.ok(drinks.length >= 9 && flasks.length === 3);
   assert.ok(POTIONS.filter(p => p.effect?.heal).length >= 4, 'several kinds of health potion');
   for (const p of POTIONS) {
     assert.equal(p.category, 'potion'); assert.equal(p.stackLimit, 99);
     assert.ok(Number.isSafeInteger(p.price) && p.price > 0, p.id);
     assert.ok(p.cooldown > 0 && p.level >= 1 && p.weight > 0 && p.family && p.description, p.id);
-    for (const url of [p.icon, p.model]) assert.ok(existsSync(resolve(assetsRoot, url)), url);
+    assert.ok(existsSync(resolve(assetsRoot, p.model)), p.model);
     assert.equal(!!p.flask, p.use === 'throw'); assert.equal(!!p.effect, p.use === 'drink');
     if (p.effect) assert.ok(p.effect.time > 0 && (p.effect.heal ? p.effect.time < 1 : p.effect.time >= 10), `${p.id}: health pours in quickly, the rest lasts`);
     if (p.effect?.buff) assert.ok(BUFFS.includes(p.effect.buff));

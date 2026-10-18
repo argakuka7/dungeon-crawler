@@ -53,7 +53,7 @@ const fit = () => {
 };
 camera.position.set(0, 3, 14); camera.lookAt(0, 0, 0); fit();
 const models = MODELS;
-await new Promise(done => { const t = setInterval(() => { if (species.every(s => models[s].ready || models[s].error)) { clearInterval(t); done(); } }, 50); });
+await Promise.all(species.map(s => models[s].load()));
 
 const tags = [];
 rows.forEach((row, r) => row.forEach((k, c) => {

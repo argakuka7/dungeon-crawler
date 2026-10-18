@@ -31,7 +31,7 @@ derived from their mesh (volumes()): colliders and occluders for the cutaway.
 Headless (build, validate, export, save the showroom, render previews):
     Blender -b --python blender/themes.py -- [output-directory] [--no-render]
 
-Default output: assets/themes.glb + assets/themes/manifest.json, blender/themes.blend,
+Default output: assets/themes/<set>.glb + assets/themes/manifest.json, blender/themes.blend,
 renders in blender/previews/ (themes-preview.png, themes/<set>.png,
 themes/<set>-landmarks.png, themes/highlands-vignette.png).
 
@@ -583,10 +583,10 @@ def export(objects, directory):
     finally:
         for obj, rotation, _ in states:
             obj.rotation_euler = rotation
-    clutter.export_gltf(objects, directory / "themes.glb")
+    props.export_sets(objects, directory / "themes", clutter.export_gltf)
     sets = {s: sorted({r["prop"] for r in report if r["set"] == s}) for s in SETS}
     (directory / "themes" / "manifest.json").write_text(json.dumps({
-        "units": "cells", "up": "Y", "front": "+Z", "glb": "themes.glb", "sets": sets,
+        "units": "cells", "up": "Y", "front": "+Z", "glb": "themes/<set>.glb", "sets": sets,
         "triangles": sum(r["triangles"] for r in report), "props": report}, indent=2) + "\n")
     return report
 

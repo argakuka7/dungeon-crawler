@@ -2,7 +2,7 @@
   "units": "cells",
   "up": "Y",
   "front": "+Z",
-  "glb": "clutter.glb",
+  "glb": "clutter/<set>.glb",
   "sets": {
     "any": [
       "cairn",

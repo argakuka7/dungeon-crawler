@@ -6,8 +6,7 @@ import { makeLayouts } from '../src/world/layout.js';
 import { step } from '../src/world/coords.js';
 import { reachTo } from '../src/cubegen/reach.js';
 import { floorY } from '../src/core/surfaces.js';
-import { props, catalogProp } from '../src/core/propcatalog.js';
-import { PROP_METADATA } from '../src/core/propmetadata.js';
+import { props } from '../src/core/propcatalog.js';
 import { population } from '../src/core/spawns.js';
 import { HORDE, swarmKind } from '../src/core/hordes.js';
 import { ENEMY_KINDS, ENEMY_PROFILES, makeEnemy } from '../src/core/enemies.js';
@@ -22,8 +21,6 @@ import { placeProps } from '../src/render/propplace.js';
 import { themeOf } from '../src/themes/depth.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 
-for (const p of PROP_METADATA) catalogProp(p);
-props.ready = true;
 
 function clearing(seed = 123, depth = 1) {
   const world = new World(seed), key = world.layout(depth).hordes.keys().next().value;

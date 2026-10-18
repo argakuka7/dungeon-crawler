@@ -3,7 +3,7 @@
 // glowing orb in its staff's colour with a light and a sparkling trail. They are drawn from
 // the weapon at first and catch up with their true line (shotView).
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { shotView } from '../core/shots.js';
 import { scene } from './scene.js';
@@ -13,9 +13,8 @@ import { trackLight, untrackLight } from './lightpool.js';
 const MODELS = { arrow: 'assets/items/weapon_arrow.glb', bolt: 'assets/items/weapon_bolt.glb' };
 const LENGTH = { arrow: 0.86, bolt: 0.56 };   // nock to head, rig units
 const protos = {};
-const loader = new GLTFLoader();
 for (const [kind, url] of Object.entries(MODELS))
-  protos[kind] = loader.loadAsync(url).then(g => {
+  protos[kind] = loadGLB(url).then(g => {
     g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.sharedGeo = true; } });
     return g.scene;
   }).catch(e => { console.error('shot model failed to load', url, e); return null; });

@@ -14,16 +14,14 @@ import { walkable, findPath, groundY } from '../../src/physics/enemynav.js';
 import { enterCube, spawnAt, die } from '../../src/game/flow.js';
 import { checkPortals } from '../../src/game/portals.js';
 import { startTravel, travelling, updateTravel } from '../../src/game/travel.js';
-import { animateEnemies, removeEnemyViews } from '../../src/render/enemies.js';
+import { animateEnemies, loadSpecies, removeEnemyViews } from '../../src/render/enemies.js';
 import { animateWorld } from '../../src/render/world.js';
 import { renderer, scene, camera } from '../../src/render/scene.js';
-import { propsReady } from '../../src/render/props.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function runGuardianChecks() {
-  await propsReady;
   return paused(async () => {
     const oldCube = state.cubes.cubes.get(state.cubeKey), hero = { ...player };
     const saved = Object.fromEntries(['run', 'arrival', 'visit', 'portalLock', 'portalCharge', 'boundaryLock', 'transitioning', 'inventoryOpen', 'fallFrom', 'enemyGrace', 'statusMsg', 'statusUntil'].map(k => [k, state[k]]));
@@ -86,6 +84,7 @@ export async function runGuardianChecks() {
           level: 8, guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, yaw: 0 }, kind);
         samples.push(e);
       }
+      await loadSpecies([...new Set(samples.map(e => e.profile.species))]);   // (loaded when first needed)
       animateEnemies(samples, 0);
       check(samples.every(e => e.view?.label.visible), 'every guardian kind has a loaded model and a label');
       renderer.compile(scene, camera);
@@ -109,7 +108,6 @@ export async function runGuardianChecks() {
 }
 
 export async function runSideGuardianChecks() {
-  await propsReady;
   return paused(async () => {
     const oldCube = state.cubes.cubes.get(state.cubeKey), hero = { ...player };
     const saved = Object.fromEntries(['run', 'arrival', 'visit', 'portalLock', 'portalCharge', 'boundaryLock', 'transitioning', 'inventoryOpen', 'fallFrom', 'enemyGrace', 'statusMsg', 'statusUntil'].map(k => [k, state[k]]));

@@ -100,3 +100,13 @@ export function population(map) {
     return [e.type, { count: count * (map.guardian ? 2 : 1), pack: e.pack, lead: e === lead, kinds: e.kinds }];
   }));
 }
+
+// the species a cube's enemies can be: its population's and the kinds its packs draw from (a
+// guardian and a horde are of these too, game/enemyspawn.js); their models are loaded before
+// the cube is entered (render/cubeassets.js)
+export function speciesIn(map) {
+  const out = new Set();
+  for (const [type, spec] of population(map))
+    for (const k of [type, ...Object.keys(spec.kinds ?? {})]) if (ENEMY_KINDS[k]) out.add(ENEMY_KINDS[k].species);
+  return [...out];
+}

@@ -20,7 +20,8 @@ Large pitched roofs and raised pictogram signs keep services readable at game sc
 
 - `blender/town.py`: reproducible procedural source; depends on sibling `props.py`.
 - `blender/town.blend`: editable showroom with all seven assets, camera and lighting.
-- `assets/town.glb`: combined asset library; each named root is at the origin.
+- `assets/town.glb`: combined asset library; each named root is at the origin. With
+  `town_trees.glb` it is the `town` prop set (loaded when a cube shows it).
 - `assets/town/<asset>.glb`: standalone model; `blender/previews/town/<asset>.png`: individual preview.
 - `blender/previews/town-preview.png`: overview render.
 - `assets/town/manifest.json`: triangle counts, dimensions, authoring bounds and service hints.
@@ -64,6 +65,7 @@ From the repository root (replace `Blender` with your executable):
 ```sh
 Blender --background --python blender/town.py
 Blender --background --python blender/tests/test_town.py
+npm run compress-assets                        # then compress (README.md)
 ```
 
 The build exports before laying out the showroom. Tests check all seven meshes,

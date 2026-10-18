@@ -19,7 +19,8 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
   wobble/streaks for rock) and the palette (`LUNGTA`, `WHITEWASH`, `MAROON`, `GOLD`, ...).
 - `blender/themes_highlands.py`, `blender/themes_surface.py`, `blender/themes_caves.py`,
   `blender/themes_canyon.py`: the builders; `blender/themes_classic.py`: the classic themes' landmarks.
-- `assets/themes.glb`: the combined library, with every prop a named root at the origin.
+- `assets/themes/<set>.glb`: the library, one file per set, every prop a named root at the origin
+  (the game loads a set when a cube shows it).
 - `assets/themes/manifest.json`: per-prop set, attach, flags, triangles, sizes, bounds,
   footprint/height/anchors, and the landmarks' role, colliders and occluders.
 - `blender/themes.blend`: the editable showroom. Each set gets a block (ground props in columns, a
@@ -29,7 +30,7 @@ theme's landmarks (see "Integration"); flag lines and the honey fluid are not bu
   `blender/previews/themes-preview.png`.
 
 `props.py`'s `finish()` gained a `line` radius case and `clutter.check()` takes a
-`fluids` argument. `clutter.glb` still exports byte-identically and `test_clutter.py` passes.
+`fluids` argument. The clutter library still exports byte-identically and `test_clutter.py` passes.
 
 ## Sets
 
@@ -93,7 +94,7 @@ The classic themes' landmarks (`themes_classic.py`): meadow `windmill`, `wishing
 #ffcf8a), `giant_geode` (light #c08fff); ruins `temple_gate`, `colossus_head`; volcanic
 `fire_shrine` (light #ff6a20), `fumarole` (light #ff7a30); abyss `chained_obelisk` (light
 #ff3030), `void_throne` (light #a050ff). They are named after the classic sets
-(`meadow_windmill_a`) but only live in `themes.glb`; the classic sets get nothing else here.
+(`meadow_windmill_a`) but only live in `assets/themes/`; the classic sets get nothing else here.
 
 Their colliders and occluders are derived from the mesh when the library is built
 (`volumes()` in `themes.py`, nothing authored by hand). The mesh is sampled on an eighth-cell
@@ -106,7 +107,7 @@ occluders (for the cutaway) on the eighth-cell one with half-unit heights. Gates
 leave a way through along their Z axis at x = 0.
 
 Regular props come in `_a`/`_b` variants. Landmarks have a single variant. Object names are
-`<set>_<prop>_<a|b>`, matching `clutter.glb`, and no names collide with it.
+`<set>_<prop>_<a|b>`, matching the clutter library, and no names collide with it.
 
 ## Contract additions
 
@@ -132,8 +133,8 @@ Done (see [world.md](../world.md#themes-per-world-themesindexjs-themescavesjs-th
   weights, void, relief, fluids. Structure materials (`themes/builds.js`), footstep surfaces
   (`core/footing.js`), wind and drips (`game/ambience.js`), guardian arena palettes
   (`cubegen/arenaprops.js`) and reward-site recipes (`cubegen/sites.js`) for every set.
-- `src/render/props.js` loads `themes.glb`; `src/core/propmetadata.js` includes it
-  (`npm run prop-metadata`). The ambient scatter uses the sets' ground, cover, lip, wall and
+- `src/render/props.js` loads a set's file (with its `props/` and `clutter/` files) when a cube
+  shows the set; `src/core/propmetadata.js` includes it (`npm run compress-assets` regenerates it). The ambient scatter uses the sets' ground, cover, lip, wall and
   water props. Landmarks and `line` segments count as signature props: never scattered.
 - Landmarks: each depth's major reward site (rare or exceptional) is built around one of its
   theme's landmarks, chosen with the site's plan (`world/sites.js`; the next depth of the same
@@ -158,14 +159,13 @@ Still to do:
 - Hive needs a honey fluid (slows instead of hurting); until then its rivers are water and
   `honey_bubbles` / `comb_raft` are never placed. Forge steam vents can reuse the gust push
   upwards.
-- `themes.glb` is 7.5 MB and loads with the other libraries before the game starts; loading
-  only the sets a world picked would save most of it.
 
 ## Rebuild
 
 ```sh
 Blender --background --python blender/themes.py                 # build, export, previews
 Blender --background --python blender/themes.py -- --no-render
+npm run compress-assets                                          # then compress (README.md)
 ```
 
 MCP: see the `themes.py` docstring for the reload order.

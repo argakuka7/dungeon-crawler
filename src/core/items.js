@@ -1,7 +1,8 @@
 // Item definitions are data, not renderer objects. Equipment uses rig units in the hand sockets.
 // These are the base types; a weapon in the bag or on the floor is an instance of one, with its
 // own rolled rarity, affixes and name in `gen` (core/gear/). Its stats: core/gear/stats.js.
-const icon = name => `assets/items/${name}.png`;
+// `model`: how it looks, on the floor, in a hand and in the bag (render/itemviews.js draws the
+// bag's pictures from it).
 const model = name => `assets/items/${name}.glb`;
 // Base weapon stats at item level 1 (core/gear/stats.js grows the damage with item level):
 //   kind: sword, bow, crossbow or staff (how it attacks: core/combat.js KINDS); damage per hit;
@@ -17,7 +18,7 @@ const model = name => `assets/items/${name}.glb`;
 // hard and slowly and pierce, staffs are slow and burst.
 const weapon = (id, name, kind, damage, interval, range, more = {}) => ({
   id, name, category: 'weapon', stackLimit: 1,
-  icon: icon(more.old ? 'weapon_sword_medium' : id), model: more.old ? 'assets/sword.glb' : model(id),
+  model: more.old ? 'assets/sword.glb' : model(id),
   weapon: { kind, damage, interval, range, arc: more.arc ?? 1, pierce: more.pierce ?? 0,
     burst: more.burst ?? 0, ...(more.color && { color: more.color }) },
 });
@@ -53,7 +54,7 @@ export const COINS = [
   { id: 'item_coin_gold', name: 'Gold', value: 1000, suffix: 'g' },
   { id: 'item_coin_silver', name: 'Silver', value: 10, suffix: 's' },
   { id: 'item_coin_copper', name: 'Copper', value: 1, suffix: 'c' },
-].map(c => ({ ...c, category: 'currency', stackLimit: Infinity, icon: icon(c.id), model: model(c.id) }));
+].map(c => ({ ...c, category: 'currency', stackLimit: Infinity, model: model(c.id) }));
 // Potions (core/potions.js has their rules). Two families, both stackable:
 //   drinks (`use: 'drink'`): drinking one puts its `effect` on you for `effect.time` s:
 //     { heal }: that share of the maximum health, poured in over the time (well under a second)
@@ -70,7 +71,7 @@ export const COINS = [
 // quick bar slot they share by themselves (core/inventory.js autoBar). A new run starts with a
 // few health potions on the quick bar.
 const potionDef = (id, name, use, spec, description) => ({ id, name, category: 'potion', stackLimit: 99,
-  icon: icon(id), model: model(id), use, cooldown: 1, level: 1, weight: 1, ...spec, description });
+  model: model(id), use, cooldown: 1, level: 1, weight: 1, ...spec, description });
 const pct = v => `${Math.round(v * 100)}%`;
 const BUFF_TEXT = { moveSpeed: v => `You move ${pct(v)} faster`, attackSpeed: v => `You attack ${pct(v)} faster`,
   damage: v => `Your attacks deal ${pct(v)} more damage`, jump: v => `You jump ${pct(v)} higher` };
@@ -105,21 +106,21 @@ const stackables = [
   ['item_potion_mana', 'Mana potion'], ['item_potion_stamina', 'Stamina potion'],
   ['item_stick_short', 'Short stick'], ['item_stick_long', 'Long stick'], ['item_stick_forked', 'Forked stick'],
   ...['ruby', 'diamond', 'emerald', 'sapphire', 'amethyst'].map(s => [`item_crystal_${s}`, s[0].toUpperCase() + s.slice(1)]),
-].map(([id, name]) => ({ id, name, category: 'item', stackLimit: 99, icon: icon(id), model: model(id) }));
+].map(([id, name]) => ({ id, name, category: 'item', stackLimit: 99, model: model(id) }));
 // Tools are used, not consumed. `bound`: never leaves the bag (no Drop); `use`: what using it
-// does (game/quickbar.js useItem). They never lie on the floor, so they have no model (the
-// scroll's model in assets/items/ only renders its icon).
+// does (game/quickbar.js useItem). They never lie on the floor, so they have no `model`; their
+// `picture` is the model the bag shows them as (render/itemviews.js).
 export const TOWN_PORTAL = {
   id: 'item_town_portal', name: 'Town Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'townPortal',
   description: 'Opens a portal to town after 5 seconds of standing still. Step back through it in town to return here. Never used up.',
-  icon: icon('item_town_portal'),
+  picture: model('item_town_portal'),
 };
 // the way out of a spot you cannot leave (game/roomportal.js)
 export const ROOM_PORTAL_CAST = 3;   // s holding still to read it
 export const ROOM_PORTAL = {
   id: 'item_room_portal', name: 'Room Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'roomPortal',
   description: `Takes you back to where you came into this room after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere: the way out when you are stuck. One way. Never used up.`,
-  icon: icon('item_room_portal'),
+  picture: model('item_room_portal'),
 };
 // every hero carries these (core/progression.js carryTools)
 export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];
@@ -129,7 +130,7 @@ export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];
 // `glow`: the colour the gem-like part shines in. No stats or uses yet; for now only the
 // villagers wear them (world/town.js VILLAGERS), but they are items like any other.
 const wearable = (id, name, slot, description, more = {}) => ({
-  id, name, category: slot === 'head' ? 'wearable' : 'held', slot, stackLimit: 1, icon: icon(id), model: model(id),
+  id, name, category: slot === 'head' ? 'wearable' : 'held', slot, stackLimit: 1, model: model(id),
   description, ...more });
 export const OUTFIT_SLOTS = ['head', 'right', 'left'];
 export const WEARABLES = [

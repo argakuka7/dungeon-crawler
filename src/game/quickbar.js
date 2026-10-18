@@ -41,7 +41,7 @@ function showKeys() {
 }
 showKeys();
 onSettingsChange(showKeys);
-onItemPictures(() => { signature = ''; });   // a picture is in: instead of the icon
+onItemPictures(() => { signature = ''; });   // a picture is in: show it
 
 // use the bag item (from the bar or the inventory's Use button)
 export function useItem(instanceId) {

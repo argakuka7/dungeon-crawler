@@ -5,7 +5,7 @@
 // small light, and their name, level and health over the head. capturePose() is the other
 // half: our own character's pose, to send.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { CHAR_H } from '../core/constants.js';
 import { ITEMS } from '../core/items.js';
 import { BONES, Q, packPose } from '../net/protocol.js';
@@ -83,9 +83,9 @@ export function removePartner(slot) {
 
 // Weapons come in their own copy: the player's own models are changed for the hand they are in
 // (render/held.js), so each url is loaded again here, once.
-const loader = new GLTFLoader(), weapons = new Map();
+const weapons = new Map();
 function weaponModel(url) {
-  if (!weapons.has(url)) weapons.set(url, loader.loadAsync(url).then(g => g.scene)
+  if (!weapons.has(url)) weapons.set(url, loadGLB(url).then(g => g.scene)
     .catch(e => { weapons.delete(url); console.error('partner weapon failed to load', e); return null; }));
   return weapons.get(url);
 }

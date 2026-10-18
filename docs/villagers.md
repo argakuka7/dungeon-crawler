@@ -24,7 +24,7 @@ alchemist trades: hovered, she has a gold label and a click walks up to her to b
 
 `core/items.js` defines the wearables: category `wearable` (headwear) or `held`, and a `slot`
 (`OUTFIT_SLOTS`: `head`, `right`, `left`), one thing per slot (`outfitOf` checks an outfit).
-Each has an icon and a model in `assets/items/` like any item, and `glow` for the ones with a
+Each has a model in `assets/items/` like any item, and `glow` for the ones with a
 shining part (the crystal ball, the pliers' hot billet). They have no stats or uses yet.
 
 Their models come from `blender/items.py` (`WEARS` there) and say in their extras how they go on

@@ -42,7 +42,7 @@ health, nothing is drunk while knocked down.
   `physics/move.js`.
 - Dying ends every effect (`clearEffects` in `spawnEntry`); cooldowns carry on.
 
-Over the quick bar a row shows what is at work: each potion's icon with the seconds left and
+Over the quick bar a row shows what is at work: each potion's picture with the seconds left and
 a bar running down, blinking for the last five seconds, and a chip while you are poisoned
 (`game/effects.js`). A quick bar slot fills while its potion's cooldown runs.
 

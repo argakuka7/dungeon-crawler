@@ -20,7 +20,7 @@ them off. On, the body has the `touch` class and the layout changes with it (`st
   or straight ahead.
 - **Jump** is the smaller button beside it.
 - **Use**: above the action button, only while there is something to do: it is the action key
-  (F or right Ctrl, `src/game/action.js`). Its icon shows what it does: the treasure chest
+  (F or right Ctrl, `src/game/action.js`). Its picture shows what it does: the treasure chest
   beside you (open it), a speech bubble (talk to the trading villager beside you), or the best
   item around (collect, with how many pickups in a badge). The order is the action key's:
   chest, then villager, then collecting.

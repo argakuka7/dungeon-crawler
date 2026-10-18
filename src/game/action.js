@@ -3,7 +3,7 @@
 //   1. open the closed treasure chest beside them (game/chests.js)
 //   2. talk to the villager beside them: one who trades opens their shop (game/inventory.js)
 //   3. collect the coins and items around them (game/loot.js; four cells across)
-// pendingAction says which (for the use button's icon), useAction does it and says whether it
+// pendingAction says which (for the use button's picture), useAction does it and says whether it
 // did anything. With nothing to do the key does nothing.
 import { player, state } from './state.js';
 import { chestInReach, openChest } from './chests.js';
@@ -12,8 +12,6 @@ import { openShop } from './inventory.js';
 import { collectable, requestCollect } from './loot.js';
 import { shopOf } from '../core/shops.js';
 import { ITEMS } from '../core/items.js';
-
-const CHEST_ICON = 'assets/items/treasure_chest.png';
 
 // the trading villager the player stands next to (the nearest one), if any
 function villagerInReach() {
@@ -35,18 +33,19 @@ function showcase(list) {
 }
 
 // what the action key would do here: null, or { kind: 'chest' | 'talk' | 'collect', target,
-// label, icon (an image, not for talk), count (collect: how many pickups) }
+// label, picture (what it is about, as an item id for render/itemviews.js; not for talk),
+// count (collect: how many pickups) }
 export function pendingAction() {
   if (state.mode !== 'play' || !state.map || state.transitioning || state.inventoryOpen
     || player.down || player.ragdoll || player.hp <= 0) return null;
   const chest = chestInReach();
-  if (chest) return { kind: 'chest', target: chest, label: 'Open the chest', icon: CHEST_ICON };
+  if (chest) return { kind: 'chest', target: chest, label: 'Open the chest', picture: 'treasure_chest' };
   const villager = villagerInReach();
   if (villager) return { kind: 'talk', target: villager, label: `Talk to the ${shopOf(villager).title}` };
   const loot = collectable();
   if (loot.length) {
     const best = showcase(loot);
-    return { kind: 'collect', target: best, label: 'Collect', icon: ITEMS[best.itemId]?.icon, count: loot.length };
+    return { kind: 'collect', target: best, label: 'Collect', picture: ITEMS[best.itemId] ? best.itemId : null, count: loot.length };
   }
   return null;
 }

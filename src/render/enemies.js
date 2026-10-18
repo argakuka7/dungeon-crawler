@@ -47,6 +47,8 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel };
+// the models of these species (core/spawns.js speciesIn), loaded once
+export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
 // clip's beat (twice per hover loop); embers: per second, rising from `from` (a bone, or
 // a height above the body); flicker: extra flame motion
@@ -262,7 +264,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
   clock += dt;
   for (const e of list) {
     const prefab = prefabs[e.profile.species];
-    if (!prefab?.ready) continue;
+    if (!prefab?.ready) { prefab?.load(); continue; }   // not loaded before (a friend's, a dev spawn): shown once it is
     const v = e.view || (e.view = makeView(e, prefab)), A = v.actions;
     // A ram commits to its direction before contact; visuals must match the hit cone.
     v.yaw = e.mode === 'attack' ? e.yaw : angleTo(v.yaw, e.yaw, Math.min(1, dt * 14));

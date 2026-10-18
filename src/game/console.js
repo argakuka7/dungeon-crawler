@@ -19,6 +19,7 @@ import { CHAT_MAX } from '../net/protocol.js';
 import { online, relay, playerColor } from '../net/online.js';
 import { floatText } from '../render/floattext.js';
 import { partnerAt } from '../render/partner.js';
+import { pictureImg } from '../render/itemviews.js';
 import { player, state } from './state.js';
 import { clearInput } from './inputstate.js';
 import { isFor } from './settings.js';
@@ -165,7 +166,7 @@ function showPopup() {
   const items = popupItems();
   popup.hidden = !items.length;
   popup.innerHTML = items.map((it, i) => `<li role="option" data-i="${i}"${i === sel ? ' class="on" aria-selected="true"' : ''}>`
-    + (it.icon ? `<img src="${esc(it.icon)}" alt="">` : '<i></i>')
+    + (it.picture ? pictureImg(it.picture) : '<i></i>')
     + `<span class="label"${it.color ? ` style="color:${esc(it.color)}"` : ''}>${esc(it.label ?? it.value)}</span>`
     + (it.label && it.label !== it.value ? `<span class="id">${esc(it.value)}</span>` : '')
     + (it.hint ? `<span class="hint">${esc(it.hint)}</span>` : '') + '</li>').join('');

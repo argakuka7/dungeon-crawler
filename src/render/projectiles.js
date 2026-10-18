@@ -20,6 +20,7 @@ const ahead = new THREE.Vector3();
 
 function makeView(pr) {
   const look = LOOKS[pr.kind], group = new THREE.Group(), src = look.prop();
+  if (!src) look.model.load();   // (the thrower's model has it: loaded already, unless thrown by a friend's)
   const colors = kindColors(pr.profile, look.model), owned = [];
   const own = m => { const c = recolor(m.clone(), colors); owned.push(c); return c; };
   if (src) {

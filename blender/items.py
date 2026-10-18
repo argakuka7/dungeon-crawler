@@ -9,7 +9,8 @@ hinge with the Open and Close actions (glTF clips).
 MCP: import items; items.main()
 CLI: Blender -b --python blender/items.py -- [output-directory]
 
-Default output: assets/items.glb + assets/items/ (glb, icons, manifest),
+Default output: assets/items.glb + assets/items/ (glb, icons, manifest; the game draws
+items from their models, the icons are for the kids' guide, learn/),
 blender/items.blend, blender/previews/items-preview.png.
 """
 import hashlib

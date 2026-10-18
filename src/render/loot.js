@@ -8,7 +8,7 @@
 // it; their geometry and materials are shared between all copies (per item / per rarity), so
 // disposing a cube leaves them alone.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from './gltf.js';
 import { ITEMS } from '../core/items.js';
 import { RARITIES, rarityOf } from '../core/gear/rarities.js';
 import { player } from '../game/state.js';
@@ -16,7 +16,7 @@ import { partnerAt } from './partner.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { emit, glow as glowLayer, rand } from './particles.js';
 
-const loader = new GLTFLoader(), protos = new Map();   // itemId -> prototype (null while loading)
+const protos = new Map();   // itemId -> prototype (null while loading)
 const views = new Map();                               // pickup id -> { o, model, fx, light }
 let viewsWorld = null;
 const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72;
@@ -25,7 +25,7 @@ function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
   protos.set(itemId, null);
   const def = ITEMS[itemId], weapon = !!def.weapon;
-  loader.loadAsync(def.model).then(g => {
+  loadGLB(def.model).then(g => {
     const root = g.scene;
     root.traverse(o => {
       if (!o.isMesh) return;

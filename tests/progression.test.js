@@ -41,7 +41,7 @@ test('a new player has an equipped Old Sword, the scrolls and a few potions on t
 test('the portal scrolls are bound: they never leave the bag and never stack', () => {
   for (const [def, name] of [[TOWN_PORTAL, 'item_town_portal'], [ROOM_PORTAL, 'item_room_portal']]) {
     const inv = createPlayerStats().inventory, scroll = inv.slots.find(s => s?.itemId === def.id);
-    assert.ok(def.bound && def.use && !def.model && def.icon === `assets/items/${name}.png`);
+    assert.ok(def.bound && def.use && !def.model && def.picture === `assets/items/${name}.glb` && existsSync(assetPath(def.picture)));
     const before = JSON.stringify(inv);
     assert.equal(takeItem(inv, scroll.instanceId), null);
     assert.equal(JSON.stringify(inv), before);
@@ -258,7 +258,6 @@ test('health regeneration waits five hit-free seconds and restores a share of th
 test('every weapon has real assets, damage, reach and synchronized attack timing', () => {
   for (const w of WEAPONS) {
     assert.ok(existsSync(assetPath(w.model)));
-    assert.ok(existsSync(assetPath(w.icon)));
     const p = hero(); equip(p, w.id); awardXP(p, xpForLevel(5));
     const stats = combatStats(p), T = KINDS[w.weapon.kind].timing;
     assert.equal(stats.kind, w.weapon.kind); assert.equal(stats.ranged, w.weapon.kind !== 'sword');
@@ -294,4 +293,11 @@ test('equipment guards current actions, and an active swing snapshots its damage
   for (const extra of [{ragdoll:{}},{climb:{}},{swimming:true},{stun:1},{hp:0}]) assert.equal(canChangeWeapon(Object.assign(hero(), extra)), false);
   removeItem(p.inventory, p.inventory.equipped);
   assert.equal(combatStats(p), null); assert.equal(startSwing(p), false);
+});
+test('every item shows as its model: it has one to draw its picture from, and no icon image', () => {
+  for (const def of Object.values(ITEMS)) {
+    const url = def.model ?? def.picture;
+    assert.ok(url?.endsWith('.glb') && existsSync(assetPath(url)), def.id);
+    assert.equal(def.icon, undefined, def.id);
+  }
 });

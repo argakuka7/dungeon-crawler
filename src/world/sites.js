@@ -9,7 +9,7 @@ const SETTINGS = {
   ruins: ['burial', 'hall', 'courtyard'],
 };
 
-// every theme's landmarks (themes.glb: bigger than a cell, built around by cubegen/sites.js), by set
+// every theme's landmarks (assets/themes/: bigger than a cell, built around by cubegen/sites.js), by set
 const LANDMARKS = new Map();
 for (const p of PROP_METADATA) if (p.landmark) {
   if (!LANDMARKS.has(p.set)) LANDMARKS.set(p.set, []);

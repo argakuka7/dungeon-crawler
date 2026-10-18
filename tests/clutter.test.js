@@ -1,15 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assets } from './paths.js';
-import { assetMetadata } from '../tools/prop-metadata.mjs';
-import { PROP_METADATA } from '../src/core/propmetadata.js';
+import { propCatalog } from '../tools/prop-metadata.mjs';
+import { PROP_METADATA, PROP_FILES } from '../src/core/propmetadata.js';
 import { props, catalogProp, signatureProp } from '../src/core/propcatalog.js';
 import { placeProps } from '../src/render/propplace.js';
 import { themeById } from '../src/themes/depth.js';
 import { N, LH, WATER, LAVA, ACID, FLUID_NAME, DIRS } from '../src/core/constants.js';
 
-for (const p of PROP_METADATA) catalogProp(p);
-props.ready = true;
 
 function terrain(seed) {
   const floors = Array.from({ length: N * N }, (_, c) => ({ c, id: c, x: c % N, z: Math.floor(c / N),
@@ -18,9 +16,16 @@ function terrain(seed) {
     siteReservations: [], sitePlacements: [] };
 }
 
-test('checked-in metadata matches all 681 exported models, including the 222 clutter roots, the 325 theme roots and the chest', () => {
-  assert.deepEqual(PROP_METADATA, assetMetadata(assets));
-  assert.equal(new Set(PROP_METADATA.map(p => p.name)).size, 681);
+test('checked-in metadata matches all 691 exported models, including the 222 clutter roots, the 325 theme roots, the chest and the town', () => {
+  const { metadata, files } = propCatalog(assets);
+  assert.deepEqual(PROP_METADATA, metadata);
+  assert.deepEqual(PROP_FILES, files);
+  assert.equal(new Set(PROP_METADATA.map(p => p.name)).size, 691);
+  assert.equal(PROP_METADATA.filter(p => p.set === 'town').length, 10);
+  // a set's files: one per library it is in (props, clutter, themes), each holding only that set
+  assert.deepEqual(PROP_FILES.abyss, ['props/abyss.glb', 'clutter/abyss.glb', 'themes/abyss.glb']);
+  assert.deepEqual(PROP_FILES.town, ['town.glb', 'town_trees.glb']);
+  for (const [set, list] of Object.entries(PROP_FILES)) for (const f of list) assert.ok(f.startsWith('town') || f.startsWith('items/') || f.endsWith(`/${set}.glb`), f);
   assert.ok(PROP_METADATA.some(p => p.name === 'treasure_chest' && p.blocking && p.clips === 'Open,Close'));
   const clutter = PROP_METADATA.filter(p => p.cube_crawler_clutter);
   assert.equal(clutter.length, 222);
@@ -35,11 +40,13 @@ test('checked-in metadata matches all 681 exported models, including the 222 clu
   for (const p of themes.filter(p => p.landmark || p.attach === 'line')) assert.ok(p.attach === 'line' || signatureProp(p), p.name);
 });
 
-test('catalog registration is idempotent, not an additional scatter weight on a reload', () => {
+test('catalog registration is idempotent, not an additional scatter weight on a reload, and keeps the order', () => {
   const p = props.byName.get('any_cairn_a');
   const n = props.sets.get('any/ground').length;
+  const at = props.sets.get('any/ground').indexOf(p);
   catalogProp({ ...p }); catalogProp(p);
   assert.equal(props.sets.get('any/ground').length, n);
+  assert.equal(props.sets.get('any/ground').indexOf(p), at, 'a replaced entry keeps its place');
 });
 
 test('water and shoreline clutter respects fluid type, surface height and neighbouring banks', () => {

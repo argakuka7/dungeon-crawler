@@ -1,41 +1,51 @@
-// Decoration props from assets/props.glb, clutter.glb and themes.glb: a catalog by theme and
-// attachment (from the glTF extras), and instanced meshes per cube. Materials are cloned per cube (cubes fade and get cut
-// on their own); props with `sway` move in the wind; glowing props add light sources.
+// Decoration props (assets/props/, clutter/, themes/, the town's and the treasure chest; one
+// file per library and prop set, tools/prop-metadata.mjs PROP_FILES): instanced meshes per
+// cube. The catalog (core/propcatalog.js) knows every prop from the start; a set's geometry is
+// loaded when a cube shows it (loadPropSets, before the cube is entered: render/cubeassets.js).
+// Materials are cloned per cube (cubes fade and get cut on their own); props with `sway` move
+// in the wind; glowing props add light sources.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cutMaterial } from './section.js';
 import { buildChests } from './chests.js';
+import { loadGLB } from './gltf.js';
+import { PROP_FILES } from '../core/propmetadata.js';
 
-import { props, catalogProp, propMetadata } from '../core/propcatalog.js';
+import { props } from '../core/propcatalog.js';
 export { props } from '../core/propcatalog.js';
 
-const URLS = ['assets/props.glb', 'assets/clutter.glb', 'assets/themes.glb', 'assets/items/treasure_chest.glb'];
 const wind = { value: 0 };
-const onReady = [];
-export const whenPropsReady = fn => props.ready ? fn() : onReady.push(fn);
 export const tickProps = t => { wind.value = t; };
 
+// a loaded library: its props' parts (and an animated prop's node tree and clips) into their catalog entries
 export function registerProps(gltf) {
   gltf.scene.updateMatrixWorld(true);
   for (const o of gltf.scene.children) {
     // a prop is one mesh, or a group of meshes when it has a glowing material as well
     const parts = (o.isMesh ? [o] : o.children.filter(c => c.isMesh)).map(c => ({ geometry: c.geometry, material: c.material }));
     if (!parts.length) continue;
-    const name = o.name, ex = o.userData || {};
-    const [set, ...rest] = name.split('_');
-    const base = rest.slice(0, -1).join('_');
-    const box = new THREE.Box3();
-    for (const q of parts) { q.geometry.computeBoundingBox(); box.union(q.geometry.boundingBox); }
+    const p = props.byName.get(o.name);
+    if (!p) { console.warn('prop without metadata (tools/prop-metadata.mjs):', o.name); continue; }
+    p.parts = parts;
     // an animated prop (the treasure chest) keeps its whole node tree and clips (render/chests.js)
-    const animated = ex.clips ? { template: o, clips: gltf.animations } : {};
-    if (ex.clips) box.setFromObject(o);
-    const p = { name, set, base, attach: ex.attach || 'ground', radius: ex.radius ?? 0.3, blocking: !!ex.blocking,
-      light: ex.light, intensity: ex.intensity ?? 1, sway: ex.sway ?? 0, priority: ex.priority ?? 1,
-      cover: !!ex.cover, shore: !!ex.shore, fluid: ex.fluid, drop: ex.drop ?? 0,
-      ...propMetadata.get(name), parts, ...animated, height: box.max.y, minY: box.min.y, maxY: box.max.y };
-    catalogProp(p);
+    if (o.userData.clips) Object.assign(p, { template: o, clips: gltf.animations });
   }
+}
+
+// set -> Promise (resolves when its geometry is in the catalog, or failed to load: logged, tried again next time)
+const loading = new Map(), loaded = new Set(), onLoaded = [];
+export const propSetLoaded = set => loaded.has(set) || !PROP_FILES[set];
+// fn(set) whenever a set's geometry arrives
+export const onPropSet = fn => { onLoaded.push(fn); };
+export function loadPropSets(sets) {
+  return Promise.all(sets.filter(set => !propSetLoaded(set)).map(set => {
+    if (!loading.has(set)) loading.set(set, Promise.all(PROP_FILES[set].map(f => loadGLB('assets/' + f))).then(libraries => {
+      libraries.forEach(registerProps);
+      loaded.add(set);
+      for (const fn of onLoaded) fn(set);
+    }, e => { loading.delete(set); console.error('prop set failed to load:', set, e); }));
+    return loading.get(set);
+  }));
 }
 
 // sway: bend with the wind, more the further from the attachment point; per-instance phase
@@ -127,11 +137,3 @@ export function buildProps(placed, group) {
     }
   }
 }
-
-const loader = new GLTFLoader();
-export const propsReady = Promise.all(URLS.map(url => loader.loadAsync(url))).then(libraries => {
-  libraries.forEach(registerProps);
-  props.ready = true;
-  onReady.splice(0).forEach(fn => fn());
-});
-propsReady.catch(e => console.error('props failed to load', e));

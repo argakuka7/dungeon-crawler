@@ -18,12 +18,12 @@ export const commands = createRegistry();
 // --- what arguments can be ----------------------------------------------------------------------
 
 const once = make => { let list = null; return () => list ??= make(); };
-const items = once(() => Object.values(ITEMS).map(d => ({ value: d.id, label: d.name, hint: d.weapon ? d.weapon.kind : d.category, icon: d.icon })));
+const items = once(() => Object.values(ITEMS).map(d => ({ value: d.id, label: d.name, hint: d.weapon ? d.weapon.kind : d.category, picture: d.id })));
 addType(commands, { name: 'item', values: items });
 addType(commands, { name: 'weapon', values: once(() => items().filter(i => ITEMS[i.value].weapon)) });
 // what the hero can wear (only headwear for now: game/equipment.js devWear), or 'off'
 addType(commands, { name: 'wearable', values: once(() => [...WEARABLES.filter(w => w.slot === 'head')
-  .map(w => ({ value: w.id, label: w.name, hint: w.slot, icon: w.icon })), { value: 'off', label: 'off', hint: 'take it off' }]) });
+  .map(w => ({ value: w.id, label: w.name, hint: w.slot, picture: w.id })), { value: 'off', label: 'off', hint: 'take it off' }]) });
 // the ordinary kinds first, the guardians after
 addType(commands, { name: 'enemy', values: once(() => Object.values(ENEMY_KINDS).sort((a, b) => !!a.guardian - !!b.guardian)
   .map(k => ({ value: k.type, label: k.label, hint: k.guardian ? `guardian (${k.guardianRole})` : k.species }))) });

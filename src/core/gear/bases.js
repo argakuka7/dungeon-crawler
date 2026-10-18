@@ -1,7 +1,7 @@
 // Which base types drop, from what item level and how often. A base is an item in
 // core/items.js; `tags` decide which affixes may roll on it (core/gear/affixes.js): its kind
 // (sword, bow, crossbow, staff) and how it fights (melee or ranged).
-// To add a dropping weapon: define the item (with its model and icon), then list it here.
+// To add a dropping weapon: define the item (with its model), then list it here.
 // The Old Sword is never dropped: it is what a run starts with.
 // Every kind has a light base from item level 1 and heavier ones further down; a kind's weights
 // add up to the same, so each kind is about as likely as the others once all of it drops.

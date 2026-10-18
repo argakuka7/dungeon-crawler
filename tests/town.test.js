@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { assets } from './paths.js';
+import { readGlb, rootBounds, roots } from '../tools/glb.mjs';
 import { N, LH, CHAR_R, EDGE_CORNERS } from '../src/core/constants.js';
 import { containsXZ, viewBlockedAt } from '../src/core/blockers.js';
 import { World } from '../src/world/world.js';
@@ -378,18 +378,14 @@ test('building boxes collide in every covered cell; canopy occlusion is separate
   assert.equal(insideSolid(crown.x + crown.rx * .8, crown.z, 2.5), false);
 });
 
-function glb(file) { const b = readFileSync(resolve(assets, file)); return JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12))); }
+const glb = file => readGlb(resolve(assets, file)).json;
 
 test('authored building footprint boxes contain the actual exported assets', () => {
   for (const b of [...BUILDINGS, ...MERCHANTS]) {
-    const j = glb(`town/${b.name}.glb`), root = j.nodes[j.scenes[j.scene || 0].nodes[0]];
-    assert.equal(root.name, b.name);
-    const positions = j.meshes[root.mesh].primitives.map(p => j.accessors[p.attributes.POSITION]);
-    assert.ok(Math.min(...positions.map(a => a.min[0])) >= b.bounds[0]);
-    assert.ok(Math.min(...positions.map(a => a.min[2])) >= b.bounds[1]);
-    assert.ok(Math.max(...positions.map(a => a.max[0])) <= b.bounds[2]);
-    assert.ok(Math.max(...positions.map(a => a.max[2])) <= b.bounds[3]);
-    assert.ok(Math.max(...positions.map(a => a.max[1])) <= b.height);
+    const j = glb(`town/${b.name}.glb`), i = roots(j)[0], { min, max } = rootBounds(j, i);
+    assert.equal(j.nodes[i].name, b.name);
+    assert.ok(min[0] >= b.bounds[0] && min[2] >= b.bounds[1] && max[0] <= b.bounds[2] && max[2] <= b.bounds[3]);
+    assert.ok(max[1] <= b.height);
   }
 });
 test('grove assets have flat coloured geometry, ground pivots and explicit trunk metadata', () => {
@@ -400,11 +396,10 @@ test('grove assets have flat coloured geometry, ground pivots and explicit trunk
     const n = j.nodes[i], e = n.extras;
     assert.ok(n.name.startsWith('town_tree_')); assert.equal(e.attach, 'ground');
     assert.ok(e.trunk_radius > .1 && e.trunk_radius < .4 && e.radius > e.trunk_radius);
-    const primitives = j.meshes[n.mesh].primitives;
+    const primitives = j.meshes[n.mesh].primitives, { min, max } = rootBounds(j, i);
+    assert.ok(Math.abs(min[1]) < 1e-6); assert.ok(max[1] > 6 && max[1] < 7.3);
     for (const p of primitives) {
       assert.ok(p.attributes.COLOR_0 !== undefined && p.attributes.NORMAL !== undefined);
-      const a = j.accessors[p.attributes.POSITION];
-      assert.ok(Math.abs(a.min[1]) < 1e-6); assert.ok(a.max[1] > 6 && a.max[1] < 7.3);
       assert.ok(j.accessors[p.indices].count / 3 < 900);
     }
   }

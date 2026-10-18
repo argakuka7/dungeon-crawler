@@ -44,15 +44,19 @@ docs that explain how the game works, from the big ideas down to the real code:
   - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
     chat when playing together, and commands after a `/` that complete the game's items and
     enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).
-- `assets/`: exported game data (GLB models, item icons, manifests). The game
-  loads assets only from here (and music from `music/`). These files are generated; do not edit them by hand.
+- `assets/`: exported game data (meshopt-compressed GLB models, manifests, and item icons that only
+  the guide uses: the game draws items from their models). The game loads assets only from here
+  (and music from `music/`), each when it is first needed: the prop libraries are one file per
+  prop set (`assets/props/`, `clutter/`, `themes/`), loaded with the enemy models a cube has
+  before it is entered (`src/render/cubeassets.js`). These files are generated; do not edit them by hand.
 - `music/`: hand-written Scrimshaw scores the game plays (`docs/music.md`). Before writing
   or changing a song, read `music/README.md` for the style, the layers and the format.
 - `blender/`: authoring sources: Blender scripts and `.blend` files that export
   into `assets/`, Blender test scripts in `blender/tests/`, renders in `blender/previews/`.
 - `tests/`: `node --test` unit tests; `tests/browser/` holds integration checks
   that run from the game's devtools console.
-- `tools/`: dev server, the prop metadata generator, the enemy kinds preview
+- `tools/`: dev server, the prop metadata generator, the GLB compressor (`compress-assets.mjs`;
+  `glb.mjs` reads the GLBs for the tools and tests), the enemy kinds preview
   (`/tools/kinds.html`, see `docs/enemy-kinds.md`), the depth population measurement, the
   weapon drop tables (`node tools/loot-table.mjs`) and the balance simulation
   (`node tools/balance.mjs`, see `docs/balance.md`).
@@ -64,7 +68,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   `npm run learn` (`npm test` runs it too): it names the slides to review; then
   `npm run learn -- --stamp`, or `-- --defer` to note them as outdated. See `learn/README.md`.
 - `vendor/three/`: three.js (r186: `three.core.js`, which the world worker imports by path, and
-  `three.module.js` with the renderer) and the addons in use; `vendor/scrimshaw/`: the music score parser and synth;
+  `three.module.js` with the renderer) and the addons in use (with the meshopt decoder for the
+  GLBs, `addons/libs/`); `vendor/scrimshaw/`: the music score parser and synth;
   `vendor/peerjs/`: PeerJS for playing together, loaded only when someone hosts or joins;
   `vendor/pi-durable/`: Pi's durable agent harness and model access for the tutor, one bundle built
   by `node tools/vendor-pi-durable.mjs <pi checkout>`.
@@ -86,14 +91,20 @@ see `docs/combat.md`.
 
 ## Re-exporting assets
 
+The Blender scripts export plain GLBs; `npm run compress-assets` (`tools/compress-assets.mjs`)
+then compresses every one not compressed yet with meshopt (gltf-transform through `npx`: the
+vertices are quantized, geometry and animation meshopt-encoded; `src/render/gltf.js` decodes them),
+keeping each prop's exact bounds in its extras, and regenerates the prop metadata
+(`src/core/propmetadata.js`, also `npm run prop-metadata`). A test fails on an uncompressed GLB.
+
 ```sh
 Blender -b --python blender/props.py          # likewise character, spider, stunder, snake, octonaut,
                                               # fireface, triangle, firecat, shraps, spicy, wolla, wolk, sword
 Blender -b --python blender/clutter.py        # libraries: clutter, items, town, town_trees
 Blender -b --python blender/tests/test_clutter.py
 Blender -b --python blender/themes.py         # the alternative themes' library and every theme's
-                                              # landmarks (themes.glb; see docs/assets/themes.md)
-npm run prop-metadata                         # after props/clutter changes
+                                              # landmarks (assets/themes/; see docs/assets/themes.md)
+npm run compress-assets                       # after any export, before committing
 Blender -b --python blender/loadout.py        # the player with each kind of weapon and the
                                               # villagers (previews; -- --mounts solves the mounts
                                               # of weapons and worn / held things)

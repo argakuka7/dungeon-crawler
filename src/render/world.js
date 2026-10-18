@@ -10,9 +10,9 @@ import { buildMarkers, townPortalFx } from './markers.js';
 import { adoptLights, releaseLights, trackLight, untrackLight } from './lightpool.js';
 import { makeFadable, adoptFade } from './fade.js';
 import { makeGlass, setGlassFaces } from './glass.js';
-import { buildProps } from './props.js';
+import { buildProps, propSetLoaded } from './props.js';
 import { openedChest, tickChests } from './chests.js';
-import { placeProps } from './propplace.js';
+import { placeProps, propSetsOf } from './propplace.js';
 import { buildVillagers, tickVillagers } from './villagers.js';
 import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
@@ -33,8 +33,9 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   const { splashes, lights } = buildFalls(m, group);
   lavaLights(m, group, lights);
   const markers = buildMarkers(m, group, showPath, seen, open, locked);
-  // decoration (also sets the colliders of blocking props on the map)
-  const placed = placeProps(m, themeOf(m));
+  // decoration (also sets the colliders of blocking props on the map); missingSets: the prop
+  // sets not loaded yet, whose props are not drawn (game/flow.js builds the cube again for them)
+  const placed = placeProps(m, themeOf(m)), missingSets = propSetsOf(m, themeOf(m)).filter(s => !propSetLoaded(s));
   m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list]);
   buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
   const villagers = buildVillagers(m.villagers, group);
@@ -46,7 +47,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   makeFadable(group);
   ownShadowDepth(group);   // the props' instanced meshes
   scene.add(group);
-  const world = { group, glass, fluidMeshes, splashes, lights, villagers, ...markers };
+  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, ...markers };
   setTownPortal(world, townPad);
   return world;
 }

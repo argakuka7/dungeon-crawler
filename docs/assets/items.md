@@ -45,7 +45,7 @@ At rest (no clip) the lid is closed. Its floor is at `contents_gltf` (`[0, .118,
 game builds each chest as its own object, not an instance, and plays the clips with an
 `AnimationMixer` (`src/render/chests.js`); collision uses the closed bounds.
 
-The portal scrolls only render their icons; the game never puts tools on the floor.
+The game never puts tools on the floor: the portal scrolls' models only show them in the bag.
 
 ## Files
 
@@ -53,7 +53,8 @@ The portal scrolls only render their icons; the game never puts tools on the flo
 - `blender/items.blend`: editable, labelled showroom with camera and lighting.
 - `assets/items.glb`: complete library, all 47 named roots at the origin.
 - `assets/items/<name>.glb` and `<name>.png`: standalone exports and individual previews
-  (the PNGs double as inventory icons).
+  (the kids' guide uses some of the PNGs as pictures; the game draws every item from its model,
+  `src/render/itemviews.js`).
 - `assets/items/manifest.json`: names, triangles, authoring bounds, sizes and unit/scale contract.
 - `blender/previews/items-preview.png`: overview render.
 - `blender/tests/test_items.py`: geometry, repeatability and actual binary GLB validation.
@@ -115,7 +116,7 @@ starts with (`assets/sword.glb`). The game mounts them in their socket and switc
 stats with equipment; on the floor they lie flat, glowing by rarity (see `docs/loot.md`). The
 arrow and bolt are what bows and crossbows shoot (`render/shots.js`; a nocked arrow also lies on
 a drawn bow). With `?dev=1`, open inventory (`I`) to roll and equip any weapon. Coin types and
-stackable potions/sticks/crystals have inventory definitions and preview icons;
+stackable potions/sticks/crystals have inventory definitions;
 coins normalize automatically. Potions/materials have no use actions yet; reward sites place
 the chest (`docs/loot.md`). How the player holds and uses each kind: `docs/combat.md`.
 See `docs/progression.md` for inventory and balance rules. The headwear and held things are
@@ -126,6 +127,7 @@ items too (`core/items.js WEARABLES`), worn for now only by the villagers (`docs
 ```sh
 Blender --background --python blender/items.py
 Blender --background --python blender/tests/test_items.py
+npm run compress-assets                        # then compress (README.md)
 ```
 
 Via the interactive Blender MCP execute tool:

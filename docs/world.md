@@ -88,7 +88,7 @@ The existing cutaway includes building and canopy occlusion volumes, independent
 of body colliders, so foreground roofs/foliage reveal the player as the camera turns.
 
 Both clearings are then dressed with ~140 small catalog props (`put`/`group`/`scatter`
-in `world/town.js`), all reusing `props.glb`/`clutter.glb`: authored set pieces
+in `world/town.js`), all reusing `props/`/`clutter/` models: authored set pieces
 (a gate signpost, lamp posts, barrels/crates/sacks by each trade, the blacksmith's
 planks and coal, a wheelbarrow at the stable, reeds/stones/lily pads around the pond,
 the traders' campfire with log seats) followed by seeded meadow ground cover that
@@ -745,11 +745,15 @@ Routes can now also use these moves:
 
 ## Props (`render/props.js`, `render/propplace.js`)
 
-Decoration comes from `assets/props.glb` (133 models), `assets/clutter.glb`
-(222 additional models) and `assets/themes.glb` (274 models for the alternative themes, see
+Decoration comes from `assets/props/` (133 models), `assets/clutter/`
+(222 additional models) and `assets/themes/` (274 models for the alternative themes, see
 [the theme library](assets/themes.md)). Each theme names its prop set (`props`); neutral `any_*` rocks are
 tinted with the theme's rock colour. Placement runs on the main thread when a cube's meshes
-are built, seeded by the cube. One factor, `CLUTTER` in `core/propcatalog.js` (0.75), scales
+are built, seeded by the cube. It draws from the catalog (`core/propcatalog.js`), which knows
+every prop from its metadata, so placement and colliders never wait for a download; the
+geometry is one file per library and prop set, loaded with the cube's enemy models before the
+cube is entered (`render/cubeassets.js`, `WorldClient.get`; the cubes behind the portals are
+asked for early, and theirs come along). One factor, `CLUTTER` in `core/propcatalog.js` (0.75), scales
 every scatter pass below, the guardian arenas' cover and loose things and the town's ground
 cover; authored set pieces keep their count.
 
@@ -779,7 +783,7 @@ fixed before terrain retries and are independent of asset loading. Larger presti
 reserves more space; difficulty/encounter selection is a separate concern.
 
 The rare (or exceptional) one is built around one of the theme's **landmarks**
-(`assets/themes.glb`, see [the theme library](assets/themes.md#landmarks)), chosen with the plan:
+(`assets/themes/`, see [the theme library](assets/themes.md#landmarks)), chosen with the plan:
 the next depth of the same theme gets the theme's next landmark. The site is laid out by the
 landmark's role: a shrine with the chest in front of it, a gate with the chest behind it (the
 way in leads through), a camp or monument beside the chest. Landmarks face the approach and

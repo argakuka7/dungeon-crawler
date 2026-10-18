@@ -8,15 +8,18 @@ UVs, unapplied transforms, modifiers, rigs or preview objects are exported.
 Variants are reproducible and change silhouettes, not just object yaw.
 
 Headless:
-    Blender -b --python blender/props.py -- [assets/props.glb]
+    Blender -b --python blender/props.py -- [assets/props]
 
 Inside Blender / MCP (does not clear an existing scene):
     import sys; sys.path.insert(0, "<repo>/blender")
     import importlib, props; importlib.reload(props)
-    objects = props.main(export_path="<repo>/assets/props.glb")
+    objects = props.main(export_dir="<repo>/assets/props")
 
 build(priority=1) builds only P1. main() builds P1 across every theme, then
-P2, validates the mesh library, and exports only the library. All meshes
+P2, validates the mesh library, and exports only the library: one GLB per
+prop set (export_sets: assets/props/<set>.glb), so the game loads a set
+only when a cube shows it. Then `node tools/prop-metadata.mjs` and
+`node tools/compress-assets.mjs` (README.md, "Assets"). All meshes
 are at the origin for instancing. layout_preview() temporarily arranges
 them in theme rows for inspection; export_gltf() always exports at origin
 and restores their preview locations afterwards.
@@ -1172,6 +1175,27 @@ def export_gltf(objects, path, animations=False):
         bpy.context.view_layer.objects.active = active
 
 
+def set_of(obj):
+    """A prop's set: the first part of its name (`abyss_cage_a` -> `abyss`)."""
+    return obj.name.split("_")[0]
+
+
+def export_sets(objects, directory, export=export_gltf):
+    """One GLB per prop set, directory/<set>.glb, each with its props in their order; GLBs of
+    sets that are gone are removed. export(objects, path) writes one (export_gltf by default)."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    sets = {}
+    for obj in objects:
+        sets.setdefault(set_of(obj), []).append(obj)
+    for name, members in sets.items():
+        export(members, directory / f"{name}.glb")
+    for old in directory.glob("*.glb"):
+        if old.stem not in sets:
+            old.unlink()
+    return sorted(sets)
+
+
 def layout_preview(objects, spacing=1.35, row_spacing=4.6):
     """P1/P2 in manifest order, variants adjacent. Ceiling origins sit at z=3.3."""
     themes = list(dict.fromkeys(s[0] for s in SPECS))
@@ -1194,14 +1218,14 @@ def output_dirs(directory=None):
     return ASSETS, HERE, PREVIEWS
 
 
-def main(scene=None, export_path=None):
+def main(scene=None, export_dir=None):
     obj = bpy.context.object
     if obj is not None and obj.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
     objects = build(scene)
     report = validate(objects)
-    if export_path:
-        export_gltf(objects, export_path)
+    if export_dir:
+        export_sets(objects, export_dir)
     print(f"Cube Crawler: {len(objects)} props, {sum(r['triangles'] for r in report)} triangles")
     return objects
 
@@ -1209,6 +1233,6 @@ def main(scene=None, export_path=None):
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if len(args) > 1:
-        raise SystemExit("Usage: Blender -b --python blender/props.py -- [assets/props.glb]")
+        raise SystemExit("Usage: Blender -b --python blender/props.py -- [assets/props]")
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    main(export_path=args[0] if args else str(ASSETS / "props.glb"))
+    main(export_dir=args[0] if args else str(ASSETS / "props"))

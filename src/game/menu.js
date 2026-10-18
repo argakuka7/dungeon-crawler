@@ -29,6 +29,7 @@ import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } 
 import { cleanName, heroLevel, heroStats, savedWorldName, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
 import { readSeed } from '../core/names.js';
 import { ITEMS } from '../core/items.js';
+import { pictureImg } from '../render/itemviews.js';
 import { playSong } from '../audio/music.js';
 import { readCode } from '../net/protocol.js';
 import { online } from '../net/online.js';
@@ -60,7 +61,8 @@ function playTime(s) {
   const m = Math.round(s / 60);
   return m < 60 ? `${m} min played` : `${Math.floor(m / 60)} h ${m % 60} min played`;
 }
-const heroIcon = h => { const s = h.inventory.slots.find(x => x?.instanceId === h.inventory.equipped); return s ? ITEMS[s.itemId]?.icon : null; };
+// the item a hero holds (its weapon), shown as its picture
+const heroWeapon = h => { const s = h.inventory.slots.find(x => x?.instanceId === h.inventory.equipped); return ITEMS[s?.itemId] ? s.itemId : null; };
 const depthText = w => w.deepest ? `depth ${w.deepest}` : 'town';
 const chosen = () => { const id = store.selected(); return id ? store.hero(id) : null; };
 
@@ -95,8 +97,8 @@ function deleteButton(id) {
 const noHero = `<p class="title-none">You don't have a character yet.</p><button class="menu-big" data-act="first-hero">OK</button>`;
 // a hero to pick (with its weapon's picture); `chosen`: the one picked now
 function heroPick(h, isChosen = false) {
-  const icon = heroIcon(h);
-  return `<button class="title-pick${isChosen ? ' chosen' : ''}" data-act="hero" data-id="${h.id}">${icon ? `<img src="${esc(icon)}" alt="">` : '<i></i>'}`
+  const weapon = heroWeapon(h);
+  return `<button class="title-pick${isChosen ? ' chosen' : ''}" data-act="hero" data-id="${h.id}">${weapon ? pictureImg(weapon) : '<i></i>'}`
     + `<span><b>${esc(h.name)}</b><small>Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}</small></span></button>`;
 }
 

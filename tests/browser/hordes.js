@@ -7,7 +7,6 @@ import { allEnemies, updateEnemies, drawEnemies } from '../../src/game/enemies.j
 import { damageEnemy, cancelSwing } from '../../src/core/combat.js';
 import { createRun } from '../../src/core/progression.js';
 import { HORDE } from '../../src/core/hordes.js';
-import { propsReady } from '../../src/render/props.js';
 import { spiderModel } from '../../src/render/spidermodel.js';
 import { snakeModel } from '../../src/render/snakemodel.js';
 import { renderer, scene, camera } from '../../src/render/scene.js';
@@ -16,11 +15,9 @@ import { around } from '../../src/physics/enemynav.js';
 import { floorY } from '../../src/core/surfaces.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function runHordeChecks() {
-  await propsReady;
-  for (let i = 0; i < 100 && (!spiderModel.ready || !snakeModel.ready); i++) await delay(50);
+  await Promise.all([spiderModel.load(), snakeModel.load()]);
   check(spiderModel.ready && snakeModel.ready, 'horde models loaded');
   return paused(async () => {
     const oldCube = state.cubes.cubes.get(state.cubeKey), hero = { ...player };

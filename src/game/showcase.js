@@ -17,7 +17,7 @@ import { buildWorld, disposeWorld } from '../render/world.js';
 import * as THREE from 'three';
 import { camera, scene } from '../render/scene.js';
 import { N } from '../core/constants.js';
-import { townAssetsReady } from '../render/townassets.js';
+import { cubeAssets } from '../render/cubeassets.js';
 import { villagersReady } from '../render/villagers.js';
 import { player, state, view } from './state.js';
 import { resetEnemies } from './enemies.js';
@@ -60,7 +60,7 @@ export function startShowcase(focus = null) {
   const begin = () => {
     if (show !== s) return;
     if (prev?.cubes && state.cubes === prev.cubes) { prev.cubes.dispose(); state.cubes = null; }
-    const cubes = new WorldClient(focus ? focus.seed : (Math.random() * 2 ** 32) >>> 0);
+    const cubes = new WorldClient(focus ? focus.seed : (Math.random() * 2 ** 32) >>> 0, { prepare: cubeAssets });
     s.cubes = cubes;
     state.cubes = cubes; state.run = createRun(); state.openedFaces.clear();
     if (focus) {
@@ -97,7 +97,7 @@ async function swap(s, first = false) {
   let c;
   try {
     c = await s.next;
-    await Promise.all([townAssetsReady, villagersReady.catch(() => null)]);   // (a town needs them)
+    await villagersReady.catch(() => null);   // (a town needs them)
   } catch (e) {
     console.warn('showcase cube failed', e);
     // another one in a moment (the hero's cube would not come: random ones)

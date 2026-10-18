@@ -248,7 +248,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
   $('inventory-feedback').title = $('inventory-feedback').textContent = state.equipping ? 'Loading weapon…' : !allowed ? 'Finish your current action before changing weapons.' : state.statusMsg;
 }
 const refresh = () => { signature = ''; updateInventory(); };
-onItemPictures(() => { signature = ''; });   // a model's picture is in: show it instead of the icon
+onItemPictures(() => { signature = ''; });   // a model's picture is in: show it
 
 // move the selected item across: floor -> bag, bag -> floor
 function take() {

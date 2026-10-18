@@ -79,8 +79,11 @@ stackables but have no use actions or crafting yet (there is no mana or stamina)
 
 **Tools** (`category: 'tool'`) are used, not used up. The only one is the **Town Portal
 Scroll** ([world.md](world.md#town-portal-gametownportaljs)). It is **bound**: Drop is disabled
-for it and `takeItem` refuses it, so it never lies on the floor and has no model. Its icon is
-an inline SVG placeholder in `core/items.js` until it gets artwork in `blender/items.py`.
+for it and `takeItem` refuses it, so it never lies on the floor and has no `model`; the bag
+shows it as its `picture` model (`assets/items/item_town_portal.glb`). Every item shows as its
+model wherever it appears (the bag, the quick bar, the potions at work, the chat's suggestions,
+the touch buttons, the heroes in the main menu): `render/itemviews.js` renders each once into a
+picture. There are no icon images in the game.
 
 ## Quick bar (`game/quickbar.js`)
 
@@ -212,7 +215,7 @@ await checks.runInventoryChecks();
 ```
 
 This resets to a seed-3 run before and after checking the real modal, input pause,
-icons/counts, all six swords and a bow, crossbow and staff mounted in their sockets, dev gating, ordinary slot equipment, death
+pictures/counts, all six swords and a bow, crossbow and staff mounted in their sockets, dev gating, ordinary slot equipment, death
 rewards, cube revisits, max-HP respawn, new-run reset and asynchronous race handling.
 The existing combat/climbing/travel browser checks remain available; see
 [combat.md](combat.md).
