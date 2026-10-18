@@ -20,6 +20,9 @@ export const ROLES = {
   pilgrim: { title: 'pilgrim', kinds: { landmark: 3, reach: 1 }, outfits: [['wear_hood', 'held_towel'], ['wear_headscarf', 'held_towel']], depths: [0, 13] },
   trapper: { title: 'trapper', kinds: { horde: 3, guardian: 1 }, outfits: [['wear_straw_hat', 'held_rope'], ['wear_straw_hat', 'held_feed_bag']], depths: [0, 16] },
   scholar: { title: 'scholar', kinds: { landmark: 2, reach: 2 }, outfits: [['wear_wizard_hat'], ['wear_wizard_hat', 'held_crystal_ball']], depths: [3, 20] },
+  // who keeps an outpost's supply cart (world/spots.js), and asks for help defending it
+  carter: { title: 'carter', kinds: { horde: 2, guardian: 1 }, outfits: [['wear_straw_hat', 'held_feed_bag'], ['wear_explorer_hat', 'held_rope']],
+    depths: [0, 20], only: 'outpost' },
 };
 export const NAMES = ['Ada', 'Alma', 'Bodo', 'Bram', 'Clara', 'Cora', 'Dov', 'Edda', 'Emil', 'Finn', 'Frida', 'Greta', 'Gus',
   'Hanna', 'Hugo', 'Ilse', 'Ivo', 'Jonah', 'Juna', 'Kai', 'Kira', 'Lars', 'Lotte', 'Mats', 'Mila', 'Nils', 'Nora', 'Olga',
@@ -35,11 +38,13 @@ export const spotOfGiver = g => isNpcGiver(g) ? g.slice(4) : null;
 // the cube key in a spot's id ('<seed>:<key>:spot:<n>')
 export const keyOfSpot = id => String(id).split(':')[1] ?? null;
 
-// who lives at a planned seat or camp (world/spots.js; null: a hiding place, nobody lives there)
+// who lives at a planned seat, camp or outpost (world/spots.js; null: a hiding place, nobody
+// lives there)
 export function residentOf(plan) {
-  if (plan?.kind !== 'seat' && plan?.kind !== 'camp') return null;
+  if (!['seat', 'camp', 'outpost'].includes(plan?.kind)) return null;
   const R = mulberry32(hash32(plan.seed ^ 0x9e0c5));
-  const roles = Object.entries(ROLES).filter(([, r]) => plan.depth >= r.depths[0] && plan.depth <= r.depths[1]);
+  const roles = Object.entries(ROLES).filter(([, r]) => plan.depth >= r.depths[0] && plan.depth <= r.depths[1]
+    && (r.only ?? null) === (plan.kind === 'outpost' ? 'outpost' : null));
   const [role, r] = roles[Math.floor(R() * roles.length)];
   const name = NAMES[Math.floor(R() * NAMES.length)];
   return { id: `${plan.id}:resident`, giver: npcGiver(plan.id), name, role, title: `${name} the ${r.title}`,
@@ -54,7 +59,7 @@ export function residentsOf(spots = []) {
   for (const s of spots) {
     const npc = residentOf(s);
     if (!npc) continue;
-    const at = s.kind === 'camp' ? s.places[0] : s.anchor;
+    const at = s.kind === 'camp' || s.kind === 'outpost' ? s.places[0] : s.anchor;
     if (at) out.push({ ...npc, x: at.x, y: at.y, z: at.z, yaw: at.yaw });
   }
   return out;

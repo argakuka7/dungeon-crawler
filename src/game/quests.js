@@ -17,7 +17,7 @@ import { awardXP } from '../core/progression.js';
 import { addCopper, addInstance, autoBar, fits, formatCoins } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { dropAtFeet } from './loot.js';
-import { giverOf, giverName, meet, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
+import { giverOf, giverName, meet, fail, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
 import { pickUpQuestItems, questWorldChanged, bountiesHere } from './questworld.js';
@@ -45,6 +45,7 @@ const live = () => state.mode === 'play' && !!state.cubes && !!state.run?.quests
 // tells the host
 export function questEvent(ev) {
   if (!live()) return;
+  if (ev.kind === 'lost') { questAct('fail', ev.quest); return; }   // a raid lost (game/defense.js)
   if (!questAuthority()) { relay.questAct?.({ act: 'event', ev }); return; }
   const paid = noteEvent(questLog(), ev, facts(), Date.now());
   for (const q of paid) payEveryone(q);
@@ -68,6 +69,7 @@ function doAct(act, id) {
     case 'unarchive': return archive(L, id, false, gates);
     case 'restart': return restart(L, id, gates);
     case 'meet': return meet(L, id) && refreshOffers(L, ctx(), [id]);
+    case 'fail': return fail(L, id);
     case 'handIn': {
       const q = handIn(L, id, Date.now());
       if (q) payEveryone(q);
@@ -83,8 +85,8 @@ export function guestQuestAct(m) {
   if (m.act === 'event' && m.ev && typeof m.ev === 'object') {
     const { kind, depth, key } = m.ev;
     if (['visit', 'horde', 'landmark'].includes(kind)) questEvent({ kind, depth: Number.isInteger(depth) ? depth : undefined, key: typeof key === 'string' ? key : undefined });
-    if (['found', 'rescued', 'talked'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
-  } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet'].includes(m.act)) { doAct(m.act, m.id); share(); }
+    if (['found', 'rescued', 'talked', 'defended'].includes(kind) && typeof m.ev.quest === 'string') questEvent({ kind, quest: m.ev.quest });
+  } else if (typeof m.id === 'string' && ['accept', 'archive', 'unarchive', 'restart', 'handIn', 'meet', 'fail'].includes(m.act)) { doAct(m.act, m.id); share(); }
 }
 
 // A guest: the host's quest log (net/session.js); fresh: it comes with the welcome (nothing to

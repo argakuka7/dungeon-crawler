@@ -335,6 +335,26 @@ function recipients(ctx, log, depths, giver) {
     });
   });
 }
+// defend an outpost's supply cart (world/spots.js) against raiders, for whoever keeps it
+// (game/defense.js runs the raid); it may fail, and start again
+KINDS.defense = {
+  payout: 'spot',
+  targets: (ctx, log, depths, giver) => depths.flatMap(depth => ctx.layout(depth).spotList
+    .filter(s => s.kind === 'outpost' && residentOf(s)?.giver === giver)
+    .map(plan => ({ id: `defend:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: 1, plan }))),
+  quest(t, ctx, R) {
+    const keeper = residentOf(t.plan), where = depthName(t.depth);
+    return {
+      title: `Raiders at the cart`,
+      text: pick(R, [
+        `Every night the monsters come for my supply cart. I cannot hold them off alone! When you are ready, stand by the cart and I will ring the bell. Keep them off it until they give up.`,
+        `They have been at my cart again, and next time there will be more of them. Will you stand by it with me? Keep them away from it, wave after wave.`,
+      ]),
+      target: { spot: t.spot },
+      stages: [{ goal: 'defend', depth: t.depth, key: t.key, spot: t.spot, waves: 3, text: `Defend ${keeper.name}'s cart on ${where}` }],
+    };
+  },
+};
 // the things a giver may have lost (core/items.js QUEST_ITEMS)
 const LOST_ITEMS = { innkeeper: ['quest_ring', 'quest_letter', 'quest_locket'], groom: ['quest_compass', 'quest_map_scrap'],
   smith: ['quest_ring', 'quest_journal'], keeper: ['quest_toy_rabbit'], alchemist: ['quest_journal', 'quest_locket'],
@@ -348,7 +368,7 @@ function hidingPlaces(ctx, log, depths) {
     .map(plan => ({ id: `spot:${plan.id}`, depth, key: plan.key, spot: plan.id, tier: plan.tier, plan })));
 }
 // what a goal is, by name (the kinds' stages)
-export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty', 'deliver', 'talk'];
+export const GOALS = ['reach', 'landmark', 'guardian', 'horde', 'find', 'rescue', 'open', 'bounty', 'deliver', 'talk', 'defend'];
 export const QUEST_KINDS = Object.keys(KINDS);
 
 const range = (a, b) => Array.from({ length: Math.max(0, Math.min(b, MAX_DEPTH) - a + 1) }, (_, i) => a + i);
@@ -400,7 +420,7 @@ const weighted = (R, list, weight) => {
 const takenTargets = log => new Set(log.list.filter(q => q.state !== 'done' || !q.target?.spot).map(q => q.target?.id).filter(Boolean));
 // the kinds to try for a slot of the plan: its own (a scout as the giver leans), then the others
 const FALLBACK = { scout: ['find'], find: ['treasure', 'scout'], treasure: ['find'], rescue: ['find'], bounty: ['find'],
-  delivery: ['relay', 'find'], relay: ['delivery', 'find'] };
+  delivery: ['relay', 'find'], relay: ['delivery', 'find'], defense: ['find'] };
 function kindsFor(slot, g, R) {
   const scouts = () => {
     const left = SCOUTS.map(k => [k, g.kinds[k] ?? 0.3]), out = [];
@@ -423,7 +443,8 @@ export function makeQuest(log, ctx, giver, slot) {
       && !goalDone({ goal: kind, depth: t.depth, key: t.key }, log, f));
     if (!options.length) continue;
     const t = options[Math.floor(R() * options.length)];
-    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' || kind === 'bounty' ? 1 : 0) + ((t.tier ?? 0) >= 3 ? 1 : 0)));
+    const step = Math.max(0, Math.min(2, t.depth - log.deepest + (t.role === 'descent' || kind === 'bounty' || kind === 'defense' ? 1 : 0)
+      + ((t.tier ?? 0) >= 3 ? 1 : 0)));
     const difficulty = DIFFICULTIES[step], made = KINDS[kind].quest(t, ctx, R, { id, giver, difficulty });
     const rewards = questRewards(R, t.depth, difficulty);
     return { id, giver, n: Number(slot.id.split(':')[1]) || 0, slot: slot.id, from: { name: g.name, title: g.title, where: g.where },
@@ -539,6 +560,7 @@ function settled(log, q) {
 //   { kind: 'rescued', quest }    somebody found the person quest `quest` is looking for
 //   { kind: 'talked', quest }     somebody talked to who quest `quest` sends them to (a letter
 //                                 delivered, somebody asked)
+//   { kind: 'defended', quest }   the raid on quest `quest`'s cart is beaten (game/defense.js)
 // The log takes note, and the quests move on (settle). The quests paid on the spot.
 export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'visit' && Number.isInteger(ev.depth) && ev.depth > log.deepest) { log.deepest = Math.min(MAX_DEPTH, ev.depth); log.version++; }
@@ -547,9 +569,9 @@ export function questEvent(log, ev, gates = new Set(), now = 0) {
     const s = q.stages[q.stage];
     if (q.state === 'active' && !q.archived && s?.goal === 'landmark' && s.key === ev.key && !s.done) { s.done = true; log.version++; }
   }
-  if (['found', 'rescued', 'talked'].includes(ev.kind) && typeof ev.quest === 'string') {
+  if (['found', 'rescued', 'talked', 'defended'].includes(ev.kind) && typeof ev.quest === 'string') {
     const q = find(log, ev.quest), s = q?.stages[q.stage];
-    const goals = { found: ['find'], rescued: ['rescue'], talked: ['deliver', 'talk'] }[ev.kind];
+    const goals = { found: ['find'], rescued: ['rescue'], talked: ['deliver', 'talk'], defended: ['defend'] }[ev.kind];
     if (q?.state === 'active' && !q.archived && goals.includes(s?.goal) && !s.done) { s.done = true; log.version++; }
   }
   return settle(log, gates, now);
@@ -655,7 +677,8 @@ function checkStage(s) {
     out.reply = text(s.reply, 200);
   }
   if (typeof s.clue === 'string') out.clue = text(s.clue, 120);
-  if (['find', 'rescue', 'open', 'bounty'].includes(s.goal) && !out.spot) return null;
+  if (s.goal === 'defend') out.waves = Math.max(1, Math.min(9, nat(s.waves) || 3));
+  if (['find', 'rescue', 'open', 'bounty', 'defend'].includes(s.goal) && !out.spot) return null;
   return out;
 }
 // somebody (lost, or living at a camp): their name, how they are related, how they look

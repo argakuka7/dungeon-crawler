@@ -7,6 +7,8 @@
 //         (`approach`)
 //   camp  a fire (`anchor`) and the four cells beside it: three people around it (`places`),
 //         the fourth side the approach (with the corners between them that are level too)
+//   outpost  three by three level cells, a supply cart in the middle (`anchor`, it blocks), its
+//         keeper on one side (`places`), the approach on another, and room to fight round it
 // A spot's floors are flat, dry, under open sky or enough headroom, off portal pads, reward
 // sites and the horde's patch, and nothing is built on them (they claim their space against
 // structures, smoothing keeps them flat, props and enemies keep off them). One that does not
@@ -17,7 +19,8 @@ import { floorY } from '../core/surfaces.js';
 import { search, take } from './route.js';
 import { reachTo, reachFrom, isCramped } from './reach.js';
 
-const ORDER = { camp: 0, seat: 1, hide: 2 };
+const ORDER = { outpost: 0, camp: 1, seat: 2, hide: 3 };
+const ROOM = 10;   // level floors (a level up or down) within 4 cells an outpost needs to fight on (more is better)
 const TRIES = 10;   // footprints tried (both ways searched) per spot
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
@@ -56,6 +59,17 @@ export function placeSpots(ctx) {
         const d = Math.floor(R() * 4), [dx, dz] = AXES[d], g = beside(f, dx, dz);
         if (!g) continue;
         cells = [f, g]; access = g;
+      } else if (plan.kind === 'outpost') {
+        if (onRoute.has(f.id)) continue;   // (the cart stands there: not on the way itself)
+        const ring = [];
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (dx || dz) ring.push(beside(f, dx, dz));
+        if (ring.some(g => !g)) continue;
+        let room = 0;
+        for (const g of ctx.floors) if (g.layer === f.layer && Math.abs(g.top - f.top) <= 1 && Math.hypot(g.x - f.x, g.z - f.z) <= 4 && !g.fluid && !g.prot) room++;
+        if (room < ROOM) continue;
+        cells = [f, ...ring]; cells.room = room;
+        const sides = AXES.map(([dx, dz]) => beside(f, dx, dz)), open = Math.floor(R() * 4);
+        access = sides[open]; places = [sides[(open + 2) % 4]];
       } else {
         // the fire and the four cells beside it (and the corners that are level with it)
         const sides = AXES.map(([dx, dz]) => beside(f, dx, dz));
@@ -70,6 +84,7 @@ export function placeSpots(ctx) {
       const portal = Math.min(...portalCells.map(c => Math.hypot(c % N - f.x, ((c / N) | 0) - f.z)));
       const score = plan.kind === 'hide' ? (onRoute.has(f.id) ? -4 : 0) + Math.min(portal, 8) * 0.5 + (plan.tier >= 3 ? f.top * 0.6 : 0)
         : plan.kind === 'seat' ? -Math.abs(portal - 5) + (cells.some(g => onRoute.has(g.id)) ? -1 : 0) + (byRoute(cells) ? 2 : 0)
+        : plan.kind === 'outpost' ? -Math.abs(portal - 5) + (byRoute(cells) ? 2 : 0) + Math.min(cells.room, 30) * 0.25
         : -Math.abs(Math.hypot(entry.x - f.x, entry.z - f.z) - 4);
       // level ground all round stays level when smoothed
       let flat = 0;
@@ -109,7 +124,7 @@ export function placeSpots(ctx) {
 // The spots as the map carries them, checked with the final slopes and fences: reachable both
 // ways, flat, and nothing built on them. The camp's fire and pack (as site placements).
 export function finishSpots(ctx) {
-  const spots = [], placements = [];
+  const spots = [], placements = [], blockers = [];
   const at = (f, yaw = 0) => ({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5, yaw });
   for (const s of ctx.spots || []) {
     const { plan, f, cells, access, places } = s;
@@ -119,7 +134,7 @@ export function finishSpots(ctx) {
     if (!reachable || !clear) { ctx.spotFailures.push({ id: plan.id, kind: plan.kind, reason: reachable ? 'not clear' : 'approach or return blocked' }); continue; }
     // somebody standing there (where a seat's NPC or a hidden person stands, a camp's places)
     // must not block the way: every portal still leads to the exit around them
-    const stood = plan.kind === 'camp' ? places : [f], was = stood.map(g => g.siteBlocked);
+    const stood = plan.kind === 'camp' ? places : plan.kind === 'outpost' ? [f, ...places] : [f], was = stood.map(g => g.siteBlocked);
     for (const g of stood) g.siteBlocked = true;
     const safe = reachTo(ctx, s.exit, true), around = ctx.portalFloors.every(p => safe?.has(p.id))
       && (plan.kind === 'hide' || safe?.has(access.id) && reachTo(ctx, access, true)?.has(s.entry.id));
@@ -131,6 +146,15 @@ export function finishSpots(ctx) {
     spots.push({ id: plan.id, kind: plan.kind, tier: plan.tier, depth: plan.depth, seed: plan.seed, layer: f.layer,
       cells: cells.map(g => g.c), floor: f.id, accessFloor: access.id, anchor, approach,
       places: places.map(g => at(g, face(g, f))) });
+    if (plan.kind === 'outpost') {
+      // the cart blocks its cell (the way round it was checked with it there); a pack on a corner
+      const R = mulberry32(plan.seed), corner = cells.slice(1).find(g => g.x !== f.x && g.z !== f.z && !places.includes(g));
+      const yaw = Math.floor(R() * 4) * Math.PI / 2, cart = at(f, yaw);
+      placements.push({ name: 'mines_ore_cart_a', ...cart, s: 1, spot: plan.id });
+      blockers.push({ x: cart.x, z: cart.z, r: 0.42, bottom: cart.y, top: cart.y + 0.9, spot: plan.id });
+      f.siteBlocked = true; f.siteBlockTop = f.top + 2;
+      if (corner) placements.push({ name: 'relics_abandoned_pack_a', ...at(corner, face(corner, f)), s: 1, spot: plan.id });
+    }
     if (plan.kind === 'camp') {
       const R = mulberry32(plan.seed), corner = cells.slice(1).find(g => g.x !== f.x && g.z !== f.z && g !== access);
       placements.push({ name: R() < 0.5 ? 'relics_old_campfire_a' : 'relics_old_campfire_b', ...at(f, R() * Math.PI * 2), s: 1, spot: plan.id });
@@ -138,5 +162,5 @@ export function finishSpots(ctx) {
     }
   }
   ctx.stats.spots = spots.length; ctx.stats.requestedSpots = (ctx.spec.spots || []).length;
-  return { spots, spotPlacements: placements, spotFailures: ctx.spotFailures || [] };
+  return { spots, spotPlacements: placements, spotBlockers: blockers, spotFailures: ctx.spotFailures || [] };
 }

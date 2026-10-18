@@ -15,7 +15,8 @@ import { updateConsole, openChat, closeChat, say } from './game/console.js';
 import { runCommand } from './game/commands.js';
 import { chronicle } from './game/log.js';
 import { updateInventory } from './game/inventory.js';
-import { updateQuests } from './game/quests.js';
+import { updateQuests, questEvent } from './game/quests.js';
+import { updateDefense } from './game/defense.js';
 import { skinEditorOpen } from './game/skineditor.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './game/equipment.js';
 import { updateLightPool, focusPoint } from './render/lightpool.js';
@@ -157,6 +158,7 @@ function frame(now = performance.now()) {
   updateCastBar();
   updateMusic(elapsed);
   updateQuests(elapsed);   // the world's quests: goals done, offers made, told to the others (game/quests.js)
+  updateDefense(dt, questEvent);   // a raid on an outpost's cart (game/defense.js), in game time
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   fitView();      // a new size or resolution only now, right before drawing (render/scene.js)

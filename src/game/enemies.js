@@ -50,6 +50,13 @@ export const ENTRY_GRACE = 1.2;
 // enemies spawned with the dev tools (game/devspawn.js), of any species; gone when the cube resets
 let spawned = [];
 export function addEnemies(list) { spawned.push(...list); }
+// those of them `gone` picks leave (a raid called off, game/defense.js), without a reward
+export function removeEnemies(gone) {
+  const out = spawned.filter(gone);
+  if (!out.length) return;
+  spawned = spawned.filter(e => !gone(e));
+  removeEnemyViews(out);
+}
 
 // Shown another player's enemies (net/foes.js Viewer): { list, apply(dt), reset() }. `list` is
 // the runner's enemies in this cube, shown here; apply puts them where the runner says they are

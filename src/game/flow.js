@@ -33,6 +33,7 @@ import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 import { questEvent, questMark, restoreQuests } from './quests.js';
 import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
+import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
 
@@ -90,6 +91,7 @@ function restoreVisit(v) {
 // learn: memory.html#death (see learn/README.md)
 export function die() {
   sfx('death');
+  raidDied();   // a raid going on is lost (game/defense.js)
   logDeath();
   backAfterDeath();
 }

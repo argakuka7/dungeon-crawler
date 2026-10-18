@@ -18,7 +18,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   in as built ones (`BUILT`, `STAND_IN`). Somebody lost is always asked for by whoever lives at a
   camp at or up to two above the depth (they will wait there together); the rest by the villagers
   (a share falling with depth) or the people of the depth and the one above.
-- **Ten kinds:**
+- **Eleven kinds:**
   - the scouting kinds, about what the world has anyway: `reach` (get down to a depth nobody has
     been to, one or two below the deepest), `landmark` (stand beside a depth's landmark, within
     `LANDMARK_REACH` cells of its chest), `guardian` (beat a side or descent guardian: done once
@@ -44,6 +44,16 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
     delivery's recipient), who tells where the lost thing is: a hiding place on the same depth
     (the clue is in the goal), then it is a `find`, back to the giver. Quests with more than one
     stage run them in order.
+  - `defense`: an outpost's keeper (a carter, `core/npcs.js`) asks to defend the supply cart.
+    Every outpost has one such slot in the plan, at its depth, in place of that depth's last.
+    `game/defense.js` runs the raid (on the game that runs the cube's enemies): coming within
+    `RAID.start` of the cart starts it; after a moment three waves (3, 4, 5 raiders, more deeper
+    down, of the depth's kinds that fight up close) come through the portals (else from a few
+    cells off, where the cart is up on a ledge), each once the one before is beaten. Raiders are
+    posted beside the cart like a guardian's defenders (`e.defence`): there they take from it
+    (its strength, shown over it, drains), and they fight a player who comes close or hits them.
+    All waves beaten: done, the keeper pays (`spot`). The cart emptied, or dying: it fails;
+    Restart in the quest menu, then again by the cart. Leaving the cube calls the raid off.
 
   The scouting kinds and `find` are paid back at the giver (`return`).
 - **Givers** (the villagers, and the people out in the world once met) each have one offer at a
@@ -87,7 +97,7 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
 - **People out in the world** (`core/npcs.js`, `game/npcs.js`): somebody lives at every seat
   and camp (below, "Who they are"). Talked to once (`log.met`), they give quests like the
   villagers, about their own depth and the one below.
-- **Not yet:** the other kinds (gather, scattered pieces, prisoners, defense),
+- **Not yet:** annex rooms, the other kinds (gather, scattered pieces, prisoners),
   failing, repeats, tracking a quest in the HUD, dev commands.
 
 ## What we want
@@ -199,7 +209,7 @@ like the villagers' places in `tests/town.test.js`). What stands on it is decide
 the quests: an NPC (its figure from `render/figure.js`, its collider added then), a quest item, a
 thing to defend, or nothing. An unused spot is just open ground.
 
-**Built** (hiding places, seats, camps; outposts are still to come): `world/spots.js` plans them
+**Built** (hiding places, seats, camps, outposts): `world/spots.js` plans them
 with each depth's layout (`layout.spots`, `layout.spotList`), on a random stream of their own, so
 nothing else in the world changes:
 
@@ -207,6 +217,11 @@ nothing else in the world changes:
   the route (where the depth begins). Only in rooms the ordinary generator makes: not the town and
   the merchant camp, not guardian arenas, not a span's gorge cubes, not a large area's rooms but
   its foot and a hairpin's summit. The spots spread over the rooms (fewest first).
+- an outpost on six depths, one in each stretch (`OUTPOST_BANDS`: 1-3, 4-6, 7-9, 10-12, 13-15,
+  16-19; which depth from the seed), in a plain room on the way (not at its ends, not the horde's,
+  not a high place), on a random stream of its own. In the cube: three by three level cells with
+  the supply cart in the middle (it blocks), the keeper on one side, the approach on another, and
+  as much level ground round it as there is (at least 10 floors within 4 cells).
 - each has a `tier`, how hard it is to get to, 0 to 4: one for every side guardian or the horde
   the way to it leads past, one for a branch room, one for a room with a reward site, two for the
   high places (a tableland, a pinnacle, a lone peak, a great lake, a large area's foot or summit, a

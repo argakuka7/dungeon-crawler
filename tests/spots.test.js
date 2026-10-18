@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/world/world.js';
 import { makeLayouts } from '../src/world/layout.js';
-import { planSpots, SPOT_KINDS, MAX_TIER, SEATS, HIDES, campDepth } from '../src/world/spots.js';
+import { planSpots, SPOT_KINDS, MAX_TIER, SEATS, HIDES, campDepth, OUTPOST_BANDS } from '../src/world/spots.js';
 import { isClearing } from '../src/world/town.js';
 import { N } from '../src/core/constants.js';
 import { placeProps } from '../src/render/propplace.js';
@@ -34,6 +34,10 @@ test('every depth plans its spots from the seed: hiding places, two seats, a cam
       if (d > 0) assert.ok(Math.max(...tiers) > Math.min(...tiers), `depth ${d}: hiding places of several tiers`);
     }
     assert.deepEqual(planSpots(seed, L(5)).list, L(5).spotList, 'the same plan again');
+    const outposts = Array.from({ length: 21 }, (_, d) => L(d).spotList.filter(x => x.kind === 'outpost')).flat();
+    assert.equal(outposts.length, OUTPOST_BANDS.length, 'an outpost in every stretch of depths');
+    for (const [i, [a, b]] of OUTPOST_BANDS.entries()) assert.equal(outposts.filter(o => o.depth >= a && o.depth <= b).length, 1, `stretch ${i}`);
+    for (const o of outposts) assert.ok(!L(o.depth).hordes.has(o.key) && L(o.depth).route.includes(o.key), 'on the way, not the horde\'s room');
   }
 });
 
@@ -72,6 +76,12 @@ function checkSpots(world, map, plans) {
       assert.ok(props.out.some(q => q.spot === s.id && q.name.includes('campfire')), 'the camp has its fire');
     }
     if (s.kind === 'seat') assert.ok(Math.hypot(s.anchor.x - s.approach.x, s.anchor.z - s.approach.z) === 1);
+    if (s.kind === 'outpost') {
+      assert.equal(s.cells.length, 9);
+      assert.equal(s.places.length, 1, 'its keeper');
+      assert.ok(props.out.some(q => q.spot === s.id && q.name.includes('ore_cart')), 'the supply cart');
+      assert.ok(map.staticBlockers[s.cells[0]].some(b => b.spot === s.id), 'the cart is in the way');
+    }
   }
 }
 

@@ -14,10 +14,11 @@ export const MAX_DEPTH = 20;
 export const perDepth = d => d === 0 ? 4 : d <= 3 ? 7 : d <= 11 ? 5 : d <= 19 ? 4 : 3;
 // the share of each kind (docs/quests.md "Kinds"). `scout` is one of the kinds about what the
 // world has anyway (reach, landmark, guardian, horde), as the giver leans.
-export const MIX = { find: 13, treasure: 5, rescue: 10, bounty: 15, delivery: 14, gather: 10, scout: 10, defense: 9, pieces: 8, prisoners: 6 };
+// (defense is not drawn: every outpost has one, at its depth, from whoever keeps it)
+export const MIX = { find: 13, treasure: 5, rescue: 10, bounty: 15, delivery: 14, gather: 10, scout: 10, pieces: 8, prisoners: 6 };
 export const SCOUTS = ['reach', 'landmark', 'guardian', 'horde'];
 // the kinds there are so far; a planned kind that is not yet stands in as one of these
-export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout', 'bounty', 'delivery', 'relay']);
+export const BUILT = new Set(['find', 'treasure', 'rescue', 'scout', 'bounty', 'delivery', 'relay', 'defense']);
 const STAND_IN = [['find', 6], ['treasure', 1], ['scout', 3]];
 // how many of a depth's quests the villagers give (the rest: the people out in the world)
 const townShare = d => d <= 3 ? 0.7 : d <= 7 ? 0.45 : d <= 11 ? 0.3 : 0.1;
@@ -51,6 +52,11 @@ export function questPlan(seed, layout) {
       else giver = npcGiver(near[Math.floor(R() * near.length)].id);
       if (!giver) { kind = 'find'; giver = TOWN[Math.floor(R() * TOWN.length)]; }
       slots.push({ id: `${d}:${i}`, depth: d, kind, giver });
+    }
+    // an outpost's defense, from whoever keeps it, in place of the depth's last quest
+    for (const o of layout(d).spotList.filter(s => s.kind === 'outpost')) {
+      const slot = slots.findLast(s => s.depth === d && s.kind !== 'defense');
+      if (slot) Object.assign(slot, { kind: 'defense', giver: npcGiver(o.id) });
     }
   }
   const byGiver = new Map();

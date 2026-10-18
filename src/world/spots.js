@@ -6,6 +6,8 @@
 //   seat  2 places for one NPC sitting or standing about
 //   camp  on every third depth (1, 4, 7, ...), one camp near where the depth begins: a fire,
 //         room for three people around it
+//   outpost  on six depths, one in each stretch of them (OUTPOST_BANDS), in a room on the way:
+//         somebody's supply cart with level ground round it, to defend (docs/quests.md, Defense)
 // A spot names its cube; where in the cube it lies is up to the cube's generator
 // (cubegen/spots.js), which keeps it clear and reachable both ways like a reward site.
 //
@@ -17,7 +19,11 @@ import { hash32, mulberry32 } from '../core/util.js';
 import { isClearing } from './town.js';
 import { key, hashKey } from './coords.js';
 
-export const SPOT_KINDS = ['hide', 'seat', 'camp'];
+export const SPOT_KINDS = ['hide', 'seat', 'camp', 'outpost'];
+export const OUTPOST_BANDS = [[1, 3], [4, 6], [7, 9], [10, 12], [13, 15], [16, 19]];
+// the depth of a stretch that has its outpost, from the seed
+export const outpostDepth = (seed, band) => { const [a, b] = OUTPOST_BANDS[band]; return a + hash32(seed ^ Math.imul(band + 1, 0x0f7905)) % (b - a + 1); };
+export const hasOutpost = (seed, d) => OUTPOST_BANDS.some(([a, b], i) => d >= a && d <= b && outpostDepth(seed, i) === d);
 export const MAX_TIER = 4;
 export const SEATS = 2;
 export const HIDES = [6, 8];
@@ -73,6 +79,14 @@ export function planSpots(seed, layout) {
   for (let i = 0; i < count; i++) {
     const aim = lo + (hi - lo) * (count > 1 ? i / (count - 1) : 0);
     add(best(info, r => Math.abs(r.tier - aim) * 4), 'hide');
+  }
+  // the outpost: a plain room on the way, not at its ends, not the horde's (on a stream of its own)
+  if (hasOutpost(seed, d)) {
+    const R2 = mulberry32(hash32(seed ^ Math.imul(d + 1, 0x0f7905) ^ 0x0f7)), last = route.length - 1;
+    const plain = info.filter(r => !r.branch && r.at >= 2 && r.at <= last - 1 && !layout.hordes.has(r.key) && !high(r.key));
+    const room = plain.map(r => ({ r, s: r.spots.filter(s => s.kind !== 'hide').length * 10 + Math.abs(r.at / last - 0.5) * 4 + R2() }))
+      .sort((a, b) => a.s - b.s)[0]?.r;
+    if (room) add(room, 'outpost');
   }
   for (const r of info) if (r.spots.length) plans.set(r.key, r.spots);
   return { spots: plans, list: info.flatMap(r => r.spots) };

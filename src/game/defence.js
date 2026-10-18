@@ -8,6 +8,7 @@ export function coordinateDefence(map, run, list, player) {
   const guardian = list.find(e => e.guardianGate && e.mode !== 'dead');   // not a dev-spawned one
   if (!gateLocked(map, run) || !guardian) {
     for (const e of list) {
+      if (e.raid) continue;   // a raid's (game/defense.js): posted at the cart they raid
       if (e.defence && e.mode === 'defend') { e.mode = 'idle'; e.t = 1; e.path = null; }
       e.defence = null;
     }
@@ -20,7 +21,7 @@ export function coordinateDefence(map, run, list, player) {
   const advancing = alive && distance < 8 && ahead < 6;
   const alarm = guardian.hp < guardian.profile.hp;
   // (a boss's summoned minions are no defenders: they go for the player)
-  const defenders = list.filter(e => !e.guardian && !e.summoned && e.mode !== 'dead');
+  const defenders = list.filter(e => !e.guardian && !e.summoned && !e.raid && e.mode !== 'dead');
   const nearest = [...defenders].sort((a, b) => Math.hypot(a.x - player.x, a.z - player.z) - Math.hypot(b.x - player.x, b.z - player.z));
   const pursuers = new Set(nearest.slice(0, Math.max(1, Math.ceil(defenders.length / 3))));
   // a boss, once hurt, fights on wherever the player goes (game/gusto.js)

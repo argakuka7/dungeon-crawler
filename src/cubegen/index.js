@@ -1,5 +1,5 @@
 // Cube generator: turns one cube's spec into its map. Runs the stages in order and retries with a new seed on failure.
-import { N, LH, DIRS } from '../core/constants.js';
+import { N, LH, DIRS, CHAR_R } from '../core/constants.js';
 import { hash32 } from '../core/util.js';
 import { floorY, runY } from '../core/surfaces.js';
 import { createContext } from './context.js';
@@ -115,6 +115,10 @@ function tryGenerate(seed, spec) {
   // among the site placements); one that failed is tried again for like a site
   const spots = finishSpots(ctx);
   sites.sitePlacements.push(...spots.spotPlacements);
+  for (const b of spots.spotBlockers) {   // an outpost's cart: in every cell the character could touch it from
+    for (let z = Math.max(0, Math.floor(b.z - b.r - CHAR_R)); z <= Math.min(N - 1, Math.floor(b.z + b.r + CHAR_R)); z++)
+      for (let x = Math.max(0, Math.floor(b.x - b.r - CHAR_R)); x <= Math.min(N - 1, Math.floor(b.x + b.r + CHAR_R)); x++) sites.staticBlockers[z * N + x].push(b);
+  }
   sites.siteReservations.push(...spots.spots.flatMap(s => s.cells.map(c => ({ c, layer: s.layer }))));
   sites.siteFailures.push(...spots.spotFailures);
   const { K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves } = ctx;

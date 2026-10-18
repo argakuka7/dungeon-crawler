@@ -552,3 +552,9 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 #skin-name:invalid { border-color: #9c8154; }
 #skin-status { min-height: 1.3em; }
 #skin-editor :focus-visible { outline: 2px solid #ffcf7a; outline-offset: 2px; }
+/* an outpost's supply cart under raid (game/defense.js): its strength over it */
+.cart-bar { position: absolute; left: 0; top: 0; width: 100px; font: 11px/1.2 monospace; color: #ffe4ae; text-align: center;
+  text-shadow: 0 1px 2px #000; pointer-events: none; }
+.cart-bar i { display: block; height: 6px; margin-top: 2px; background: #0b0e14d0; border: 1px solid #ffffff33; border-radius: 3px; overflow: hidden; }
+.cart-bar b { display: block; height: 100%; background: #e6c35a; transition: width .2s; }
+.cart-bar[data-phase="countdown"] span::after, .cart-bar[data-phase="between"] span::after { content: ' · get ready'; }

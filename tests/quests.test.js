@@ -41,7 +41,10 @@ test('the plan: about a hundred quests, by depth, from the villagers and the peo
       assert.ok(BUILT.has(s.kind), s.kind);
       assert.ok(TOWN.includes(s.giver) || isNpcGiver(s.giver));
       if (s.kind === 'rescue') assert.ok(campOf(ctx.layout, s.giver), 'somebody lost is asked for by somebody at a camp');
+      if (s.kind === 'defense') assert.ok(ctx.layout(s.depth).spotList.some(o => o.kind === 'outpost' && npcGiver(o.id) === s.giver), 'by its keeper');
     }
+    const outposts = Array.from({ length: 21 }, (_, d) => ctx.layout(d).spotList.filter(o => o.kind === 'outpost')).flat();
+    assert.equal(plan.slots.filter(s => s.kind === 'defense').length, outposts.length, 'every outpost has its defense');
     for (const [giver, slots] of plan.byGiver) assert.deepEqual(slots.map(s => s.depth), [...slots.map(s => s.depth)].sort((a, b) => a - b), giver);
   }
 });
@@ -76,7 +79,8 @@ test('offers follow the plan and are about what the world has, never two about o
       if (q.kind === 'guardian') assert.ok(L.guardians.has(s.key));
       if (q.kind === 'horde') assert.ok(L.hordes.has(s.key));
       if (q.kind === 'landmark') assert.ok(L.sitePlans.get(s.key)?.[0]?.landmark);
-      if (s.spot) assert.ok(L.spotList.some(p => p.id === s.spot && p.kind === 'hide' && p.key === s.key), 'on a hiding place');
+      if (s.spot) assert.ok(L.spotList.some(p => p.id === s.spot && p.kind === (s.goal === 'defend' ? 'outpost' : 'hide') && p.key === s.key),
+        'on a hiding place (a defense: at its outpost)');
       if (s.item) assert.equal(ITEMS[s.item].category, 'quest');
       assert.ok(q.title && q.text && s.text && !/undefined|NaN|null/.test(q.title + q.text + s.text), q.text);
       assert.ok(q.rewards.xp > 0);
@@ -304,4 +308,25 @@ test('a relay: ask somebody, then find it where they say, then bring it back', (
   questEvent(log, { kind: 'found', quest: q.id });
   assert.equal(q.state, 'ready');
   assert.deepEqual(carried(q), [q.stages[1].item]);
+});
+
+test('a defense: the keeper of every outpost asks for one; beating the raid ends it there and pays', () => {
+  const ctx = ctxOf(20);
+  const outpost = Array.from({ length: 21 }, (_, d) => ctx.layout(d).spotList).flat().find(s => s.kind === 'outpost');
+  const log = createQuestLog();
+  log.deepest = outpost.depth;
+  const q = makeQuest(log, ctx, npcGiver(outpost.id), { id: `${outpost.depth}:98`, depth: outpost.depth, kind: 'defense' });
+  assert.equal(q.kind, 'defense');
+  assert.equal(q.payout, 'spot');
+  assert.equal(q.stages[0].spot, outpost.id);
+  assert.equal(makeQuest(log, ctx, 'innkeeper', { id: `${outpost.depth}:97`, depth: outpost.depth, kind: 'defense' })?.kind ?? 'none', 'find',
+    'only its keeper asks (anybody else finds something else to ask)');
+  log.list.push(q);
+  accept(log, q.id);
+  assert.deepEqual(questGoalsIn(log, outpost.key).map(g => g.stage.goal), ['defend']);
+  assert.ok(fail(log, q.id), 'a raid lost');
+  assert.ok(restart(log, q.id));
+  const paid = questEvent(log, { kind: 'defended', quest: q.id });
+  assert.deepEqual(paid, [q]);
+  assert.equal(q.state, 'done');
 });
