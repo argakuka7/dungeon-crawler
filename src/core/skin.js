@@ -2,6 +2,7 @@
 export const SKIN_SIZE = 2048;
 export const SKIN_UV = 'character-v1';
 export const SKIN_NAME_MAX = 32;
+export const MAX_SKINS = 10;   // named skins in the library (game/skinfiles.js)
 export function cleanSkinName(value) {
   if (typeof value !== 'string') return '';
   return value.normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, SKIN_NAME_MAX);

@@ -492,6 +492,7 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 #title-panel .menu-big small { display: block; margin-top: 2px; color: #aab3c2; font-size: 11px; }
 #title-panel .title-item { display: block; box-sizing: border-box; width: 100%; padding: 9px; font-size: 13px; }
 .title-world .title-pick b { white-space: normal; }
+.title-skin .title-pick img, .title-skin .title-pick i { width: 32px; height: 40px; }   /* (the thumbnails are 144×180) */
 #title-panel .menu-row > * { flex: 1; }
 #title-panel .menu-row input { flex: 3; min-width: 0; }
 .title-list { display: grid; gap: 10px; }
@@ -545,23 +546,6 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 #skin-view { height: clamp(230px, 48dvh, 440px); margin-top: 12px; border-radius: 8px; overflow: hidden; }
 #skin-view canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 #skin-editor p { font-size: 13px; color: #b5c2d8; }
-#skin-recent-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
-  max-height: min(55dvh, calc(94dvh - 250px)); overflow: auto; align-content: start; margin: 12px 0; padding: 0; list-style: none; }
-.skin-recent-item { display: grid; gap: 6px; width: 100%; box-sizing: border-box; padding: 12px; text-align: left;
-  background: #19212f; color: #e6e9ef; border: 1px solid #61718b; border-radius: 6px; cursor: pointer; font: inherit; }
-.skin-recent-preview { display: grid; place-items: center; height: clamp(96px, 24dvh, 160px); overflow: hidden; border-radius: 4px; background: #19212f; }
-.skin-recent-preview img { display: block; width: 100%; height: clamp(96px, 24dvh, 160px); object-fit: contain; }
-.skin-recent-preview span { color: #b5c2d8; font-size: 11px; }
-.skin-recent-item:hover { background: #263349; border-color: #ffcf7a; }
-.skin-recent-item b { overflow-wrap: anywhere; }
-.skin-recent-item small { color: #b5c2d8; font-size: 11px; }
-.skin-recent-empty { grid-column: 1 / -1; padding: 18px; color: #b5c2d8; }
-.skin-chooser-footer { position: sticky; bottom: 0; flex-direction: column; align-items: stretch;
-  gap: 8px; padding-top: 12px; background: #101722; }
-#skin-editor #skin-recent-back { width: 100%; padding: 16px 24px; font-size: 18px; font-weight: bold;
-  background: #3a567f; border-color: #ffcf7a; }
-#skin-chooser-close { align-self: center; min-width: 120px; }
-@media (max-width: 480px) { #skin-recent-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .skin-library { margin-top: 12px; }
 #skin-name { flex: 1; min-width: 120px; padding: 8px 10px; border: 1px solid #61718b; border-radius: 6px;
   background: #19212f; color: #e6e9ef; font: inherit; }

@@ -1,5 +1,9 @@
 // Large PNGs belong in IndexedDB; hero JSON in localStorage only keeps an immutable id.
-import { checkSkin, SKIN_UV, SKIN_SIZE, cleanSkinName, skinNameKey } from '../core/skin.js';
+import { checkSkin, SKIN_UV, SKIN_SIZE, MAX_SKINS, cleanSkinName, skinNameKey } from '../core/skin.js';
+// writeNamedSkin: a new name while the library holds MAX_SKINS already
+export class SkinLibraryFull extends Error {
+  constructor() { super(`There are ${MAX_SKINS} skins already`); }
+}
 let opening;
 function database() {
   if (!opening) opening = new Promise((resolve, reject) => {
@@ -70,6 +74,8 @@ export async function readNamedSkin(name) {
     tx.onerror = tx.onabort = () => reject(tx.error || new Error('Could not load named skin'));
   });
 }
+// Rejects with SkinLibraryFull for a new name when there are MAX_SKINS already (replacing
+// one of them is fine). Checked in the same transaction, so two tabs cannot both add the tenth.
 export async function writeNamedSkin(name, blob, preview = null) {
   name = cleanSkinName(name);
   if (!name) throw new Error('A skin name is required');
@@ -77,39 +83,56 @@ export async function writeNamedSkin(name, blob, preview = null) {
   const record = { name, uv: SKIN_UV, blob, revision: crypto.randomUUID(), ...(preview instanceof Blob ? { preview } : {}) };
   return new Promise((resolve, reject) => {
     const tx = db.transaction('names', 'readwrite'), names = tx.objectStore('names');
-    const read = names.get(key), latest = names.index('savedAt').openCursor(null, 'prev');
-    let previous;
-    read.onsuccess = () => { previous = read.result; };
+    const read = names.get(key), count = names.count(), latest = names.index('savedAt').openCursor(null, 'prev');
+    let full = false;
     latest.onsuccess = () => {
+      // (requests in one transaction finish in order: read and count are done)
+      if (!read.result && count.result >= MAX_SKINS) { full = true; tx.abort(); return; }
       // Serialized write transactions provide a stable newest-first order even if
       // several saves (or tabs) share the same millisecond.
       record.savedAt = Math.max(Date.now(), (latest.result?.value.savedAt ?? 0) + 1);
       names.put(record, key);
     };
-    tx.oncomplete = () => resolve({ key, record, previous });
-    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Could not save named skin'));
+    tx.oncomplete = () => resolve({ key, record, previous: read.result });
+    tx.onerror = tx.onabort = () => reject(full ? new SkinLibraryFull() : tx.error || new Error('Could not save named skin'));
   });
 }
-export async function recentNamedSkins() {
+// The library for Choose Skin (game/menu.js), newest first: names and thumbnails, not the PNGs.
+export async function listNamedSkins() {
   const db = await database();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('names', 'readonly');
     const request = tx.objectStore('names').index('savedAt').openCursor(null, 'prev');
-    const recent = [];
+    const skins = [];
     request.onsuccess = () => {
       const cursor = request.result;
-      if (!cursor || recent.length >= 20) return;
+      if (!cursor) return;
       const record = cursor.value;
       if (record.uv === SKIN_UV && record.blob instanceof Blob && cleanSkinName(record.name)) {
-        // Do not keep the full PNG blobs in the menu's state.
-        recent.push({ name: record.name, savedAt: record.savedAt, revision: record.revision,
+        skins.push({ name: record.name, key: skinNameKey(record.name), savedAt: record.savedAt, revision: record.revision,
           preview: record.preview instanceof Blob ? record.preview : null });
       }
-      if (recent.length < 20) cursor.continue();
+      cursor.continue();
     };
-    tx.oncomplete = () => resolve(recent);
-    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Could not load recent skins'));
+    tx.oncomplete = () => resolve(skins);
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Could not load the skins'));
   });
+}
+// Heroes wearing it keep their own copy (writeSkinFile).
+export async function deleteNamedSkin(name) {
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('names', 'readwrite');
+    tx.objectStore('names').delete(skinNameKey(name));
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Could not delete the skin'));
+  });
+}
+
+// A hero's own copy of a named skin (its `skin`); null: no skin of that name.
+export async function copyNamedSkin(name) {
+  const record = await readNamedSkin(name);
+  return record && { ...await writeSkinFile(record.blob), name: record.name };
 }
 
 // Cache derived thumbnails without changing save order or overwriting a newer painting.

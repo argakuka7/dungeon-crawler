@@ -10,6 +10,9 @@
 //   joining     waiting for the friend's game; the hero comes along, the world is theirs (it
 //               does not become the hero's world)
 //   characters  up to three heroes (core/save.js MAX_HEROES): choose, rename, delete, make one
+//   skins       the chosen hero's skin: one of the saved ones (up to core/skin.js MAX_SKINS, in
+//               IndexedDB: game/skinfiles.js), or none; each painted on (game/skineditor.js) or
+//               deleted here, and a new one painted
 // ?join=CODE opens Join Game with the code filled in (state.js: never skipped).
 //
 // Behind the menu the cube the chosen hero left its world in (game/showcase.js), and over it the
@@ -25,7 +28,11 @@ import { syncEquippedWeapon } from './equipment.js';
 import { showPortrait } from '../render/portrait.js';
 import { setCharacterSkin } from '../render/character.js';
 import { openSkinEditor } from './skineditor.js';
-import { deleteSkinFile } from './skinfiles.js';
+import { deleteSkinFile, listNamedSkins, deleteNamedSkin, copyNamedSkin, readNamedSkin, cacheNamedSkinPreview } from './skinfiles.js';
+import { SkinPreview } from '../render/skinpreview.js';
+import { rigReady } from '../render/figure.js';
+import { renderer } from '../render/scene.js';
+import { skinNameKey, MAX_SKINS } from '../core/skin.js';
 import { isInterior } from '../world/town.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
 import { store, play, playAsGuest, stopSaving, newHero, newSavedWorld, forget } from './save.js';
@@ -51,6 +58,9 @@ const params = new URLSearchParams(location.search), local = params.get('net') =
 let screen = 'title', from = 'title', form = null, asked = { id: null, until: 0 }, note = '', copied = null;
 let invite = state.mode === 'menu' ? readCode(params.get('join')) : null, code = invite ?? '', joining = null;
 let shownHero = '';   // the hero over the menu, as it was saved (id, when): its bag is the player's
+// Choose Skin: the library (null: still coming from IndexedDB), its thumbnails (object URLs, by
+// key) and which load is the latest; wearing: a skin is being copied onto the hero
+let skins = null, skinPictures = new Map(), skinLoad = 0, wearing = false;
 
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 function ago(t) {
@@ -93,16 +103,43 @@ function closeMainMenu() {
   state.mode = 'play';
 }
 
+// --- the lists: Choose Character, Choose World and Choose Skin ----------------------------------
+
 function deleteButton(id) {
   const sure = asked.id === id && performance.now() < asked.until;
-  return `<button data-act="delete" data-id="${id}" class="${sure ? 'confirm' : ''}">${sure ? 'Sure? Click again' : 'Delete'}</button>`;
+  return `<button data-act="delete" data-id="${esc(id)}" class="${sure ? 'confirm' : ''}">${sure ? 'Sure? Click again' : 'Delete'}</button>`;
 }
+// a thing to pick: `picture` (HTML, null: none), its name and what is known about it under it;
+// `tag`: said after the name; `chosen`: the one picked now
+function pick({ act, id = '', chosen = false, picture = null, name, tag = '', info = '' }) {
+  return `<button class="title-pick${chosen ? ' chosen' : ''}" data-act="${act}" data-id="${esc(id)}">${picture ?? ''}`
+    + `<span><b>${esc(name)}${tag ? ` <em>${tag}</em>` : ''}</b><small>${info}</small></span></button>`;
+}
+// a row of the list: the pick (or a form in its place) and the buttons beside it
+const card = (body, actions = '', kind = '') =>
+  `<li class="title-card${kind ? ` ${kind}` : ''}">${body}${actions ? `<div class="title-actions">${actions}</div>` : ''}</li>`;
+// a list screen: its title (and what it is for, how many), the cards (none: `empty`), what is
+// under them (making a new one) and Back
+function listScreen({ title, about = '', cards, empty = '', below = '' }) {
+  return `<h2>${title}${about ? ` <small>${about}</small>` : ''}</h2>`
+    + (cards.length ? `<ul class="title-cards">${cards.join('')}</ul>` : `<p>${empty}</p>`)
+    + `${below}<button data-act="back" class="title-back">Back</button>`;
+}
+// the most there can be: why there is no "new" button
+const tooMany = (max, what) => `<p>${max} ${what} is the most: delete one to make a new one.</p>`;
+
 const noHero = `<p class="title-none">You don't have a character yet.</p><button class="menu-big" data-act="first-hero">OK</button>`;
 // a hero to pick (with its weapon's picture); `chosen`: the one picked now
-function heroPick(h, isChosen = false) {
+function heroPick(h, chosen = false) {
   const weapon = heroWeapon(h);
-  return `<button class="title-pick${isChosen ? ' chosen' : ''}" data-act="hero" data-id="${h.id}">${weapon ? pictureImg(weapon) : '<i></i>'}`
-    + `<span><b>${esc(h.name)}</b><small>Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}</small></span></button>`;
+  return pick({ act: 'hero', id: h.id, chosen, picture: weapon ? pictureImg(weapon) : '<i></i>', name: h.name,
+    info: `Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}` });
+}
+// a skin to pick (its thumbnail: the hero wearing it)
+function skinPick(s, chosen) {
+  const url = skinPictures.get(s.key);
+  return pick({ act: 'skin', id: s.key, chosen, name: s.name, tag: chosen ? 'wears it now' : '',
+    picture: url ? `<img src="${url}" alt="">` : '<i></i>', info: s.savedAt ? `saved ${ago(s.savedAt)}` : 'saved skin' });
 }
 
 const screens = {
@@ -117,29 +154,29 @@ const screens = {
       <button class="${world ? 'title-item' : 'menu-big'}" data-act="choose-world">Choose World${world ? '' : `<small>${esc(hero.name)} has no world yet</small>`}</button>
       <button class="title-item" data-act="join-game">Join Game</button>
       <button class="title-item" data-act="characters">Choose Character</button>
-      <button class="title-item" data-act="paint-skin">Choose Skin</button>
+      <button class="title-item" data-act="skins">Choose Skin</button>
       ${more}
     </div>`;
   },
   worlds() {
     const hero = chosen(), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
-    const rows = worlds.map(w => `<li class="title-card title-world"><button class="title-pick${w.id === hero.world ? ' chosen' : ''}" data-act="world" data-id="${w.id}"><span>`
-      + `<b>${esc(w.name)}${w.id === hero.world ? ' <em>its world now</em>' : ''}</b>`
-      + `<small>${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}</small></span></button>`
-      + `<div class="title-actions"><button data-act="copy-name" data-id="${w.id}" title="To share it: a friend makes it with New Known World">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}</div></li>`).join('');
-    const make = worlds.length >= MAX_WORLDS ? `<p>${MAX_WORLDS} worlds is the most: delete one to make a new one.</p>`
+    const cards = worlds.map(w => card(pick({ act: 'world', id: w.id, chosen: w.id === hero.world, name: w.name,
+      tag: w.id === hero.world ? 'its world now' : '',
+      info: `${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}` }),
+      `<button data-act="copy-name" data-id="${w.id}" title="To share it: a friend makes it with New Known World">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}`,
+      'title-world'));
+    const make = worlds.length >= MAX_WORLDS ? tooMany(MAX_WORLDS, 'worlds')
       : form === 'known' ? `<div class="title-form title-new-world">
           <input id="title-seed" maxlength="60" placeholder="A world name or a number" data-enter="create-world" aria-label="World name or number" autocomplete="off" spellcheck="false">
           <p id="title-preview" class="title-preview">A friend's world: type its name.</p>
           <div class="menu-row"><button class="menu-big" data-act="create-world">Make it</button><button data-act="cancel">Cancel</button></div></div>`
       : `<div class="menu-row title-new"><button data-act="random-world">New Random World</button><button data-act="known-world">New Known World</button></div>`;
-    return `<h2>Choose World <small>for ${esc(hero.name)} · ${worlds.length} of ${MAX_WORLDS}</small></h2>
-      ${rows ? `<ul class="title-cards">${rows}</ul>` : '<p>No worlds yet.</p>'}${make}
-      <button data-act="back" class="title-back">Back</button>`;
+    return listScreen({ title: 'Choose World', about: `for ${esc(hero.name)} · ${worlds.length} of ${MAX_WORLDS}`,
+      cards, empty: 'No worlds yet.', below: make });
   },
   join() {
     const heroes = store.heroes(), hero = chosen();
-    const body = !heroes.length ? noHero : `<h3>Who goes</h3><ul class="title-cards">${heroes.map(h => `<li class="title-card">${heroPick(h, h.id === hero?.id)}</li>`).join('')}</ul>
+    const body = !heroes.length ? noHero : `<h3>Who goes</h3><ul class="title-cards">${heroes.map(h => card(heroPick(h, h.id === hero?.id))).join('')}</ul>
       <h3>Your friend's code</h3>
       <div class="menu-row"><input id="title-code" maxlength="40" placeholder="CODE" data-enter="join" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}"><button class="menu-big" data-act="join">Join</button></div>
       <p>Your hero goes into your friend's world and takes home what it finds there.</p>`;
@@ -155,25 +192,36 @@ const screens = {
     let formShown = false;
     const cards = Array.from({ length: MAX_HEROES }, (_, i) => {
       const h = heroes[i];
-      if (h) return `<li class="title-card">${form?.rename === h.id
+      if (h) return card(form?.rename === h.id
         ? `<span class="title-rename"><input id="title-rename" maxlength="16" value="${esc(h.name)}" data-enter="save-name" aria-label="New name"><button data-act="save-name" data-id="${h.id}">Save</button></span>`
-        : heroPick(h, h.id === hero?.id)}
-        <div class="title-actions"><button data-act="rename" data-id="${h.id}">Rename</button>${deleteButton(h.id)}</div></li>`;
+        : heroPick(h, h.id === hero?.id),
+        `<button data-act="rename" data-id="${h.id}">Rename</button>${deleteButton(h.id)}`);
       if (form === 'hero' && !formShown) {
         formShown = true;
-        return `<li class="title-card title-form"><input id="title-name" maxlength="16" placeholder="Name your hero" data-enter="create-hero" aria-label="Hero name">
-          <button data-act="create-hero">Create</button>${heroes.length ? '<button data-act="cancel">Cancel</button>' : ''}</li>`;
+        return card(`<input id="title-name" maxlength="16" placeholder="Name your hero" data-enter="create-hero" aria-label="Hero name">
+          <button data-act="create-hero">Create</button>${heroes.length ? '<button data-act="cancel">Cancel</button>' : ''}`, '', 'title-form');
       }
-      return `<li class="title-card title-empty"><button data-act="new-hero">+ New hero</button></li>`;
-    }).join('');
-    return `<h2>Choose Character</h2><ul class="title-cards">${cards}</ul><button data-act="back" class="title-back">Back</button>`;
+      return card('<button data-act="new-hero">+ New hero</button>', '', 'title-empty');
+    });
+    return listScreen({ title: 'Choose Character', cards });
   },
-
+  skins() {
+    const hero = chosen(), worn = skinNameKey(hero.skin?.name ?? '');
+    const cards = !skins ? [] : [
+      card(pick({ act: 'skin', chosen: !hero.skin, name: 'No skin', tag: hero.skin ? '' : 'wears it now', picture: '<i></i>', info: 'plain clay' }), '', 'title-skin'),
+      ...skins.map(s => card(skinPick(s, !!hero.skin && s.key === worn),
+        `<button data-act="paint-skin" data-id="${esc(s.key)}">Paint</button>${deleteButton(`skin:${s.key}`)}`, 'title-skin')),
+    ];
+    const make = !skins ? '' : skins.length >= MAX_SKINS ? tooMany(MAX_SKINS, 'skins')
+      : '<div class="menu-row title-new"><button data-act="new-skin">Paint New Skin</button></div>';
+    return listScreen({ title: 'Choose Skin', about: `for ${esc(hero.name)}${skins ? ` · ${skins.length} of ${MAX_SKINS}` : ''}`,
+      cards, empty: 'Loading the skins …', below: make });
+  },
 };
 
 function render() {
   if (state.mode !== 'menu') return;
-  if (screen === 'worlds' && !chosen()) screen = 'title';
+  if ((screen === 'worlds' || screen === 'skins') && !chosen()) screen = 'title';
   panel.innerHTML = screens[screen]() + (note ? `<p class="title-note" role="alert">${esc(note)}</p>` : '');
   panel.dataset.screen = screen;
   panel.querySelector('#title-rename, #title-name, #title-seed')?.focus();
@@ -267,23 +315,114 @@ function chooseWorld(id) {
   form = null; screen = 'title';
 }
 
+// --- Choose Skin --------------------------------------------------------------------------------
+
+// The library from IndexedDB, then the thumbnails it lacks (skins saved before there were any),
+// made one by one with the game's renderer and kept for next time
+async function loadSkins() {
+  const load = ++skinLoad;
+  let list;
+  try { list = await listNamedSkins(); } catch (e) {
+    console.error(e);
+    if (load === skinLoad) { note = 'Could not load the skins'; skins = []; render(); }
+    return;
+  }
+  if (load !== skinLoad) return;
+  dropPictures();
+  skins = list;
+  for (const s of list) if (s.preview) skinPictures.set(s.key, URL.createObjectURL(s.preview));
+  render();
+  const missing = list.filter(s => !s.preview);
+  if (!missing.length) return;
+  await rigReady;
+  const previews = new SkinPreview(renderer);
+  try {
+    for (const s of missing) {
+      if (load !== skinLoad) return;
+      try {
+        const record = await readNamedSkin(s.name);
+        if (record?.revision !== s.revision) continue;
+        const blob = await previews.render(record.blob);
+        if (!blob || load !== skinLoad) continue;
+        await cacheNamedSkinPreview(s.name, s.revision, blob);
+        if (load !== skinLoad) return;
+        skinPictures.set(s.key, URL.createObjectURL(blob));
+        render();
+      } catch (e) { console.warn('Skin preview failed', e); }
+    }
+  } finally { previews.dispose(); }
+}
+function dropPictures() {
+  for (const url of skinPictures.values()) URL.revokeObjectURL(url);
+  skinPictures = new Map();
+}
+// leaving Choose Skin: no more thumbnails, and the next visit loads the library again
+function dropSkins() { skinLoad++; skins = null; dropPictures(); }
+
+// The chosen hero wears `skin` (its own file of it, null: none) from now on; its old file goes
+function wear(skin) {
+  const hero = chosen();
+  if (!hero) return false;
+  const { skin: old, ...rest } = hero;
+  if (!store.putHero({ ...rest, ...(skin ? { skin } : {}), updated: Date.now() })) return false;
+  if (old?.id !== skin?.id) deleteSkinFile(old).catch(console.warn);
+  return true;
+}
+// A skin from the list (key '': none). Back to the title, as with the world.
+async function chooseSkin(key) {
+  if (wearing) return;
+  if (!key) {
+    if (!wear(null)) { note = 'Could not save that (is the storage full?)'; return; }
+    dropSkins(); screen = 'title'; return;
+  }
+  const s = skins?.find(e => e.key === key);
+  if (!s) return;
+  wearing = true;
+  let file = null;
+  try {
+    file = await copyNamedSkin(s.name);
+    if (!file) { note = 'That skin is gone'; loadSkins(); return; }
+    if (!wear(file)) throw new Error('Hero storage refused');
+    if (screen === 'skins') { dropSkins(); screen = 'title'; }
+  } catch (e) {
+    console.error(e);
+    if (file) deleteSkinFile(file).catch(console.warn);
+    note = 'Could not save that (is the storage full?)';
+  } finally {
+    wearing = false;
+    render();
+  }
+}
+function paintSkin(name) {
+  const hero = chosen();
+  if (!hero || name === undefined) return;
+  openSkinEditor({ hero, name, save: wear, onClose: saved => {
+    if (state.mode !== 'menu') return;
+    if (saved) { dropSkins(); screen = 'title'; render(); } else loadSkins();
+  } });
+}
+async function deleteSkin(key) {
+  const s = skins?.find(e => e.key === key);
+  if (!s) return;
+  try { await deleteNamedSkin(s.name); } catch (e) { console.error(e); note = 'Could not delete that skin'; }
+  loadSkins();
+}
+
 const actions = {
   continue() { const id = store.selected(), w = id && store.heroWorld(id); if (w) start(id, w.id); },
   'choose-world'() { screen = 'worlds'; form = null; },
   'join-game'() { screen = 'join'; },
   characters() { from = 'title'; screen = 'characters'; form = store.heroes().length ? null : 'hero'; },
   'first-hero'() { from = screen; screen = 'characters'; form = 'hero'; },
-  'paint-skin'() {
-    const hero = chosen();
-    if (hero) openSkinEditor(hero, skin => {
-      const current = store.hero(hero.id);
-      return !!current && store.putHero({ ...current, skin, updated: Date.now() });
-    });
-  },
+  skins() { screen = 'skins'; loadSkins(); },
+  skin(key) { chooseSkin(key); },
+  'paint-skin'(key) { paintSkin(skins?.find(s => s.key === key)?.name); },
+  'new-skin'() { paintSkin(''); },
   settings() { openSettings(); },
   back() {
     form = null;
     if (screen === 'join') { invite = null; code = ''; }
+    if (screen === 'skins') dropSkins();
     screen = screen === 'characters' ? from : 'title';
   },
   cancel() { form = null; },
@@ -328,6 +467,7 @@ const actions = {
       return;
     }
     asked = { id: null, until: 0 };
+    if (id.startsWith('skin:')) { deleteSkin(id.slice(5)); return; }
     forget(id);
     const hero = store.hero(id);
     if (hero) {

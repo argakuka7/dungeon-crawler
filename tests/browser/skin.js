@@ -4,35 +4,50 @@ import { rigReady, createFigure } from '../../src/render/figure.js';
 import { createSkinPicker, setSkinMap } from '../../src/render/skin.js';
 import { SkinPainter } from '../../src/render/skinpaint.js';
 import { SkinPreview } from '../../src/render/skinpreview.js';
-import { readSkinFile, writeSkinFile, deleteSkinFile, skinImage, readNamedSkin, writeNamedSkin, rollbackNamedSkin, recentNamedSkins } from '../../src/game/skinfiles.js';
+import { readSkinFile, writeSkinFile, deleteSkinFile, skinImage, readNamedSkin, writeNamedSkin, rollbackNamedSkin, listNamedSkins,
+  deleteNamedSkin, copyNamedSkin, SkinLibraryFull } from '../../src/game/skinfiles.js';
+import { MAX_SKINS } from '../../src/core/skin.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 
-// (await import('/tests/browser/skin.js')).runRecentSkinChecks()
-export async function runRecentSkinChecks() {
-  const receipts = [], prefix = `Recent ${crypto.randomUUID().slice(0,8)}`;
+// (await import('/tests/browser/skin.js')).runSkinLibraryChecks()
+// (Uses the real library: fills it up to MAX_SKINS and takes everything back out again.)
+export async function runSkinLibraryChecks() {
+  const receipts = [], prefix = `Library ${crypto.randomUUID().slice(0,8)}`;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 2048;
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
   const names = [];
   try {
-    for (let i = 0; i < 22; i++) {
+    const before = (await listNamedSkins()).length;
+    check(before < MAX_SKINS, `Delete a skin first: the library is full (${before})`);
+    for (let i = before; i < MAX_SKINS; i++) {
       const name = `${prefix} ${i}`; names.push(name);
       receipts.push(await writeNamedSkin(name, blob));
     }
-    let recent = await recentNamedSkins();
-    check(recent.length === 20, 'Recent menu must contain at most the last 20 skins');
-    check(recent.every((entry,i) => entry.name === names[21-i]), 'Recent skins must be newest first');
-    check(recent.every(entry => !('blob' in entry)), 'Menu metadata must not retain full PNGs');
-    check(!!await readNamedSkin(names[0]), 'Skins older than the last 20 must remain loadable by name');
-    receipts.push(await writeNamedSkin(names[0], blob));
-    recent = await recentNamedSkins();
-    check(recent[0].name === names[0], 'Saving an existing name must move it to the top');
-    check(new Set(recent.map(entry=>entry.name)).size === 20, 'Resaving a skin must not duplicate its menu entry');
+    let list = await listNamedSkins();
+    check(list.length === MAX_SKINS, `The library must hold ${MAX_SKINS} skins`);
+    check(names.every((name, i) => list[names.length - 1 - i].name === name), 'Skins must be newest first');
+    check(list.every(entry => !('blob' in entry)), 'Menu metadata must not retain full PNGs');
+    let full = false;
+    try { receipts.push(await writeNamedSkin(`${prefix} one too many`, blob)); } catch (e) { full = e instanceof SkinLibraryFull; }
+    check(full, `A new name must be refused with ${MAX_SKINS} skins`);
+    check((await listNamedSkins()).length === MAX_SKINS, 'A refused save must not add a skin');
+    receipts.push(await writeNamedSkin(names[0].toUpperCase(), blob));
+    list = await listNamedSkins();
+    check(list[0].key === names[0].toLowerCase(), 'Saving over an existing name (when full) must move it to the top');
+    check(list.length === MAX_SKINS, 'Resaving a skin must not duplicate it');
     await rollbackNamedSkin(receipts.pop());
-    check((await recentNamedSkins())[0].name === names[21], 'A failed save must restore the previous recent order');
-    return ['last 20 only', 'newest-first ordering', 'older names preserved', 'resave promotion without duplicates', 'rollback restores order'];
+    check((await listNamedSkins())[0].name === names.at(-1), 'A failed save must restore the previous order');
+    const copy = await copyNamedSkin(names[0]);
+    await deleteNamedSkin(names[0]);
+    check(!await readNamedSkin(names[0]), 'A deleted skin must be gone from the library');
+    check((await readSkinFile(copy)).size === blob.size, "Deleting a named skin must not delete a hero's copy of it");
+    await deleteSkinFile(copy);
+    return [`at most ${MAX_SKINS} skins`, 'newest-first ordering', 'resave when full without duplicates', 'rollback restores order',
+      'delete keeps hero copies'];
   } finally {
     for (const receipt of receipts.reverse()) await rollbackNamedSkin(receipt);
+    for (const name of names) await deleteNamedSkin(name);
   }
 }
 
@@ -84,8 +99,8 @@ export async function runSkinChecks() {
     for(let i=0;i<data.length;i+=4)if(data[i]>100&&data[i]>data[i+1]*1.5&&data[i]>data[i+2]*1.5)red++;
     check(red>0, 'The thumbnail must show the painted red stroke, not only an unpainted body');
     const first = await writeNamedSkin(name, blob, preview); receipts.push(first);
-    check((await recentNamedSkins()).find(entry=>entry.name===name)?.preview?.size === preview.size,
-      'Recent skin metadata must include its cached character preview');
+    check((await listNamedSkins()).find(entry=>entry.name===name)?.preview?.size === preview.size,
+      'Skin metadata must include its cached character preview');
     const named = await readNamedSkin(`  ${name.toUpperCase()}  `);
     check(named.name === name && named.blob.size === blob.size, 'Names must round trip and load case-insensitively');
     const replacement = await writeNamedSkin(name, blob); receipts.push(replacement);

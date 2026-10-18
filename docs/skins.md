@@ -1,8 +1,16 @@
-# Skin painter
+# Skins
 
-Main menu → **Choose Skin** (choose/create a hero first). It opens the last-20-skins menu
-first, with a character preview on each card. Choose a saved skin to load it, or use the large
-**Paint Skin** button at the bottom to enter the painter. All labels are English.
+Main menu → **Choose Skin** (choose/create a hero first). Like Choose World and Choose
+Character (`game/menu.js` builds all three from the same list helpers), it lists the saved
+skins, newest first, each with a thumbnail of the hero wearing it, plus **No skin** (plain clay).
+The one the hero wears is marked. Up to `MAX_SKINS` (10, `core/skin.js`) named skins are kept.
+
+- Click a skin to put it on the hero (back to the title, as with a world).
+- **Paint** opens the painter on that skin; **Paint New Skin** on a blank one (gone once there
+  are ten: delete one first). **Delete** asks again, then removes it from the library; heroes
+  wearing it keep their own copy.
+
+The painter (`game/skineditor.js`):
 
 - **Pen** draws a continuous line directly into a 2048×2048 texture. Brush size is the
   diameter in CSS pixels, independent of the polygon density. Scroll to zoom for details.
@@ -15,14 +23,10 @@ first, with a character preview on each card. Choose a saved skin to load it, or
   painting or filling. The browser context menu is suppressed over the canvas.
   **Rotate** also supports left-drag/touch rotation, including above/below and behind the hero.
 - **Skin name** is required before **Save Skin**. Names are up to 32 characters, with
-  surrounding/repeated spaces normalized. Reusing a name asks before replacing its library copy.
-- **Load Skin** restores a saved skin by its name (case-insensitive). It replaces the editor
-  preview, not the hero immediately; choose **Save Skin** to apply it. Unsaved paint is replaced
-  only after confirmation. Named skins are shared across your heroes in this browser, not online.
-- **Recent Skins** opens a menu of the last 20 saved named skins, newest first. Click a name
-  to load it, or choose **Paint Skin**. Resaving a name moves it to the top without
-  duplicates. Older skins remain available through **Load Skin**; the menu limit does not delete them.
-- **Save Skin** writes the named PNG and applies it to this hero; **Cancel** / Escape discards the draft.
+  surrounding/repeated spaces normalized, and case-insensitive. Saving under another existing
+  name asks before replacing it; a new name is refused when there are ten skins already.
+- **Save Skin** writes the named PNG and puts it on this hero; **Cancel** / Escape discards
+  the painting (asking first if anything was painted).
 
 ## UV asset
 
@@ -72,20 +76,24 @@ Skin textures currently stay local and are **not transmitted in multiplayer**.
 ## Character previews
 
 `render/skinpreview.js` renders the real standing character with its saved paint into a
-144×180 PNG, not an image of the flat UV atlas. One reusable figure, render target and the
-editor's existing WebGL context serve all cards. New saves include a cached preview; older
-named skins generate/cache theirs sequentially when the chooser opens. Revision checks keep
-an old preview from overwriting a newer save. Preview generation stops when leaving the
-chooser, and temporary image URLs/GPU resources are released when it closes.
+144×180 PNG, not an image of the flat UV atlas. One reusable figure and render target serve
+all cards. New saves include a cached preview (made with the painter's WebGL context); older
+named skins without one get theirs made one by one, with the game's renderer, when Choose Skin
+opens, and cached. Revision checks keep an old preview from overwriting a newer save. Preview
+generation stops when leaving the screen, and its object URLs are released then.
 
 ## Persistence
 
 `game/skinfiles.js` stores immutable hero PNG blobs in IndexedDB (`crawler.skins`, `textures`).
 Database version 2 adds a `names` store keyed by normalized, case-insensitive skin name. The
 named library keeps independent PNG copies: replacing or deleting a hero's texture never
-removes the named skin. Database version 3 adds a `savedAt` index and reads at most 20 entries
+removes the named skin, and deleting a named skin never removes a hero's texture (choosing a
+skin copies it: `copyNamedSkin`). Database version 3 adds a `savedAt` index; the list is read
 through a newest-first cursor. Write transactions assign monotonic timestamps so rapid saves
-have a stable order. Old named entries without dates are kept at the end of the list.
+have a stable order, and refuse a new name (`SkinLibraryFull`) when there are `MAX_SKINS`
+already, in the same transaction, so two tabs cannot both add the tenth. Old named entries
+without dates are kept at the end of the list. A library from before the limit with more than
+ten skins keeps them all; new names are refused until enough are deleted.
 Existing version-1 hero textures survive the database upgrade.
 
 Hero JSON in localStorage contains only `{v: 2, uv: 'character-v1', id: 'skin-…', name: 'Blue Knight'}`.
@@ -106,10 +114,11 @@ From the main-menu browser console:
 
 ```js
 (await import('/tests/browser/skin.js')).runSkinChecks()
-(await import('/tests/browser/skin.js')).runRecentSkinChecks()
+(await import('/tests/browser/skin.js')).runSkinLibraryChecks()
 ```
 
 Checks cover exported UV coverage/non-overlap, sub-polygon texture detail, paint-through
 rejection, seam-crossing strokes, erasing, PNG/IndexedDB round trips, closed-outline fills
 and rejecting outlines with gaps. Named-library checks cover case-insensitive loading,
-replacement rollback and independence from deleted/replaced hero textures.
+replacement rollback, the ten-skin limit, newest-first order and independence between named
+skins and hero textures. They use the real library: it must have room for one more skin.

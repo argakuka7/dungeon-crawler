@@ -1,29 +1,26 @@
 // A separate, unarmed standing figure. Paint is a GPU-resident 2048² RGBA texture;
 // the original hero and PNG stay untouched until both IndexedDB and hero save succeed.
+// Opened from Choose Skin (game/menu.js): a new skin, or one of the library to paint on.
 import * as THREE from 'three';
 import { rigReady, createFigure } from '../render/figure.js';
-import { characterReady, setCharacterSkin } from '../render/character.js';
+import { characterReady } from '../render/character.js';
 import { setSkinMap, createSkinPicker } from '../render/skin.js';
 import { SkinPainter } from '../render/skinpaint.js';
 import { SkinPreview } from '../render/skinpreview.js';
-import { readSkinFile, writeSkinFile, deleteSkinFile, skinImage, readNamedSkin, writeNamedSkin, rollbackNamedSkin, recentNamedSkins, cacheNamedSkinPreview } from './skinfiles.js';
-import { cleanSkinName, SKIN_NAME_MAX } from '../core/skin.js';
+import { writeSkinFile, deleteSkinFile, skinImage, readNamedSkin, writeNamedSkin, rollbackNamedSkin, SkinLibraryFull } from './skinfiles.js';
+import { cleanSkinName, skinNameKey, SKIN_NAME_MAX, MAX_SKINS } from '../core/skin.js';
 
 let active = false;
+const escapeText = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 export const skinEditorOpen = () => active;
-export async function openSkinEditor(hero, save) {
+// name: the library's skin to start from ('': a blank one); save(skin): the hero wears that new
+// file of it (false: the hero storage refused); onClose(saved): when the editor is gone
+export async function openSkinEditor({ hero, name = '', save, onClose }) {
   if (active) return;
   active = true;
   const previousFocus = document.activeElement, dialog = document.createElement('dialog');
   dialog.id = 'skin-editor'; dialog.setAttribute('aria-labelledby', 'skin-title');
-  dialog.innerHTML = `<h2 id="skin-title">Choose Skin <small>2048 × 2048</small></h2>
-    <section id="skin-recents" aria-labelledby="skin-recents-title">
-      <h3 id="skin-recents-title">Recent Skins</h3>
-      <p>Your last 20 saved skins, newest first. Choose one to load it.</p>
-      <ol id="skin-recent-list"></ol>
-      <div class="skin-tools skin-chooser-footer"><button id="skin-recent-back" disabled>Paint Skin</button><button id="skin-chooser-close">Close</button></div>
-    </section>
-    <div id="skin-painting" hidden>
+  dialog.innerHTML = `<h2 id="skin-title">${name ? 'Paint Skin' : 'New Skin'} <small>2048 × 2048</small></h2>
     <div class="skin-tools" role="group" aria-label="Paint tools">
       <button data-tool="pen" aria-pressed="true">Pen</button>
       <button data-tool="fill" aria-pressed="false">Fill</button>
@@ -38,39 +35,37 @@ export async function openSkinEditor(hero, save) {
     <div class="skin-tools skin-library">
       <label for="skin-name">Skin name</label>
       <input id="skin-name" type="text" maxlength="${SKIN_NAME_MAX}" required placeholder="Name your skin" autocomplete="off">
-      <button id="skin-load" disabled>Load Skin</button>
-      <button id="skin-recent" disabled aria-controls="skin-recents">Recent Skins</button>
     </div>
-    <p>Enter a name to save. Type a saved name and choose Load Skin to restore it. Names stay in this browser.</p>
+    <p>Saving keeps the skin under this name (up to ${MAX_SKINS} skins) and puts it on ${escapeText(hero.name)}.</p>
     <div class="skin-tools"><button id="skin-save" disabled>Save Skin</button><button id="skin-cancel">Cancel</button></div>
-    </div>
     <p id="skin-status" role="status">Loading skin …</p>`;
   document.body.append(dialog); dialog.showModal();
   const $ = s => dialog.querySelector(s), status = $('#skin-status');
-  $('#skin-name').value = cleanSkinName(hero.skin?.name);
-  let renderer, figure, painter, resize, meshes = [], pickers = [], frame = null;
+  $('#skin-name').value = cleanSkinName(name);
+  let renderer, figure, painter, resize, meshes = [], pickers = [], frame = null, thumbnails, done = false;
   let tool = 'pen', pointer = null, last = null, rotating = false, busy = false, dirty = false, viewDirty = true;
-  const strokes = [], previewURLs = [];
-  let thumbnails, previewEpoch = 0;
-  function releasePreviews() { for (const url of previewURLs.splice(0)) URL.revokeObjectURL(url); }
+  const strokes = [];
   function close() {
     if (busy) return;
     active = false; cancelAnimationFrame(frame); resize?.disconnect();
-    previewEpoch++; releasePreviews(); thumbnails?.dispose();
-    painter?.dispose();
+    thumbnails?.dispose(); painter?.dispose();
     // Figure geometry and shadow-depth material belong to the shared rig.
     meshes.forEach(o => o.material.dispose());
     pickers.forEach(p => { p.geometry.dispose(); p.material.dispose(); });
     renderer?.dispose(); dialog.remove(); previousFocus?.focus();
+    onClose?.(done);
   }
   dialog.addEventListener('keydown', e => e.stopPropagation());
-  dialog.addEventListener('cancel', e => { e.preventDefault(); close(); });
-  $('#skin-cancel').onclick = close;
-  $('#skin-chooser-close').onclick = close;
+  dialog.addEventListener('cancel', e => {
+    e.preventDefault();
+    if (!dirty || busy || confirm('Discard your unsaved painting?')) close();
+  });
+  $('#skin-cancel').onclick = () => { if (!dirty || busy || confirm('Discard your unsaved painting?')) close(); };
   try {
     await Promise.all([rigReady, characterReady]);
-    const blob = await readSkinFile(hero.skin);
-    const image = blob ? await skinImage(blob) : null;
+    const record = name ? await readNamedSkin(name) : null;
+    if (name && !record) throw new Error(`No skin named ${name}`);
+    const image = record ? await skinImage(record.blob) : null;
     if (!dialog.isConnected) return;
     figure = createFigure();
     figure.model.traverse(o => { if (o.isMesh) { o.userData.skinMaterial = true; meshes.push(o); } });
@@ -117,7 +112,7 @@ export async function openSkinEditor(hero, save) {
     }
     resize = new ResizeObserver(() => { viewDirty = true; requestDraw(); }); resize.observe(view);
     draw(); status.textContent = '';
-    for (const id of ['#skin-save', '#skin-load', '#skin-recent', '#skin-recent-back']) $(id).disabled = false;
+    $('#skin-save').disabled = false;
     dialog.querySelectorAll('[data-tool]').forEach(button => {
       button.onclick = () => {
         if (busy) return;
@@ -133,96 +128,8 @@ export async function openSkinEditor(hero, save) {
       return name;
     }
     $('#skin-name').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); $('#skin-load').click(); }
+      if (e.key === 'Enter') { e.preventDefault(); $('#skin-save').click(); }
     });
-    function showPainting() {
-      previewEpoch++;
-      $('#skin-recents').hidden = true; $('#skin-painting').hidden = false;
-      viewDirty = true; requestDraw();
-    }
-    $('#skin-recent-back').onclick = () => {
-      if (busy) return;
-      showPainting(); status.textContent = dirty ? 'Unsaved changes' : ''; $('#skin-recent').focus();
-    };
-    function attachPreview(card, blob) {
-      const url = URL.createObjectURL(blob); previewURLs.push(url);
-      card.image.src = url; card.image.hidden = false; card.placeholder.hidden = true;
-    }
-    async function loadPreviews(cards, epoch) {
-      for (const card of cards) {
-        if (!dialog.isConnected || epoch !== previewEpoch) return;
-        try {
-          const record = await readNamedSkin(card.entry.name);
-          if (!record || record.revision !== card.entry.revision || epoch !== previewEpoch) continue;
-          thumbnails ??= new SkinPreview(renderer);
-          const blob = await thumbnails.render(record.blob);
-          if (!blob || !dialog.isConnected || epoch !== previewEpoch) return;
-          const current = await cacheNamedSkinPreview(record.name, record.revision, blob);
-          if (current && epoch === previewEpoch && dialog.isConnected) attachPreview(card, blob);
-        } catch (e) {
-          if (epoch === previewEpoch && dialog.isConnected) {
-            console.warn('Skin preview failed', e); card.placeholder.textContent = 'Preview unavailable';
-          }
-        }
-      }
-    }
-    $('#skin-recent').onclick = async () => {
-      if (busy) return;
-      busy = true; status.textContent = 'Loading recent skins …';
-      $('#skin-painting').hidden = true; $('#skin-recents').hidden = false;
-      const epoch = ++previewEpoch;
-      releasePreviews();
-      const list = $('#skin-recent-list'); list.replaceChildren();
-      const pending = [];
-      try {
-        const recent = await recentNamedSkins();
-        if (!recent.length) {
-          const empty = document.createElement('li'); empty.className = 'skin-recent-empty';
-          empty.textContent = 'No saved skins yet. Paint a skin and save it with a name first.';
-          list.append(empty);
-        }
-        for (const entry of recent) {
-          const row = document.createElement('li'), button = document.createElement('button');
-          const name = document.createElement('b'), date = document.createElement('small');
-          const preview = document.createElement('span'), image = document.createElement('img'), placeholder = document.createElement('span');
-          preview.className = 'skin-recent-preview'; image.hidden = true;
-          image.alt = `Preview of ${entry.name}`; image.width = 144; image.height = 180;
-          placeholder.textContent = 'Loading preview …'; preview.append(image, placeholder);
-          const card = { entry, image, placeholder };
-          if (entry.preview) attachPreview(card, entry.preview); else pending.push(card);
-          button.type = 'button'; button.className = 'skin-recent-item'; name.textContent = entry.name;
-          date.textContent = entry.savedAt ? new Date(entry.savedAt).toLocaleString('en-GB', {
-            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-          }) : 'Saved skin';
-          button.append(preview, name, date); button.onclick = () => { void loadNamed(entry.name); };
-          row.append(button); list.append(row);
-        }
-        status.textContent = ''; (list.querySelector('button') ?? $('#skin-recent-back')).focus();
-        void loadPreviews(pending, epoch);
-      } catch (e) { console.error(e); status.textContent = 'Could not load recent skins.'; }
-      finally { busy = false; }
-    };
-    $('#skin-load').onclick = () => {
-      if (busy) return;
-      const name = requiredName();
-      if (name) void loadNamed(name);
-    };
-    async function loadNamed(name) {
-      if (busy) return;
-      if (dirty && !confirm('Loading a skin will replace your unsaved painting. Continue?')) return;
-      busy = true; status.textContent = 'Loading named skin …';
-      try {
-        const record = await readNamedSkin(name);
-        if (!record) { status.textContent = `No skin named “${name}” was found in this browser.`; return; }
-        const image = await skinImage(record.blob);
-        const texture = new THREE.CanvasTexture(image); texture.colorSpace = THREE.SRGBColorSpace;
-        strokes.length = 0; pointer = null; last = null;
-        painter.copy(texture, true); texture.dispose();
-        $('#skin-name').value = record.name; dirty = true; showPainting();
-        status.textContent = `Loaded “${record.name}”. Choose Save Skin to apply it to this hero.`;
-      } catch (e) { console.error(e); status.textContent = 'Could not load this named skin.'; }
-      finally { busy = false; }
-    }
     const point = e => {
       const r = canvas.getBoundingClientRect();
       return { x: e.clientX - r.left, y: r.height - (e.clientY - r.top) };
@@ -279,35 +186,32 @@ export async function openSkinEditor(hero, save) {
     }, { passive: false });
     $('#skin-save').onclick = async () => {
       if (busy) return;
-      const name = requiredName();
-      if (!name) return;
+      const newName = requiredName();
+      if (!newName) return;
       busy = true; $('#skin-save').disabled = true; status.textContent = 'Saving texture …';
-      let saved, receipt;
+      let file, receipt;
       try {
-        if (await readNamedSkin(name) && !confirm(`Replace the saved skin named “${name}”?`)) {
+        if (skinNameKey(newName) !== skinNameKey(name) && await readNamedSkin(newName)
+            && !confirm(`Replace the saved skin named “${newName}”?`)) {
           status.textContent = 'Choose a different name to keep both skins.';
           busy = false; $('#skin-save').disabled = false; return;
         }
         draw();
         const blob = await painter.png();
-        saved = { ...await writeSkinFile(blob), name };
         thumbnails ??= new SkinPreview(renderer);
         const preview = await thumbnails.render(blob);
-        receipt = await writeNamedSkin(name, blob, preview);
-        if (!await save(saved)) throw new Error('Hero storage refused');
-        await setCharacterSkin(saved);
-        // The old immutable file is no longer referenced by this hero.
-        deleteSkinFile(hero.skin).catch(console.warn);
-        busy = false; close();
+        receipt = await writeNamedSkin(newName, blob, preview);
+        file = { ...await writeSkinFile(blob), name: newName };
+        if (!await save(file)) throw new Error('Hero storage refused');
+        done = true; busy = false; close();
       } catch (e) {
         if (receipt) await rollbackNamedSkin(receipt).catch(console.warn);
-        if (saved) await deleteSkinFile(saved).catch(console.warn);
-        console.error(e); status.textContent = 'Could not save. Is the browser storage full?';
+        if (file) await deleteSkinFile(file).catch(console.warn);
+        if (e instanceof SkinLibraryFull) status.textContent = `There are ${MAX_SKINS} skins already: save over one of them, or delete one in Choose Skin.`;
+        else { console.error(e); status.textContent = 'Could not save. Is the browser storage full?'; }
         busy = false; $('#skin-save').disabled = false;
       }
     };
-    // Choose Skin is the entry screen; the painter is one action inside this menu.
-    $('#skin-recent').click();
   } catch (error) {
     console.error('Skin editor failed', error);
     if (dialog.isConnected) status.textContent = 'Could not load the skin editor.';
