@@ -100,7 +100,7 @@
     "src/cubegen/heights.js#shapePinnacle": "611834f5",
     "src/cubegen/heights.js#shapeShaft": "1184ee1d",
     "src/cubegen/index.js#generate": "ee1656ca",
-    "src/cubegen/index.js#tryGenerate": "15e001d3",
+    "src/cubegen/index.js#tryGenerate": "6b80aed7",
     "src/cubegen/reach.js#reachTo": "f03a56c3",
     "src/cubegen/route.js#search": "cdae09bf",
     "src/cubegen/setpieces.js#shapeLake": "563ed8c1",

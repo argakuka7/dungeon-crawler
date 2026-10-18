@@ -10,7 +10,7 @@
 //   crater      a ring wall around a lake
 // and the big height pieces (cubegen/heights.js): ascent, plateau, descent, pinnacle; the large
 // areas (cubegen/areas.js): spiral, and the hairpin's foot, turn and summit; the set pieces
-// (cubegen/setpieces.js): peak, lake; then the basin under a great shaft and a tunnel
+// (cubegen/setpieces.js): peak, lake; a trial room (cubegen/trials/); then the basin under a great shaft and a tunnel
 // (cubegen/tunnel.js) where the spec asks for them
 import { N, MAX_L } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
@@ -19,6 +19,7 @@ import { shapeAscent, shapePlateau, shapeDescent, shapePinnacle, shapeShaftBotto
 import { carveTunnel } from './tunnel.js';
 import { shapeSpiral, shapeFoot, shapeTurn, shapeSummit } from './areas.js';
 import { shapePeak, shapeLake } from './setpieces.js';
+import { shapeTrial } from './trials/index.js';
 
 const PIECES = { ascent: shapeAscent, plateau: shapePlateau, descent: shapeDescent, pinnacle: shapePinnacle,
   spiral: shapeSpiral, foot: shapeFoot, turn: shapeTurn, summit: shapeSummit, peak: shapePeak, lake: shapeLake };
@@ -38,6 +39,7 @@ function shapeArchetype(ctx) {
   const { R, ri, lvl0, void0, spec, noise } = ctx, kind = spec.archetype || 'plain';
   if (kind === 'gorge') return shapeGorge(ctx);   // a span's valley (cubegen/span.js)
   if (kind === 'island') return shapeIsland(ctx);
+  if (kind === 'trial') return shapeTrial(ctx);   // a trial room (cubegen/trials/)
   if (PIECES[kind]) return PIECES[kind](ctx);
   // open: void if allowed, else a pit (sea: filled with fluid)
   const open = (i, sea) => { if (spec.voidOK) void0[i] = 1; else { lvl0[i] = 0; if (sea) ctx.seaCells.push(i); } };

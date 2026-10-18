@@ -32,6 +32,7 @@ import { spanBridge } from './span.js';
 import { descentRoute, pinnacleRoute } from './heights.js';
 import { areaRoute } from './areas.js';
 import { setPieceRoute } from './setpieces.js';
+import { routeTrial, finishTrial } from './trials/index.js';
 
 function indexFloors(ctx) {
   const floors = ctx.floors = [];
@@ -44,7 +45,7 @@ function indexFloors(ctx) {
 }
 
 // polyline along route moves (debug overlay, test bots)
-function pathPoints(ctx, moves) {
+export function pathPoints(ctx, moves) {
   const center = (c, y) => ({ x: c % N + 0.5, y: y + 0.12, z: ((c / N) | 0) + 0.5 });
   const nodeY = n => n.landing ? n.top * LH : floorY(n, 0.5, 0.5);
   if (!ctx.portalFloors.length) return [];
@@ -95,6 +96,7 @@ function tryGenerate(seed, spec) {
   setPieceRoute(ctx);
   if (!findRoute(ctx)) return null;
   routeSites(ctx);
+  if (!routeTrial(ctx)) return null;   // the way to a trial's goal (cubegen/trials/)
   if (!routeHorde(ctx)) return null;
   placeSpots(ctx);
   addAccess(ctx);
@@ -109,6 +111,8 @@ function tryGenerate(seed, spec) {
   const safe = reachTo(ctx, ctx.hub, true);
   if (safe && ctx.portalFloors.some(f => !safe.has(f.id))) return null;
   if (ctx.moves.some(m => isCramped(ctx, m.from) || isCramped(ctx, m.to))) return null;   // a route squeezes under a slab
+  const trial = finishTrial(ctx, pathPoints);   // a trial room's goal, parts and checks (cubegen/trials/)
+  if (!trial) return null;
   const sites = finishSites(ctx), horde = finishHorde(ctx, sites.staticBlockers);
   if (horde === null) return null;
   // the spots (cubegen/spots.js): kept like the reward sites (no props on them, the camp's fire
@@ -121,6 +125,7 @@ function tryGenerate(seed, spec) {
   }
   sites.siteReservations.push(...spots.spots.flatMap(s => s.cells.map(c => ({ c, layer: s.layer }))));
   sites.siteFailures.push(...spots.spotFailures);
+  sites.siteReservations.push(...trial.reservations || []);   // (no props on a trial's own ground)
   const { K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves } = ctx;
   const portals = ctx.portals.map(p => ({ id: p.id, kind: p.kind, dir: p.dir, layer: p.layer, cells: p.cells,
     x: p.c % N, z: (p.c / N) | 0, y: p.level * LH, floor: p.floor }));
@@ -128,6 +133,7 @@ function tryGenerate(seed, spec) {
     seed, K, B, cols, floors, pieces, runs, falls, fences, fenceList, stats, moves, portals, ...sites, horde, spots: spots.spots,
     roomRole: spec.roomRole, biome: spec.biome, populationScale: spec.populationScale, annexRoom: !!spec.annexRoom,
     trialRoom: !!spec.trial, trialFaces: spec.trialFaces || [null, null, null, null],   // (world/trials.js)
+    trial: trial.trial,   // what the trial is built of (cubegen/trials/)
     ladders: ctx.ladders.map(l => ladderInfo(l, ladderStyle(spec, l))), exit: spec.exit,
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
     safe: Uint8Array.from(floors, f => !safe || safe.has(f.id) ? 1 : 0),   // floors that lead to the exit

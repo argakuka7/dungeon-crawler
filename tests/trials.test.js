@@ -6,6 +6,7 @@ import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate } from '../src/core/trials.js';
+import { N } from '../src/core/constants.js';
 
 const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
 const forced = (seed, trial) => makeLayouts(seed, worldThemes(seed), { trial });
@@ -89,4 +90,37 @@ test('the kinds: every one has a name, a family and depths', () => {
     assert.ok(t.name && ['event', 'puzzle'].includes(t.family) && t.depths[0] >= 1 && t.depths[1] <= 19, id);
     assert.equal(t.id, id);
   }
+});
+
+// every flood room of a few worlds, generated
+function* floods(seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: 'flood' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'flood') yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+const SEEDS = Array.from({ length: 10 }, (_, i) => i);
+
+test('every flood room generates: a summit, the highest ground, reached from every portal, and on to the exit', () => {
+  let n = 0, attempts = 0;
+  for (const { t, seed, d, m } of floods(SEEDS)) {
+    n++; attempts += m.attempts;
+    const tr = m.trial;
+    assert.equal(tr.kind, 'flood'); assert.equal(tr.gate, t.gate); assert.equal(m.archetype, 'trial'); assert.ok(m.trialRoom);
+    const top = m.floors[tr.goalFloor];
+    assert.equal(top.top, tr.summit.level);
+    const inside = g => Math.min(g.x, g.z, N - 1 - g.x, N - 1 - g.z) >= 2;
+    assert.ok(m.floors.every(g => g.fluid || !inside(g) || g.top <= tr.summit.level), `${seed}/${d}: the summit is not the highest`);
+    assert.ok(tr.summit.level - tr.lo >= 10, `${seed}/${d}: the summit is ${tr.summit.level - tr.lo} over its foot`);
+    // the way up starts at the entry's pad and ends on the summit
+    const entry = m.portals.find(p => p.dir === tr.entry);
+    assert.equal(tr.entryFloor, entry.floor.id);
+    const last = tr.path.at(-1);
+    assert.ok(Math.hypot(last.x - tr.button.x, last.z - tr.button.z) < 0.01, `${seed}/${d}: the path ends off the summit`);
+    for (const p of m.portals) assert.equal(m.safe[p.floor.id], 1, `${seed}/${d}: portal ${p.dir} cut off from the exit`);
+    // nobody spawns on the way up
+    assert.ok(tr.pathFloors.every(id => m.floors[id].noSpawn));
+  }
+  assert.ok(n > 150, `${n} floods`);
+  assert.ok(attempts / n < 4, `${(attempts / n).toFixed(2)} attempts a room`);
 });

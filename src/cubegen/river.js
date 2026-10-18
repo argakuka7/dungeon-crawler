@@ -46,7 +46,8 @@ export function carveRiver(ctx) {
   const wet = i => fluid0[i] || ctx.void0[i];
   const rim = (x, z) => DIRS.some(([dx, dz]) => wet(idx(x + dx, z + dz)));
   // (none on a hairpin's summit, cubegen/areas.js: it stays level; none round a lone peak: mostly empty)
-  for (let p = spec.area?.role === 'summit' || spec.peak ? 0 : ri(1, 3); p > 0; p--) {
+  // (nor in a trial room, cubegen/trials/: the trial decides its fluids)
+  for (let p = spec.area?.role === 'summit' || spec.peak || spec.trial ? 0 : ri(1, 3); p > 0; p--) {
     const type = pickFluid();
     const cx = 3 + R() * (N - 6), cz = 3 + R() * (N - 6), rad = 1.1 + R() * 1.4;
     const cells = [];
