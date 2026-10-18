@@ -579,3 +579,6 @@ body.touch #quest-track { top: calc(150px + env(safe-area-inset-top)); width: 15
 #trial-banner.out { opacity: 0; }
 #trial-banner b { display: block; font: bold 34px/1.2 serif; letter-spacing: .04em; }
 #trial-banner span { display: block; font: 15px/1.4 sans-serif; margin-top: 4px; }
+#trial-tip { position: fixed; z-index: 3; pointer-events: none; transform: translateX(-50%); white-space: nowrap; padding: 3px 8px;
+  background: #0b0e14d8; border: 1px solid #fff4; border-radius: 4px; font: 12px/1.35 monospace; color: #e6edf5; }
+#trial-tip[hidden] { display: none; }

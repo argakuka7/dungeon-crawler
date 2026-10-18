@@ -67,7 +67,7 @@ import { tickStatuses } from './render/statuses.js';
 import { updateEffects } from './game/effects.js';
 import { updateAim } from './game/throws.js';
 import { updateEnemies, allEnemies } from './game/enemies.js';
-import { updateTrial } from './game/trials.js';
+import { updateTrial, updateTrialTip } from './game/trials.js';
 import { updateMusic, forceMood } from './game/music.js';
 import { updateFootsteps } from './game/footsteps.js';
 import { updateSounds } from './game/sounds.js';
@@ -149,6 +149,7 @@ function frame(now = performance.now()) {
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Teacher (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items
+  updateTrialTip();   // after the camera too: the name of a trial over its portal (game/trials.js)
   drawMinimap();   // after the camera too: the map turns with it
   updateAim(allEnemies());   // the arc a flask in hand would fly (game/throws.js)
   tickTeach();   // what the Teacher draws over the world (game/teach.js)

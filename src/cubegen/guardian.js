@@ -172,7 +172,7 @@ export function generateGuardian(spec) {
     pieces: Array.from({ length: N * N }, () => []), runs: [], falls: [], ladders: [],
     fences, fenceList, stats: ctx.stats, moves, portals, exit, guardian,
     arena: { type: arena.type, requested },
-    routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys,
+    routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys, trialFaces: spec.trialFaces || [null, null, null, null],
     safe: Uint8Array.from(floors, f => prev.has(f) ? 1 : 0),
     kind: spec.kind, archetype: 'arena', roomRole: `${role}-guardian`, biome: spec.biome,
     key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: !!spec.walled, enemyFree: false,

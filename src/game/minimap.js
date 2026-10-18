@@ -1,7 +1,7 @@
 // Overview of the cubes visited at the current depth: a round map centred on the player that
 // turns with the camera (what is ahead on screen is up on the map; the "N" on the rim is north,
 // -z). Cubes are coloured by their WFC tile; edges show rivers (blue) and portals (gold: leads
-// somewhere new, cyan: explored); triangles are wells / rings; a violet dot is the open town
+// somewhere new, cyan: explored; ringed in a trial's colour: into a trial room); triangles are wells / rings; a violet dot is the open town
 // portal. Each player is an arrow pointing where they face, in their colour (ours is white when
 // playing alone). The quest followed (game/questpanel.js followedQuest) shows in gold where it
 // wants you, once that cube has been visited (game/questworld.js questTarget): a pin on the person
@@ -21,6 +21,8 @@ import { online, playerColor, together } from '../net/online.js';
 import { truePosition } from './travel.js';
 import { followedQuest } from './questpanel.js';
 import { questTarget, questWay } from './questworld.js';
+import { warnedFace } from './trials.js';
+import { TRIALS } from '../core/trials.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
@@ -140,7 +142,12 @@ export function drawMinimap() {
         else g.fillRect(x - CELL / 2 + 3, y - 1, CELL - 6, 2);
       } else if (f?.portal) {
         const color = portalLocked(c.map, state.run, { dir: d }) ? '#ff3547' : visited(step(k, d)) ? '#5fd3ff' : '#ffc94a';
-        marks.push([edgePt(px, pz, d, (f.portal.pos + 0.5) / 16), ([x, y]) => { g.fillStyle = color; g.fillRect(x - 3, y - 3, 6, 6); }]);
+        // into a trial room not resolved yet: a ring of the trial's colour round it (game/trials.js)
+        const trial = warnedFace(c.map, d);
+        marks.push([edgePt(px, pz, d, (f.portal.pos + 0.5) / 16), ([x, y]) => {
+          g.fillStyle = color; g.fillRect(x - 3, y - 3, 6, 6);
+          if (trial) { g.strokeStyle = TRIALS[trial].color; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.stroke(); }
+        }]);
       }
     }
     for (const d of [4, 5]) if (t.faces[d]?.portal) {

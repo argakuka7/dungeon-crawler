@@ -37,7 +37,7 @@ import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
 import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
-import { enterTrial, restartTrial, refreshTrialView, sealedIn } from './trials.js';
+import { enterTrial, restartTrial, refreshTrialView, sealedIn, warnTrials } from './trials.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -240,6 +240,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   if (!back) discover(c);
   state.cubeKey = k; state.map = c.map; state.lookDepth = c.map.depth;
   questWorld(c.map);   // the people living here, and what the quests put here (game/questworld.js)
+  warnTrials(c.map);   // the portals into trial rooms not resolved yet warn of them (game/trials.js)
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(k, c.map), c.geo, openedSides(state.openedFaces, k), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
   enterTrial(c.map);   // its trial, as built (or resolved for good: game/trials.js)
@@ -316,6 +317,7 @@ export function rebuildWorld() {
   const c = state.cubes.cubes.get(state.cubeKey);
   if (c?.map !== state.map) return;
   questWorld(c.map);
+  warnTrials(c.map);
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(state.cubeKey, c.map), c.geo, openedSides(state.openedFaces, state.cubeKey), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
   refreshTrialView();

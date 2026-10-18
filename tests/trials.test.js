@@ -336,3 +336,22 @@ test('discovery joins a trial room only through its portals; its gate keeps the 
     }
   }
 });
+
+test('the warning: every map knows which of its faces lead into a trial room, as planned', () => {
+  let n = 0;
+  for (const seed of [0, 1]) {
+    const w = new World(seed, { trial: 'flood' });
+    for (const d of DEPTHS) {
+      const L = w.layout(d);
+      for (const k of L.exists) {
+        const m = w.cube(k).map;
+        for (let d4 = 0; d4 < 4; d4++) {
+          const t = L.trials.find(x => x.from === k && x.fromDir === d4);
+          assert.equal(m.trialFaces[d4], t ? t.kind : null, `${seed}/${d}: ${k} face ${d4}`);
+          if (t) { n++; assert.ok(m.portals.some(p => p.dir === d4), `${seed}/${d}: no portal to warn on`); }
+        }
+      }
+    }
+  }
+  assert.ok(n > 30, `${n} warnings`);
+});

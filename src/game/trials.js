@@ -2,9 +2,13 @@
 // (state.trial, core/trials.js), the rising fluid, the HUD, the parts the action key uses
 // (game/action.js), resolving and resetting it.
 //   state.trial: { key, kind, phase, t, done, at } (core/trials.js newTrial) or null
-import { LH } from '../core/constants.js';
+import * as THREE from 'three';
+import { LH, N } from '../core/constants.js';
+import { step } from '../world/coords.js';
+import { camera } from '../render/scene.js';
+import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
-  nextPulse, floodEnd, trialSealed } from '../core/trials.js';
+  nextPulse, floodEnd, trialSealed, trialGate } from '../core/trials.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers } from '../render/trials.js';
 import { openedSides } from '../core/boundaries.js';
@@ -203,4 +207,43 @@ function solveLens() {
       { id: `trial-solve-${i}`, size: 0.16, ttl: 60 });
   });
   return `The way up: ${m.check.path.at(-1).t.toFixed(1)} s walking, slack ${m.check.slack} s (shown for a minute)`;
+}
+
+// --- the warning (docs/trials.md "The warning") ---------------------------------------------------
+
+// Which side faces of `map` lead into a trial room not resolved yet (by dir: its kind, or null):
+// their portals carry the trial's ring and glyph (render/markers.js). Before the cube is built.
+export function warnTrials(map) {
+  map.trialWarn = (map.trialFaces || [null, null, null, null]).map((kind, d) => kind && !state.run.unlockedGates.has(trialGate(step(map.key, d))) ? kind : null);
+  return map.trialWarn;
+}
+
+// the kind behind face d of a visited cube on the minimap (game/minimap.js), or null
+export const warnedFace = (map, d) => {
+  const kind = map?.trialFaces?.[d];
+  return kind && !state.run.unlockedGates.has(trialGate(step(map.key, d))) ? kind : null;
+};
+
+// Hovering over a warned portal (or standing near it) names the trial: a tip over its glyph
+const tipAt = new THREE.Vector3();
+export function updateTrialTip() {
+  const el = $('trial-tip');
+  if (!el) return;
+  const map = state.map;
+  let show = null;
+  if (map?.trialWarn && !state.transitioning && state.mode === 'play') for (const p of map.portals) {
+    const kind = p.kind === 'side' && map.trialWarn[p.dir];
+    if (!kind) continue;
+    tipAt.set(p.dir < 2 ? (p.dir === 0 ? N : 0) : p.x + 0.5, p.y + 2.55, p.dir < 2 ? p.z + 0.5 : (p.dir === 2 ? N : 0)).project(camera);
+    if (tipAt.z > 1) continue;
+    const x = (tipAt.x + 1) / 2 * innerWidth, y = (1 - tipAt.y) / 2 * innerHeight;
+    const cursor = pointer.inside ? [(pointer.ndc.x + 1) / 2 * innerWidth, (1 - pointer.ndc.y) / 2 * innerHeight] : null;
+    const near = Math.hypot(player.x - p.x - 0.5, player.z - p.z - 0.5) < 3;
+    if (near || (cursor && Math.hypot(cursor[0] - x, cursor[1] - y) < 70)) { show = { kind, x, y }; break; }
+  }
+  el.hidden = !show;
+  if (!show) return;
+  const t = TRIALS[show.kind], text = `${t.name} · ${t.family === 'event' ? 'an event: it seals the room' : 'a puzzle'}`;
+  if (el.textContent !== text) { el.textContent = text; el.style.borderColor = t.color; }
+  el.style.left = `${Math.round(show.x)}px`; el.style.top = `${Math.round(show.y - 34)}px`;
 }
