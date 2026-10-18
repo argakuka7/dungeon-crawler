@@ -50,6 +50,7 @@ export const state = {
   cast: null,        // reading a portal scroll: { kind, t, duration, ... } (game/townportal.js startCast)
   visit: null,       // this cube as you came in: what a death restores (game/flow.js)
   fallFrom: null,    // falling through cubes: the cube the fall started in (game/fall.js)
+  trial: null,       // the trial of the cube we are in: { key, kind, phase, t, ... } (game/trials.js, core/trials.js)
   dev,   // debug tools (?dev=1)
   keepHero: false,   // a saved hero is played (game/save.js): a new world (N) keeps it as it is
   devPassive: false,   // dev: enemies stand still and never attack (game/devspawn.js)

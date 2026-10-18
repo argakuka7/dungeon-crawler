@@ -32,7 +32,7 @@ import { spanBridge } from './span.js';
 import { descentRoute, pinnacleRoute } from './heights.js';
 import { areaRoute } from './areas.js';
 import { setPieceRoute } from './setpieces.js';
-import { routeTrial, finishTrial } from './trials/index.js';
+import { routeTrial, finishTrial, trialCosts } from './trials/index.js';
 
 function indexFloors(ctx) {
   const floors = ctx.floors = [];
@@ -94,6 +94,7 @@ function tryGenerate(seed, spec) {
   pinnacleRoute(ctx);
   areaRoute(ctx);
   setPieceRoute(ctx);
+  trialCosts(ctx);
   if (!findRoute(ctx)) return null;
   routeSites(ctx);
   if (!routeTrial(ctx)) return null;   // the way to a trial's goal (cubegen/trials/)

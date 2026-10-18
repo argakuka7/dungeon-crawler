@@ -4,6 +4,7 @@ import { clamp, edgeKey } from '../core/util.js';
 import { topOf } from '../core/surfaces.js';
 import { player, state } from '../game/state.js';
 import { cellAt, groundAt, blockedAt } from './collide.js';
+import { underTrialFluid } from './fluid.js';
 
 // The invisible rails along stairs, bridges and landings (cubegen/fences.js) keep a walking or
 // swimming body on them; a jump goes on or off over them. Visible fences hold up to their height.
@@ -67,7 +68,7 @@ export function canMove(nx, nz, axis, sign) {
     // remain walkable. Rim probes keep the body off the edge.
     if (player.grounded && !player.swimming) {
       const gr = groundAt(sx, sz, y, step);
-      if (!gr.s || !gr.s.kind && gr.s.fluid) return false;
+      if (!gr.s || !gr.s.kind && gr.s.fluid || underTrialFluid(gr.h)) return false;
     }
     if (hopBlocked(rx, rz, sx, sz, y, step)) return false;
     if (fenceBlocks(ci, si, y)) return false;

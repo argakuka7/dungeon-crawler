@@ -17,6 +17,7 @@ import { LH, DIRS } from '../core/constants.js';
 import { clearMouseInput } from './orders.js';
 import { takeTownPortal } from './townportal.js';
 import { shaftOf } from '../world/heights.js';
+import { TRIALS } from '../core/trials.js';
 
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 const D = [[1, 0], [-1, 0], [0, 1], [0, -1]], NAMES = ['east', 'west', 'south', 'north'];
@@ -238,6 +239,42 @@ export async function goArena(type, depth = state.map?.depth ?? 0) {
     enterCube(c, c.map.portals[0].dir);
     setStatus(`Guardian arena · ${c.map.arena.type} · depth ${c.map.depth}`);
   } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Stand in the room before the next trial (of a kind) from this depth (or `from`) on down, beside
+// its portal into the trial room, facing it (docs/trials.md "Dev: /trial"). The portal's lock keeps
+// you from walking straight in. A world without one: the page comes again with ?trial=<kind>
+// (same seed, dev on) and goes there.
+const lastTrial = {};
+export async function goTrial(kind, from) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, here = from ?? Math.max(1, state.map?.depth ?? 1), all = [];
+  for (let d = 1; d < 20; d++) all.push(...cubes.layout(d).trials.filter(t => !kind || t.kind === kind));
+  if (!all.length) {
+    if (!kind) { setStatus('No trials in this world'); return; }
+    const p = new URLSearchParams(location.search);
+    p.set('trial', kind); p.set('seed', String(cubes.seed)); p.set('dev', '1'); p.set('at', 'trial');
+    location.search = p.toString();
+    return;
+  }
+  const ahead = all.filter(t => t.depth >= here), list = ahead.length ? ahead : all;
+  const i = (list.findIndex(t => t.key === lastTrial[kind]) + 1) % list.length, t = list[i];
+  lastTrial[kind] = t.key;
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(t.from));
+    if (state.cubes !== cubes) return;
+    enterCube(c, t.fromDir);
+    const [dx, dz] = DIRS[t.fromDir];
+    player.yaw = Math.atan2(dx, dz);
+    setStatus(`${TRIALS[t.kind].name} · depth ${t.depth} · ${t.role} · through the ${NAMES[t.fromDir]} portal`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+// ?at=trial: once the world is there, to the forced trial (after goTrial reloaded the page)
+if (state.dev && new URLSearchParams(location.search).get('at') === 'trial') {
+  const kind = new URLSearchParams(location.search).get('trial')?.split(':')[0];
+  const wait = () => state.map && !state.transitioning ? goTrial(kind) : setTimeout(wait, 200);
+  setTimeout(wait, 200);
 }
 
 // The cube faces sit on the screen diagonals, so the screen direction is turned an eighth

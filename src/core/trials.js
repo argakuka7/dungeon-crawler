@@ -123,3 +123,48 @@ export function fitFlood(from, to, needs = []) {
   if (end() > max) return null;
   return { kind: 'flood', from, to, step, rise, pulses: pulses.map(p => Math.round(p * 100) / 100) };
 }
+
+// --- states (docs/trials.md "States") ------------------------------------------------------------
+//   idle      the room as built; an event arms when a player steps off the arrival pad
+//   armed     ARM_TIME s of telegraph: the banner, the rumble; nothing hurts yet
+//   running   the clock runs (t, from arming on): the water rises
+//   resolved  the goal is met; `done` counts the s since (the water drains back)
+// One state per trial room a game is in: { key, kind, phase, t, done, at (the water's level when
+// it was resolved) }. Puzzles never arm: they are just there.
+
+export const ARM_DISTANCE = 1.2;   // cells off the arrival pad that arm an event
+export const newTrial = (trial, resolved = false) => ({ key: trial.key, kind: trial.kind, phase: resolved ? 'resolved' : 'idle', t: 0,
+  done: resolved ? Infinity : 0, at: null });
+
+// One step of dt s. input: { away (a player stepped off the arrival pad) }. Returns what happened:
+// 'armed', 'running' (the phase it came into), or nothing.
+export function stepTrial(s, dt, input = {}) {
+  if (s.phase === 'idle') {
+    if (isEvent(s.kind) && input.away) { s.phase = 'armed'; s.t = 0; return 'armed'; }
+    return null;
+  }
+  if (s.phase === 'resolved') { s.done += dt; return null; }
+  s.t += dt;
+  if (s.phase === 'armed' && s.t >= ARM_TIME) { s.phase = 'running'; return 'running'; }
+  return null;
+}
+
+// the goal is met (level: the water's level then, for it to drain back from)
+export function resolveTrial(s, level = null) {
+  if (s.phase === 'resolved') return false;
+  s.phase = 'resolved'; s.done = 0; s.at = level;
+  return true;
+}
+// back as built (a fail, a death, nobody left in the room)
+export function resetTrial(s) { Object.assign(s, { phase: 'idle', t: 0, done: 0, at: null }); }
+
+// the level (in levels) the trial's fluid stands at in map trial `m` with state s, or null for none
+export function trialFluidLevel(m, s) {
+  if (!m || !s || m.kind !== 'flood') return null;
+  const tl = m.timeline;
+  if (s.phase === 'idle') return null;
+  if (s.phase === 'resolved') return s.at == null || s.done >= DRAIN_TIME ? null : drainLevel(tl, s.at, s.done);
+  return floodLevel(tl, s.t);
+}
+
+export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has to be to use it (cells)

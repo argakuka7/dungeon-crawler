@@ -10,13 +10,16 @@ import { N } from '../../core/constants.js';
 import { floorY } from '../../core/surfaces.js';
 import { search, take } from '../route.js';
 import { reachFrom, reachTo } from '../reach.js';
-import { shapeFlood, floodGoal } from './flood.js';
+import { shapeFlood, floodGoal, floodRoute } from './flood.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD } from '../../core/trials.js';
 
 const KINDS = {
-  flood: { shape: shapeFlood, goal: floodGoal },
+  flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute },
 };
+
+// before the route search: what the kind makes its ways cost (cubegen/index.js)
+export function trialCosts(ctx) { if (ctx.spec.trial) KINDS[ctx.spec.trial.kind].costs?.(ctx); }
 
 export function shapeTrial(ctx) {
   const kind = KINDS[ctx.spec.trial.kind];
@@ -64,15 +67,22 @@ export function finishTrial(ctx, pathPoints) {
     if (ctx.floors.some(g => !g.fluid && inside(g) && g.top > s.level)) return null;
     const timed = fitFloodRoom(ctx, entry, goal, s.level);
     if (!timed) return null;
-    Object.assign(out, { summit: { c: s.c, level: s.level, x: s.x + 0.5, z: s.z + 0.5, cells: s.cells }, lo: t.lo,
-      button: { x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 }, ...timed });
+    const button = { x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 };
+    Object.assign(out, { summit: { c: s.c, level: s.level, x: s.x + 0.5, z: s.z + 0.5, cells: s.cells }, lo: t.lo, fluid: spec.fluid,
+      button, parts: [{ id: 'button', type: 'button', ...button }], ...timed });
   }
   // enemies keep off the checked path and its 2-cell band
   if (out.check?.path) {
     const band = out.check.path.map(p => [Math.floor(p.x), Math.floor(p.z)]);
     for (const g of ctx.floors) if (band.some(([x, z]) => Math.max(Math.abs(g.x - x), Math.abs(g.z - z)) <= 2)) g.noSpawn = true;
   }
-  return { trial: out, reservations: t.keep.map(c => ({ c, layer: 0 })) };
+  // no props on the trial's own ground, nor any in the way of the checked path
+  const reservations = t.keep.map(c => ({ c, layer: 0 }));
+  for (const p of out.check?.path || []) {
+    const f = ctx.cols[Math.floor(p.z) * N + Math.floor(p.x)].find(g => Math.abs(g.top * 0.5 - p.y) < 0.01);
+    if (f) reservations.push({ c: f.c, layer: f.layer });
+  }
+  return { trial: out, reservations };
 }
 
 // The flood's timeline, fitted to the fastest way up for a slow player, then checked on its own:

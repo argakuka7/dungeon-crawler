@@ -12,7 +12,9 @@ import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
-import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, FEATURES } from './dev.js';
+import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, goTrial, FEATURES } from './dev.js';
+import { TRIALS, TRIAL_KINDS } from '../core/trials.js';
+import { devTrial } from './trials.js';
 import { SPOT_KINDS } from '../world/spots.js';
 import { QUEST_KINDS } from '../core/quests.js';
 import { devQuest } from './quests.js';
@@ -103,6 +105,25 @@ dev({
   name: 'spot', help: 'stand at the next spot the quests keep free (a hiding place, a seat, a camp) from this depth (or that one) on down',
   args: [{ name: 'kind', type: 'spotkind', optional: true }, { name: 'depth', type: 'depth', optional: true }],
   async run({ kind, depth }) { await goSpot(kind, depth === undefined ? undefined : Number(depth)); },
+});
+addType(commands, { name: 'trialdo', values: () => [
+  ...TRIAL_KINDS.map(k => ({ value: k, label: k, hint: `${TRIALS[k].name} (${TRIALS[k].family})`, color: TRIALS[k].color })),
+  { value: 'win', label: 'win', hint: 'resolve the trial of this room' }, { value: 'fail', label: 'fail', hint: 'fail it' },
+  { value: 'reset', label: 'reset', hint: 'put it back as built' }, { value: 'solve', label: 'solve', hint: 'what the generator proved' },
+  { value: 'list', label: 'list', hint: "this world's trials by depth" }] });
+dev({
+  name: 'trial', help: 'stand before the next trial of a kind (from this depth or that one on down); win, fail, reset, solve: this room\'s; list',
+  args: [{ name: 'kind', type: 'trialdo', optional: true }, { name: 'depth', type: 'depth', optional: true }],
+  async run({ kind = 'list', depth }) {
+    if (TRIALS[kind]) { await goTrial(kind, depth === undefined ? undefined : Number(depth)); return; }
+    if (kind === 'list') {
+      const lines = [];
+      for (let d = 1; d < 20; d++) for (const t of state.cubes.layout(d).trials)
+        lines.push(`depth ${d}: ${TRIALS[t.kind].name} (${t.kind}, ${t.role}) in ${t.key}${t.stages ? ' · ' + t.stages.join(', ') : ''}${state.run.unlockedGates.has(t.gate) ? ' · done' : ''}`);
+      return lines.length ? lines.join('\n') : 'No trials in this world (/trial <kind> makes one)';
+    }
+    return devTrial(kind);
+  },
 });
 addType(commands, { name: 'arena', values: () => Object.keys(ARENA_WEIGHTS.descent).map(t => ({ value: t, label: t })) });
 dev({

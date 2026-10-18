@@ -67,6 +67,7 @@ import { tickStatuses } from './render/statuses.js';
 import { updateEffects } from './game/effects.js';
 import { updateAim } from './game/throws.js';
 import { updateEnemies, allEnemies } from './game/enemies.js';
+import { updateTrial } from './game/trials.js';
 import { updateMusic, forceMood } from './game/music.js';
 import { updateFootsteps } from './game/footsteps.js';
 import { updateSounds } from './game/sounds.js';
@@ -119,7 +120,11 @@ function frame(now = performance.now()) {
   state.time += dt;
   if (state.map) state.run.clock += dt;   // the world's play time: when its enemies come back (core/respawn.js)
   if (dt > 0 && travelling()) updateTravel(dt);
-  else if (dt > 0 && state.map && !state.transitioning) { updatePlayer(dt); if (!state.transitioning) updateEnemies(dt); }
+  else if (dt > 0 && state.map && !state.transitioning) {
+    updatePlayer(dt);
+    if (!state.transitioning) updateEnemies(dt);
+    if (!state.transitioning) updateTrial(dt);   // a trial room's clock, its rising fluid (game/trials.js)
+  }
 
   // smooth out small vertical snaps (steps), but not falls
   player.visY += (player.y - player.visY) * Math.min(1, dt * 25);

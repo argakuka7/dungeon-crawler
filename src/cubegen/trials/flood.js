@@ -47,8 +47,17 @@ export function shapeFlood(ctx) {
     } else if (d < foot) lvl0[i] = lo;
     else lvl0[i] = Math.min(lvl0[i], lo + 2);
   });
+  ctx.trialKeep = new Set([...summit, ...ways]);
   ctx.trialBuild = { kind: 'flood', summit: { x: sx, z: sz, c: idx(sx, sz), level: top, cells: [...summit] }, ramp: [...ways], lo, keep: [...summit, ...ways] };
   ctx.stats.mode = spec.kind + ' / flood';
+}
+
+// the way up the summit is its ramp: any structure onto or off the needle (but a walk, or a drop
+// off it: one way, down) costs a lot more, so the route and the ways out keep to the ramp
+export function floodRoute(ctx) {
+  const movesFrom = ctx.movesFrom, on = f => ctx.trialKeep.has(f.c);
+  ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).map(m => m.kind === 'walk' || (m.kind === 'drop' && on(f)) || (!on(f) && !on(m.to))
+    ? m : { ...m, cost: m.cost + 60 });
 }
 
 // the goal of the way up: the button's floor in the middle of the summit

@@ -4,7 +4,7 @@ import { Ragdoll } from '../physics/ragdoll.js';
 import { groundAt } from '../physics/collide.js';
 import { canMove } from '../physics/canmove.js';
 import { WATER, LAVA, LH, STEP, GET_UP_SPEED } from '../core/constants.js';
-import { inFluid } from '../physics/fluid.js';
+import { inFluid, fluidSurface } from '../physics/fluid.js';
 import { character } from '../render/character.js';
 import { beginRagdoll } from '../render/ragdollpose.js';
 import { fluidDeathFx } from '../render/fluiddeath.js';
@@ -66,7 +66,7 @@ export function stepRagdoll(dt) {
   r.step(dt);
   player.x = pel[0]; player.z = pel[2]; player.y = pel[1] - 0.35;
   const gr = groundAt(player.x, player.z, player.y, 0), fluid = inFluid(gr, player.y);
-  if (fluid) dieInFluid(fluid, gr.s.surf * LH);
+  if (fluid) dieInFluid(fluid, fluidSurface(gr));
   if (player.fluidDeath) { sink(r, player.fluidDeath); if (r.t < FLUID_DEATH_TIME) r.done = false; }
   if (pel[1] < -3) r.done = true;
   if (!r.done) return;

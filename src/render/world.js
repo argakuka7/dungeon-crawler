@@ -18,6 +18,7 @@ import { indexBlockers } from '../core/blockers.js';
 import { NPC_R, NPC_H } from '../core/npcs.js';
 import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
+import { buildTrialView, tickTrialView } from './trials.js';
 
 export function disposeWorld(world) {
   if (!world) return;
@@ -44,6 +45,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
   const villagers = buildVillagers([...(m.villagers || []), ...(m.npcs || [])], group);
   addGhosts(group);
+  const trialView = buildTrialView(m, group);   // a trial room's parts and rising fluid (render/trials.js)
   const glass = makeGlass(1, open);
   glass.visible = !m.interior;   // inside a house: walls, no glass box
   group.add(glass);
@@ -51,7 +53,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   makeFadable(group);
   ownShadowDepth(group);   // the props' instanced meshes
   scene.add(group);
-  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, ...markers };
+  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, trialView, ...markers };
   setTownPortal(world, townPad);
   return world;
 }
@@ -90,6 +92,14 @@ export function setGuardianGate(world, locked) {
   for (const fx of world?.portalFx || []) fx.setLocked?.(locked);
 }
 
+// a trial room's seals (game/trials.js): the portals on these faces sealed, the others open
+export function setPortalSeals(world, dirs, immediate = false) {
+  const key = dirs.join(',');
+  if (!world || (world.seals === key && !immediate)) return;
+  world.seals = key;
+  for (const fx of world.portalFx || []) fx.setLocked?.(dirs.includes(fx.obj.userData.portal?.dir), immediate);
+}
+
 // per-frame animation of fluids, waterfalls, lights and the portal
 export function animateWorld(world, dt, time) {
   for (const m of world.fluidMeshes) {
@@ -102,6 +112,7 @@ export function animateWorld(world, dt, time) {
   world.splashes.forEach((s, i) => { const k = 1 + Math.sin(time * 9 + i) * 0.08; s.scale.set(k, 1, k); });
   for (const l of world.lights) l.intensity = 5 + Math.sin(time * 4 + l.position.x) * 1.5;
   for (const p of world.portalFx) p.tick(time);
+  tickTrialView(world, time);
   tickChests(dt);
   tickVillagers(world.villagers, dt, time);
 }

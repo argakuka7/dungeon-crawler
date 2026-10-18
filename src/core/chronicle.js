@@ -29,6 +29,7 @@ export const KINDS = {
   loot: { group: 'events' },     // { name, rarity }: a rare (or better) weapon picked up
   kill: { group: 'events' },     // { count, xp }: enemies defeated (merged, MERGE_TIME)
   horde: { group: 'events' },    // {}: a horde woke up
+  trial: { group: 'events' },    // { name, depth, what: 'resolved' | 'failed' }: a trial room (core/trials.js) met or failed
   trade: { group: 'events' },    // { item, price }: bought something
   quest: { group: 'events' },    // { title, what, giver?, xp?, coins? }: a quest taken ('taken'), its goals done
                                  // ('ready'), handed in and paid ('done'), failed or started again
@@ -39,7 +40,7 @@ export const KINDS = {
 };
 // what a friend is told about (net/session.js `news`)
 // learn: memory.html#diary (see learn/README.md)
-export const NEWS = new Set(['death', 'down', 'up', 'level', 'guardian', 'depth', 'loot']);
+export const NEWS = new Set(['death', 'down', 'up', 'level', 'guardian', 'depth', 'loot', 'trial']);
 
 export const createLog = () => ({ entries: [], next: 1, version: 0 });
 export function clearLog(log) { log.entries.length = 0; log.version++; }
@@ -108,6 +109,7 @@ export function describe({ kind, data: d = {}, who }) {
     case 'loot': return `${S} found ${d.name}${RARITY[d.rarity] ? ` (${RARITY[d.rarity].name})` : ''}`;
     case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
     case 'horde': return 'A horde woke up!';
+    case 'trial': return d.what === 'failed' ? `${S} failed ${d.name} on depth ${d.depth}` : `${S} mastered ${d.name} on depth ${d.depth}: the way on is open`;
     case 'trade': return `Bought ${d.item} for ${d.price}`;
     case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to ${d.giver}`,
       done: `Quest complete: ${d.title}${d.xp ? ` · +${d.xp} XP` : ''}${d.coins ? ` · ${d.coins}` : ''}`, failed: `Quest failed: ${d.title}`,
@@ -155,6 +157,10 @@ export function cleanNews(kind, d) {
     }
     case 'depth': { const depth = int(d.depth, 1, 999); return depth === null ? null : { depth, place: text(d.place, 30) }; }
     case 'loot': return text(d.name) && Object.hasOwn(RARITY, d.rarity) ? { name: text(d.name), rarity: d.rarity } : null;
+    case 'trial': {
+      const depth = int(d.depth, 0, 999);
+      return depth === null || !text(d.name) ? null : { name: text(d.name, 40), depth, what: d.what === 'failed' ? 'failed' : 'resolved' };
+    }
   }
   return null;
 }

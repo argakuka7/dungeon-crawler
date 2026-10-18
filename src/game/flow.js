@@ -37,6 +37,7 @@ import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
 import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
+import { enterTrial, restartTrial, refreshTrialView } from './trials.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -104,6 +105,7 @@ function backAfterDeath() {
   // we are shown are another player's anyway, src/net/foes.js)
   if (mirroring() || online.buddies.some(b => b.here && !b.out && b.hp > 0)) { spawnEntry(); return; }
   restoreVisit(state.visit);
+  restartTrial();   // a trial room is put back as it was too (game/trials.js)
   resetEnemies();
   spawnEntry();
 }
@@ -201,6 +203,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   questWorld(c.map);   // the people living here, and what the quests put here (game/questworld.js)
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(k, c.map), c.geo, openedSides(state.openedFaces, k), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
+  enterTrial(c.map);   // its trial, as built (or resolved for good: game/trials.js)
   if (back) {
     const { arrival, portalLock, boundaryLock, visit } = back;
     Object.assign(state, { arrival, portalLock, boundaryLock, visit });
@@ -276,6 +279,7 @@ export function rebuildWorld() {
   questWorld(c.map);
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(state.cubeKey, c.map), c.geo, openedSides(state.openedFaces, state.cubeKey), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
+  refreshTrialView();
 }
 
 // keepPlayer: the player keeps their character (level, bag, gear); joining a friend's world
@@ -336,6 +340,7 @@ export function endWorld() {
   removeEnemyViews(detachEnemies());
   clearNeighbors(); clearNeighborCache();
   disposeWorld(state.world); state.world = null;
+  enterTrial(null);
   state.cubes?.dispose(); state.cubes = null;
   Object.assign(state, { map: null, cubeKey: '', arrival: null, visit: null, fallFrom: null, cast: null, portalCharge: null,
     portalLock: 0, boundaryLock: -1, inventoryOpen: false, transitioning: false, run: createRun() });

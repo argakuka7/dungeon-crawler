@@ -6,10 +6,11 @@
 //   deadlines  the hazard gives each floor the time it stops being safe: the path must leave
 //              every floor with arrival x SLACK + ARM_TIME <= deadline, and end on a floor with
 //              none
-import { N, LH, WALK_SPEED, CLIMB_SPEED } from '../../core/constants.js';
+import { N, LH, WALK_SPEED, CLIMB_SPEED, CHAR_H } from '../../core/constants.js';
 import { Heap } from '../../core/heap.js';
 import { ARM_TIME, SLACK } from '../../core/trials.js';
 import { graph } from '../reach.js';
+import { floorWalkable } from '../../physics/floornav.js';
 
 export const JUMP_TIME = 0.6, USE_TIME = 1;
 const level = f => f.fluid ? f.surf : f.top;
@@ -37,6 +38,9 @@ export function arrivals(ctx, start, speed = WALK_SPEED) {
     moves.set(m.from.id + '>' + m.to.id, m);
     if (!['walk', 'drop', 'jump'].includes(m.kind) && !moves.has(m.to.id + '>' + m.from.id)) moves.set(m.to.id + '>' + m.from.id, m);
   }
+  // (the reach graph knows floors only: a stair or bridge crossing a column over its floor leaves
+  // no room to walk there; on a route move the structure is the way)
+  const room = new Map(), fits = f => f.landing || (room.get(f.id) ?? room.set(f.id, floorWalkable(ctx, f, CHAR_H, true)).get(f.id));
   const time = new Map([[start.id, 0]]), prev = new Map(), node = new Map([[start.id, start]]), done = new Set(), open = new Heap();
   open.push(0, start);
   while (open.size) {
@@ -44,7 +48,9 @@ export function arrivals(ctx, start, speed = WALK_SPEED) {
     if (done.has(a.id)) continue;
     done.add(a.id);
     for (const b of adj.get(a.id) || []) {
-      const t = time.get(a.id) + duration(a, b, moves.get(a.id + '>' + b.id), speed);
+      const move = moves.get(a.id + '>' + b.id);
+      if (!move && !fits(b)) continue;
+      const t = time.get(a.id) + duration(a, b, move, speed);
       if (t < (time.get(b.id) ?? Infinity)) { time.set(b.id, t); prev.set(b.id, a); node.set(b.id, b); open.push(t, b); }
     }
   }

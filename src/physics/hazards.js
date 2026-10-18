@@ -5,7 +5,7 @@ import { takeDamage, regenerate } from '../core/progression.js';
 import { player, state } from '../game/state.js';
 import { hurt } from '../game/flow.js';
 import { knockDown, dieInFluid } from '../game/ragdoll.js';
-import { inFluid } from './fluid.js';
+import { inFluid, fluidSurface } from './fluid.js';
 import { startFall, landFall } from '../game/fall.js';
 import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
@@ -16,7 +16,7 @@ import { toxinOf, ACID_TOXIN } from '../core/status.js';
 function fluids(gr) {
   player.swimming = false; player.fluid = 0;
   const fluid = inFluid(gr, player.y);
-  if (fluid) { dieInFluid(fluid, gr.s.surf * LH); return false; }
+  if (fluid) { dieInFluid(fluid, fluidSurface(gr)); return false; }
   return true;
 }
 

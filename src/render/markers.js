@@ -129,10 +129,12 @@ export function buildMarkers(m, group, showPath, seen = {}, open = [], locked = 
   const portalFx = m.portals.filter(p => p.kind !== 'side' || !open[p.dir]).map(p => {
     const col = COLORS[m.sealed?.includes(p.dir) ? 'sealed' : seen[p.id] ? 'seen' : 'new'];
     const guardian = p.dir === m.exit ? m.guardian : null;
-    const fx = p.kind === 'side' ? gate(p, col, guardian) : p.kind === 'down' ? well(p, col, guardian) : p.kind === 'up' ? ring(p, col) : spawnPad(p);
+    // a trial room's gates (world/trials.js) can all be sealed: its exit until it is resolved, every
+    // one while an event runs (game/trials.js)
+    const fx = p.kind === 'side' ? gate(p, col, guardian || !!m.trial) : p.kind === 'down' ? well(p, col, guardian) : p.kind === 'up' ? ring(p, col) : spawnPad(p);
     fx.obj.userData.guardianRole = guardian?.role ?? null;
     fx.obj.userData.bossPlaceholder = !!guardian?.bossPlaceholder;
-    fx.setLocked?.(locked, true);
+    fx.setLocked?.(m.trial ? false : locked, true);
     fx.obj.userData.portal = p;   // dev tools: click to take it
     group.add(fx.obj);
     return fx;

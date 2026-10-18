@@ -5,9 +5,15 @@ import { World } from '../src/world/world.js';
 import { step, faceKey, parse, key } from '../src/world/coords.js';
 import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
-import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK } from '../src/core/trials.js';
+import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
+  newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel } from '../src/core/trials.js';
+import { state } from './fixtures.js';
+import { player } from '../src/game/state.js';
+import { movePlayer } from '../src/physics/move.js';
+import { groundAt } from '../src/physics/collide.js';
+import { inFluid, setTrialFluid, underTrialFluid } from '../src/physics/fluid.js';
 import { checkDeadlines } from '../src/cubegen/trials/timing.js';
-import { N } from '../src/core/constants.js';
+import { N, LH, CHAR_R, CHAR_H } from '../src/core/constants.js';
 
 const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
 const forced = (seed, trial) => makeLayouts(seed, worldThemes(seed), { trial });
@@ -190,4 +196,105 @@ test('every generated flood room passes its own timing check', () => {
     assert.equal(check.path.at(-1).dl, null);
   }
   assert.ok(n > 90);
+});
+
+test('the states: idle until a player steps off the pad, armed for ARM_TIME, then running; resolved for good, reset to idle', () => {
+  const t = { key: 'k', kind: 'flood' };
+  const s = newTrial(t);
+  assert.equal(s.phase, 'idle');
+  assert.equal(stepTrial(s, 1, { away: false }), null); assert.equal(s.phase, 'idle'); assert.equal(s.t, 0);
+  assert.equal(stepTrial(s, 0.1, { away: true }), 'armed');
+  for (let i = 0; i < 29; i++) stepTrial(s, 0.1);
+  assert.equal(s.phase, 'armed');
+  assert.equal(stepTrial(s, 0.1), 'running');
+  stepTrial(s, 1); assert.ok(Math.abs(s.t - (ARM_TIME + 1)) < 1e-9);
+  assert.ok(resolveTrial(s, 7)); assert.equal(s.phase, 'resolved'); assert.equal(resolveTrial(s), false);
+  stepTrial(s, 2); assert.equal(s.done, 2);
+  resetTrial(s); assert.deepEqual([s.phase, s.t], ['idle', 0]);
+  assert.equal(newTrial(t, true).phase, 'resolved');
+  // puzzles never arm
+  const p = newTrial({ key: 'p', kind: 'slide' });
+  stepTrial(p, 1, { away: true }); assert.equal(p.phase, 'idle');
+  // the fluid: none while idle, the timeline's level while it runs, draining back once resolved
+  const m = { kind: 'flood', timeline: { kind: 'flood', from: 2, to: 15, step: 2, rise: 3, pulses: [3, 10, 17] } };
+  const f = newTrial({ key: 'f', kind: 'flood' });
+  assert.equal(trialFluidLevel(m, f), null);
+  stepTrial(f, 0, { away: true }); stepTrial(f, 11.5);
+  assert.equal(trialFluidLevel(m, f), floodLevel(m.timeline, 11.5));
+  resolveTrial(f, trialFluidLevel(m, f));
+  stepTrial(f, DRAIN_TIME / 2);
+  assert.ok(trialFluidLevel(m, f) < 5 && trialFluidLevel(m, f) > 2);
+  stepTrial(f, DRAIN_TIME);
+  assert.equal(trialFluidLevel(m, f), null);
+});
+
+const DT = 1 / 60;
+function place(m, x, y, z) {
+  state.map = m;
+  Object.assign(player, { x, y, z, vx: 0, vy: 0, vz: 0, visY: y, grounded: true, swimming: false, fluid: 0,
+    stun: 0, coyote: 0, jumpBuf: 0, r: CHAR_R, h: CHAR_H, support: null, climb: null });
+  movePlayer(DT, 0, 0, false, false);
+}
+
+test('under the trial\'s fluid everything drowns, and walking stops at its edge', () => {
+  const { m } = floods([1]).next().value, tr = m.trial, entry = m.portals.find(p => p.dir === tr.entry);
+  const a = tr.check.path[1];
+  place(m, a.x, a.y, a.z);
+  const gr = groundAt(player.x, player.z, player.y + 0.1, 0);
+  setTrialFluid(null);
+  assert.equal(inFluid(gr, player.y), 0);
+  setTrialFluid({ y: player.y + 0.4, fluid: tr.fluid });
+  assert.equal(inFluid(gr, player.y), tr.fluid, 'standing in it drowns');
+  assert.equal(inFluid(gr, player.y + 0.5), 0, 'over it is dry');
+  // on the summit, the water round its foot: walking off the top towards it stops at the edge
+  const b = tr.button;
+  place(m, b.x, b.y, b.z);
+  setTrialFluid({ y: b.y - 0.3, fluid: tr.fluid });
+  assert.equal(underTrialFluid(b.y), false);
+  assert.ok(underTrialFluid(b.y - 1));
+  setTrialFluid(null);
+  void entry;
+});
+
+// The slow player: walking (not running) along the checked path, the water rising as the
+// timeline says from the moment it arms (they step off the pad), every step checked for drowning.
+// Climbs the walker cannot do (a ladder, a jump) are taken at their checked time.
+test('walking the checked way up of every flood with the real water: the summit is reached dry', () => {
+  let n = 0, worst = Infinity;
+  for (const { seed, d, m } of floods(SEEDS.slice(0, 4))) {
+    const { check, timeline: tl } = m.trial, pts = check.path;
+    place(m, pts[0].x, pts[0].y, pts[0].z);
+    let t = 0, drowned = null;
+    const water = () => { setTrialFluid({ y: floodLevel(tl, t) * LH, fluid: m.trial.fluid }); };
+    for (let j = 1; j < pts.length && !drowned; j++) {
+      const q = pts[j];
+      let steps = 0;
+      while (Math.hypot(q.x - player.x, q.z - player.z) > 0.15 && steps++ < 300) {
+        const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
+        movePlayer(DT, dx / dist, dz / dist, false, false);
+        t += DT; water();
+        const gr = groundAt(player.x, player.z, player.y + 0.1, 0);
+        if (inFluid(gr, player.y)) { drowned = `at ${t.toFixed(1)} s on the way to point ${j}`; break; }
+      }
+      if (Math.hypot(q.x - player.x, q.z - player.z) > 0.15) {   // a climb: at its checked time
+        t = Math.max(t, q.t); place(m, q.x, q.y + 0.05, q.z);
+      }
+    }
+    setTrialFluid(null);
+    assert.ok(!drowned, `${seed}/${d}: drowned ${drowned}`);
+    const dl = floodTime(tl, tl.to - 0.01);
+    worst = Math.min(worst, dl - t);
+    n++;
+  }
+  assert.ok(n > 40 && worst > 0, `${n} walks, the least margin ${worst.toFixed(1)} s`);
+});
+
+test('the flood\'s summit is climbed by its ramp: no stair, ladder or bridge leads onto it', () => {
+  for (const { seed, d, m } of floods(SEEDS.slice(0, 5))) {
+    const keep = new Set([...m.trial.summit.cells, ...m.trial.pathFloors.map(id => m.floors[id].c)]);
+    const needle = new Set(m.trial.summit.cells);
+    for (const r of m.runs) if (r.kind !== 'landing') assert.ok(!needle.has(r.from.c) && !needle.has(r.to.c), `${seed}/${d}: a ${r.kind} onto the summit`);
+    for (const l of m.ladders) assert.ok(!needle.has(l.hi) && !needle.has(l.lo), `${seed}/${d}: a ladder onto the summit`);
+    void keep;
+  }
 });

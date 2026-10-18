@@ -566,3 +566,16 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 #quest-track[hidden] { display: none; }
 #quest-track b { display: block; color: #e6c35a; font-weight: normal; }
 body.touch #quest-track { top: calc(150px + env(safe-area-inset-top)); width: 150px; font-size: 11px; }
+/* a trial room (game/trials.js): its name and what it needs while it runs, the banner as it arms */
+#trial-hud { position: fixed; top: calc(14px + var(--safe-t)); left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none;
+  min-width: 220px; padding: 6px 12px 8px; background: #0b0e14c8; border: 1px solid #ffffff26; border-radius: 4px; font: 12px/1.4 monospace;
+  color: #d8e2ec; text-align: center; }
+#trial-hud[hidden], #trial-banner[hidden] { display: none; }
+#trial-hud b { display: block; color: #8fd0ff; font-weight: normal; letter-spacing: .06em; text-transform: uppercase; }
+#trial-meter { height: 4px; margin-top: 5px; background: #ffffff18; border-radius: 2px; overflow: hidden; }
+#trial-bar { display: block; height: 100%; width: 0; background: #5fb8ff; transition: width .25s linear; }
+#trial-banner { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none; text-align: center;
+  color: #eef6ff; text-shadow: 0 2px 8px #000c; transition: opacity .8s; }
+#trial-banner.out { opacity: 0; }
+#trial-banner b { display: block; font: bold 34px/1.2 serif; letter-spacing: .04em; }
+#trial-banner span { display: block; font: 15px/1.4 sans-serif; margin-top: 4px; }
