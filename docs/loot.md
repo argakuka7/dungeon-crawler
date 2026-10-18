@@ -129,9 +129,12 @@ a compound and an epithet. The base type shows under the name where the name doe
 ## Drops
 
 `enemyDrops(enemy, worldSeed, favor)` in `core/gear/drops.js` (`weaponDrops` and `potionDrops`),
-seeded by the world seed and the enemy id: the same enemy always drops the same thing (also
-after a death brings it back, like its coins) as long as you fight with the same kind of weapon
-(`favor`, see smart loot). The item level is the enemy's level.
+seeded by the world seed, the enemy id and its life: the same enemy always drops the same thing
+in one life (also after a death brings it back, like its coins) as long as you fight with the
+same kind of weapon (`favor`, see smart loot). An enemy that comes back after a while
+([progression.md](progression.md#enemies-come-back)) is in its next life (`wave`) and rolls
+anew; its drop's source is `e:<id>~<life>` (the first life's stays `e:<id>`). The item level
+is the enemy's level.
 
 - Which potion is drawn by the item level from those that drop there, weighted, health
   potions the likeliest (`potionTable`, [potions.md](potions.md)); chests likewise.

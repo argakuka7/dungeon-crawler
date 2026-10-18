@@ -23,6 +23,7 @@ import { villagersReady } from '../render/villagers.js';
 import { createPlayerStats, createRun, takeDamage } from '../core/progression.js';
 import { clearEffects } from '../core/potions.js';
 import { restoreDefeated, gateLocked, guardianLockMessage } from '../core/guardians.js';
+import { respawnCube, unpackKills } from '../core/respawn.js';
 import { syncEquippedWeapon } from './equipment.js';
 import { clearInput } from './inputstate.js';
 import { lootMark, forgetLoot, takeLoot } from './loot.js';
@@ -73,9 +74,11 @@ export function hurt(amount, reason, by = null) {
 }
 
 // The cube as you came in. A death puts it back: the enemies you defeated since return and
-// the coins they dropped (and you did not pick up yet) go.
+// the coins they dropped (and you did not pick up yet) go. Those dead long enough are back first
+// (core/respawn.js), unless a friend is in the cube already: it stays as they have it.
 // learn: memory.html#death (see learn/README.md)
 export function beginVisit() {
+  if (!online.buddies.some(b => b.cube === state.cubeKey)) respawnCube(state.run, state.cubeKey);
   state.visit = { key: state.cubeKey, defeated: new Set(state.run.defeated), loot: lootMark(), quests: questMark() };
 }
 function restoreVisit(v) {
@@ -318,6 +321,7 @@ function restoreRun({ run, faces, visited, deepest = 0 }) {
   for (const k of run.gates) r.unlockedGates.add(k);
   for (const id of run.chests) r.chests.add(id);
   for (const s of run.dropped) r.dropped.add(s);
+  r.clock = run.clock; r.kills = unpackKills(run.kills);
   r.townPortal = run.townPortal;
   r.quests = checkQuestLog(run.quests);
   r.quests.deepest = Math.max(r.quests.deepest, deepest);

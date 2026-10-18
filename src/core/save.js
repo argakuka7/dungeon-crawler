@@ -10,7 +10,7 @@ import { checkSkin } from './skin.js';
 // the loot on the floor, the cubes discovered, and where each hero left it (spots). Its name
 // comes from the seed (core/names.js); the same seed saved again is the second copy, "... II".
 //   { v, id, seed, copy, name, created, updated, deepest,
-//     run: { defeated, gates, chests, dropped, loot, townPortal, quests }, faces, visited,
+//     run: { defeated, gates, chests, dropped, loot, townPortal, quests, clock, kills }, faces, visited,
 //     spots: { [heroId]: { cube, arrival: { x, y, z } } } }
 // The map itself is never saved: the same seed makes the same cubes (world/). The name is
 // written along (to read the file) but never read back.
@@ -26,6 +26,7 @@ import { createPlayerStats, carryTools, levelFromXP, maxHealth } from './progres
 import { validGen, validPickup } from './loot.js';
 import { worldName } from './names.js';
 import { createQuestLog, checkQuestLog } from './quests.js';
+import { packKills, unpackKills } from './respawn.js';
 
 export const SAVE_VERSION = 1, MAX_HEROES = 3, MAX_WORLDS = 8, NAME_MAX = 16;
 export const KEYS = {
@@ -114,7 +115,8 @@ export function checkHero(h) {
 export function createWorld(seed, { copy = 1, id = newId('w'), now = Date.now() } = {}) {
   seed >>>= 0;
   return { v: SAVE_VERSION, id, seed, copy, name: savedWorldName(seed, copy), created: now, updated: now, deepest: 0,
-    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog() }, faces: [], visited: [], spots: {} };
+    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog(), clock: 0, kills: [] },
+    faces: [], visited: [], spots: {} };
 }
 
 function checkTownPortal(tp) {
@@ -142,7 +144,8 @@ export function checkWorld(w) {
   return { v: SAVE_VERSION, id: w.id, seed: w.seed, copy, name: savedWorldName(w.seed, copy),
     created: time(w.created), updated: time(w.updated), deepest: Number.isInteger(w.deepest) && w.deepest > 0 ? w.deepest : 0,
     run: { defeated: strings(run.defeated), gates: strings(run.gates), chests: strings(run.chests), dropped: strings(run.dropped),
-      loot: checkLoot(run.loot), townPortal: checkTownPortal(run.townPortal), quests: checkQuestLog(run.quests) },
+      loot: checkLoot(run.loot), townPortal: checkTownPortal(run.townPortal), quests: checkQuestLog(run.quests),
+      clock: time(run.clock), kills: packKills(unpackKills(run.kills)) },
     faces: strings(w.faces), visited: strings(w.visited), spots };
 }
 // what the menu lists of a world, without reading all of it (the heroes: those that were there)

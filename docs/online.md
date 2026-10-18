@@ -90,7 +90,12 @@ being helped up and getting back in. Up to four players, co-op.
   connection goes), the next lowest number there takes them over the same way, from what it
   was shown.
 - A kill apart tells the other games the enemy is gone (`defeated`), and a guardian's gate
-  opens for everyone; the XP and loot are only the killer's.
+  opens for everyone; the XP and loot are only the killer's. An ordinary enemy's `defeated` says
+  its cube and life (`cube`, `n`), so it comes back for everyone
+  ([progression.md](progression.md#enemies-come-back)). The `welcome` brings the host's play time
+  and kills along, so the guest's clock runs with the host's. Coming into a cube a friend is in
+  already brings nothing back: it stays as they have it. The roster says each enemy's `respawn`
+  and `wave`, so a viewer's kill drops the life it is in.
 
 ## One map for both
 

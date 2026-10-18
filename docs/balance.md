@@ -95,6 +95,13 @@ chests per depth (two basic, one uncommon, one rare or exceptional) hold coins, 
 one or two weapons a level or two above the depth. Per depth that is about 10 potions and
 15 weapons, most of the useful ones from guardians and chests.
 
+**Farming**: ordinary enemies come back five minutes of play after they died, the next time
+their cube is entered, and every life rolls its drops anew
+([progression.md](progression.md#enemies-come-back)). So bad luck is never final: a player who
+wants a bow or more levels can clear the road again. The XP falloff keeps that from paying far
+below the player's level; the loot keeps its item level (the depth's), so farming shallow ground
+finds the kinds of weapon, not stronger ones. The simulation does not farm.
+
 ## Tuning
 
 Change a number, then run `node tools/balance.mjs` and `npm test`. Useful checks:

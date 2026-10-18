@@ -12,12 +12,14 @@
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
-//   welcome { v, slot, players, seed, defeated, gates, visited, faces, loot, dropped, chests, quests }
+//   welcome { v, slot, players, seed, defeated, gates, visited, faces, loot, dropped, chests, quests,
+//             clock, kills }
 //                                      host -> guest: you are player `slot`, with players
 //                                      ([{ slot, name }], the host too); play in this world
 //                                      (and what was defeated, opened and discovered in it so
 //                                      far, the loot on its floors: [[cube, pickups]], the
-//                                      sources that dropped, the chests open, the quest log)
+//                                      sources that dropped, the chests open, the quest log, its
+//                                      play time and the kills that come back: core/respawn.js)
 //   joined  { slot, name }             host -> guests: someone came (or got back in)
 //   left    { slot }                   host -> guests: someone went
 //   visited { keys }                   to all: I discovered these cubes (yours too now)
@@ -37,8 +39,9 @@
 //   want    {}                         viewer -> runner: send the roster again (we came, died)
 //   handover { cube, list }            to the new runner: it came into our cube: our enemies
 //                                      as they are ({ id, x, y, z, yaw, hp, mode }), its now
-//   defeated { id, gate }              to all: I got the reward for enemy `id` (apart, it
-//                                      stays defeated for you; gate: a guardian's, now open)
+//   defeated { id, gate, cube, n }     to all: I got the reward for enemy `id` (apart, it
+//                                      stays defeated for you; gate: a guardian's, now open;
+//                                      cube, n: one that comes back, its cube and life)
 //   hit     { id, damage, crit, dx, dz, kb }  viewer -> runner: I hurt enemy `id`
 //   afflict { id, status, spec }       viewer -> runner: I set it burning or poisoned
 //   hurt    { blow, fx, fz, nx, nz }   runner -> viewer: an enemy's blow landed on you
@@ -227,7 +230,7 @@ export function rosterOf(list, cube, seed) {
       kind: e.kind && { xp: e.kind.xp, dropXP: e.kind.dropXP, dropScale: e.kind.dropScale, drops: e.kind.drops },
       guardian: e.guardian, guardianRole: e.guardianRole, bossPlaceholder: e.bossPlaceholder, guardianGate: e.guardianGate,
       boss: e.boss, proxy: e.proxy, summoned: e.summoned, noReward: e.noReward,
-      hordeId: e.hordeId, x: r3(e.x), y: r3(e.y), z: r3(e.z), yaw: r3(e.yaw), hp: e.hp, mode: e.mode };
+      hordeId: e.hordeId, respawn: e.respawn, wave: e.wave, x: r3(e.x), y: r3(e.y), z: r3(e.z), yaw: r3(e.yaw), hp: e.hp, mode: e.mode };
   });
   return { t: 'roster', cube, seed, profiles, list: entries };
 }

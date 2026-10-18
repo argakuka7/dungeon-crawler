@@ -1152,4 +1152,3 @@ ride on the figure, and going from the main menu into the game changed the count
   arbitrary. Highland corners can show small dips.
 - **Vertical portals:** they only need to line up loosely; a pad that would overlap another
   portal moves to a free spot in that cube.
-- **Not persisted:** spiders respawn when you re-enter a cube. Nothing is saved to disk.

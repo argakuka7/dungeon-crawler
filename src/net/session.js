@@ -73,6 +73,7 @@ import { downInfo } from '../game/downed.js';
 import { packPickup, acceptDrop, takenBy, grant, forgetDrops, dropOf, allLoot, takeLoot, settleClaims } from '../game/loot.js';
 import { shareChest } from '../game/chests.js';
 import { validPickup } from '../core/loot.js';
+import { sourceEnemy, shareKill, packKills, unpackKills } from '../core/respawn.js';
 import { cleanText, cleanNews } from '../core/chronicle.js';
 import { log } from '../game/log.js';
 import { speech } from '../game/console.js';
@@ -319,7 +320,8 @@ function welcome(l, slot, name, id, again) {
   const players = [{ slot: 0, name: myName }, ...[...peers.values()].filter(o => o !== p).map(o => ({ slot: o.slot, name: o.name }))];
   l.send({ t: 'welcome', v: PROTOCOL, slot, players, seed: announced,
     defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces],
-    loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests], quests: questLogPacked() });
+    loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests], quests: questLogPacked(),
+    clock: state.run.clock, kills: packKills(state.run.kills) });
   facesSent = state.openedFaces.size;
   deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
   together();
@@ -394,7 +396,8 @@ function welcomed(m) {
   const loot = (Array.isArray(m.loot) ? m.loot : []).filter(c => Array.isArray(c) && typeof c[0] === 'string' && Array.isArray(c[1]))
     .map(([k, items]) => [k, items.filter(p => typeof p?.source === 'string' && validPickup(p))]);
   const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces),
-    loot, dropped: list(m.dropped), chests: list(m.chests), quests: m.quests ?? null };
+    loot, dropped: list(m.dropped), chests: list(m.chests), quests: m.quests ?? null,
+    clock: Number.isFinite(m.clock) && m.clock >= 0 ? m.clock : null, kills: unpackKills(m.kills) };
   if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
   else {
     takeRun(run);
@@ -447,7 +450,8 @@ function pingAll() {
 // someone to play with (again): tell them what happens
 function together() {
   const r = x => Math.round(x * 1000) / 1000;
-  relay.defeated = e => post({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null });
+  relay.defeated = e => post({ t: 'defeated', id: e.id, gate: e.guardian && e.guardianGate || null,
+    ...e.respawn && { cube: e.respawn, n: e.wave ?? 0 } });
   // the chat box: what we say, and what happens to us (game/log.js)
   relay.chat = text => post({ t: 'chat', text });
   relay.news = (kind, data) => post({ t: 'news', kind, data });
@@ -518,7 +522,8 @@ function handle(m) {
 // what everyone hears about: kills, cubes, faces, the arrows and flasks of those here, and
 // what they say and what happened to them (the chat box)
 function shared(m, p) {
-  if (m.t === 'defeated' && typeof m.id === 'string') shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null);
+  if (m.t === 'defeated' && typeof m.id === 'string')
+    shareDefeat(m.id, typeof m.gate === 'string' ? m.gate : null, typeof m.cube === 'string' ? { cube: m.cube, n: m.n } : null);
   else if (m.t === 'chat') {
     const text = cleanText(m.text, CHAT_MAX);
     if (text) { log('chat', { text }, { who: { slot: p.slot, name: p.name } }); speech(text, p.slot); }
@@ -633,7 +638,7 @@ function lootReceive(m, p) {
   return true;
 }
 // is the enemy that dropped `source` still alive here, where we run the enemies?
-const aliveHere = (key, source) => source.startsWith('e:') && key === state.cubeKey && foes instanceof Runner && !!enemy(source.slice(2));
+const aliveHere = (key, source) => key === state.cubeKey && foes instanceof Runner && !!enemy(sourceEnemy(source));
 
 // we run the enemies here: those shown them ask for them, hand theirs over, and hit them
 function runnerReceive(m, p) {
@@ -687,6 +692,9 @@ function updateRunner(now) {
 // learn: network.html#seed (see learn/README.md)
 function takeRun(run) {
   for (const id of run.defeated) state.run.defeated.add(id);
+  // and when its enemies come back (core/respawn.js): on its clock
+  if (run.clock !== null) state.run.clock = run.clock;
+  for (const [id, k] of run.kills) state.run.kills.set(id, k);
   for (const k of run.gates) state.run.unlockedGates.add(k);
   // the floor loot is the host's (also after getting back in: what we dropped meanwhile went)
   takeLoot(run.loot);

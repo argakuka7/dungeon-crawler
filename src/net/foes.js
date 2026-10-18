@@ -59,6 +59,7 @@ function replica(entry, profile, i) {
   return { id: entry.id, profile, type: profile.type, level: entry.level, coinDrop: entry.coinDrop, kind: entry.kind,
     guardian: entry.guardian, guardianRole: entry.guardianRole, bossPlaceholder: entry.bossPlaceholder,
     guardianGate: entry.guardianGate, hordeId: entry.hordeId,
+    respawn: typeof entry.respawn === 'string' ? entry.respawn : undefined, wave: Number.isInteger(entry.wave) && entry.wave > 0 ? entry.wave : 0,
     boss: entry.boss, proxy: !!entry.proxy, summoned: !!entry.summoned, noReward: !!entry.noReward,
     x: entry.x, y: entry.y, z: entry.z, yaw: entry.yaw, hp: entry.hp, mode: entry.mode === 'dead' ? 'dead' : 'idle',
     t: 0, attacks: 0, attack: 0, speed: 0, deadT: entry.mode === 'dead' ? 1e9 : 0, hurtT: 0, stun: 0, cool: 0,

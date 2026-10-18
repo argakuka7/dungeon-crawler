@@ -6,7 +6,7 @@
 // puts things from the bag back on the floor. Pickups stay where they fell (per cube, for the
 // whole run) until collected. They are credited when they reach the player.
 //
-// Every drop has a source: an enemy (`e:<id>`), a chest (`c:<site id>`) or something put down
+// Every drop has a source: an enemy (`e:<id>`, from its second life `e:<id>~<life>`, core/respawn.js), a chest (`c:<site id>`) or something put down
 // from the bag (`b:<player>:<page><n>`), and each pickup is `<source>#<i>`. A source drops once per
 // run (run.dropped), until a death puts its enemy back (forgetLoot).
 //
@@ -28,6 +28,7 @@ import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar, fits } f
 import { ITEMS } from '../core/items.js';
 import { RARITY, rarityOf } from '../core/gear/rarities.js';
 import { enemyDrops } from '../core/gear/drops.js';
+import { dropSource } from '../core/respawn.js';
 import { favoredKind } from '../core/combat.js';
 import { displayName } from '../core/gear/stats.js';
 import { groundAt } from '../physics/collide.js';
@@ -91,7 +92,7 @@ function place(list, item, id, source, at, from, extra = {}) {
 // what enemy e leaves behind: its coins and its seeded weapon and potion drops (core/gear/drops.js),
 // leaning towards our weapons (we killed it)
 export function dropLoot(e, copper) {
-  const source = `e:${e.id}`;
+  const source = dropSource(e);
   if (state.run.dropped.has(source)) return;
   const items = enemyDrops(e, state.map?.seed ?? 0, favoredKind(player));
   if (copper || items.length) spill(source, e, copper, items);   // (nothing at all: a Custo triangle, mostly)

@@ -1,6 +1,7 @@
 // What a defeated enemy drops besides its coins: maybe a weapon, maybe a potion. Seeded by
-// the world seed and the enemy's id, so the same enemy always drops the same thing (also when
-// it comes back after a death, like its coins). The item level is the enemy's level, so deeper
+// the world seed, the enemy's id and its life (`wave`, core/respawn.js), so the same enemy always
+// drops the same thing in one life (also when it comes back after a death, like its coins), and
+// something new when it comes back after a while. The item level is the enemy's level, so deeper
 // drops hit harder (core/gear/stats.js).
 //   ordinary enemies: a weapon 5% of the time and a potion 3%, both × √(its XP / 30): the
 //     tougher the kind, the likelier (a spider 4% / 2.5%, a Stunder 8% / 5%, a Triangle 10% / 6%)
@@ -36,7 +37,8 @@ export function hashString(s) {
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
   return h >>> 0;
 }
-const stream = (enemy, seed, salt) => mulberry32(hash32(hashString(String(enemy.id)) ^ Math.imul(seed >>> 0, 0x9e3779b1) ^ salt));
+const stream = (enemy, seed, salt) => mulberry32(hash32(hashString(String(enemy.id)) ^ Math.imul(seed >>> 0, 0x9e3779b1) ^ salt
+  ^ (enemy.wave ? Math.imul(enemy.wave, 0x85ebca6b) : 0)));
 
 // enemy: { id, level, kind? (its level-1 profile), guardian?, guardianRole? }; seed: the world's
 // learn: code.html#loops (see learn/README.md)

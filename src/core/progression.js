@@ -3,6 +3,7 @@ import { OLD_SWORD, TOWN_PORTAL, ROOM_PORTAL, TOOLS, HEALTH_POTION } from './ite
 import { fixedWeapon } from './gear/generate.js';
 import { createPotionState } from './potions.js';
 import { createQuestLog } from './quests.js';
+import { noteKill } from './respawn.js';
 
 // The player's numbers. docs/balance.md explains the targets; tools/balance.mjs plays them through.
 //   a level costs XP_BASE + XP_STEP (L - 1) + XP_CURVE (L - 1)² XP, so the first levels come in a
@@ -68,11 +69,12 @@ export function createPlayerStats(dev = false) {
 }
 // defeated: enemy IDs; loot: cube key -> pickups lying there (game/loot.js); chests: the reward
 // sites whose chests are open (game/chests.js); townPortal: the open town portal, if any
-// (game/townportal.js); quests: the world's quest log (core/quests.js)
+// (game/townportal.js); quests: the world's quest log (core/quests.js); clock: the world's play time
+// (s, main.js); kills: the ordinary kills, for them to come back (core/respawn.js)
 // loot: the pickups on the floor per cube (game/loot.js); dropped: the drops (their sources) that came
 // learn: memory.html#notes (see learn/README.md)
 export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), dropped: new Set(), chests: new Set(), townPortal: null,
-  quests: createQuestLog() });
+  quests: createQuestLog(), clock: 0, kills: new Map() });
 // learn: stronger.html#xp-code (see learn/README.md)
 export function awardXP(p, amount) {
   whole(amount);
@@ -90,7 +92,7 @@ export function awardKill(p, run, enemy) {
   const xp = whole(Math.round(enemy.profile.xp * xpScale(p.level, enemy.level || 1))), coins = whole(enemy.coinDrop);
   whole(p.xp + xp);   // validate before mutating any state
   const levels = awardXP(p, xp);
-  if (enemy.summoned) enemy.awarded = true; else run.defeated.add(enemy.id);
+  if (enemy.summoned) enemy.awarded = true; else { run.defeated.add(enemy.id); noteKill(run, enemy); }
   if (enemy.guardian && enemy.guardianGate) run.unlockedGates.add(enemy.guardianGate);
   return { xp, coins, levels };
 }

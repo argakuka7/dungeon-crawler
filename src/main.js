@@ -117,6 +117,7 @@ function frame(now = performance.now()) {
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
   state.time += dt;
+  if (state.map) state.run.clock += dt;   // the world's play time: when its enemies come back (core/respawn.js)
   if (dt > 0 && travelling()) updateTravel(dt);
   else if (dt > 0 && state.map && !state.transitioning) { updatePlayer(dt); if (!state.transitioning) updateEnemies(dt); }
 

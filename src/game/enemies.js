@@ -27,6 +27,7 @@ import { updateEnemyStatuses } from './statuses.js';
 import { animateEnemies } from '../render/enemies.js';
 import { player, state, setStatus, worldPaused } from './state.js';
 import { awardKill } from '../core/progression.js';
+import { liveAgain, shareKill } from '../core/respawn.js';
 import { dropLoot } from './loot.js';
 import { coordinateDefence } from './defence.js';
 import { createHordeGroups, coordinateHordes } from './hordes.js';
@@ -84,6 +85,7 @@ export function resetEnemies() {
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
   resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetGustos();
+  for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
   coordinateDefence(state.map, state.run, allEnemies(), player);
@@ -132,12 +134,14 @@ function droppedHere(e) {
 }
 
 // Playing together, another player defeated enemy `id` somewhere else (net/session.js): it stays
-// defeated here too (no reward: that was theirs), and a guardian's gate opens. One that is
+// defeated here too (no reward: that was theirs), and a guardian's gate opens. life: { cube, n } of
+// one that comes back (core/respawn.js): it comes back here too. One that is
 // here with us we see die ourselves.
 // learn: network.html#apart (see learn/README.md)
-export function shareDefeat(id, gate) {
+export function shareDefeat(id, gate, life = null) {
   if (allEnemies().some(e => e.id === id)) return;
   state.run.defeated.add(id);
+  if (life) shareKill(state.run, id, life.cube, life.n);
   if (!gate || state.run.unlockedGates.has(gate)) return;
   state.run.unlockedGates.add(gate);
   if (gate === state.cubeKey) setGuardianGate(state.world, false);

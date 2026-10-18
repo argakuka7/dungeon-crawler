@@ -34,7 +34,8 @@ before one existed gets it when loaded (`carryTools`, `core/progression.js`).
 Progression, currency, inventory and equipment survive cube travel and death.
 Death (or `R`) restores the current maximum HP; there is no death penalty yet. Death also
 resets the cube to how it was when you came in: enemies killed since come back (and give XP
-again), uncollected coins they dropped vanish; collected rewards are kept.
+again), uncollected coins they dropped vanish; collected rewards are kept. Ordinary enemies also
+come back after a while ([below](#enemies-come-back)).
 `N` / `newWorld()` resets the run, including defeated enemy IDs and equipment.
 State is **in memory only**, not saved across page reloads.
 
@@ -128,8 +129,34 @@ separate stream from terrain/spawn placement. All species: [depths.md](depths.md
 
 On death, XP is credited at once; coins and sometimes a weapon or a health potion drop as loot
 to pick up ([loot.md](loot.md)). The run remembers defeated enemy IDs, so revisiting
-or rebuilding a cube cannot resurrect them or duplicate rewards. Surviving
-monsters currently reset on re-entry; their levels/drop rolls remain unchanged.
+or rebuilding a cube cannot resurrect them or duplicate rewards (until they come back, below).
+Surviving monsters reset on re-entry; their levels/drop rolls remain unchanged.
+
+### Enemies come back
+
+`core/respawn.js`. An ordinary enemy, one of a cube's own or of its horde (its spot says
+`respawn`: the cube's key, `game/enemyspawn.js`), comes back once it has been dead for
+`RESPAWN` (300 s) of play and its cube is entered (`game/flow.js beginVisit`): never in front
+of you, and only one at a time as their times are up. Guardians, Gusto, guardian defenders,
+bounties, raiders, summoned minions and dev spawns never come back. So a player who needs to
+can farm: for XP (which the level falloff keeps from paying off far below one's level) and above
+all for loot.
+
+- The clock is the world's play time (`run.clock`, `main.js`), stopped while the game is paused
+  (the inventory, the menu). Closing the game or the computer's clock change nothing.
+- `run.kills` remembers each such kill: `id -> { n, at, cube }`. `n` is its life (how often it
+  came back), `at` when it died. Ids do not change: what is defeated, quests, the co-op roster
+  and the chronicle work as before.
+- Each life rolls drops of its own: the life (`wave`) goes into the drop seed
+  (`core/gear/drops.js`), coins are rolled again (`liveAgain`), and its loot has a source of its
+  own (`e:<id>~<n>`, [loot.md](loot.md)). The first life is unchanged.
+- A death in its cube brings an enemy back in the **same** life: dying re-rolls nothing.
+- A friend in the cube already: nothing comes back, it stays as they have it
+  ([online.md](online.md)).
+- Saved with the world ([saves.md](saves.md)). Kills from before this existed are not in
+  `run.kills` and stay dead.
+
+`node --test tests/enemyrespawn.test.js` checks it.
 
 ## Weapons
 

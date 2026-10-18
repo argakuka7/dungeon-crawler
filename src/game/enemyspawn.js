@@ -59,7 +59,7 @@ export function enemySpots(map, profile) {
       spots.push(f); used.add(f); kinds.push(kind); n++;
     }
   }
-  return spots.map((f, i) => ({ ...enemyRoll(map, kinds[i], f.id), kind: kinds[i], f, x: f.x + 0.5, z: f.z + 0.5, y: groundY(f, f.x + 0.5, f.z + 0.5), yaw: R() * Math.PI * 2 }));
+  return spots.map((f, i) => ({ ...enemyRoll(map, kinds[i], f.id), respawn: map.key, kind: kinds[i], f, x: f.x + 0.5, z: f.z + 0.5, y: groundY(f, f.x + 0.5, f.z + 0.5), yaw: R() * Math.PI * 2 }));
 }
 
 // A connected local spawn patch; IDs/rolls use member slots, not terrain floor IDs.
@@ -80,7 +80,7 @@ export function hordeSpots(map) {
     if (floors.length === spec.count) break;
   }
   if (floors.length !== spec.count) throw new Error(`Horde patch cannot hold ${spec.count} members: ${map.key}`);
-  return floors.map((f, i) => ({ ...enemyRoll(map, kind, i), id: `${map.horde.id}:member:${i}`,
+  return floors.map((f, i) => ({ ...enemyRoll(map, kind, i), id: `${map.horde.id}:member:${i}`, respawn: map.key,
     kind, hordeId: map.horde.id, hordeSlot: i, hordeReaction: R() * HORDE.reaction,
     f, x: f.x + .5, z: f.z + .5, y: groundY(f, f.x + .5, f.z + .5), yaw: R() * Math.PI * 2 }));
 }
