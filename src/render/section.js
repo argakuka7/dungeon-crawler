@@ -130,8 +130,9 @@ function wallFloors(map) {
   for (let t = 0; t < N; t++) { a[t] = top(N - 3, t); a[N + t] = top(2, t); a[2 * N + t] = top(t, N - 3); a[3 * N + t] = top(t, 2); }
 }
 
-// y = height of the cut (Infinity for none), (px, py, pz) = the point to keep visible
-export function setCut(y, map, px, py, pz) {
+// y = height of the cut (Infinity for none), (px, py, pz) = the point to keep visible; walls:
+// the walls on the camera's side may come down (not in the close view, game/camera.js)
+export function setCut(y, map, px, py, pz, walls = true) {
   const on = y < CUBE_H;
   turnShape(performance.now() / 1000);
   U.uCutY.value = on ? y : 1e3;
@@ -142,7 +143,7 @@ export function setCut(y, map, px, py, pz) {
   // (only the walls' own mesh there: not the floors, the stair or the railing beside them)
   if (room) { U.uWallBox.value.set(room.x0 - t, room.x1 + t, room.z0 - t, room.z1 + t); U.uWallBand.value = t + WALL_CUT; U.uFrontKinds.value.set(0, 1, 0, 0); U.uFrontCorners.value = 0; }
   else { U.uWallBox.value.set(0, N, 0, N); U.uWallBand.value = 2.2; U.uFrontKinds.value.set(1, 1, 1, 1); U.uFrontCorners.value = 1; }
-  const box = U.uWallBox.value, walled = !!map?.walled || !!room;
+  const box = U.uWallBox.value, walled = walls && (!!map?.walled || !!room);
   const cx = camera.position.x - (box.x + box.y) / 2, cz = camera.position.z - (box.z + box.w) / 2;
   wallFloors(map);
   U.uFront.value.set(walled && cx > 6 ? 1 : 0, walled && cx < -6 ? 1 : 0, walled && cz > 6 ? 1 : 0, walled && cz < -6 ? 1 : 0);
@@ -153,7 +154,7 @@ export function setCut(y, map, px, py, pz) {
   // a room's walls whose inner face the camera is not beyond: no line of sight from the camera
   // into the room crosses them, so the cutaway must not open holes in them
   const cp = camera.position;
-  if (room) U.uBack.value.set(cp.x < room.x1 ? 1 : 0, cp.x > room.x0 ? 1 : 0, cp.z < room.z1 ? 1 : 0, cp.z > room.z0 ? 1 : 0);
+  if (room && walls) U.uBack.value.set(cp.x < room.x1 ? 1 : 0, cp.x > room.x0 ? 1 : 0, cp.z < room.z1 ? 1 : 0, cp.z > room.z0 ? 1 : 0);
   else U.uBack.value.set(0, 0, 0, 0);
   U.uWallY.value = inside ? inside.door.y + CUT_HEIGHT : py + 1;
   camera.updateMatrixWorld();

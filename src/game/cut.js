@@ -1,12 +1,14 @@
 // How deep the cutaway goes, driven by occlusion: rays from the character to the camera find
 // the lowest solid in the way and the cut drops just below it (a slab underside or a terrain
 // level). Revealing is quick; restoring waits until the character has been visible a while.
+// The close view (game/camera.js) has none: its camera stays out of the solids, and the walls
+// stay up.
 import { N, LH } from '../core/constants.js';
 import { camera } from '../render/scene.js';
 import { setCut } from '../render/section.js';
 import { insideSolid } from '../physics/collide.js';
 import { player, state } from './state.js';
-import { updateCamera } from './camera.js';
+import { updateCamera, closeView } from './camera.js';
 import { mapInfo, inSlab, outOfSlabs } from './cutinfo.js';
 import { viewBlockedAt } from '../core/blockers.js';
 
@@ -75,12 +77,19 @@ function cachedTarget(m) {
   return lastTarget = target(m);
 }
 
+// the close view: no cut, no walls down; coming back to the overview opens what is needed
+// quickly from nothing cut (reveal), not slowly from an old cut
+function open(m) {
+  cut = mapInfo(m).top; vel = 0; hold = RESTORE_DELAY; lastKey = null;
+  setCut(Infinity, m, player.x, player.visY + 0.6, player.z, false);
+}
 function apply(m) { setCut(cut >= mapInfo(m).top - 0.01 ? Infinity : cut, m, player.x, player.visY + 0.6, player.z); }
 
 export function updateCut(dt) {
   const m = state.map;
   if (!m) return;
   if (m !== lastMap) { resetCut(); return; }
+  if (closeView()) { open(m); return; }
   const t = cachedTarget(m);
   if (t > cut + 1e-3) {
     // restoring hidden geometry: only once the character has been in clear view for a moment;
@@ -103,6 +112,7 @@ export function resetCut() {
   if (!m) return;
   updateCamera(0);   // the camera may still be looking at the previous spot
   lastMap = m; vel = 0; hold = RESTORE_DELAY; lastKey = null;
+  if (closeView()) { open(m); return; }
   cut = mapInfo(m).top;
   cut = target(m);
   apply(m);

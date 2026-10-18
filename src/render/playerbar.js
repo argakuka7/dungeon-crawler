@@ -25,11 +25,24 @@ group.add(bars, label, note);
 group.visible = false;
 scene.add(group);
 
-// after the camera moved, so the bars face it this frame
-export function updatePlayerBar() {
+// In the close view (game/camera.js) over the hero they would cover the middle of the screen:
+// they sit at the bottom instead, over the quick bar, a step in front of the camera.
+const SCREEN_Y = -0.71, AHEAD = 1, SIZE = 0.42;   // height on screen (-1..1), units, per screen height
+const fwd = new THREE.Vector3(), up = new THREE.Vector3();
+function onScreen() {
+  const h = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * AHEAD;
+  camera.getWorldDirection(fwd);
+  up.setFromMatrixColumn(camera.matrixWorld, 1);
+  group.position.copy(camera.position).addScaledVector(fwd, AHEAD).addScaledVector(up, SCREEN_Y * h);
+  group.scale.setScalar(h * SIZE);
+}
+
+// after the camera moved, so the bars face it this frame; close: the close view
+export function updatePlayerBar(close = false) {
   group.visible = character.ready && character.group.visible;   // (not in the main menu)
   if (!group.visible) return;
-  group.position.set(player.x, player.visY + CHAR_H + 0.4, player.z);
+  if (close) onScreen();
+  else { group.position.set(player.x, player.visY + CHAR_H + 0.4, player.z); group.scale.setScalar(1); }
   bars.quaternion.copy(camera.quaternion);
   hp.set(player.hp / player.maxHp);
   const p = xpProgress(player);

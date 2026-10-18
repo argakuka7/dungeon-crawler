@@ -8,7 +8,7 @@ import { groundAt } from './physics/collide.js';
 import { player, state, setStatus, worldPaused } from './game/state.js';
 import { loadCube } from './game/flow.js';
 import { updatePlayer } from './game/update.js';
-import { updateCamera } from './game/camera.js';
+import { updateCamera, closeView } from './game/camera.js';
 import { updateCut } from './game/cut.js';
 import { updateHud } from './game/hud.js';
 import { updateConsole, openChat, closeChat, say } from './game/console.js';
@@ -152,8 +152,9 @@ function frame(now = performance.now()) {
   applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes);
   followHero();   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
-  cullNeighbors(player.x, player.z, !state.transitioning, state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));
-  updatePlayerBar();
+  // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)
+  cullNeighbors(player.x, player.z, !state.transitioning && !closeView(), state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));
+  updatePlayerBar(closeView());
   updateOnline();   // playing together: send our pose, follow, show the partner (net/session.js)
   updatePortalBar();
   updateCastBar();

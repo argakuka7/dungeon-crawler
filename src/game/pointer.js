@@ -7,7 +7,7 @@ import { camera, renderer } from '../render/scene.js';
 import { U } from '../render/cutshader.js';
 import { solidTop } from '../physics/collide.js';
 import { mapInfo } from './cutinfo.js';
-import { player, state } from './state.js';
+import { player, state, view } from './state.js';
 import { allEnemies } from './enemies.js';
 import { absent } from '../core/enemies.js';
 
@@ -22,7 +22,8 @@ export function pointAt(x, y) {
   pointer.ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   pointer.inside = true;
 }
-canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') pointAt(e.clientX, e.clientY); });
+// (not while the mouse turns the view, game/camerakey.js: what it points at stays)
+canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && !view.orbiting) pointAt(e.clientX, e.clientY); });
 canvas.addEventListener('pointerleave', () => { pointer.inside = false; });
 addEventListener('pointerup', e => { if (e.button === 0) pointer.down = false; });
 addEventListener('blur', () => { pointer.down = false; });

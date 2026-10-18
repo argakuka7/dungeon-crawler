@@ -30,6 +30,8 @@ import { W, resetMode } from '../../src/render/blendtree.js';
 import { character, equipSword, loadSword, prepareSword } from '../../src/render/character.js';
 import { animateCharacter } from '../../src/render/animator.js';
 import { scene } from '../../src/render/scene.js';
+import { cameraMode, setCameraMode } from '../../src/game/settings.js';
+import { settleCamera } from '../../src/game/camera.js';
 import { stunderModel } from '../../src/render/stundermodel.js';
 import { spiderModel } from '../../src/render/spidermodel.js';
 import { snakeModel } from '../../src/render/snakemodel.js';
@@ -45,8 +47,12 @@ import { updatePointer, hoveredEnemy, pointer } from '../../src/game/pointer.js'
 const check = (condition, message) => { if (!condition) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 // also: no critical hits while checking, so every blow deals its exact damage
+// (in the overview, the view these checks were written for: the cutaway, the walls that come
+// down; the camera key's setting comes back afterwards, tests/browser/camera.js checks the close view)
 export async function paused(fn) {
   const raf = window.requestAnimationFrame, cancel = window.cancelAnimationFrame, crit = rolls.crit;
+  const mode = cameraMode();
+  setCameraMode('overview'); settleCamera();
   const pending = new Map(); let id = 0;
   window.requestAnimationFrame = callback => { pending.set(--id, callback); return id; };
   window.cancelAnimationFrame = token => { if (token < 0) pending.delete(token); else cancel.call(window, token); };
@@ -54,6 +60,7 @@ export async function paused(fn) {
   try { await delay(150); return await fn(); }
   finally {
     rolls.crit = crit;
+    setCameraMode(mode); settleCamera();
     window.requestAnimationFrame = raf; window.cancelAnimationFrame = cancel;
     // Fade/flash callbacks must not overwrite the queued main frame and stop the game.
     for (const callback of pending.values()) raf.call(window, callback);

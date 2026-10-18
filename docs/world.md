@@ -885,6 +885,9 @@ The world guarantees that from anywhere you can arrive, you can get to depth 20.
 
 ## Cutaway (`game/cut.js`, `render/section.js`, `render/cutshader.js`, `render/ghosts.js`)
 
+The overview's. The close view behind the hero has none: its camera stays out of the solids,
+and the walls stay up (`docs/camera.md`).
+
 - **When and how deep:** rays from the character to the camera find what hides it, and the
   cut height drops just below that (`game/cut.js`).
 - **The shape:** a nine-cornered polygon on a circle 2.8 units around the character on

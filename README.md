@@ -47,7 +47,9 @@ docs that explain how the game works, from the big ideas down to the real code:
     on the hero; Cancel leaves it unchanged. Not sent to other players online. See `docs/skins.md`.
   - Settings (`src/game/settings.js`, the menu in `src/game/settingsmenu.js`, from the Esc menu
     and the main menu): the frame rate cap (30, 60 or unlimited, `src/main.js`), the anti-aliasing (MSAA off to
-    8x, `src/render/msaa.js`), music on / off,
+    8x, `src/render/msaa.js`), the camera (the overview or the close view behind the hero; Tab or C
+    taps between them, held it turns the view with the mouse: `src/game/camera.js`,
+    `docs/camera.md`), music on / off,
     the music's and the sounds' volume, and the keys. Every
     control is an action with a primary and a secondary key (`src/core/keybinds.js`: codes, so
     WASD keeps its place on any layout); kept in `localStorage` as `crawler.settings`.

@@ -1,5 +1,6 @@
 // The settings (the settings menu, game/settingsmenu.js, changes them): the frame rate cap
-// (main.js) and the anti-aliasing (render/msaa.js), the music on or off, the music's and the sounds' volume, and the keys
+// (main.js) and the anti-aliasing (render/msaa.js), the camera (the overview or the close view,
+// game/camera.js; the camera key switches it too, game/camerakey.js), the music on or off, the music's and the sounds' volume, and the keys
 // (core/keybinds.js). Kept in localStorage
 // (crawler.settings) as soon as they change, for every hero alike; the keys only as far as they
 // differ from the defaults. The music setting of before (crawler.music) is taken over once.
@@ -23,10 +24,12 @@ export const ANTIALIAS = [0, 2, 4, 8];        // MSAA samples; 0: off (the GPU m
 // 2x MSAA by default: on a high-DPI screen it looks like 4x for less of the GPU's work (and when
 // the GPU cannot keep up, render/resolution.js drops it further before the resolution)
 const DEFAULT_FPS = 60, DEFAULT_MSAA = 2;
+export const CAMERAS = ['overview', 'close'];
 const oneOf = (list, v, fallback) => (list.includes(v) ? v : fallback);
 const stored = read();
 const settings = {
   fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS), msaa: oneOf(ANTIALIAS, stored.msaa, DEFAULT_MSAA),
+  camera: oneOf(CAMERAS, stored.camera, CAMERAS[0]),
   music: stored.music === true,
   musicVolume: volume(stored.musicVolume), soundVolume: volume(stored.soundVolume),
   keys: resolveBindings(stored.keys),
@@ -37,7 +40,7 @@ function changed() {
   setVolume('music', settings.musicVolume);
   setVolume('sounds', settings.soundVolume);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, music: settings.music, musicVolume: settings.musicVolume,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, camera: settings.camera, music: settings.music, musicVolume: settings.musicVolume,
       soundVolume: settings.soundVolume, keys: overrides(settings.keys) }));
   } catch { /* private mode: for this page only */ }
   for (const fn of listeners) fn();
@@ -54,6 +57,8 @@ export const frameRate = () => settings.fps;
 export function setFrameRate(fps) { settings.fps = oneOf(FRAME_RATES, fps, DEFAULT_FPS); changed(); }
 export const antialias = () => settings.msaa;
 export function setAntialias(samples) { settings.msaa = oneOf(ANTIALIAS, samples, DEFAULT_MSAA); changed(); }
+export const cameraMode = () => settings.camera;
+export function setCameraMode(mode) { settings.camera = oneOf(CAMERAS, mode, CAMERAS[0]); changed(); }
 
 // --- sound --------------------------------------------------------------------------------------
 

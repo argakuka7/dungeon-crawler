@@ -2,6 +2,7 @@
 import { CHAR_R, CHAR_H } from '../core/constants.js';
 import { swordState } from '../core/combat.js';
 import { DEFAULT_ZOOM } from '../core/zoom.js';
+import { PITCH } from '../core/view.js';
 import { createPlayerStats, createRun } from '../core/progression.js';
 import { together } from '../net/online.js';
 
@@ -55,8 +56,9 @@ export const state = {
   baseSeed: params.has('seed') ? (parseInt(params.get('seed'), 10) >>> 0) : (Math.random() * 1e9) >>> 0,
 };
 
-// camera orientation and zoom (eased towards the targets)
-export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_ZOOM, zoomTarget: DEFAULT_ZOOM };
+// the camera (game/camera.js): which way it looks from and how far (the zoom presets), eased towards the targets; the close
+// view's pitch (core/view.js), and whether the mouse is turning it (game/camerakey.js)
+export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_ZOOM, zoomTarget: DEFAULT_ZOOM, pitch: PITCH, orbiting: false };
 
 // The inventory, the Esc menu and "Leave the fight?" stop the world, except when playing
 // together: the friend plays on, and so do the enemies (only your own input stops)

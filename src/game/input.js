@@ -9,7 +9,9 @@
 // instead, whatever is there. F or right Ctrl: the action key (game/action.js): open the chest
 // beside the player, else talk to the villager beside them, else collect what lies around
 // (Enter is the chat, game/console.js). I (or V): the inventory, with the floor in reach beside the bag
-// when something lies there (game/inventory.js); U: the inventory's quests tab; X: item labels. 1-6: the quick bar (game/
+// when something lies there (game/inventory.js); U: the inventory's quests tab; X: item labels.
+// Tab or C: the camera key (game/camerakey.js): a tap switches the overview and the close view,
+// held it lets the mouse turn the view. 1-6: the quick bar (game/
 // quickbar.js; while the teleport scroll asks where to, they pick there: game/teleportmenu.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
 // action button holds like Shift, its use button is the action key, and a tap on the game
 // clicks there without walking.
@@ -37,6 +39,7 @@ import { teleportMenuOpen, closeTeleportMenu, pickTeleport } from './teleportmen
 import { setMenuOpen, toggleMenu } from './escmenu.js';
 import { answerLeave } from './leavefight.js';
 import { useAction } from './action.js';
+import { cameraKeyDown, cameraKeyUp, cancelCameraKey } from './camerakey.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
 export { clearInput };
 
@@ -113,6 +116,8 @@ addEventListener('keydown', e => {
   }
   if (e.code === 'Escape' && teleportMenuOpen()) { closeTeleportMenu(); e.preventDefault(); return; }
   if (state.inventoryOpen) return;
+  // the camera key: what it does is decided when it is let go (or the mouse moves)
+  if (is('camera')) { if (!e.repeat) cameraKeyDown(e.code); e.preventDefault(); return; }
   if (is('help')) { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
   if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }
   // Esc with nothing else open, and the menu key: the menu (play together and the settings are in it)
@@ -123,8 +128,8 @@ addEventListener('keydown', e => {
   for (const id of acts) PRESS[id]?.();
   if (e.code === 'KeyN' && state.dev) nextCube();   // (new worlds come from the main menu)
 });
-addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', clearInput);
+addEventListener('keyup', e => { keys.delete(e.code); cameraKeyUp(e.code); });
+addEventListener('blur', () => { clearInput(); cancelCameraKey(); });
 // Ctrl+click is a right click on macOS: no context menu over the game
 addEventListener('contextmenu', e => { if (e.target.tagName === 'CANVAS') e.preventDefault(); });
 // no picture or link dragged off by accident (style.css stops text selection)
