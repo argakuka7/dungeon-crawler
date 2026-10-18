@@ -1,6 +1,6 @@
 // Entry point: load the first cube and run the frame loop.
 import * as THREE from 'three';
-import { renderer, scene, camera } from './render/scene.js';
+import { renderer, scene, camera, fitView } from './render/scene.js';
 import { animateWorld } from './render/world.js';
 import { animateCharacter } from './render/animator.js';
 import { generate } from './cubegen/index.js';
@@ -152,6 +152,7 @@ function frame(now = performance.now()) {
   updateMusic(elapsed);
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
+  fitView();      // a new size or resolution only now, right before drawing (render/scene.js)
   beginFrame();   // anti-aliasing: draw into the multisampled buffer (render/msaa.js)
   renderer.render(scene, camera);
   endFrame();     // and onto the screen
@@ -182,6 +183,7 @@ function menuFrame(dt, start) {
   applyLook(state.lookDepth, camera.position.distanceTo(menuFocus), state.cubes?.layout.themes);
   updateLightPool(menuFocus);
   tickSky(performance.now() / 1000);
+  fitView();
   beginFrame();
   renderer.render(scene, camera);
   drawPortrait(heroBox());
