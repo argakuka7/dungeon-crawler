@@ -13,6 +13,7 @@ import { player, state, setStatus } from './state.js';
 import { newWorld, visitedKeys } from './flow.js';
 import { savedLoot } from './loot.js';
 import { knowDepths } from './log.js';
+import { packQuestLog } from '../core/quests.js';
 
 const CHECK_EVERY = 1000, SAVE_EVERY = 30000;
 
@@ -79,7 +80,7 @@ export function stopSaving() {
 function restoreOf(world, heroId) {
   const spot = world.spots[heroId] ?? null, [X, Y, Z] = spot && !isInterior(spot.cube) ? parse(spot.cube) : [0, 0, 0];
   const far = k => isInterior(k) ? Infinity : (([x, y, z]) => Math.abs(x - X) + Math.abs(y - Y) * 2 + Math.abs(z - Z))(parse(k));
-  return { name: world.name, run: world.run, faces: world.faces, spot, visited: [...world.visited].sort((a, b) => far(a) - far(b)) };
+  return { name: world.name, run: world.run, faces: world.faces, spot, deepest: world.deepest, visited: [...world.visited].sort((a, b) => far(a) - far(b)) };
 }
 
 // A new hero in the store (null: there are MAX_HEROES already, or the storage refused)
@@ -154,6 +155,7 @@ function worldNow() {
   const deepest = Math.max(w.deepest, ...visited.filter(k => !isInterior(k)).map(depthOf));
   return { ...w, updated: Date.now(), deepest,
     run: { defeated: [...r.defeated], gates: [...r.unlockedGates], chests: [...r.chests], dropped: [...r.dropped], loot: savedLoot(),
+      quests: packQuestLog(r.quests),
       townPortal: tp ? { key: tp.key, depth: tp.depth, pad: { x: tp.pad.x, y: tp.pad.y, z: tp.pad.z }, back: { x: tp.back.x, y: tp.back.y, z: tp.back.z } } : null },
     faces: [...state.openedFaces], visited,
     spots: spot && current.hero ? { ...w.spots, [current.hero.id]: spot } : w.spots };
@@ -182,7 +184,7 @@ function changes() {
   let loot = 0;
   for (const l of r.loot.values()) loot += l.length;
   return [player.xp, player.inventory.version, state.cubeKey, r.defeated.size, r.unlockedGates.size, r.chests.size, r.dropped.size,
-    loot, state.openedFaces.size, r.townPortal?.key ?? '', state.cubes ? visitedKeys().length : 0].join('|');
+    loot, state.openedFaces.size, r.townPortal?.key ?? '', state.cubes ? visitedKeys().length : 0, r.quests.version].join('|');
 }
 
 // main.js, every frame: count the time played, and once a second save what changed (every 30 s

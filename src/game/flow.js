@@ -30,6 +30,9 @@ import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
+import { questEvent, questMark, restoreQuests } from './quests.js';
+import { checkQuestLog } from '../core/quests.js';
+import { depthOf } from '../themes/depth.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -70,12 +73,13 @@ export function hurt(amount, reason, by = null) {
 // the coins they dropped (and you did not pick up yet) go.
 // learn: memory.html#death (see learn/README.md)
 export function beginVisit() {
-  state.visit = { key: state.cubeKey, defeated: new Set(state.run.defeated), loot: lootMark() };
+  state.visit = { key: state.cubeKey, defeated: new Set(state.run.defeated), loot: lootMark(), quests: questMark() };
 }
 function restoreVisit(v) {
   if (!v) return;
   restoreDefeated(state.run, v.defeated);
   forgetLoot(v.key, v.loot);
+  restoreQuests(v.quests);   // a horde broken since comes back, and so do the quests' goals (game/quests.js)
 }
 
 // died: back to where you came in, in the cube as it was then (after a fall through cubes:
@@ -131,6 +135,7 @@ function returnFromFall(dead) {
 // discovered cubes are checked again.
 export function discover(c) {
   if (!c.visits++) relay.visited?.(c.key);   // playing together: the friend's map shows it too
+  if (!isInterior(c.key)) questEvent({ kind: 'visit', depth: depthOf(c.key) });   // how deep anyone got (game/quests.js)
   return openDiscoveredFaces();
 }
 
@@ -139,6 +144,7 @@ export function discover(c) {
 // learn: network.html#apart (see learn/README.md)
 export function shareVisit(k) {
   const cubes = state.cubes;
+  if (!isInterior(k)) questEvent({ kind: 'visit', depth: depthOf(k) });
   cubes.map(k).then(c => {
     if (state.cubes !== cubes || c.visits) return;
     c.visits = 1;
@@ -282,14 +288,16 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
     });
 }
 
-// a saved world's progress into the fresh run (newWorld)
-function restoreRun({ run, faces, visited }) {
+// a saved world's progress into the fresh run (newWorld); deepest: how deep anyone got there
+function restoreRun({ run, faces, visited, deepest = 0 }) {
   const r = state.run;
   for (const id of run.defeated) r.defeated.add(id);
   for (const k of run.gates) r.unlockedGates.add(k);
   for (const id of run.chests) r.chests.add(id);
   for (const s of run.dropped) r.dropped.add(s);
   r.townPortal = run.townPortal;
+  r.quests = checkQuestLog(run.quests);
+  r.quests.deepest = Math.max(r.quests.deepest, deepest);
   takeLoot(run.loot);
   for (const k of visitedFaces(faces, new Set(visited))) state.openedFaces.add(k);
 }

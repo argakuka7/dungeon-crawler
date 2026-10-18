@@ -5,11 +5,11 @@
 // can reach (and does nothing without one, or with a flask in hand). Space jumps.
 // Mouse: click the floor to walk there, click an enemy to attack it (hold for more), click an
 // item on the floor to pick it up, click a treasure chest to open it, click a villager who
-// trades to go and trade. With a flask in hand (game/throws.js) a click throws it at the cursor
+// has quests or wares to go and talk to them. With a flask in hand (game/throws.js) a click throws it at the cursor
 // instead, whatever is there. F or right Ctrl: the action key (game/action.js): open the chest
-// beside the player, else trade with the villager beside them, else collect what lies around
+// beside the player, else talk to the villager beside them, else collect what lies around
 // (Enter is the chat, game/console.js). I (or V): the inventory, with the floor in reach beside the bag
-// when something lies there (game/inventory.js); X: item labels. 1-6: the quick bar (game/
+// when something lies there (game/inventory.js); U: the inventory's quests tab; X: item labels. 1-6: the quick bar (game/
 // quickbar.js; while the teleport scroll asks where to, they pick there: game/teleportmenu.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
 // action button holds like Shift, its use button is the action key, and a tap on the game
 // clicks there without walking.
@@ -17,7 +17,7 @@ import { stepZoom } from '../core/zoom.js';
 import { player, state, view, setStatus } from './state.js';
 import { spawnEntry, nextCube } from './flow.js';
 import { knockDown } from './ragdoll.js';
-import { toggleInventory, setInventoryOpen } from './inventory.js';
+import { toggleInventory, toggleQuests, setInventoryOpen } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
@@ -94,6 +94,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (is('inventory')) { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
+  if (is('quests')) { if (!e.repeat) { setHelpOpen(false); toggleQuests(); } e.preventDefault(); return; }
   if (e.code === 'Escape' && state.inventoryOpen) { setInventoryOpen(false); e.preventDefault(); return; }
   // the quick bar (with the inventory open: put the selected item there); not while typing
   // (the teleport scroll asking where to, game/teleportmenu.js: the keys pick there; Esc closes it)

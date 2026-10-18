@@ -8,6 +8,9 @@
 // same slot: off; game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
 // uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
 // of their own (core/shops.js): Buy, Enter or a double-click buys one.
+// Two tabs: the bag, and the quests (game/questpanel.js; U opens the panel there). Talking to a
+// villager (talkTo) opens the quests when they have something new for you (an offer, a quest to
+// hand in) or nothing to sell, else the bag with their wares; the other tab is a click away.
 // The layout keeps its size whatever is selected: the hero with what it holds on the left
 // (render/itemviews.js draws it), the bag with the selected item's actions underneath it, the
 // details on the right (scrolling when long). Items show as their models (pictures rendered
@@ -33,20 +36,26 @@ import { log } from './log.js';
 import { keyLabel, barKeysText, onSettingsChange } from './settings.js';
 import { itemPicture, itemModelReady, onItemPictures, drawLiveViews } from '../render/itemviews.js';
 import { readiedFlask, equippedWeapon } from '../core/combat.js';
+import { GIVERS, giverQuests } from '../core/quests.js';
+import { talkQuests, questLog } from './quests.js';
+import { openQuests, closeQuests, drawQuests, onQuestChange } from './questpanel.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // selected: { from: 'bag', id: instanceId } | { from: 'floor', id: pickup id } |
 // { from: 'shop', id: item id } | null; trader: the villager whose wares are shown (or null)
 let selected = null, signature = '', shown = null, previousFocus = null, floorMode = false, trader = null;
+// tab: 'bag' or 'quests'
+let tab = 'bag';
 
 // the details' Quick bar row: one button per slot
 $('inventory-bar-keys').innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => `<button data-bar-key="${i}" aria-pressed="false">${i + 1}</button>`).join('');
 const barButtons = [...$('inventory-bar-keys').querySelectorAll('[data-bar-key]')];
 
-export const inventoryFloor = () => state.inventoryOpen && floorMode;
-// villager: open with their wares (a villager with a shop) instead of the floor
-export function setInventoryOpen(open, villager = null) {
+export const inventoryFloor = () => state.inventoryOpen && floorMode && tab === 'bag';
+// villager: open with their wares (a villager with a shop) instead of the floor, and their quests
+// on the quests tab; view: the tab it opens on
+export function setInventoryOpen(open, villager = null, view = 'bag') {
   if (open && (!state.map || state.transitioning)) return;
   if (open) cancelCast(state.cast ? 'Portal cancelled' : '');
   if (open !== state.inventoryOpen) sfx(open ? 'bagOpen' : 'bagClose');
@@ -58,20 +67,49 @@ export function setInventoryOpen(open, villager = null) {
     const first = floorMode && floorItems()[0], ware = trader && shopOf(trader).wares[0];
     selected = ware ? { from: 'shop', id: ware } : first ? { from: 'floor', id: first.id }
       : player.inventory.equipped ? { from: 'bag', id: player.inventory.equipped } : null;
-    signature = ''; updateInventory();
-    (ware ? $('inventory-shop').querySelector('[data-ware]') : first ? $('inventory-floor').querySelector('[data-floor]') : $('inventory-close')).focus();
-  } else { trader = null; previousFocus?.focus(); }
+    openQuests(villager);
+    showTab(view);
+  } else { trader = null; closeQuests(); previousFocus?.focus(); }
 }
-// trade with villager v (core/shops.js): the bag with their wares beside it
-export function openShop(v) {
-  if (state.inventoryOpen || !shopOf(v)) return;
-  setInventoryOpen(true, v);
-  if (state.inventoryOpen) setStatus(`${shopOf(v).title}: what will it be?`);
+// show tab `view` ('bag' or 'quests'), with the focus on its first thing
+function showTab(view) {
+  tab = view === 'quests' ? 'quests' : 'bag';
+  for (const b of $('inventory-tabs').querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  $('inventory-title').textContent = tab === 'quests' ? 'Quests' : 'Inventory';
+  document.querySelector('#inventory-panel .inventory-body').hidden = tab !== 'bag';
+  $('quests-body').hidden = tab !== 'quests';
+  $('inventory-footer').hidden = tab !== 'bag';
+  $('quests-footer').hidden = tab !== 'quests';
+  showKeys();
+  signature = ''; updateInventory();
+  const ware = trader && $('inventory-shop').querySelector('[data-ware]'), first = floorMode && $('inventory-floor').querySelector('[data-floor]');
+  (tab === 'quests' ? $('quests-body').querySelector('.quest-entry.selected') ?? $('inventory-tabs').querySelector('[data-tab="quests"]')
+    : ware || first || $('inventory-close')).focus();
 }
-export const toggleInventory = () => setInventoryOpen(!state.inventoryOpen);
+// talk to villager v: their quests (when they have news for you: a quest to hand in, an offer not
+// seen yet; or nothing to sell), else their wares (core/shops.js, core/quests.js)
+const seenOffers = new Set();
+export function talkTo(v) {
+  if (state.inventoryOpen) return;
+  const giver = talkQuests(v), shop = shopOf(v);
+  if (!giver && !shop) return;
+  const mine = giver ? giverQuests(questLog(), giver) : [];
+  const news = mine.some(q => q.state === 'offered' && !seenOffers.has(q.id) || q.state === 'ready' && !q.archived);
+  const quests = !!giver && (news || !shop);
+  if (quests) for (const q of mine) if (q.state === 'offered') seenOffers.add(q.id);
+  setInventoryOpen(true, v, quests ? 'quests' : 'bag');
+  if (state.inventoryOpen) setStatus(quests ? `${GIVERS[giver].title}: ${news ? 'hello there!' : 'hello again.'}` : `${shop.title}: what will it be?`);
+}
+export const openShop = talkTo;
+// I (or V): the bag, open or closed (from the quests tab: over to the bag)
+export const toggleInventory = () => state.inventoryOpen && tab !== 'bag' ? showTab('bag') : setInventoryOpen(!state.inventoryOpen);
+// U: the quests, open or closed (from the bag: over to the quests)
+export const toggleQuests = () => state.inventoryOpen && tab !== 'quests' ? showTab('quests') : setInventoryOpen(!state.inventoryOpen, null, 'quests');
+onQuestChange(() => updateInventory());
 
 // 1-6 with the bag open: the selected bag item onto that quick bar slot (or off it again)
 export function assignSelectedToBar(i) {
+  if (tab !== 'bag') return false;
   const slot = selected?.from === 'bag' && ownedItem(player.inventory, selected.id);
   if (!slot) { setStatus('Select a bag item to put it on the quick bar'); return false; }
   if (!barAllowed(slot.itemId)) { setStatus('Only weapons and usable items go on the quick bar'); return false; }
@@ -152,6 +190,7 @@ function compareText(item) {
 export function updateInventory() {
   $('inventory-overlay').hidden = !state.inventoryOpen;
   if (!state.inventoryOpen) return;
+  if (tab === 'quests') drawQuests();
   if (!floorMode && !trader && floorItems().length) floorMode = true;   // something was put down
   const inv = player.inventory, equipped = equippedItem(inv), allowed = equipmentAllowed(), floor = floorMode ? floorItems() : [];
   if (selected && !selectedItem()) selected = null;
@@ -305,10 +344,16 @@ function use() {
 }
 
 $('inventory-close').addEventListener('click', () => setInventoryOpen(false));
+$('inventory-tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
 // the keys it names are the settings' (game/settings.js)
 function showKeys() {
-  const bag = keyLabel('inventory');
-  $('inventory-close').textContent = `Close · ${bag ? `${bag} / ` : ''}Esc`;
+  const bag = keyLabel('inventory'), quests = keyLabel('quests'), key = tab === 'quests' ? quests : bag;
+  $('inventory-close').textContent = `Close · ${key ? `${key} / ` : ''}Esc`;
+  for (const b of $('inventory-tabs').querySelectorAll('[data-tab]')) {
+    const key = keyLabel(b.dataset.tab === 'bag' ? 'inventory' : 'quests');
+    b.title = key ? `${b.textContent} · ${key}` : b.textContent;
+  }
+  $('quests-key-text').textContent = quests || 'The Quests tab';
   $('inventory-bar-keys-text').textContent = barKeysText();
 }
 showKeys();

@@ -1,23 +1,27 @@
 // The action key, F or right Ctrl (game/input.js), and the use button on touch screens
 // (game/touch.js): does the first thing that works where the player stands:
 //   1. open the closed treasure chest beside them (game/chests.js)
-//   2. talk to the villager beside them: one who trades opens their shop (game/inventory.js)
+//   2. talk to the villager beside them: their quests, or their shop (game/inventory.js talkTo)
 //   3. collect the coins and items around them (game/loot.js; four cells across)
 // pendingAction says which (for the use button's picture), useAction does it and says whether it
 // did anything. With nothing to do the key does nothing.
 import { player, state } from './state.js';
 import { chestInReach, openChest } from './chests.js';
 import { canTrade } from './orders.js';
-import { openShop } from './inventory.js';
+import { talkTo } from './inventory.js';
 import { collectable, requestCollect } from './loot.js';
 import { shopOf } from '../core/shops.js';
+import { GIVERS, giverOf } from '../core/quests.js';
 import { ITEMS } from '../core/items.js';
 
-// the trading villager the player stands next to (the nearest one), if any
+// a villager with something to say: quests to give, or wares
+export const talkative = v => !!(shopOf(v) || giverOf(v));
+const titleOf = v => GIVERS[v.name]?.title ?? shopOf(v)?.title ?? v.name;
+// the villager the player stands next to who has something to say (the nearest one), if any
 function villagerInReach() {
   let best = null, bestD = Infinity;
   for (const v of state.map?.villagers ?? []) {
-    if (!shopOf(v) || !canTrade(v)) continue;
+    if (!talkative(v) || !canTrade(v)) continue;
     const d = Math.hypot(v.x - player.x, v.z - player.z);
     if (d < bestD) { best = v; bestD = d; }
   }
@@ -41,7 +45,7 @@ export function pendingAction() {
   const chest = chestInReach();
   if (chest) return { kind: 'chest', target: chest, label: 'Open the chest', picture: 'treasure_chest' };
   const villager = villagerInReach();
-  if (villager) return { kind: 'talk', target: villager, label: `Talk to the ${shopOf(villager).title}` };
+  if (villager) return { kind: 'talk', target: villager, label: `Talk to the ${titleOf(villager)}` };
   const loot = collectable();
   if (loot.length) {
     const best = showcase(loot);
@@ -53,7 +57,7 @@ export function pendingAction() {
 export function useAction() {
   const a = pendingAction();
   if (a?.kind === 'chest') return openChest(a.target);
-  if (a?.kind === 'talk') { openShop(a.target); return true; }
+  if (a?.kind === 'talk') { talkTo(a.target); return true; }
   if (a?.kind === 'collect') { requestCollect(); return true; }
   return false;
 }

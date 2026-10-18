@@ -30,6 +30,8 @@ export const KINDS = {
   kill: { group: 'events' },     // { count, xp }: enemies defeated (merged, MERGE_TIME)
   horde: { group: 'events' },    // {}: a horde woke up
   trade: { group: 'events' },    // { item, price }: bought something
+  quest: { group: 'events' },    // { title, what, giver?, xp?, coins? }: a quest taken ('taken'), its goals done
+                                 // ('ready'), handed in and paid ('done'), failed or started again
   party: { group: 'events' },    // { text }: someone joined or left
   world: { group: 'events' },    // { seed, name? }: a new world began (name: a saved one, back in it)
   system: { group: 'system' },   // { text }: what the console says (help, mistakes)
@@ -107,6 +109,9 @@ export function describe({ kind, data: d = {}, who }) {
     case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
     case 'horde': return 'A horde woke up!';
     case 'trade': return `Bought ${d.item} for ${d.price}`;
+    case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to the ${d.giver}`,
+      done: `Quest complete: ${d.title}${d.xp ? ` · +${d.xp} XP` : ''}${d.coins ? ` · ${d.coins}` : ''}`, failed: `Quest failed: ${d.title}`,
+      restarted: `Quest started again: ${d.title}` }[d.what] ?? `Quest: ${d.title}`;
     case 'world': return d.name ? `${d.name} · seed ${d.seed}` : `A new world · seed ${d.seed}`;
     default: return String(d.text ?? '');
   }

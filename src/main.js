@@ -15,6 +15,7 @@ import { updateConsole, openChat, closeChat, say } from './game/console.js';
 import { runCommand } from './game/commands.js';
 import { chronicle } from './game/log.js';
 import { updateInventory } from './game/inventory.js';
+import { updateQuests } from './game/quests.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './game/equipment.js';
 import { updateLightPool, focusPoint } from './render/lightpool.js';
 import { tickNeighbors, cullNeighbors } from './render/neighbors.js';
@@ -151,6 +152,7 @@ function frame(now = performance.now()) {
   updatePortalBar();
   updateCastBar();
   updateMusic(elapsed);
+  updateQuests(elapsed);   // the world's quests: goals done, offers made, told to the others (game/quests.js)
   updateSaves();   // the hero and world being played, as they change (game/save.js)
   tickSky(performance.now() / 1000);   // real time: the stars shimmer on while paused
   fitView();      // a new size or resolution only now, right before drawing (render/scene.js)

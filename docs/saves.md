@@ -65,12 +65,12 @@ Status: implemented (`src/core/save.js`, `src/game/save.js`), with the main menu
   `{ v, id, name, created, updated, playTime, xp, inventory, world }`
 - A **world** (up to 8) is a seed and what was done in it: what was defeated, the gates and
   chests opened, the drops that came (`run.dropped`), the loot lying on the floors, the open town
-  portal, the open side faces, the discovered cubes, the deepest depth reached, and where each
-  hero left it (`spots`: the cube and its entry). The map is never saved: the seed makes the same
+  portal, the quests ([quests.md](quests.md): they are the world's, not a hero's), the open side
+  faces, the discovered cubes, the deepest depth reached, and where each hero left it (`spots`: the cube and its entry). The map is never saved: the seed makes the same
   cubes again (`world/`). A world is named after its seed (`core/names.js`, below); a seed saved
   a second time is its copy 2, "... II". The name is written along but never read back.
   `{ v, id, seed, copy, name, created, updated, deepest, run: { defeated, gates, chests, dropped,
-  loot, townPortal }, faces, visited, spots }`
+  loot, townPortal, quests }, faces, visited, spots }`
 - Coming into a world a hero has its level and bag, full health, no potions at work
   (`heroStats`). It comes in at the entry of the cube it left that world in (or the cube a fall
   started in), else in town. What it defeated there stays defeated: no cube is put back.

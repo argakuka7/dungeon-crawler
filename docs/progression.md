@@ -2,7 +2,8 @@
 
 ## Controls
 
-- **I** opens/closes inventory; **Escape** or Close also closes it. The panel
+- **I** opens/closes inventory, **U** opens it on its second tab, the quests
+  ([quests.md](quests.md)); **Escape** or Close also closes it. The panel
   pauses simulation/animations and suppresses gameplay input, including attacks,
   movement, respawn, new world, portal debug controls, camera keys and zoom.
   Held/queued input is cleared on opening and closing; keyboard focus stays inside.

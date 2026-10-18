@@ -248,12 +248,59 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }
 .loot-label[data-rarity="legendary"], .loot-label[data-rarity="mythic"], .loot-label[data-rarity="ancient"] { font-weight: bold; }
 #inventory-panel footer { font-size: 11px; color: #9ea9b6; }
+/* the tabs: the bag or the quests (game/inventory.js, game/questpanel.js) */
+#inventory-tabs { flex: none; display: flex; gap: 4px; }
+#inventory-panel #inventory-tabs button { padding: 6px 16px; background: #181e28; }
+#inventory-panel #inventory-tabs button[aria-selected="true"] { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
+#inventory-panel footer[hidden], .inventory-body[hidden] { display: none; }
+/* the quests: the list (with what the villager talked to has, above it) | the selected quest */
+#quests-body { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+#quests-body[hidden] { display: none; }
+#quests-list-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+#quests-talk { margin-top: 12px; padding: 8px 10px; background: #2a2418; border: 1px solid #6a5a32; border-radius: 4px; }
+#quests-talk[hidden] { display: none; }
+#inventory-panel #quests-talk h2 { margin: 0 0 4px; color: #e6c35a; }
+#quests-talk p { margin: 0 0 8px; font-size: 12px; color: #c9bfa6; }
+#quests-talk .quest-entries { display: flex; flex-direction: column; gap: 6px; }
+#quests-filter { display: flex; gap: 6px; margin: 12px 0 8px; }
+#inventory-panel #quests-filter button { padding: 5px 10px; font-size: 12px; }
+#inventory-panel #quests-filter button[aria-pressed="true"] { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
+#quests-list { flex: 1 1 0; min-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px; margin: -4px; scrollbar-width: thin; }
+#inventory-panel .quest-entry { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: #181e28; padding: 6px 10px; }
+#inventory-panel .quest-entry.selected { border-color: #ffcf7a; box-shadow: 0 0 0 1px #ffcf7a, 0 0 10px #ffcf7a44; }
+.quest-entry .mark { flex: none; width: 16px; text-align: center; font-weight: bold; color: #e6c35a; }
+.quest-entry.ready .mark { color: #7fd87a; } .quest-entry.failed .mark { color: #ff7a6a; } .quest-entry.done .mark { color: #8f9aaa; }
+.quest-entry span:last-child { min-width: 0; }
+.quest-entry b { display: block; font-weight: normal; color: #ffe4ae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quest-entry small { display: block; color: #8f9aaa; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quest-empty { color: #8b95a3; font-size: 12px; padding: 4px 2px; }
+#quests-details { position: relative; min-height: 500px; background: #181e28; border-radius: 4px; }
+#quests-details-inner { padding: 6px 14px; }
+#inventory-panel #quests-details-inner h2 { font-size: 16px; color: #ffe4ae; white-space: normal; margin: 12px 0 4px; }
+#quests-details-inner h3 { font-size: 12px; color: #c5cdbc; margin: 14px 0 6px; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; }
+.quest-meta { color: #8f9aaa; font-size: 12px; }
+.quest-text { color: #d6dccf; font-size: 13px; line-height: 1.5; }
+.quest-goals, .quest-rewards { margin: 0; padding: 0; list-style: none; font-size: 13px; color: #b8c2d0; }
+.quest-goals li::before { content: '○ '; color: #8f9aaa; }
+.quest-goals li.done { color: #7fd87a; } .quest-goals li.done::before { content: '✓ '; color: #7fd87a; }
+.quest-goals li.now { color: #ffe4ae; }
+.quest-rewards li { margin: 2px 0; }
+.quest-hint { color: #ffcf7a; font-size: 12px; margin: 12px 0 0; }
+.quest-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+#inventory-panel .quest-actions .main { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
+#inventory-panel .quest-actions .main:hover:not(:disabled) { background: #ffe0a0; }
 #inventory-feedback { height: 18px; margin: 10px 0 6px; color: #ffcf7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* smaller screens: the details under the bag, the hero beside both (with a floor or shop: under it) */
 @media (max-width: 1000px) {
   .inventory-body { grid-template-columns: 170px minmax(0, 1fr); grid-template-areas: "hero bag" "hero details"; }
   #inventory-panel.with-floor .inventory-body { grid-template-columns: 170px 80px minmax(0, 1fr); grid-template-areas: "hero floor bag" "hero details details"; }
   #inventory-details { height: 240px; min-height: 0; }
+  #quests-details { min-height: 380px; }
+  /* the tabs need the room: the coins go to a row of their own */
+  #inventory-panel header { flex-wrap: wrap; gap: 8px 18px; }
+  #inventory-panel header > div:first-child { flex: 1; }
+  #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
+  .coin-slot { flex: 1; }
 }
 @media (max-width: 540px) {
   #inventory-panel { padding: 12px; }
@@ -268,6 +315,10 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
   #inventory-panel h2 { margin: 8px 0 6px; }
   #inventory-act { flex-wrap: wrap; }
   #inventory-bar { margin-left: 0; }
+  #quests-body { grid-template-columns: minmax(0, 1fr); }
+  #quests-list { flex: none; max-height: 220px; }
+  #quests-details { min-height: 0; }
+  #quests-details-inner { position: static; }
 }
 
 /* quick bar (game/quickbar.js): above the inventory's dimmed backdrop, so items can be assigned */

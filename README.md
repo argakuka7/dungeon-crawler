@@ -35,6 +35,9 @@ docs that explain how the game works, from the big ideas down to the real code:
   - Saves (`src/core/save.js`, `src/game/save.js`): up to three heroes and eight worlds,
     apart, in `localStorage`; each hero remembers its world, goes into any other, a friend's too;
     every seed has its own name (`src/core/names.js`, `docs/saves.md`).
+  - Quests (`src/core/quests.js`, `src/game/quests.js`, the inventory's Quests tab in
+    `src/game/questpanel.js`, U): the villagers give quests, shared by everyone in the world and
+    saved with it (`docs/quests.md`).
   - Settings (`src/game/settings.js`, the menu in `src/game/settingsmenu.js`, from the Esc menu
     and the main menu): the frame rate cap (30, 60 or unlimited, `src/main.js`), the anti-aliasing (MSAA off to
     8x, `src/render/msaa.js`), music on / off,

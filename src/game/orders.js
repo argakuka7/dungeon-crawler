@@ -1,6 +1,6 @@
 // Mouse orders, Diablo style: click the floor to walk there, click an enemy to go and hit
 // it (with a bow, crossbow or staff: until it is in range and in sight, then shoot), click an item on the floor (or its label) to go and pick it up, click a treasure chest to
-// go and open it, click a villager who trades to walk up and trade (core/shops.js). Holding the button
+// go and open it, click a villager to walk up and talk (their quests or wares: game/inventory.js talkTo). Holding the button
 // keeps walking towards the cursor / keeps attacking. WASD cancels.
 // Orders steer only; the speed (run, or walk with Ctrl) is up to update.js.
 // Walks follow the floor graph where there is one (floors, stairs, bridges and landings; to
@@ -18,7 +18,7 @@ import { groundAt } from '../physics/collide.js';
 import { lootHere, takePickup, canReachPickup } from './loot.js';
 import { canReachChest, openChest } from './chests.js';
 import { TRADE_REACH } from '../core/shops.js';
-import { openShop } from './inventory.js';
+import { talkTo } from './inventory.js';
 import { absent } from '../core/enemies.js';
 
 // kind: 'move' (to x, z) | 'attack' (enemy) | 'pickup' (a pickup) | 'chest' (a reward site) |
@@ -111,13 +111,13 @@ export function orderChest(site) {
 
 // a villager (state.map.villagers) close enough to trade with
 export const canTrade = v => Math.hypot(v.x - player.x, v.z - player.z) <= TRADE_REACH && Math.abs(v.y - player.y) <= 0.8;
-// v: a villager with a shop; walk to the spot in front of them
+// v: a villager with something to say (quests, wares); walk to the spot in front of them
 export function orderTrade(v) {
   begin('trade');
   const x = v.x + Math.sin(v.yaw) * 0.85, z = v.z + Math.cos(v.yaw) * 0.85;
   Object.assign(order, { x, z, floor: floorOf(groundAt(x, z, v.y + 0.3, 0).s), enemy: null, pickup: null, chest: null, villager: v, repath: 1e9 });
   plan(order.floor);
-  if (canTrade(v)) { clearOrder(); openShop(v); }
+  if (canTrade(v)) { clearOrder(); talkTo(v); }
 }
 
 // the held button: keep walking to the cursor, or pick the next enemy under it
@@ -159,7 +159,7 @@ export function followOrder(dt) {
     if (state.run.chests.has(order.chest.id)) { clearOrder(); return null; }
     if (canReachChest(order.chest)) { openChest(order.chest); clearOrder(); return { dx: 0, dz: 0 }; }
   }
-  if (order.kind === 'trade' && canTrade(order.villager)) { const v = order.villager; clearOrder(); openShop(v); return { dx: 0, dz: 0 }; }
+  if (order.kind === 'trade' && canTrade(order.villager)) { const v = order.villager; clearOrder(); talkTo(v); return { dx: 0, dz: 0 }; }
   // the next floor on the path (skipping those we already reached), the target at the end
   let wx = tx, wz = tz;
   const path = order.path;

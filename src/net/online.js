@@ -45,5 +45,9 @@ export const playerColor = slot => PLAYER_COLORS[slot] ?? PLAYER_COLORS[0];
 // and the chat box (game/console.js, game/log.js):
 //   chat(text)                                we said something
 //   news(kind, data)                          something happened to us (core/chronicle.js NEWS)
+// and the world's quests (game/quests.js; the host decides):
+//   quests(log)                               the host: the quest log changed (packed)
+//   questAct({ act, id?, ev? })               a guest: we did this with a quest, or this happened
+//   questReward(id, rewards, title)           the host: a quest was handed in, everyone gets this
 export const relay = { hit: null, afflict: null, launch: null, landed: null, shoot: null, toss: null, defeated: null, visited: null,
-  drop: null, take: null, forget: null, chat: null, news: null };
+  drop: null, take: null, forget: null, chat: null, news: null, quests: null, questAct: null, questReward: null };

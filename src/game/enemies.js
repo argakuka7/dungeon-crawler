@@ -36,6 +36,7 @@ import { sfx } from '../audio/sfx.js';
 import { party, nearestTo } from './party.js';
 import { relay, online } from '../net/online.js';
 import { log } from './log.js';
+import { questEvent } from './quests.js';
 import { groundAt } from '../physics/collide.js';
 import { walkable } from '../physics/enemynav.js';
 
@@ -79,6 +80,13 @@ export function resetEnemies() {
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
   coordinateDefence(state.map, state.run, allEnemies(), player);
+  hordeBroken();
+}
+// The horde of this cube is broken (every one of it defeated, now or before): the quests hear
+// of it (game/quests.js). Only where we run the enemies: those we are shown are another's.
+function hordeBroken() {
+  const group = hordeGroups[0];
+  if (!mirror && state.map?.horde && group && group.members.every(e => e.mode === 'dead')) questEvent({ kind: 'horde', key: state.cubeKey });
 }
 // Every enemy that died since the last look: its XP, and its loot dropped. Playing together,
 // every player there gets the XP, whoever struck the blow: each game looks at its own enemies
@@ -104,6 +112,7 @@ function awardKills(list) {
     log('kill', { count: killed, xp });
   }
   if (levels) log('level', { level: player.level }, { share: true });
+  if (killed) hordeBroken();
   if (unlocked) { setGuardianGate(state.world, false); refreshOpenFaces(); sfx('unlock'); }
   if (levels) sfx('levelUp');
   return unlocked;

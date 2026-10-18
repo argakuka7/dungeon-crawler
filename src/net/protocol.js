@@ -11,12 +11,12 @@
 //   hello   { v, name, pid }           guest -> host, first thing after connecting (pid: this
 //                                      page's player; the same pid again is the friend getting
 //                                      back in after a lost connection)
-//   welcome { v, slot, players, seed, defeated, gates, visited, faces, loot, dropped, chests }
+//   welcome { v, slot, players, seed, defeated, gates, visited, faces, loot, dropped, chests, quests }
 //                                      host -> guest: you are player `slot`, with players
 //                                      ([{ slot, name }], the host too); play in this world
 //                                      (and what was defeated, opened and discovered in it so
 //                                      far, the loot on its floors: [[cube, pickups]], the
-//                                      sources that dropped, the chests open)
+//                                      sources that dropped, the chests open, the quest log)
 //   joined  { slot, name }             host -> guests: someone came (or got back in)
 //   left    { slot }                   host -> guests: someone went
 //   visited { keys }                   to all: I discovered these cubes (yours too now)
@@ -60,6 +60,11 @@
 //   took    { cube, id, by }           host -> guests: player `by` has it
 //   forget  { cube, sources }          guest -> host: a death put my cube back, undo these drops
 //   gone    { cube, sources }          host -> guests: these drops are undone
+// The world's quests are shared and the host decides (game/quests.js, core/quests.js):
+//   quests  { log }                    host -> guests: the quest log, whenever it changed
+//   quest   { act, id?, ev? }          guest -> host: we did `act` with quest `id` (accept, archive,
+//                                      unarchive, restart, handIn), or event `ev` happened here
+//   questReward { id, rewards, title }  host -> guests: quest `id` was handed in: take your reward
 // and between a guest and the host only:
 //   ping    {}                         both ways, every second, also from a background tab
 //   full    {}                         host -> a guest too many: this game is full
@@ -67,12 +72,12 @@
 //   bye     {}                         either way: leaving
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 8;
+export const PROTOCOL = 9;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
 export const RELAYED = new Set(['me', 'visited', 'faces', 'defeated', 'roster', 'foes', 'want', 'handover',
-  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news']);
+  'hit', 'afflict', 'hurt', 'shot', 'landed', 'arrow', 'flask', 'drop', 'take', 'forget', 'chat', 'news', 'quest']);
 // is a message addressed `to` (undefined: everyone) for player `slot`?
 export const isFor = (to, slot) => to === undefined || to === slot || Array.isArray(to) && to.includes(slot);
 // a valid `to` from a guest: a slot, a list of slots, or none (everyone)

@@ -70,6 +70,7 @@ import { cleanText, cleanNews } from '../core/chronicle.js';
 import { log } from '../game/log.js';
 import { speech } from '../game/console.js';
 import { detachWorld } from '../game/save.js';
+import { takeQuestLog, guestQuestAct, questRewarded, questLogPacked } from '../game/quests.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -263,6 +264,7 @@ function apart() {
   foes = null;
   relay.hit = relay.afflict = relay.launch = relay.landed = relay.shoot = relay.toss = relay.defeated = relay.visited = null;
   relay.drop = relay.take = relay.forget = relay.chat = relay.news = null;
+  relay.quests = relay.questAct = relay.questReward = null;
   settleClaims();   // what we reached for is ours: nobody else is left to have it
   setOthers([]);
   online.buddies = [];
@@ -301,7 +303,7 @@ function welcome(l, slot, name, id, again) {
   const players = [{ slot: 0, name: myName }, ...[...peers.values()].filter(o => o !== p).map(o => ({ slot: o.slot, name: o.name }))];
   l.send({ t: 'welcome', v: PROTOCOL, slot, players, seed: announced,
     defeated: [...state.run.defeated], gates: [...state.run.unlockedGates], visited: visitedKeys(), faces: [...state.openedFaces],
-    loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests] });
+    loot: allLoot(), dropped: [...state.run.dropped], chests: [...state.run.chests], quests: questLogPacked() });
   facesSent = state.openedFaces.size;
   deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
   together();
@@ -376,7 +378,7 @@ function welcomed(m) {
   const loot = (Array.isArray(m.loot) ? m.loot : []).filter(c => Array.isArray(c) && typeof c[0] === 'string' && Array.isArray(c[1]))
     .map(([k, items]) => [k, items.filter(p => typeof p?.source === 'string' && validPickup(p))]);
   const run = { defeated: list(m.defeated), gates: list(m.gates), visited: list(m.visited), faces: list(m.faces),
-    loot, dropped: list(m.dropped), chests: list(m.chests) };
+    loot, dropped: list(m.dropped), chests: list(m.chests), quests: m.quests ?? null };
   if (Number.isFinite(m.seed) && m.seed !== state.cubes?.seed) { pendingSeed = m.seed; pendingRun = run; }
   else {
     takeRun(run);
@@ -434,6 +436,11 @@ function together() {
   relay.chat = text => post({ t: 'chat', text });
   relay.news = (kind, data) => post({ t: 'news', kind, data });
   relay.visited = key => post({ t: 'visited', keys: [key] });
+  // the world's quests: the host decides and tells, a guest asks (game/quests.js)
+  if (online.role === 'host') {
+    relay.quests = log => post({ t: 'quests', log });
+    relay.questReward = (id, rewards, title) => post({ t: 'questReward', id, rewards, title });
+  } else relay.questAct = m => post({ t: 'quest', ...m }, 0);
   // our arrows, bolts, spells and flasks fly for those here too (they only look; the hits
   // are ours: game/shots.js, game/throws.js)
   relay.shoot = shot => {
@@ -504,6 +511,10 @@ function shared(m, p) {
     if (data) log(m.kind, data, { who: { slot: p.slot, name: p.name } });
   }
   else if (m.t === 'visited' && Array.isArray(m.keys)) { for (const k of m.keys) if (typeof k === 'string') shareVisit(k); }
+  // the quests: the host hears what a guest did, a guest what the host decided
+  else if (m.t === 'quest') { if (online.role === 'host') guestQuestAct(m); }
+  else if (m.t === 'quests') { if (m.from === 0 && online.role === 'guest') takeQuestLog(m.log); }
+  else if (m.t === 'questReward') { if (m.from === 0 && online.role === 'guest') questRewarded(m.id, m.rewards, m.title); }
   else if (m.t === 'faces' && Array.isArray(m.keys)) { shareFaces(m.keys.filter(k => typeof k === 'string')); facesSent = state.openedFaces.size; }
   else if (m.t === 'arrow') {
     if (!p.here || !['arrow', 'bolt', 'spell'].includes(m.kind) || !Array.isArray(m.at) || m.at.length !== 6 || !finite(...m.at)
@@ -615,6 +626,7 @@ function takeRun(run) {
   for (const k of run.visited) shareVisit(k);
   shareFaces(visitedFaces(run.faces, new Set(run.visited)));
   facesSent = state.openedFaces.size;
+  if (run.quests) takeQuestLog(run.quests, true);
 }
 
 // --- every frame -----------------------------------------------------------------------------

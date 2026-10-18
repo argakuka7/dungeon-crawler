@@ -151,6 +151,16 @@ being helped up and getting back in. Up to four players, co-op.
   undoes the drops since it came in for everyone (`forget` to the host, `gone` to all): those
   enemies are back and can drop them again. What was put down or spilled by a chest stays.
 
+## Quests
+
+The world's quests are shared ([quests.md](quests.md)): everyone plays the same ones. The host's
+game keeps the quest log (`state.run.quests`) and decides; it sends the whole log (`quests`) with
+the welcome and whenever it changes. A guest asks the host for what it does (`quest`: accept,
+archive, unarchive, restart, hand in) and tells it what happened where it is (`quest` with an
+event: a cube visited, a horde broken, standing at a landmark). Kills and opened gates reach the
+host anyway (`defeated`). A quest handed in pays everyone in the game, wherever they are: the host
+pays itself and sends `questReward`, each guest pays itself once (`game/quests.js`).
+
 ## Downed and helped up
 
 - A fatal blow on dry land, with a friend in the cube and on their feet, leaves you lying
