@@ -351,3 +351,27 @@ test('an annex: its storehouse defense opens the sealed portal, for good, once t
   const plan = questPlan(21, L);
   assert.ok(plan.slots.some(s => s.kind === 'defense' && s.depth === d && !isNpcGiver(s.giver) || s.giver !== npcGiver(outpost.id)));
 });
+
+test('a repeatable quest comes back to its giver once the party was away and came back, for half the pay', () => {
+  const { log, q, ctx } = questOf(22, 'bounty', 3);
+  accept(log, q.id);
+  settle(log, { ...ctx, defeated: new Set([q.stages[0].enemyId]) });
+  handIn(log, q.id);
+  assert.deepEqual(log.repeats.map(r => [r.id, r.depth, r.ready]), [[q.id, 0, false]], 'a villager: at home in town');
+  log.deepest = 4;
+  log.used = questPlan(22, ctx.layout).slots.map(s => s.id);   // (the plan used up: only the repeat is left)
+  refreshOffers(log, ctx, ['innkeeper']);
+  assert.ok(!log.list.some(x => x.state === 'offered'), 'not before going away');
+  questEvent(log, { kind: 'visit', depth: 0 });
+  assert.ok(!log.repeats[0].ready, 'still at home');
+  questEvent(log, { kind: 'visit', depth: 3 });
+  questEvent(log, { kind: 'visit', depth: 0 });
+  assert.ok(log.repeats[0].ready, 'away and back');
+  refreshOffers(log, ctx, ['innkeeper']);
+  const again = log.list.find(x => x.state === 'offered');
+  assert.ok(again?.repeat && again.kind === 'bounty' && again.title.endsWith('(again)'));
+  assert.notEqual(again.stages[0].enemyId, q.stages[0].enemyId, 'a new one');
+  assert.ok(again.rewards.items.every(i => !i.gen), 'potions, no weapon');
+  assert.deepEqual(log.repeats, [], 'it comes back when this one is done');
+  assert.deepEqual(checkQuestLog(roundTrip(packQuestLog(log))).list.at(-1), again);
+});

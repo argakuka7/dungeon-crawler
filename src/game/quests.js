@@ -17,12 +17,13 @@ import { awardXP } from '../core/progression.js';
 import { addCopper, addInstance, autoBar, fits, formatCoins } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { dropAtFeet } from './loot.js';
-import { giverOf, giverName, meet, fail, openedGates, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
+import { giverOf, giverName, meet, fail, openedGates, makeQuest, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
 import { cleanText } from '../core/chronicle.js';
 import { pickUpQuestItems, questWorldChanged, bountiesHere } from './questworld.js';
 import { allEnemies, addEnemies, mirroring } from './enemies.js';
 import { rebuildWorld, refreshOpenFaces } from './flow.js';
+import { drawTracker } from './questpanel.js';
 
 const CHECK_EVERY = 0.5;   // s (real time): the gates looked at, offers brought up to date, a landmark looked for
 // seen: the quests' states as last told (in run seenIn); sent: the log as last given out
@@ -184,6 +185,7 @@ export function updateQuests(dt) {
   }
   pickUpQuestItems(questEvent);
   share();
+  drawTracker();
 }
 // what changed is told: on our screen, and (the authority) to the others
 function share() {
@@ -195,6 +197,27 @@ function share() {
 }
 // a guest just came in: the log goes out again (net/session.js)
 export const questLogPacked = () => state.run?.quests ? packQuestLog(state.run.quests) : null;
+
+// --- the dev tools ------------------------------------------------------------------------------
+
+// /quest <kind> [depth] (game/devcommands.js): a quest of that kind there, taken at once, from
+// somebody who could give it. What it says (or why not).
+let devSerial = 0;
+export function devQuest(kind, depth) {
+  if (!live()) return 'No world';
+  if (!questAuthority()) return 'Only the host makes quests';
+  const L = questLog(), c = ctx(), layout = c.layout(depth), spots = [depth, depth - 1, depth - 2].filter(d => d >= 0).flatMap(d => c.layout(d).spotList);
+  const camp = spots.find(s => s.kind === 'camp'), outpost = layout.spotList.find(s => s.kind === 'outpost');
+  const seat = layout.spotList.find(s => s.kind === 'seat');
+  const giver = kind === 'rescue' ? camp && `npc:${camp.id}` : kind === 'defense' ? outpost && (outpost.annex ? (seat ? `npc:${seat.id}` : 'innkeeper') : `npc:${outpost.id}`) : 'innkeeper';
+  if (!giver) return `Nobody near depth ${depth} could ask for that`;
+  const q = makeQuest(L, c, giver, { id: `dev:${++devSerial}`, depth, kind });
+  if (!q || q.kind !== kind) return `No ${kind} quest fits on depth ${depth} now`;
+  L.list.push(q); L.version++;
+  doAct('accept', q.id);
+  share();
+  return `${q.title}: ${q.stages[0].text}${q.stages[0].key ? ` (cube ${q.stages[0].key})` : ''}`;
+}
 
 // --- talking to a giver ---------------------------------------------------------------------------
 

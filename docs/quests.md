@@ -107,8 +107,17 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   and unlit (`render/markers.js`), "Sealed. Somebody on this depth may know the way in."; the
   quest taken opens it for good (`openedGates`, `run.unlockedGates`). Faces never open into an
   annex but by its portal (`core/boundaries.js`).
-- **Not yet:** the other kinds (gather, scattered pieces, prisoners),
-  failing, repeats, tracking a quest in the HUD, dev commands.
+- **Repeats** (`REPEAT`): a bounty done, or an outpost's defense (not an annex's), waits to
+  come back to its giver (`log.repeats`): once the party has been to another depth than the
+  giver's (the town: 0) and back at the giver's, the giver offers it again when it has nothing of
+  the plan to offer, filled in anew, "(again)", for half the XP and coins and potions instead of a
+  weapon. Not counted in the hundred.
+- **Following a quest**: under the minimap the newest quest going on (or the one chosen with
+  Follow in the Quests tab, each player's own) shows its title and what to do now
+  (`game/questpanel.js drawTracker`).
+- **Dev:** `/quest <kind> [depth]` makes a quest of that kind there and takes it; `/spot`.
+- **Not yet:** the other kinds (gather, scattered pieces, beacons, prisoners, pet chase): their
+  slots in the plan stand in as built kinds.
 
 ## What we want
 

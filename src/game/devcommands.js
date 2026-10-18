@@ -14,6 +14,8 @@ import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
 import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, FEATURES } from './dev.js';
 import { SPOT_KINDS } from '../world/spots.js';
+import { QUEST_KINDS } from '../core/quests.js';
+import { devQuest } from './quests.js';
 import { BRIDGE_STYLES, LADDER_STYLES } from '../themes/builds.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
@@ -89,6 +91,12 @@ dev({
   name: 'height', help: 'the next of the big height pieces: a tableland\'s ascent, plateau or descent, a great shaft, a pinnacle, a spiral or hairpin (in at its foot), a lone peak, a great lake, a tunnel',
   args: [{ name: 'kind', type: 'feature' }],
   async run({ kind }) { await goFeature(kind); },
+});
+addType(commands, { name: 'questkind', values: () => QUEST_KINDS.map(k => ({ value: k, label: k })) });
+dev({
+  name: 'quest', help: 'a quest of this kind on this depth (default: here), taken at once',
+  args: [{ name: 'kind', type: 'questkind' }, { name: 'depth', type: 'depth', optional: true }],
+  run({ kind, depth }) { return devQuest(kind, depth === undefined ? state.map?.depth ?? 0 : Number(depth)); },
 });
 addType(commands, { name: 'spotkind', values: () => SPOT_KINDS.map(k => ({ value: k, label: k })) });
 dev({

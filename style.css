@@ -558,3 +558,9 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 .cart-bar i { display: block; height: 6px; margin-top: 2px; background: #0b0e14d0; border: 1px solid #ffffff33; border-radius: 3px; overflow: hidden; }
 .cart-bar b { display: block; height: 100%; background: #e6c35a; transition: width .2s; }
 .cart-bar[data-phase="countdown"] span::after, .cart-bar[data-phase="between"] span::after { content: ' · get ready'; }
+/* the quest followed (game/questpanel.js Track): its title and what to do now, under the minimap */
+#quest-track { position: fixed; top: calc(260px + var(--safe-t)); right: calc(16px + var(--safe-r)); width: 200px; z-index: 3; pointer-events: none;
+  padding: 6px 9px; background: #0b0e14b8; border: 1px solid #ffffff1f; border-radius: 4px; font: 12px/1.35 monospace; color: #c9d2dc; }
+#quest-track[hidden] { display: none; }
+#quest-track b { display: block; color: #e6c35a; font-weight: normal; }
+body.touch #quest-track { top: calc(150px + env(safe-area-inset-top)); width: 150px; font-size: 11px; }

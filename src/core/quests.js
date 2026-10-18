@@ -83,7 +83,17 @@ export const giverTitle = q => q.from?.title ?? GIVERS[q.giver]?.title ?? 'Giver
 
 //   used:   the plan's slots offered (or passed over: core/questplan.js)
 //   living: the people found and come to live at a camp: [{ id, name, tint, outfit, camp }]
-export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], used: [], living: [], version: 0 });
+//   repeats: the repeatable quests done, waiting to come back (REPEAT): [{ id, giver, kind, depth,
+//           away, ready }]; repeated: how many came back (their slots' numbers)
+export const createQuestLog = () => ({ list: [], next: {}, deepest: 0, broken: [], met: [], used: [], living: [], repeats: [], repeated: 0,
+  version: 0 });
+// Repeatable quests (docs/quests.md "Repeatable quests"): what happens in a world again may be
+// asked again. One of these done comes back to its giver once the party has been away from the
+// giver's depth (the town: depth 0) and come back; filled in anew (a new target), paying half the
+// XP and coins and potions instead of a weapon. They are not part of the plan's hundred.
+export const REPEAT = { kinds: ['bounty', 'defense'], share: 0.5 };
+const repeatable = q => REPEAT.kinds.includes(q.kind) && !q.stages.some(s => s.opens);   // (an annex's defense is done once)
+const giverDepth = g => { const key = keyOfSpot(spotOfGiver(g) ?? ''); return key ? -Number(key.split(',')[1]) : 0; };
 const factsOf = f => f instanceof Set ? { gates: f, chests: new Set(), defeated: new Set() }
   : { gates: f?.gates ?? new Set(), chests: f?.chests ?? new Set(), defeated: f?.defeated ?? new Set() };
 // talked to giver g for the first time: from now on it makes offers (refreshOffers)
@@ -325,7 +335,7 @@ KINDS.relay = {
 // camps (but whoever asks), else somebody waiting on a hiding place
 function recipients(ctx, log, depths, giver) {
   return depths.flatMap(depth => {
-    const living = ctx.layout(depth).spotList.filter(s => s.kind !== 'hide').map(residentOf).filter(n => n && n.giver !== giver)
+    const living = ctx.layout(depth).spotList.filter(s => s.kind !== 'hide' && !s.annex).map(residentOf)   // (not behind a sealed portal).filter(n => n && n.giver !== giver)
       .map(n => ({ id: `to:${n.giver}`, depth, key: keyOfSpot(n.spot),
         to: { resident: n.giver, name: n.name, title: n.title, where: n.camp ? `at the camp on ${depthName(depth)}` : `on ${depthName(depth)}` } }));
     if (living.length) return living;
@@ -467,6 +477,19 @@ export function makeQuest(log, ctx, giver, slot) {
   return null;
 }
 
+// a repeatable quest come back (REPEAT): of its kind, at its giver's depth (a villager's: at or a
+// little above the deepest anyone got), filled in anew; half the pay, potions for a weapon
+function makeRepeat(log, ctx, r) {
+  const R = mulberry32(hash32(ctx.seed ^ hashString(r.id) ^ Math.imul(log.repeated + 1, 0x2545f491)));
+  const depth = GIVERS[r.giver] ? Math.max(1, log.deepest - Math.floor(R() * 3)) : Math.min(MAX_DEPTH, r.depth + (r.kind === 'defense' ? 0 : Math.floor(R() * 2)));
+  const q = makeQuest(log, ctx, r.giver, { id: `r:${++log.repeated}`, depth, kind: r.kind });
+  if (!q || q.kind !== r.kind) return null;
+  const level = depthLevel(q.depth);
+  Object.assign(q, { repeat: true, title: `${q.title} (again)`, text: `Back again? ${q.text}`,
+    rewards: { xp: Math.round(q.rewards.xp * REPEAT.share), copper: Math.round(q.rewards.copper * REPEAT.share),
+      items: rollPotions(R, level, 1 + Math.floor(R() * 2)) } });
+  return q;
+}
 // an offer that can no longer be done (its goal is done already): it goes
 const stale = (q, log, facts) => q.state === 'offered' && q.stages.some(s => goalDone(s, log, facts));
 
@@ -485,6 +508,14 @@ export function refreshOffers(log, ctx, givers = [...Object.keys(GIVERS), ...log
       if (slot.depth > log.deepest + 2) break;
       const q = makeQuest(log, ctx, giver, slot);
       log.used.push(slot.id);
+      changed = true;
+      if (q) log.list.push(q);
+    }
+    // nothing of the plan to offer: a repeatable quest come back
+    const r = log.list.some(q => q.giver === giver && q.state === 'offered') ? null : log.repeats.find(x => x.giver === giver && x.ready);
+    if (r) {
+      const q = makeRepeat(log, ctx, r);
+      log.repeats.splice(log.repeats.indexOf(r), 1);
       changed = true;
       if (q) log.list.push(q);
     }
@@ -534,6 +565,7 @@ export function handIn(log, id, now = 0) {
   const q = find(log, id);
   if (q?.state !== 'ready') return null;
   q.state = 'done'; q.finished = now;
+  settled(log, q);
   touch(log);
   return q;
 }
@@ -560,6 +592,9 @@ function settled(log, q) {
   const s = q.stages.find(x => x.goal === 'rescue');
   const camp = s && spotOfGiver(q.giver);
   if (camp && !log.living.some(p => p.id === q.id)) log.living.push({ id: q.id, ...s.person, camp });
+  // a repeatable one waits to come back (REPEAT)
+  if (repeatable(q) && !log.repeats.some(r => r.id === q.id))
+    log.repeats.push({ id: q.id, giver: q.giver, kind: q.kind, depth: giverDepth(q.giver), away: false, ready: false });
 }
 
 // Something happened (game/quests.js):
@@ -575,6 +610,11 @@ function settled(log, q) {
 // The log takes note, and the quests move on (settle). The quests paid on the spot.
 export function questEvent(log, ev, gates = new Set(), now = 0) {
   if (ev.kind === 'visit' && Number.isInteger(ev.depth) && ev.depth > log.deepest) { log.deepest = Math.min(MAX_DEPTH, ev.depth); log.version++; }
+  // away from a repeatable quest's giver, and back: it comes back (REPEAT)
+  if (ev.kind === 'visit' && Number.isInteger(ev.depth)) for (const r of log.repeats) {
+    if (r.ready) continue;
+    if (ev.depth !== r.depth) { if (!r.away) { r.away = true; log.version++; } } else if (r.away) { r.ready = true; log.version++; }
+  }
   if (ev.kind === 'horde' && typeof ev.key === 'string' && !log.broken.includes(ev.key)) { log.broken.push(ev.key); log.version++; }
   if (ev.kind === 'landmark' && typeof ev.key === 'string') for (const q of log.list) {
     const s = q.stages[q.stage];
@@ -718,7 +758,8 @@ export function checkQuest(q) {
   const f = isObj(q.from) ? q.from : {}, town = GIVERS[q.giver];
   const from = { name: text(f.name, 60) || (town ? `the ${town.title}` : 'somebody'), title: text(f.title, 60) || town?.title || 'Somebody',
     where: text(f.where, 80) || town?.where || '' };
-  return { id: q.id, giver: q.giver, n: nat(q.n), ...(typeof q.slot === 'string' ? { slot: q.slot.slice(0, 12) } : {}), from, kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
+  return { id: q.id, giver: q.giver, n: nat(q.n), ...(typeof q.slot === 'string' ? { slot: q.slot.slice(0, 12) } : {}),
+    ...(q.repeat ? { repeat: true } : {}), from, kind: q.kind, depth: q.depth, difficulty: q.difficulty, target,
     title: text(q.title, 80), text: text(q.text), stages, stage: Math.min(nat(q.stage), stages.length), payout: q.payout,
     rewards: checkRewards(q.rewards),
     state: q.state, archived: !!q.archived, created: nat(q.created), finished: nat(q.finished) };
@@ -735,6 +776,10 @@ export function checkQuestLog(x) {
   if (isObj(x.next)) for (const [g, n] of Object.entries(x.next)) if (isGiver(g)) log.next[g] = nat(n);
   log.met = Array.isArray(x.met) ? [...new Set(x.met.filter(g => isNpcGiver(g) && g.length <= 60))] : [];
   log.used = Array.isArray(x.used) ? [...new Set(x.used.filter(u => typeof u === 'string' && u.length <= 12))] : [];
+  log.repeats = (Array.isArray(x.repeats) ? x.repeats : []).filter(r => isObj(r) && typeof r.id === 'string' && isGiver(r.giver)
+    && REPEAT.kinds.includes(r.kind) && Number.isInteger(r.depth)).map(r => ({ id: r.id.slice(0, 80), giver: r.giver, kind: r.kind,
+    depth: Math.min(MAX_DEPTH, nat(r.depth)), away: !!r.away, ready: !!r.ready }));
+  log.repeated = nat(x.repeated);
   log.living = (Array.isArray(x.living) ? x.living : []).map(p => {
     const c = checkPerson(p);
     return c && typeof p.id === 'string' && typeof p.camp === 'string' ? { id: p.id.slice(0, 80), ...c, camp: p.camp.slice(0, 60) } : null;
@@ -746,4 +791,4 @@ export function checkQuestLog(x) {
 }
 // what is saved and sent of a log (plain JSON)
 export const packQuestLog = log => structuredClone({ list: log.list, next: log.next, deepest: log.deepest, broken: log.broken, met: log.met,
-  used: log.used, living: log.living, version: log.version });
+  used: log.used, living: log.living, repeats: log.repeats, repeated: log.repeated, version: log.version });

@@ -11,11 +11,13 @@ import { rarityOf } from '../core/gear/rarities.js';
 import { displayName } from '../core/gear/stats.js';
 import { GIVERS, giverOf, giverQuests, questLists, stateText, depthName, giverName, carried } from '../core/quests.js';
 import { questLog, questAct } from './quests.js';
+import { state } from './state.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-// filter: which list shows; selected: the quest shown on the right (its id)
-let filter = 'active', selected = null, signature = '', talker = null, onChange = () => {};
+// filter: which list shows; selected: the quest shown on the right (its id); tracked: the quest
+// followed in the corner (null: the newest one going on), this player's own choice
+let filter = 'active', selected = null, signature = '', talker = null, onChange = () => {}, tracked = null;
 
 // the panel opened (talking to villager v, or not): the giver's news is selected first
 export function openQuests(v = null) {
@@ -46,7 +48,7 @@ export function drawQuests() {
   const all = [...mine, ...lists.active, ...lists.done, ...lists.archived];
   if (selected && !L.list.some(q => q.id === selected && (q.state !== 'offered' || mine.includes(q)))) selected = null;
   if (!selected) selected = (mine[0] ?? lists[filter][0])?.id ?? null;
-  const next = `${L.version}:${filter}:${selected}:${talker?.name}`;
+  const next = `${L.version}:${filter}:${selected}:${talker?.name}:${tracked}`;
   if (next === signature) return;
   signature = next;
   const focus = document.activeElement?.dataset?.quest;
@@ -90,6 +92,7 @@ function details(q) {
     q.state === 'offered' && atGiver ? '<button class="main" data-act="accept">Accept</button>' : '',
     q.state === 'ready' && atGiver && !q.archived ? '<button class="main" data-act="handIn">Hand in</button>' : '',
     q.state === 'failed' && !q.archived ? '<button class="main" data-act="restart">Restart</button>' : '',
+    q.state === 'active' && !q.archived ? `<button data-act="track">${tracked === q.id ? 'Following' : 'Follow'}</button>` : '',
     q.state !== 'offered' && !q.archived ? '<button data-act="archive">Archive</button>' : '',
     q.archived ? '<button data-act="unarchive">Unarchive</button>' : '',
   ].join('');
@@ -110,6 +113,7 @@ $('quests-body').addEventListener('click', e => {
   else if (f) { filter = f.dataset.filter; selected = null; }
   else if (act && selected) {
     const id = selected;
+    if (act.dataset.act === 'track') { tracked = tracked === id ? null : id; signature = ''; onChange(); drawTracker(); return; }
     questAct(act.dataset.act, id);
     // an archived quest leaves the list it was in: show it where it went now
     if (act.dataset.act === 'archive') filter = 'archived';
@@ -119,6 +123,20 @@ $('quests-body').addEventListener('click', e => {
   signature = '';
   onChange();
 });
+// The quest followed, in the corner: the one chosen (Follow), else the newest one going on
+const box = $('quest-track');
+let shownTrack = '';
+export function drawTracker() {
+  const L = questLog(), live = state.mode === 'play' && !!L;
+  const going = live ? L.list.filter(q => (q.state === 'active' || q.state === 'ready' || q.state === 'failed') && !q.archived) : [];
+  const q = going.find(x => x.id === tracked) ?? going.at(-1) ?? null;
+  const text = q ? `<b>${esc(q.title)}</b>${esc(stateText(q))}` : '';
+  if (text === shownTrack) return;
+  shownTrack = text;
+  box.hidden = !q;
+  box.innerHTML = text;
+}
+
 // up and down move through the quests
 $('quests-body').addEventListener('keydown', e => {
   if (e.code !== 'ArrowDown' && e.code !== 'ArrowUp') return;
