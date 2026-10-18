@@ -1,6 +1,10 @@
 // Render resolution that follows the frame rate (render/resolution.js applies it). On a high-DPI
 // screen the GPU shades up to four pixels per CSS pixel; when frames come too slowly because of
 // that, the resolution steps down, and creeps back up after a while of smooth frames.
+//   - Before the resolution, the anti-aliasing goes: each step down first takes the MSAA
+//     samples a level down (8, 4, 2, off: every sample is shaded and stored for every pixel), as many steps as the setting allows
+//     (`steps`, from render/msaa.js); `drop` says how many are dropped. Stepping up takes the
+//     resolution back to the full ratio first, then the samples.
 //   - Frames are judged a second at a time, by the time between frames and by how much of it the
 //     frame's own work (JavaScript, handing the draws to the GPU) took: slow frames that are
 //     mostly that work are CPU-bound, and fewer pixels would not help.
@@ -24,12 +28,14 @@ const CALM = 4000, CALM_MAX = 64000; // ms of smooth frames before a step up
 const REST = 30000;                  // ms without stepping down after a step down that did not help
 
 export function resolutionController(max, min = Math.min(max, Math.max(0.6, max / 2))) {
-  let ratio = max, sum = 0, work = 0, n = 0, span = 0;
+  let ratio = max, drop = 0, sum = 0, work = 0, n = 0, span = 0;
   let smooth = 0, calm = CALM, rest = 0, trial = null, raised = -Infinity, clock = 0;
   const clamp = r => Math.min(max, Math.max(min, r));
   // interval: ms since the last frame; spent: ms the frame's own work took; target: ms between
-  // frames the frame rate cap asks for (0: no cap). Returns the new ratio when it changes, else null.
-  function tick(interval, spent, target = 0) {
+  // frames the frame rate cap asks for (0: no cap); steps: the MSAA steps that may be dropped.
+  // Returns the new ratio when it changes, else null (`drop` may have changed all the same).
+  function tick(interval, spent, target = 0, steps = 0) {
+    drop = Math.min(drop, steps);
     if (!(interval > 0) || interval > STALL) return null;
     clock += interval; rest = Math.max(0, rest - interval);
     sum += interval; work += spent; n++; span += interval;
@@ -39,21 +45,26 @@ export function resolutionController(max, min = Math.min(max, Math.max(0.6, max 
     sum = work = n = span = 0;
     if (trial) {   // the second after a step down: did it help?
       const t = trial; trial = null;
-      if (avg > t.before * PROOF) { rest = REST; return set(t.from); }
+      if (avg > t.before * PROOF) { rest = REST; drop = t.drop; return set(t.from); }
     }
     if (avg > slow) {
       smooth = 0;
       if (clock - raised < 3000) calm = Math.min(CALM_MAX, calm * 2);   // the step up was too much
-      if (busy < CPU_BOUND && rest === 0 && ratio > min) {
-        trial = { from: ratio, before: avg };
+      if (busy < CPU_BOUND && rest === 0 && (drop < steps || ratio > min)) {
+        trial = { from: ratio, drop, before: avg };
+        if (drop < steps) { drop++; return null; }
         return set(clamp(ratio * DOWN));
       }
       return null;
     }
     smooth = avg < fast ? smooth + WINDOW : 0;
-    if (smooth >= calm && ratio < max) { smooth = 0; raised = clock; return set(clamp(ratio * UP)); }
+    if (smooth >= calm && (ratio < max || drop > 0)) {
+      smooth = 0; raised = clock;
+      if (ratio < max) return set(clamp(ratio * UP));
+      drop--;
+    }
     return null;
   }
   function set(r) { if (r === ratio) return null; ratio = r; return r; }
-  return { tick, get ratio() { return ratio; }, min, max };
+  return { tick, get ratio() { return ratio; }, get drop() { return drop; }, min, max };
 }

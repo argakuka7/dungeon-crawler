@@ -4,7 +4,8 @@
 // somewhere new, cyan: explored); triangles are wells / rings; a violet dot is the open town
 // portal. Each player is an arrow pointing where they face, in their colour (ours is white when
 // playing alone). Inside a house it shows the cube outside, centred on the house's door. Below:
-// the cube we are in and its depth. Drawn every frame (main.js), as the camera and players move.
+// the cube we are in and its depth. Asked for every frame (main.js), drawn when the camera or a
+// player moved, else REFRESH times a second (for the rest: faces opening, portals, friends' lines).
 import { KIND_COLOR } from '../world/tiles.js';
 import { key, parse, step } from '../world/coords.js';
 import { state, player, view } from './state.js';
@@ -21,6 +22,8 @@ const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', 
 document.body.appendChild(canvas);
 const g = canvas.getContext('2d');
 const BG = '#0b0d1266', OUTLINE = '#0b0d12';
+const REFRESH = 4;
+let drawn = '', drawnAt = -Infinity;   // what the map showed last, and when (ms)
 
 // a point on edge d of the cell at (px, pz), t in [0,1] along it
 const edgePt = (px, pz, d, t) => [[px + CELL, pz + t * CELL], [px, pz + t * CELL], [px + t * CELL, pz + CELL], [px + t * CELL, pz]][d];
@@ -68,6 +71,13 @@ export function drawMinimap() {
   // the centre: where we stand, in a house its door outside
   const door = inside && W.cubes.get(inside.outside)?.map.doors?.find(d => d.building === inside.building);
   const me = truePosition();
+  // the same view as last time (to half a pixel), and drawn not long ago: nothing to do
+  const px = v => Math.round(v / N * CELL * 2);
+  const seen = [state.cubeKey, px(me.x), px(me.z), Math.round(view.yaw * 200), Math.round(player.yaw * 20),
+    ...online.buddies.map(b => `${b.cube} ${px(b.x)} ${px(b.z)} ${Math.round(b.yaw * 20)}`)].join('|');
+  const now = performance.now();
+  if (seen === drawn && now - drawnAt < 1000 / REFRESH) return;
+  drawn = seen; drawnAt = now;
   const fx = inside ? (door ? door.x / N : 0.5) : me.x / N, fz = inside ? (door ? door.z / N : 0.5) : me.z / N;
   const cx = X0 + fx, cz = Z0 + fz;
   cos = Math.cos(view.yaw); sin = Math.sin(view.yaw);

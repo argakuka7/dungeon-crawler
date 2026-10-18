@@ -20,7 +20,9 @@ function read() {
 const volume = v => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1);
 export const FRAME_RATES = [30, 60, 0];       // frames a second at most; 0: as many as the screen shows
 export const ANTIALIAS = [0, 2, 4, 8];        // MSAA samples; 0: off (the GPU may offer fewer, render/msaa.js)
-const DEFAULT_FPS = 60, DEFAULT_MSAA = 4;
+// 2x MSAA by default: on a high-DPI screen it looks like 4x for less of the GPU's work (and when
+// the GPU cannot keep up, render/resolution.js drops it further before the resolution)
+const DEFAULT_FPS = 60, DEFAULT_MSAA = 2;
 const oneOf = (list, v, fallback) => (list.includes(v) ? v : fallback);
 const stored = read();
 const settings = {

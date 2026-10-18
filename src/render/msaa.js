@@ -8,6 +8,8 @@
 //   - three.js binds null for the screen; gl.bindFramebuffer passes our framebuffer instead
 //     (and gl.drawBuffers its colour attachment for the screen's BACK).
 //   - Off draws straight onto the canvas, as cheap as it gets.
+//   - When the GPU cannot keep up, the resolution controller (core/resolution.js) drops levels
+//     below the setting before it lowers the resolution (setMsaaDrop), and gives them back.
 import { renderer } from './scene.js';
 
 const gl = renderer.getContext();
@@ -17,7 +19,9 @@ const DEPTH = stencil ? gl.DEPTH24_STENCIL8 : gl.DEPTH_COMPONENT24;
 const DEPTH_ATTACHMENT = stencil ? gl.DEPTH_STENCIL_ATTACHMENT : gl.DEPTH_ATTACHMENT;
 const COLOR_ONLY = [gl.COLOR_ATTACHMENT0];
 
-let want = 0;                      // the samples asked for (0: off)
+let asked = 0, ladder = [0];       // the samples the settings ask for; the levels from there down to off
+let drop = 0;                      // levels dropped from it while the GPU cannot keep up
+let want = 0;                      // the samples to draw with (0: off)
 let samples = 0, fbo = null, color = null, depth = null, w = 0, h = 0;
 
 gl.bindFramebuffer = (target, fb) => bindFramebuffer(target, fb ?? fbo);
@@ -30,7 +34,15 @@ export const MSAA_LEVELS = [0, ...[2, 4, 8].filter(n => both.includes(n))];
 // the level used for `n` asked for: the most this GPU can do up to n
 export const msaaLevel = n => Math.max(...MSAA_LEVELS.filter(l => l <= n));
 
-export function setMsaa(n) { want = msaaLevel(n); }
+export function setMsaa(n) {
+  asked = msaaLevel(n);
+  ladder = MSAA_LEVELS.filter(l => l <= asked).reverse();
+  want = ladder[Math.min(drop, ladder.length - 1)];
+}
+// how many levels below the setting there are to drop (render/resolution.js)
+export const msaaSteps = () => ladder.length - 1;
+// draw with `d` levels fewer than the setting asks for
+export function setMsaaDrop(d) { drop = d; want = ladder[Math.min(drop, ladder.length - 1)]; }
 
 function release() {
   if (fbo) { gl.deleteFramebuffer(fbo); gl.deleteRenderbuffer(color); gl.deleteRenderbuffer(depth); }

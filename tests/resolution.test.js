@@ -105,3 +105,41 @@ test('a frame rate cap is not mistaken for slow frames', () => {
   assert.deepEqual(capped(f, 1000, 1000 / 60, 4, 1000 / 60), []);    // a cap of 60 judges as before
   assert.deepEqual(capped(f, 1000, 30, 5, 1000 / 60), [1.7]);
 });
+
+// feed `ms` of frames with `steps` MSAA levels that may be dropped; returns the states it went
+// through ([ratio, drop] after each change)
+function stepped(c, ms, interval, spent, steps) {
+  const seen = [];
+  for (let t = 0; t < ms; t += interval) {
+    const before = `${c.ratio},${c.drop}`;
+    c.tick(interval, spent, 0, steps);
+    if (`${c.ratio},${c.drop}` !== before) seen.push([c.ratio, c.drop]);
+  }
+  return seen;
+}
+
+test('the anti-aliasing goes down before the resolution, and comes back after it', () => {
+  const c = resolutionController(2);
+  assert.deepEqual(stepped(c, 1000, 30, 5, 2), [[2, 1]]);
+  assert.deepEqual(stepped(c, 1000, 25, 5, 2), [[2, 2]]);    // it helped (30 -> 25 ms): the next level
+  assert.deepEqual(stepped(c, 1000, 22, 5, 2), [[1.7, 2]]);  // none left: now the resolution
+  stepped(c, 1000, 16.7, 4, 2);                              // proves itself
+  const up = stepped(c, 30000, 16.7, 4, 2).map(([r, d]) => `${r.toFixed(2)},${d}`);
+  assert.deepEqual(up, ['1.87,2', '2.00,2', '2.00,1', '2.00,0']);
+});
+
+test('dropping the anti-aliasing that does not help is taken back', () => {
+  const c = resolutionController(2);
+  assert.deepEqual(stepped(c, 1000, 33.4, 4, 1), [[2, 1]]);  // a browser capping at 30
+  assert.deepEqual(stepped(c, 1000, 33.4, 4, 1), [[2, 0]]);
+  assert.deepEqual(stepped(c, 20000, 33.4, 4, 1), []);
+});
+
+test('fewer levels to drop (a lower setting) shrink what is dropped', () => {
+  const c = resolutionController(2);
+  stepped(c, 1000, 30, 5, 2);
+  stepped(c, 1000, 25, 5, 2);
+  assert.equal(c.drop, 2);
+  c.tick(16.7, 4, 0, 0);    // MSAA turned off in the settings
+  assert.equal(c.drop, 0);
+});
