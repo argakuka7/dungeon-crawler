@@ -58,21 +58,17 @@
 <div id="menu-overlay" hidden>
   <section id="menu-panel" role="dialog" aria-modal="true" aria-labelledby="menu-title">
     <header><h1 id="menu-title">Menu</h1><span id="menu-paused">Paused</span><button id="menu-close" aria-label="Close">Esc</button></header>
-    <button id="menu-resume" class="menu-big">Resume</button>
-    <h2>Play together</h2>
-    <div id="menu-start">
-      <button id="menu-host" class="menu-big">Host this world</button>
+    <div id="menu-list">
+      <button id="menu-resume" class="menu-big menu-main">Resume</button>
+      <button id="menu-host" class="menu-big menu-main">Host this world</button>
+      <button id="menu-leave" class="menu-big" hidden>Stop hosting</button>
+      <div id="menu-room" class="menu-big" hidden title="Your friends join with this code (up to three)"><small>Join code</small><b id="menu-room-code"></b></div>
+      <button id="menu-copy" class="menu-big" hidden>Copy join link</button>
+      <ul id="menu-players" hidden></ul>
+      <p id="menu-status" role="status" aria-live="polite"></p>
+      <button id="menu-settings" class="menu-big">Settings</button>
+      <button id="menu-quit" class="menu-big">Save and quit to the menu</button>
     </div>
-    <div id="menu-room" hidden>
-      <p>Your friends join with this code (up to three):</p>
-      <div id="menu-room-code"></div>
-      <button id="menu-copy">Copy link</button>
-    </div>
-    <ul id="menu-players" hidden></ul>
-    <p id="menu-status" role="status" aria-live="polite"></p>
-    <button id="menu-leave" hidden>Leave</button>
-    <div class="menu-more"><button id="menu-settings">Settings</button></div>
-    <button id="menu-quit">Save and quit to the menu</button>
   </section>
 </div>
 <div id="settings-overlay" hidden>

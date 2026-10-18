@@ -66,8 +66,10 @@ function render() {
   if (!state.menuOpen) return;
   const { phase, text } = sessionStatus(), idle = phase === 'idle', host = online.role === 'host';
   $('menu-paused').textContent = together() ? 'The game goes on' : 'Paused';
-  $('menu-start').hidden = !idle;
-  $('menu-room').hidden = !(host && online.code && (phase === 'waiting' || phase === 'connected'));
+  // play together: Host this world, or (hosting) Stop hosting with the join code and its link
+  const room = host && online.code && (phase === 'waiting' || phase === 'connected');
+  $('menu-host').hidden = !idle;
+  $('menu-room').hidden = $('menu-copy').hidden = !room;
   $('menu-room-code').textContent = online.code ?? '';
   const list = players();
   $('menu-players').hidden = list.length < 2;
@@ -78,7 +80,7 @@ function render() {
     li.append(dot, `${p.name}${p.you ? ' (you)' : ''}${p.slot === 0 ? ' · host' : ''}`);
     $('menu-players').append(li);
   }
-  $('menu-status').textContent = text;
+  $('menu-status').textContent = room ? '' : text;   // (hosting, the code and the players say it)
   const leave = $('menu-leave'), asking = performance.now() < confirmUntil;
   leave.hidden = idle;
   leave.classList.toggle('confirm', asking);
@@ -132,7 +134,7 @@ $('menu-quit').onclick = () => {
 $('menu-copy').onclick = async () => {
   try { await navigator.clipboard.writeText(link(online.code)); $('menu-copy').textContent = 'Copied!'; }
   catch { $('menu-copy').textContent = link(online.code); }
-  setTimeout(() => { $('menu-copy').textContent = 'Copy link'; }, 1600);
+  setTimeout(() => { $('menu-copy').textContent = 'Copy join link'; }, 1600);
 };
 $('menu-settings').onclick = () => openSettings();
 // a clicked button lets go of the focus: Space and Enter belong to the game again

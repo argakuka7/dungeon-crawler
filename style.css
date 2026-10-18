@@ -97,7 +97,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
   padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 12px; }
 #menu-panel header { display: flex; align-items: baseline; gap: 12px; }
 #menu-panel h1 { margin: 0 0 12px; color: #fff; font-size: 15px; letter-spacing: 3px; }
-#menu-panel h2 { margin: 18px 0 4px; padding-top: 12px; border-top: 1px solid #2a2f3a; color: #c5cdbc; font-size: 12px; }
 #menu-paused { color: #8a96a8; font-size: 11px; }
 #menu-panel p { margin: 10px 0 6px; color: #aab3c2; }
 #menu-panel :is(button, input) { font: inherit; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c; border-radius: 4px; padding: 6px 10px; }
@@ -105,19 +104,21 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-panel button:hover:not(:disabled) { background: #364052; color: #fff; }
 #menu-panel :is(button, input):focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
 #menu-panel #menu-close { margin-left: auto; color: #8a96a8; background: none; border: none; padding: 0; font-size: 11px; }
-#menu-panel .menu-big { display: block; width: 100%; margin-top: 10px; padding: 10px; font-size: 14px; color: #ffe4ae; border-color: #8a7a52; }
-#menu-resume { margin-top: 0 !important; }
+/* one column of items all alike: the buttons, the join code while hosting */
+#menu-list { display: grid; gap: 10px; }
+#menu-panel .menu-big { display: block; box-sizing: border-box; width: 100%; min-height: 42px; margin: 0; padding: 10px; font-size: 14px; }
+#menu-panel .menu-main { color: #ffe4ae; border-color: #8a7a52; }
 .menu-row { display: flex; gap: 8px; }
-#menu-room-code { margin: 4px 0 10px; color: #ffe4ae; font-size: 34px; letter-spacing: 10px; text-align: center; user-select: all; }
-#menu-room button, #menu-leave, #menu-quit { display: block; width: 100%; }
-#menu-quit { margin-top: 10px; }
+#menu-room { display: flex !important; align-items: center; justify-content: center; gap: 14px; padding: 4px 10px !important;
+  border: 1px dashed #444c5c; border-radius: 4px; color: #8a96a8; }
+#menu-room[hidden] { display: none !important; }
+#menu-room small { font-size: 11px; }
+#menu-room-code { color: #ffe4ae; font-size: 22px; font-weight: normal; letter-spacing: 8px; user-select: all; }
 #menu-panel :is(#menu-leave, #menu-quit).confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
-#menu-players { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: #e6e9ef; }
+#menu-players { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; color: #e6e9ef; }
 #menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
-#menu-status { min-height: 1.4em; color: #cfe2ff !important; }
+#menu-status { margin: 0 !important; color: #cfe2ff !important; text-align: center; }
 #menu-status:empty { display: none; }
-#menu-panel .menu-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid #2a2f3a; }
-#menu-settings { display: block; width: 100%; }
 #help-panel .help-note { margin: 10px 0 0; color: #6f7a8c; font-size: 11px; }
 #help-panel dt i { color: #6f7a8c; }
 /* the settings (game/settingsmenu.js): over the Esc menu or the main menu */
