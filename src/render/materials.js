@@ -110,9 +110,11 @@ export function wetLine(S, tm) {
 export function tickTides() {
   for (const [t, u] of Object.entries(WET_LINE)) u.value = wetLine(FLUID_LOOK[t].cells, WIND.value);
 }
-// the shores of a fluid's surface (cellMaterial shoreDist): from the bits in its uvs
-// (render/floors.js fluidVolume), or a trial's from the cells round about solid at its level
-// (section.js WATER_SOLID), to their squares
+// The walls a fluid's surface meets (cellMaterial wallDist): the banks round its cell that stand
+// over it, from the bits in its uvs (render/floors.js fluidVolume), or a standing fluid's from the
+// ground of the cells round about (section.js WATER_SHORE: the corners of the floor it meets
+// there): where the corners next to its cell stand at or over its rest height (as a bank does).
+// The distance to their squares.
 const UV_SHORES = `
         int ci = int(floor(code + 0.5)), s = ci & 255, c = ci >> 8;
         vec2 l = p - vec2(float(c % ${N}), float(c / ${N}));
@@ -133,10 +135,16 @@ const TRIAL_SHORES = `
         for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
           ivec2 q = at + ivec2(i, j);
           if (i == 0 && j == 0 || any(lessThan(q, ivec2(0))) || any(greaterThan(q, ivec2(${N - 1})))) continue;
-          vec4 s = texelFetch(uShoreSolid, q, 0);
-          if (uTrialLevel > s.x && uTrialLevel < s.y || uTrialLevel > s.z && uTrialLevel < s.w) {
-            vec2 lo = vec2(float(i), float(j));
-            d = shoreMin(d, length(max(lo - l, 0.0) + max(l - lo - 1.0, 0.0)));
+          // its corners next to our cell (x: 0 on its west side, 1 on its east; z the same)
+          vec4 s = texelFetch(uShoreGround, q, 0);
+          float lo = 1e9;
+          for (int k = 0; k < 4; k++) {
+            int kx = k & 1, kz = k >> 1;
+            if ((i == 0 || kx == (i > 0 ? 0 : 1)) && (j == 0 || kz == (j > 0 ? 0 : 1))) lo = min(lo, s[k]);
+          }
+          if (lo >= uTrialLevel) {
+            vec2 o = vec2(float(i), float(j));
+            d = shoreMin(d, length(max(o - l, 0.0) + max(l - o - 1.0, 0.0)));
           }
         }
         return d;`;
@@ -151,18 +159,20 @@ const TRIAL_SHORES = `
 // cut's inject). The colours are the palette's of each vertex (its `pal` attribute, render/
 // parts.js; fluidpal.js), times the material's own (white; the proxies' darker).
 // The surface rises and falls with the tide and the waves (swellGLSL), sides and all. Where it
-// meets a bank (the shores in its uvs, render/floors.js fluidVolume) foam hugs the shore, and the
+// meets the shore (shoreDist: a bank standing over it round its cell, the shores in its uvs,
+// render/floors.js fluidVolume; or the ground under it sloping up out of it, its `shore`
+// attribute, render/shore.js) foam hugs the shore, and the
 // bank's wall is dark where the water has just been, a band (in front of it, in this mesh) drawn
 // from the water's surface up to the wet line (WET_LINE) only.
 // The styles: water as above; sludge (acid) the same, with bubbles blowing up and popping in the
 // cells and a green stain on the banks; crust (lava): molten rock lit by itself in flat bands of
 // heat over big slow cells, blotches of dark crust growing and melting away on it (more by the
 // banks, where it cools), a bright seam along the bank instead of the foam and the wet band.
-// trial: a trial's fluid (render/trials.js) instead, one box rising and sinking through the room:
-// { level, wet } uniforms (its surface's rest height; how far over it the room is wet), solid
-// (section.js WATER_SOLID, which cells are solid where): its shores are the cells round about
-// that are solid at its level, and its wet bands (a mesh of their own with this material, uvs
-// (-1, 0)) go by its level.
+// trial: a standing fluid (render/trials.js: a trial's, a boss's tide) instead, rising and sinking
+// through the room: { level, wet } uniforms (its surface's rest height; how far over it the room
+// is wet), shore (section.js WATER_SHORE, the ground it meets in each cell): its walls are the
+// cells round about whose ground stands over it, and its wet bands (a mesh of their own with this
+// material, uvs (-1, 0)) go by its level.
 // over: the cube's own fluids under a standing one ({ level, box } uniforms: its level, world
 // units, -1e9 for none; [x0, z0, x1, z1] in the cube's coordinates) are not drawn in its box: it
 // is (render/surface.js ownUnder; the active cube's fluids only, render/partmeshes.js).
@@ -173,7 +183,7 @@ export function cellMaterial(mat, t, trial = null, over = null) {
   const C = CELLS[L.style];
   useCells(mat, L.style);
   const uniforms = { uCellTime: WIND, uCellTex: C.tex, uPalTex: PAL_TEX, uWetLine: trial ? trial.wet : WET_LINE[t],
-    ...trial && { uTrialLevel: trial.level, uShoreSolid: trial.solid }, ...over && { uOverLevel: over.level, uOverBox: over.box } };
+    ...trial && { uTrialLevel: trial.level, uShoreGround: trial.shore }, ...over && { uOverLevel: over.level, uOverBox: over.box } };
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
@@ -183,7 +193,7 @@ export function cellMaterial(mat, t, trial = null, over = null) {
     // the swell moves the tops and the sides' upper edges (render/floors.js fluidVolume uvs: v,
     // the rest height), not the bed or the wet bands; with zero uvs (the trial's box) every
     // vertex, undoing the matrix's scale y (it is scaled to its depth)
-    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal, shore;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nvarying vec4 vShore;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
           mat4 cellM = modelMatrix * batchingMatrix;
@@ -196,14 +206,22 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         vCellWave = swellW(cw, uCellTime);
         if (!band && upper) transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);
         vCellP = cw / ${tile}; vCellW = cw; vCellUv = uv; vCellY = cy - ${trial ? 'uTrialLevel' : 'uv.y'};
-        vCellN = normal; vPalRows = pal.xy;
+        vCellN = normal; vPalRows = pal.xy; vShore = shore;
       }`);
-    sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
-      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreSolid;\n' : '') + (over ? 'uniform float uOverLevel;\nuniform vec4 uOverBox;\n' : '') + swellGLSL(S) + `
+    sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nvarying vec4 vShore;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
+      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreGround;\n' : '') + (over ? 'uniform float uOverLevel;\nuniform vec4 uOverBox;\n' : '') + swellGLSL(S) + `
       float shoreMin(float a, float b) { float h = max(0.14 - abs(a - b), 0.0) / 0.14; return min(a, b) - h * h * 0.035; }
-      // how far p is from the banks round its cell, 9 if none near
-      float shoreDist(vec2 p, float code) {
+      // how far p is from the walls round its cell, 9 if none near
+      float wallDist(vec2 p, float code) {
         ${trial ? TRIAL_SHORES : UV_SHORES}
+      }
+      // How far p is from the shore, the one formula for every fluid: from the walls round its cell,
+      // or (nearer) across the ground sloping up out of the water under it (vShore: its height and
+      // slope, render/shore.js), from how deep the water stands over it now; past the shore: < 0.
+      // water: the surface's height there now.
+      float shoreDist(vec2 p, float code, float water) {
+        float d = wallDist(p, code);
+        return vShore.w < 0.5 && vShore.y > 0.02 ? shoreMin(d, (water - vShore.x) / vShore.y) : d;
       }
 ` + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       float cellLine = 0.0, cellBand = 0.0, cellHeat = 0.0;
@@ -227,7 +245,11 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         // how far the shore is (wobbling); sides and bands: far
         vec2 w = vCellW;
         // (no further than the foam reaches: a cell further out knows no shores, so it must not jump there)
-        float sd = vCellUv.x > -0.5 ? min(shoreDist(w, vCellUv.x), 0.7) : 0.7;
+        float water = ${trial ? 'uTrialLevel' : 'vCellUv.y'} + swellY(w, tm);
+        // (nothing where the ground stands over it: hidden by the ground anyway, but shown where
+        // the ground is cut open)
+        if (vCellUv.x > -0.5 && vShore.w < 0.5 && water < vShore.x - 0.05) discard;
+        float sd = vCellUv.x > -0.5 ? min(shoreDist(w, vCellUv.x, water), 0.7) : 0.7;
         sd += 0.022 * sin(w.x * 5.7 + w.y * 3.1 + tm * 1.9) + 0.016 * sin(w.y * 6.7 - w.x * 3.3 - tm * 2.4) + 0.008 * sin(w.x * 13.0 + w.y * 11.0 + tm * 3.1);
         // the slope of the waves: the pattern rides over them, and the side of a wave away from
         // the light is a shade darker (soft-edged, two tones)

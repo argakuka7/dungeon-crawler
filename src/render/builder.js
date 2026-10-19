@@ -3,7 +3,7 @@
 // `swayAt(y)`, set while drawing something that hangs), v unused (render/parts.js 'flags'). One
 // made with { uvs: true } keeps the uv in `uvNow` for every vertex drawn (the fluids' surfaces,
 // render/floors.js fluidVolume), the palette row in `palNow` (themes/fluids.js), and what
-// `shoreAt(vertex)` says of the ground under it (four numbers, render/shore.js; none: zeros).
+// `shoreAt(vertex)` says of the ground under it (four numbers, render/shore.js; none: 0, 0, 0, 1).
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 
 export class GeoBuilder {
@@ -30,7 +30,7 @@ export class GeoBuilder {
       if (this.swayAt) this.uv.push(this.swayAt(v[1]), 0);
       else if (this.uv) {
         this.uv.push(this.uvNow[0], this.uvNow[1]); this.pal.push(this.palNow);
-        if (this.shoreAt) this.shore.push(...this.shoreAt(v)); else this.shore.push(0, 0, 0, 0);
+        if (this.shoreAt) this.shore.push(...this.shoreAt(v)); else this.shore.push(0, 0, 0, 1);
       }
     }
     if (smooth) [a, b, c].forEach((v, k) =>

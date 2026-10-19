@@ -13,7 +13,7 @@ import { restY, tideY } from './surface.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
-import { cutMaterial, setTrialWaterCap, WATER_SOLID, WATER_OWN } from './section.js';
+import { cutMaterial, setTrialWaterCap, WATER_SOLID, WATER_OWN, WATER_SHORE } from './section.js';
 import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
 import { palRow } from '../themes/fluids.js';
@@ -390,7 +390,7 @@ function standingWater(m, fluid, view, group, [x0, z0, x1, z1], over) {
   const box = new THREE.BoxGeometry(w - 0.04, 1, d - 0.04, w * 4, 1, d * 4).translate(x0 + w / 2, 0, z0 + d / 2);
   box.getAttribute('uv').array.fill(0);
   box.setAttribute('pal', palAttribute(box, pal));
-  const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, solid: WATER_SOLID } : null;
+  const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, shore: WATER_SHORE } : null;
   const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
   water.material.side = THREE.DoubleSide;   // (it writes depth, like every fluid: materials.js fluidMaterial)
   water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;

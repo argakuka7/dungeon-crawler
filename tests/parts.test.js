@@ -82,9 +82,10 @@ test('fluid tops carry the bed under them, the sides and bands nothing', () => {
       if (!p) continue;
       assert.equal(p.shore.length, p.pos.length);
       for (let v = 0; v < p.uv.length / 2; v++) {
-        const [ground, slope, ceiling, spare] = p.shore.slice(v * 4, v * 4 + 4);
-        assert.equal(ceiling, 0); assert.equal(spare, 0);
-        if (p.uv[v * 2] < 0) { assert.equal(ground, 0); assert.equal(slope, 0); continue; }
+        const [ground, slope, ceiling, none] = p.shore.slice(v * 4, v * 4 + 4);
+        assert.equal(ceiling, 0);
+        if (p.uv[v * 2] < 0) { assert.deepEqual([ground, slope, none], [0, 0, 1]); continue; }
+        assert.equal(none, 0);
         // (the cube's own fluids lie in beds, under their surface)
         assert.ok(ground <= p.uv[v * 2 + 1] + 1e-6 && slope >= 0, `${m.key}: bed ${ground} under ${p.uv[v * 2 + 1]}`);
       }

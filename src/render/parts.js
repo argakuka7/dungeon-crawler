@@ -30,7 +30,7 @@ export const PARTS = [
 //            cubegen/fluidbodies.js): a fall's at its top and at its foot, and how far down the
 //            sheet it is (0..1000: the one turns into the other); a surface's twice, 0
 //   shore    Float32 x4 (fluids only): the ground under a surface's top (render/shore.js: its
-//            height, its slope; 0, 0), zeros elsewhere
+//            height, its slope, 0, 0); elsewhere 0, 0, 0, 1 (none: what a missing attribute reads)
 // 20 bytes a vertex for solids instead of 36, and shared corners are stored once.
 const SCALE = 1 / 1024, LIMIT = 32767;
 
