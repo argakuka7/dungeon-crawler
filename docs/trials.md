@@ -306,26 +306,30 @@ The floor breaks up behind you in a wave from the entry; outrun it to the exit.
 
 The cold sets in. Keep warm by lighting braziers along the way to the great fire.
 
-- **Room:** one layer, any shape, with 4–7 braziers along the way and the **great fire**
-  (a bonfire pit) near the exit. One or two extra braziers stand off the way.
+- **Room:** one layer, ridges across it making the way wind, with braziers far apart along the
+  way and the **great fire** (a bonfire pit) near the exit. One or two extra braziers stand off
+  the way.
 - **Cold meter:** 0–100. Away from warmth it rises to 100 in `FREEZE_TIME` (30 s); within
   `WARM_RADIUS` (2.5 cells) of a lit brazier it drops four times as fast. Frost creeps in from
   the screen's edges as it rises. At 100 you freeze: the trial fails.
-- **Rules:** a brazier is lit with `F` (1 s); it stays lit. The first one stands on the
-  entry's apron, unlit.
+- **Rules:** a brazier is lit with `F` (1 s); it stays lit.
 - **Goal:** lighting the great fire.
 - **Check:** gaps: walking from one brazier's warm circle to the next (and to the great fire)
   takes at most `FREEZE_TIME × 0.6`, at walking speed × `SLACK`, with the lighting time
   included.
 - **Population:** the depth's frost kinds, half the usual, never inside a warm circle.
 - **As built** (`cubegen/trials/cold.js`, `index.js finishCold`; `core/trials.js COLD`,
-  `game/trials.js stepCold`): the great fire in a flat 3x3 hollow four cells in from the exit's
-  face. The braziers stand on the slow player's fastest way: the first on its first floor, then
-  one about every five cells of it, evenly by time (3-7, more where a gap would be too long), and
-  one or two 3-6 cells off it. The numbers are tuned to a cube's size: a way across takes 6-11 s,
-  so `FREEZE_TIME` is 20 s (the gap allowed 12 s), and the planner keeps the room's portals at
-  least 9 cells apart. Each player has their own meter; freezing is a death (back in the room
-  before). Lit braziers stay lit for everyone (the trial's bits).
+  `game/trials.js stepCold`): the room is entered and left on opposite faces (the planner asks
+  it), the great fire in a flat 3x3 hollow four cells in from the exit's face. Between them two or
+  three ridges of rock (six levels up, one cell thick, nothing built onto or over them, to the
+  cube's edge) stand across the way, each open at one end (three cells), the ends alternating, so
+  the way winds back and forth: 37-46 cells (at least `COLD.least`). A ridge across another
+  portal's pad is open at that end, or left out. The braziers stand on the slow player's fastest
+  way, each as far on from the last (or the entry) as keeps the slow time out in the cold within
+  `COLD.reach` (0.9) of the gap allowed, at least `COLD.apart` (6) cells from each other and the
+  entry (a warm circle reaches through a ridge): two or three, and one or two 3-6 cells off the
+  way. `FREEZE_TIME` is 20 s (the gap allowed 12 s). Each player has their own meter; freezing is a
+  death (back in the room before). Lit braziers stay lit for everyone (the trial's bits).
 
 ### `storm`: The storm
 
@@ -579,16 +583,39 @@ the sluice tank and float, the waypad); nothing uses them.
 | vault cage | `trial_cage`, sinking into the ground (clipped at it) |
 | lever (reset) | `trial_lever`, `_arm`, `_knob` (the reset's red) |
 | mirror, emitter, receiver | `trial_mirror`, `_frame`, `_pane`; `trial_emitter`, `trial_receiver` with `trial_gem` |
-| brazier, the cold's warming braziers | the ruins' `ruins_brazier_a` (borrowed: `TRIAL_PROPS`), its glowing part the flame |
-| great fire, beacon | `trial_great_fire`, `trial_beacon` and their `_flame` |
+| brazier, the cold's warming braziers | the ruins' `ruins_brazier_a` (borrowed: `TRIAL_PROPS`); its flame drawn where its glowing spikes stood |
+| great fire, beacon | `trial_great_fire`, `trial_beacon`; their `_flame` pieces only say where the flame stands and how big it is |
 | crate | the mines' `mines_crate_a` (borrowed), a cell big |
 | runestone, tablet | `trial_runestone`, `trial_tablet` (the glyphs drawn on them in code) |
 | siege mouth | `trial_mouth` |
 
 A fire is lit or out (`render/trials.js fire`): out, no flame and no light; lit, its flame
-shows and flickers and its light shines (its intensity: the light pool takes no light with
-intensity 0, nor one hidden). The hunter is still made in code. The seals, the beacon's ring,
+flares up and flickers with its light (its intensity: the light pool takes no light with
+intensity 0, nor one hidden). The flames are the world's fire (`render/flames.js`, below). The hunter is still made in code. The seals, the beacon's ring,
 the beam, the tide lines and the fog are effects, drawn in code.
+
+### Fire (`render/flames.js`)
+
+Every open fire is drawn the same way: the trials' fires and the props that burn (the ruins'
+brazier, the relics' torch sconce, the lagoon's tiki torch, the cenote's copal bowl, the
+volcanic fire shrine; candles stay as they are, too small for it).
+
+- **Where:** a fire prop's model keeps its flame as glowing spikes (`blender/themes_geo.py
+  flame`, `props.py build_brazier`, `trials.py flame`). As the model is loaded (`splitFlames`)
+  its glowing part is split into its pieces; the tall ones are the flame. They are taken out
+  of the model (a flat glow, the shrine's lava ring, stays) and kept as one flame: where it
+  stands and how big it is (a third bigger, the drawn flame fills less of it). The far proxies
+  of landmarks keep the spikes.
+- **The flame:** a billboard facing the camera round its root, painted by a shader: a teardrop
+  narrowing upwards, swaying and eaten away at its tip by rising turbulence, white-yellow at
+  its core, orange to red at its edges, a faint glow round its root. Its core covers what is
+  behind it (premultiplied alpha), so it reads on snow and sand too. All of a cube's flames are
+  one instanced mesh, cut and faded with the cube.
+- **Its light:** the flame and its light flicker as one (`flicker`, the same in JS and GLSL);
+  lit or put out, the flame flares up or dies down and the light with it.
+- **Embers and smoke:** the six fires nearest the player (within 10 cells) give off embers and
+  a wisp of smoke from the shared particles, in the colours the player burns in
+  (`FIRE_COLORS`, `render/burning.js`).
 
 ## Code layout
 

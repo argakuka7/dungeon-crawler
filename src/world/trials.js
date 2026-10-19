@@ -37,9 +37,8 @@ function roomFits(kind, seed, k, entry, exit, depth) {
     const q = ([x, z]) => [x >= 8 ? 1 : 0, z >= 8 ? 1 : 0];
     return exit != null && !!sunkenPath(q(at(entry, 1)), q(at(exit, 1)), sunkenCount(depth), smallStages());
   }
-  // (the cold wants a way across the room: the portals at least 9 cells apart)
-  if (kind === 'storm') return exit != null && (entry ^ 1) === exit;   // (the way straight across, the wind across it)
-  if (kind === 'cold' && exit != null) { const [a, b] = [at(entry, 1), at(exit, 1)]; return Math.hypot(a[0] - b[0], a[1] - b[1]) >= 9; }
+  // (the storm: the way straight across, the wind across it; the cold: its ridges across the way)
+  if (kind === 'storm' || kind === 'cold') return exit != null && (entry ^ 1) === exit;
   if (kind !== 'collapse' || exit == null || (entry ^ 1) === exit || entry === (exit ^ 1)) return true;
   const [a, b] = [at(entry, 3), at(exit, 3)];
   return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) >= 7;

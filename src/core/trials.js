@@ -156,8 +156,10 @@ export const fogHurt = (maxHp, inFor) => maxHp * (FOG.hurt + FOG.more * inFor);
 // --- cold --------------------------------------------------------------------------------------------
 // Each player's cold meter (0-100): away from warmth it rises to 100 in COLD.freeze s; within
 // COLD.radius cells of a lit brazier (or the great fire) it drops COLD.thaw times as fast. At 100
-// you freeze. The generator keeps every gap between warm circles within COLD.gap s for a slow player.
-export const COLD = { freeze: 20, radius: 2.5, thaw: 4, gap: 12, along: [3, 7], every: 5 };
+// you freeze. The generator keeps every gap between warm circles within COLD.gap s for a slow player
+// (setting each brazier as far on as COLD.reach of that allows), the braziers at least COLD.apart cells
+// apart, along: how many on the way (at least, at most), least: the cells the way takes at least.
+export const COLD = { freeze: 20, radius: 2.5, thaw: 4, gap: 12, reach: 0.9, apart: 6, along: [2, 6], least: 25 };
 export function coldStep(meter, dt, warm) {
   const rate = 100 / COLD.freeze;
   return Math.max(0, Math.min(100, meter + (warm ? -rate * COLD.thaw : rate) * dt));

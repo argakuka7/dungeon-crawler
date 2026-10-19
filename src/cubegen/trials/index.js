@@ -20,7 +20,7 @@ import { shapeGrid, gridRecord } from './grid.js';
 import { RIM } from './deck.js';
 import { shapeTimed, timedGoal } from './timed.js';
 import { shapeMiasma, miasmaGoal } from './miasma.js';
-import { shapeCold, coldGoal } from './cold.js';
+import { shapeCold, coldGoal, coldRoute } from './cold.js';
 import { shapeStorm, stormGoal } from './storm.js';
 import { shapeSiege, siegeGoal, RING } from './siege.js';
 import { shapeChase, chaseGoal } from './chase.js';
@@ -31,7 +31,7 @@ const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
   miasma: { shape: shapeMiasma, goal: miasmaGoal, costs: null, finish: finishMiasma },
-  cold: { shape: shapeCold, goal: coldGoal, costs: null, finish: finishCold },
+  cold: { shape: shapeCold, goal: coldGoal, costs: coldRoute, finish: finishCold },
   storm: { shape: shapeStorm, goal: stormGoal, costs: null, finish: finishStorm },
   siege: { shape: shapeSiege, goal: siegeGoal, costs: null, finish: finishSiege },
   chase: { shape: shapeChase, goal: chaseGoal, costs: collapseRoute, finish: finishChase },
@@ -175,52 +175,56 @@ function finishMiasma(ctx, t, out) {
 
 // --- cold ----------------------------------------------------------------------------------------------
 
-// The braziers along the way (a slow player's fastest way from the entry to the great fire): the
-// first on the entry's apron, then one about every COLD.every cells, evenly by time (3-7, more
-// where a gap would be too long), so that no gap
-// (from leaving one warm circle to coming into the next, lighting included) takes a slow player
-// over COLD.gap s; one or two more off the way. Each is lit once (F) and stays lit.
+// The braziers along the way (a slow player's fastest way from the entry to the great fire, round
+// the ridges): set far apart, each as far on along the way as keeps the slow time out in the cold
+// (from leaving one warm circle, or the entry, to coming into the next, lighting included) within
+// COLD.reach x COLD.gap s, and at least COLD.apart cells from every other one and the entry (a warm
+// circle reaches through a ridge: none just across one from the last); the gap to the fire
+// too must be within COLD.gap. One or two more off the way. Each is lit once (F) and stays lit.
 function finishCold(ctx, t, out) {
   const fire = t.goal, arr = arrivals(ctx, t.entry), path = pathOf(arr, fire);
-  if (!path || path.length < 4) return null;
+  if (!path || path.length < COLD.least) return null;
   const at = n => ({ x: n.x + 0.5, y: n.landing ? n.top * LH : floorY(n, 0.5, 0.5), z: n.z + 0.5 });
-  const time = n => arr.time.get(n.id), total = time(fire);
-  const gaps = list => {   // the slow time out in the cold between each warm circle and the next
-    const out = [];
-    for (let k = 0; k + 1 < list.length; k++) {
-      const a = list[k], b = list[k + 1], seg = path.filter(n => time(n) >= time(a) && time(n) <= time(b));
-      const cold = seg.filter(n => Math.hypot(n.x - a.x, n.z - a.z) > COLD.radius && Math.hypot(n.x - b.x, n.z - b.z) > COLD.radius);
-      const span = cold.length ? time(cold.at(-1)) - time(cold[0]) + 1 / 1.9 : 0;
-      out.push(span * SLACK + USE_TIME);
-    }
-    return out;
+  const time = n => arr.time.get(n.id), near = (n, w, r = COLD.radius) => !!w && Math.hypot(n.x - w.x, n.z - w.z) <= r;
+  // the slow time out in the cold from warm spot a (null: the entry, cold from the start) to b
+  const gap = (a, b) => {
+    const seg = path.filter(n => time(n) >= (a ? time(a) : 0) && time(n) <= time(b)), cold = seg.filter(n => !near(n, a) && !near(n, b));
+    const span = cold.length ? time(cold.at(-1)) - time(cold[0]) + 1 / 1.9 : 0;
+    return span * SLACK + (a ? USE_TIME : 0);
   };
-  let picked = null;
-  for (let n = Math.max(COLD.along[0], Math.min(COLD.along[1], Math.round(path.length / COLD.every) + 1)); n <= COLD.along[1] && !picked; n++) {
-    const list = [path[0]];
-    for (let k = 1; k < n; k++) {
-      const want = total * k / n, node = path.find(p => time(p) >= want) ?? fire;
-      if (!list.includes(node) && node !== fire) list.push(node);
+  const picked = [];
+  let last = null;
+  for (;;) {
+    if (gap(last, fire) <= COLD.gap) break;
+    const from = last ? path.indexOf(last) : 0;
+    // the farthest spot on that keeps within reach of the last, well apart from every brazier
+    let best = null;
+    for (let k = from + 1; k < path.length - 1; k++) {
+      const n = path[k];
+      if (gap(last, n) > COLD.gap * COLD.reach) break;
+      if (!n.landing && !ctx.trialKeep?.has(n.c) && [path[0], ...picked].every(p => Math.hypot(p.x - n.x, p.z - n.z) >= COLD.apart)
+        && Math.hypot(fire.x - n.x, fire.z - n.z) >= COLD.apart * 0.75) best = n;
     }
-    if (gaps([...list, fire]).every(g => g <= COLD.gap)) picked = list;
+    if (!best || picked.length >= COLD.along[1]) return null;
+    picked.push(best); last = best;
   }
-  if (!picked || picked.length < COLD.along[0]) return null;
-  // one or two more off the way: dry ground 3-6 cells from it, reached from it
+  if (picked.length < COLD.along[0]) return null;
+  // one or two more off the way: dry ground 3-6 cells from it, reached from it, apart from the rest
   const on = new Set(path.map(n => n.id)), reach = reachFrom(ctx, [t.entry], true);
-  const off = ctx.floors.filter(f => !f.fluid && f.layer === 0 && reach.has(f.id) && !on.has(f.id) && !ctx.trialKeep?.has(f.c)
-    && Math.min(...path.map(n => Math.hypot(n.x - f.x, n.z - f.z))) >= 3 && Math.min(...path.map(n => Math.hypot(n.x - f.x, n.z - f.z))) <= 6);
+  const dist = f => Math.min(...path.map(n => Math.hypot(n.x - f.x, n.z - f.z)));
+  const off = ctx.floors.filter(f => !f.fluid && f.layer === 0 && reach.has(f.id) && !on.has(f.id) && !ctx.trialKeep?.has(f.c) && dist(f) >= 3 && dist(f) <= 6);
   const extra = [];
   for (let k = 0; k < 1 + (ctx.R() < 0.5 ? 1 : 0) && off.length; k++) {
     const f = off.splice(Math.floor(ctx.R() * off.length), 1)[0];
-    if (!extra.some(e => Math.hypot(e.x - f.x, e.z - f.z) < 4)) extra.push(f);
+    if ([...picked, ...extra].every(e => Math.hypot(e.x - f.x, e.z - f.z) >= COLD.apart * 0.75)) extra.push(f);
   }
   const parts = [...picked, ...extra].map((n, i) => ({ id: `warm${i}`, type: 'warm', ...at(n), i, off: i >= picked.length }));
   parts.push({ id: 'fire', type: 'fire', ...at(fire) });
   // nobody waits in a warm circle
   for (const f of ctx.floors) if (parts.some(p => Math.hypot(f.x + 0.5 - p.x, f.z + 0.5 - p.z) <= COLD.radius + 0.5)) f.noSpawn = true;
-  const g = gaps([...picked, fire]);
+  const g = [null, ...picked].map((a, k) => gap(a, k < picked.length ? picked[k] : fire));
   return { parts, fire: at(fire), check: { gaps: g.map(v => Math.round(v * 100) / 100), worst: Math.round(Math.max(...g) * 100) / 100,
-    path: checkPath(path, arr, () => null) } };
+    cells: path.length, path: checkPath(path, arr, () => null) } };
 }
 
 // --- storm --------------------------------------------------------------------------------------------

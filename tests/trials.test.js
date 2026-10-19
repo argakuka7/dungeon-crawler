@@ -798,12 +798,15 @@ test('the cold meter: up to 100 in COLD.freeze s away from warmth, down four tim
   assert.equal(coldStep(99.9, 1, false), 100);
 });
 
-test('every cold room: the braziers along the way, the first by the entry, no gap too long, the great fire by the exit', () => {
+test('every cold room: a long way round the ridges, the braziers along it far apart, no gap too long, the great fire by the exit', () => {
   let n = 0;
-  for (const { seed, d, m } of events('cold', [0, 1, 2])) {
-    const tr = m.trial, along = tr.parts.filter(p => p.type === 'warm' && !p.off), path = tr.check.path;
+  for (const { seed, d, m, t } of events('cold', [0, 1, 2])) {
+    const tr = m.trial, along = tr.parts.filter(p => p.type === 'warm' && !p.off), warm = tr.parts.filter(p => p.type === 'warm'), path = tr.check.path;
+    assert.equal(t.exit, t.fromDir);   // (in on one side, out on the opposite one)
+    assert.ok(path.length >= COLD.least, `${seed}/${d}: a way of ${path.length} cells`);
     assert.ok(along.length >= COLD.along[0] && along.length <= COLD.along[1], `${seed}/${d}: ${along.length} braziers`);
-    assert.ok(Math.hypot(along[0].x - path[0].x, along[0].z - path[0].z) < 0.01, `${seed}/${d}: the first not by the entry`);
+    assert.ok(Math.hypot(along[0].x - path[0].x, along[0].z - path[0].z) >= COLD.apart, `${seed}/${d}: the first by the entry`);
+    for (const a of along) for (const b of warm) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= COLD.apart * 0.75 - 0.01, `${seed}/${d}: braziers too close`);
     assert.ok(tr.check.gaps.every(g => g <= COLD.gap), `${seed}/${d}: gaps ${tr.check.gaps}`);
     assert.ok(tr.parts.some(p => p.type === 'fire'));
     n++;
