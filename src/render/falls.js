@@ -2,10 +2,65 @@
 // the cube's geometry (render/parts.js), drawn by the cube and its proxy alike.
 import * as THREE from 'three';
 import { N, LH, LAVA, DIRS } from '../core/constants.js';
-import { FLUID_LOOK } from './materials.js';
+import { FLUID_LOOK, SWELL, WIND } from './materials.js';
 import { cutMaterial } from './section.js';
+import { FALL_WIDTH } from './parts.js';
 
-// a splash ring where a fall lands (render/parts.js fallSheets has the sheet)
+// What rides on the water where a cartoon fall lands (FLUID_LOOK fall.cells): a crown of foam
+// round the foot of the sheet, its top edge in peaks that rise and fall, and on the pool a ragged
+// patch of foam with arcs of ripples spreading from it downstream, breaking up and fading as they
+// go. Both in the cube's coordinates, rising and falling with the pool's swell (materials.js).
+// (rides edits a cut material: the cut's inject replaces what was there before it)
+const TAU = Math.PI * 2;
+function rides(mat, name, swell, fragment) {
+  const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+  mat.onBeforeCompile = (sh, r) => {
+    compile?.call(mat, sh, r);
+    sh.uniforms.uCellTime = WIND;
+    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + SWELL + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vRideUv = uv; vRideP = position.xz;
+      transformed.y += swell(position.xz, uCellTime) * ${swell.toFixed(3)};`);
+    sh.fragmentShader = 'uniform float uCellTime;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      { float tm = uCellTime; ${fragment} }`);
+  };
+  mat.customProgramCacheKey = () => key + '-' + name;   // (programs are shared by key)
+  return mat;
+}
+function foamCrown(cx, y, cz, dx, foam, swell) {
+  // an open ring, wide across the sheet, shallow out from the cliff; u round it, v up
+  const g = new THREE.CylinderGeometry(1, 1, 0.42, 28, 1, true).translate(0, 0.21, 0);
+  g.scale(dx ? 0.36 : FALL_WIDTH * 0.62, 1, dx ? FALL_WIDTH * 0.62 : 0.36).translate(cx, y - 0.06, cz);
+  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false, side: THREE.DoubleSide })), 'crown', swell, `
+    float u = vRideUv.x * ${TAU.toFixed(4)}, v = vRideUv.y;
+    float peak = 0.3 + 0.7 * (0.5 + 0.5 * sin(u * 9.0 + tm * 4.0)) * (0.6 + 0.4 * sin(u * 5.0 - tm * 2.7 + 1.0));
+    float av = fwidth(v) + 1e-4;
+    diffuseColor.a = 1.0 - smoothstep(peak - av, peak + av, v);
+    diffuseColor.rgb *= mix(vec3(0.78, 0.9, 1.0), vec3(1.0), smoothstep(0.1, 0.35, v));
+    if (diffuseColor.a < 0.01) discard;`);
+  return new THREE.Mesh(g, mat);
+}
+function ripples(cx, y, cz, dx, dz, foam, swell) {
+  const R = 1.45, g = new THREE.PlaneGeometry(R * 2, R * 2, 8, 8).rotateX(-Math.PI / 2).translate(cx, y, cz);
+  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false })), 'ripples', swell, `
+    vec2 d = vRideP - vec2(${cx.toFixed(3)}, ${cz.toFixed(3)});
+    float r = length(d), ang = atan(d.y, d.x), down = dot(d / max(r, 1e-3), vec2(${dx.toFixed(1)}, ${dz.toFixed(1)}));
+    float ar = fwidth(r) + 1e-4;
+    // the foam where it lands
+    float a = 1.0 - smoothstep(0.42 - ar, 0.42 + ar, r + 0.06 * sin(ang * 6.0 + tm * 3.0) + 0.03 * sin(ang * 13.0 - tm * 5.0));
+    // the arcs, downstream (and a little round the sides), broken up, thinning and fading as they spread
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i), ph = fract(tm * 0.55 + fi / 3.0), rad = 0.45 + ph * 0.9, wid = 0.045 * (1.0 - ph) + 0.012;
+      float band = 1.0 - smoothstep(wid - ar, wid + ar, abs(r + 0.04 * sin(ang * 7.0 + fi * 2.0 + tm) - rad));
+      float broken = smoothstep(0.15, 0.3, 0.5 + 0.5 * sin(ang * 3.0 + fi * 1.7 + ph * 2.0));
+      a = max(a, band * broken * smoothstep(-0.35, 0.15, down) * (1.0 - ph * ph));
+    }
+    diffuseColor.a = a;
+    if (a < 0.01) discard;`);
+  return new THREE.Mesh(g, mat);
+}
+
+// a splash ring where a fall lands (render/parts.js fallSheets has the sheet), or the cartoon
+// foam and ripples
 export function buildFalls(m, group) {
   const splashes = [], lights = [];
   for (const f of m.falls) {
@@ -13,7 +68,15 @@ export function buildFalls(m, group) {
     const yTop = f.top * LH - 0.04, yBot = f.bot * LH - 0.08, h = yTop - yBot;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
     if (f.out) continue;   // pours out through the bottom of the cube: no splash here
-    const foam = FLUID_LOOK[f.type].foam;
+    const foam = FLUID_LOOK[f.type].foam, cells = FLUID_LOOK[f.type].cells;
+    if (FLUID_LOOK[f.type].fall.cells && cells) {
+      // the pool's surface (render/floors.js fluidVolume) and the foot of the sheet (parts.js)
+      const surf = f.bot * LH - 0.06, cx = ex + dx * 0.32, cz = ez + dz * 0.32;
+      const crown = foamCrown(cx, surf, cz, dx, foam, cells.swell), rip = ripples(cx, surf + 0.015, cz, dx, dz, foam, cells.swell);
+      crown.renderOrder = 10 * f.layer + 5; rip.renderOrder = 10 * f.layer + 4;
+      group.add(crown, rip);
+      continue;
+    }
     const splash = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 0.05, 14),
       cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, opacity: 0.55, depthWrite: false })));
     splash.position.set(ex + dx * 0.3, yBot + 0.06, ez + dz * 0.3);

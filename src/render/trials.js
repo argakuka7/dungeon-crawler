@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { N, BASE, LH } from '../core/constants.js';
 import { EDGE_CORNERS, edgePts } from '../core/constants.js';
-import { fluidMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
+import { fluidMaterial, cellMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
@@ -355,10 +355,11 @@ export function buildTrialView(m, group) {
       #include <clipping_planes_fragment>`), 'cut-trial-fluid');
     const compile = surface.onBeforeCompile;
     surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; };
-    const water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), surface);
+    // (its geometry in the cube's coordinates, a vertex a cell: the cells' pattern and swell go by
+    // them, materials.js cellMaterial)
+    const water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04, N, 1, N).translate(N / 2, 0, N / 2), cellMaterial(surface, fluid));
     water.material.side = THREE.DoubleSide;
     water.userData.fluid = fluid; water.visible = false; water.renderOrder = 5;
-    water.position.set(N / 2, 0, N / 2);
     group.add(water);
     view.water = water;
     if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }

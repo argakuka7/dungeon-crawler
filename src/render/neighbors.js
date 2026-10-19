@@ -12,7 +12,7 @@ import { VIEW_DISTANCE, distanceFade } from '../core/viewdistance.js';
 import { scene, camera } from './scene.js';
 import { PARTS } from './parts.js';
 import { partGeometry } from './partmeshes.js';
-import { partMaterial, fluidGlow, PROXY } from './materials.js';
+import { partMaterial, fluidLook, fluidGlow, PROXY } from './materials.js';
 import { makeFadable, setFade, dither } from './fade.js';
 import { glassState, glassBatch, setGlassFaces } from './glass.js';
 import { inject } from './cutshader.js';
@@ -167,6 +167,7 @@ function batchFor(part) {
     if (part.cap) material.side = THREE.DoubleSide;
     batches.set(part.name, b = new Batch(material, PROXY_ORDER[part.kind], 'proxy-' + part.kind + (part.cap ? '-' + part.cap : ''),
       part.cap ? proxyCaps(part.cap) : undefined, !!part.cap));
+    fluidLook(b.mesh.material, part);
     b.part = part;
   }
   return b;

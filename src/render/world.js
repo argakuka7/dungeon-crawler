@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { scene } from './scene.js';
 import { FLUID_LOOK, fluidGlow, scrollFalls, WIND } from './materials.js';
 import { partMeshes } from './partmeshes.js';
+import { bakeCells } from './watercells.js';
 import { buildCubeParts } from './cubegeo.js';
 import { buildFalls, lavaLights } from './falls.js';
 import { addGhosts } from './ghosts.js';
@@ -109,6 +110,7 @@ export function animateWorld(world, dt, time) {
   }
   scrollFalls(dt);
   WIND.value = time;
+  bakeCells(time);
   world.splashes.forEach((s, i) => { const k = 1 + Math.sin(time * 9 + i) * 0.08; s.scale.set(k, 1, k); });
   for (const l of world.lights) l.intensity = 5 + Math.sin(time * 4 + l.position.x) * 1.5;
   for (const p of world.portalFx) p.tick(time);

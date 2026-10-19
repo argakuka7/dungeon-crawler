@@ -90,28 +90,48 @@ function pack(list, scale, { kind, sway }) {
   };
 }
 
-// The sheets of the falls of one fluid: a thin box pouring over the slab edge (splash rings and
-// lights stay with the active cube, render/falls.js). v runs up the sheet, 0.7 per world unit.
+// The sheets of the falls of one fluid: a curtain, not a block. It leaves the pool a little
+// behind the edge, curls over the lip and drops, drifting out and bulging a little, wider towards
+// the bottom; one ribbon, drawn from both sides (its outline is the shader's, render/materials.js).
+// u runs across (0..1), v down the sheet from where it leaves the pool, 0.7 per world unit
+// (splash rings and lights stay with the active cube, render/falls.js).
+export const FALL_WIDTH = 0.9;   // world units across at the lip
 function fallSheets(m, type) {
-  const pos = [], nor = [], uv = [];
-  const quad = (a, b, c, d, n, ua, ub) => {
-    for (const [p, t] of [[a, ua[0]], [b, ua[1]], [c, ub[1]], [a, ua[0]], [c, ub[1]], [d, ub[0]]]) { pos.push(...p); nor.push(...n); uv.push(...t); }
-  };
+  const pos = [], nor = [], uv = [], ACROSS = 6, R = 0.22, LIP = 0.25;
   // falls of lower layers first: drawn back to front from above
   for (const f of (m.falls || []).filter(f => f.type === type).sort((a, b) => a.layer - b.layer)) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
     const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.08, h = yTop - y0;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
-    const cx = ex + dx * 0.12, cz = ez + dz * 0.12, hx = (dx ? 0.22 : 0.84) / 2, hz = (dx ? 0.84 : 0.22) / 2;
-    const x0 = cx - hx, x1 = cx + hx, z0 = cz - hz, z1 = cz + hz, y1 = yTop, v = h * 0.7;
-    // sides: u across, v up
-    quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0], [[0, 0], [1, 0]], [[0, v], [1, v]]);
-    quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0], [[0, 0], [1, 0]], [[0, v], [1, v]]);
-    quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], [[0, 0], [1, 0]], [[0, v], [1, v]]);
-    quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1], [[0, 0], [1, 0]], [[0, v], [1, v]]);
-    // top and bottom
-    quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], [0, 1, 0], [[0, 0], [1, 0]], [[0, v], [1, v]]);
-    quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [0, -1, 0], [[0, 0], [1, 0]], [[0, v], [1, v]]);
+    // the profile: [out from the edge, y, distance along the sheet]: flat over the pool, the
+    // curl over the lip, the drop
+    const prof = [[-0.05 - LIP, yTop], [-0.05, yTop]];
+    for (let i = 1; i <= 5; i++) { const t = i / 5 * Math.PI / 2; prof.push([-0.05 + R * Math.sin(t), yTop - R + R * Math.cos(t)]); }
+    const top = yTop - R, drop = Math.max(0.01, top - y0), rows = Math.max(3, Math.ceil(drop / 0.4));
+    for (let i = 1; i <= rows; i++) { const k = i / rows; prof.push([-0.05 + R + 0.1 * Math.sqrt(k), top - drop * k]); }
+    prof.forEach((p, i) => p.push(i ? prof[i - 1][2] + Math.hypot(p[0] - prof[i - 1][0], p[1] - prof[i - 1][1]) : 0));
+    // across (a, -1..1): flared lower down, bulging out a little where it drops
+    const point = (j, i) => {
+      const [o, y, sAlong] = prof[i], a = j / ACROSS * 2 - 1, k = Math.max(0, (yTop - R - y) / Math.max(h, 0.01));
+      const half = FALL_WIDTH / 2 * (1 + 0.12 * k), out = o + 0.05 * (1 - a * a) * Math.min(1, k * 4);
+      return [ex + dx * out + -dz * a * half, y, ez + dz * out + dx * a * half, j / ACROSS, sAlong * 0.7];
+    };
+    const grid = prof.map((_, i) => Array.from({ length: ACROSS + 1 }, (_, j) => point(j, i)));
+    // normals: across x down the sheet, turned outwards (or up on the lip)
+    const normal = (i, j) => {
+      const A = grid[i][Math.min(ACROSS, j + 1)], B = grid[i][Math.max(0, j - 1)];
+      const C = grid[Math.min(grid.length - 1, i + 1)][j], D = grid[Math.max(0, i - 1)][j];
+      const ax = A[0] - B[0], ay = A[1] - B[1], az = A[2] - B[2], tx = C[0] - D[0], ty = C[1] - D[1], tz = C[2] - D[2];
+      let nx = ay * tz - az * ty, ny = az * tx - ax * tz, nz = ax * ty - ay * tx;
+      if (nx * dx + nz * dz + ny * 0.5 < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      const l = Math.hypot(nx, ny, nz) || 1;
+      return [nx / l, ny / l, nz / l];
+    };
+    const vert = (i, j) => { const g = grid[i][j]; pos.push(g[0], g[1], g[2]); nor.push(...normal(i, j)); uv.push(g[3], g[4]); };
+    for (let i = 0; i + 1 < grid.length; i++) for (let j = 0; j < ACROSS; j++) {
+      vert(i, j); vert(i + 1, j); vert(i + 1, j + 1);
+      vert(i, j); vert(i + 1, j + 1); vert(i, j + 1);
+    }
   }
   return { pos, nor, uv };
 }
