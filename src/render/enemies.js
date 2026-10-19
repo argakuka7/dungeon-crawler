@@ -488,7 +488,9 @@ const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
 function glowFx(v, e, dt, life) {
   const fx = v.fx, t = clock + v.seed;
   if (!fx) return;
-  if (fx.flicker && life > 0) v.flames.forEach((b, i) => {   // on top of the clip's own flicker
+  if (fx.flicker && life > 0) v.flames.forEach((b, i) => {   // on top of the clip's own flicker (undone by unflicker)
+    (b.userData.rest ??= { s: new THREE.Vector3(), q: new THREE.Quaternion() }).s.copy(b.scale); b.userData.rest.q.copy(b.quaternion);
+    v.flickered = true;
     b.scale.multiplyScalar(1 + 0.1 * Math.sin(t * 13 + i * 2.1) * Math.sin(t * 5.3 + i));
     b.quaternion.multiply(wobble.setFromAxisAngle(axis, 0.12 * Math.sin(t * 9 + i * 1.7)));
   });
@@ -508,6 +510,14 @@ function glowFx(v, e, dt, life) {
       emit(glow, tmp.x + rand(-s, s), tmp.y + rand(0, s), tmp.z + rand(-s, s), { v: [rand(-0.2, 0.2), rand(0.6, 1.3), rand(-0.2, 0.2)],
         spread: 0.2, life: rand(0.5, 0.9), size: rand(0.04, 0.07), color: v.sparks[i % v.sparks.length], gravity: -0.3, drag: 0.8 });
     }
+}
+// Put the flame bones back to the clip's pose before the mixer runs: the mixer only writes a
+// bone when its pose changed (not while paused or idle), so the flicker would pile up on itself
+// frame after frame and the flames grow without end.
+function unflicker(v) {
+  if (!v.flickered) return;
+  v.flickered = false;
+  for (const b of v.flames) if (b.userData.rest) { b.scale.copy(b.userData.rest.s); b.quaternion.copy(b.userData.rest.q); }
 }
 function dying(v, e, dt, off) {
   if (e.proxy) {   // up in a cloud, nothing left
@@ -541,6 +551,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     const prefab = prefabs[e.profile.species];
     if (!prefab?.ready) { prefab?.load(); continue; }   // not loaded before (a friend's, a dev spawn): shown once it is
     const v = e.view || (e.view = makeView(e, prefab)), A = v.actions;
+    unflicker(v);
     // A ram commits to its direction before contact; visuals must match the hit cone.
     v.yaw = e.mode === 'attack' ? e.yaw : angleTo(v.yaw, e.yaw, Math.min(1, dt * 14));
     v.group.position.set(e.x + off.x, e.y + off.y, e.z + off.z);
