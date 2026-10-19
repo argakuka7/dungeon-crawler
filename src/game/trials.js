@@ -443,11 +443,10 @@ const RULES = {
     return beam.lit;
   },
   braziers: (pz, s) => allLit(bitsOf(pz, s, 'brazier')),
-  // every plate held at once: by a crate, or by a body standing on it
-  crates(pz, s, bodies) {
-    const F = pz.field, D = pz.deck, crates = bitsOf(pz, s, 'crate');
-    const cells = bodies.filter(b => Math.abs(b.y - D.level * LH) < 0.6).map(b => (Math.floor(b.z) - D.z0) * F.w + Math.floor(b.x) - D.x0);
-    const held = new Set(F.plates.filter(p => crates.includes(p) || cells.includes(p)));
+  // every plate held at once by a crate (standing on one does not count)
+  crates(pz, s) {
+    const F = pz.field, crates = bitsOf(pz, s, 'crate');
+    const held = new Set(F.plates.filter(p => crates.includes(p)));
     shown.set(pz.index, { held });
     return held.size === F.plates.length;
   },

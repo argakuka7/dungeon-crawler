@@ -162,7 +162,7 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 |---|---|
 | lever | `F` toggles it (1 s) |
 | button | `F` presses it once |
-| plate | pressed while a body or a crate stands on it |
+| plate | pressed while a crate stands on it |
 | gate | portcullis across a 1–3 cell opening, a box collider while shut |
 | rotor | `F` turns it a quarter (mirrors) |
 | brazier | `F` lights it; a lit brazier warms (`cold`) |
@@ -173,8 +173,8 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 - The action key (`game/action.js`) gets a new kind, `part`, beside `chest`, `talk` and
   `collect`.
 - As built: `core/trials.js` holds the parts' rules (`useBit`, `plateHeld`; a puzzle's bits in
-  `state.trial.bits`, its start in `map.trial.start`), `game/trials.js` runs them (plates held by
-  any player standing on them, a kind's rule in `RULES` solving it), `render/trials.js` draws them
+  `state.trial.bits`, its start in `map.trial.start`), `game/trials.js` runs them (a kind's rule in
+  `RULES` solving it: the crates' plates held by crates only), `render/trials.js` draws them
   (their models: "Assets" below). A shut gate is a box in the way
   (`physics/collide.js setPartBlockers`).
 - The state is a few bits and small integers per part (`map.trial.state`), easy to roll
@@ -495,19 +495,23 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 
 ### `crates`: Crates on plates
 
-- **Field:** 6×6 to 8×8 with rubble walls inside, 2–3 plates, as many heavy crates.
-- **Rules:** push only (part rules). A plate counts while a crate or a body is on it; all
-  plates pressed at once opens the gate for good. The reset lever at the entrance puts the
-  crates back.
-- **Generator:** start with the crates on the plates and pull them backwards at random (20–60
-  pulls). Then a forward Sokoban solver (BFS over crates and the player's region) gives the
-  minimal pushes, which must be within the depth band. No crate may start on a plate.
+- **Field:** 6×6 to 7×7 with rubble walls inside, 3 plates, as many heavy crates.
+- **Rules:** push only (part rules). A plate counts while a crate is on it (standing on one does
+  not); all plates covered at once opens the gate for good. The reset lever at the entrance puts
+  the crates back.
+- **Generator:** the pull search: from the crates on the plates, every state the crates can be
+  pulled into (a pull is a push backwards), breadth first, so each state's depth is its fewest
+  pushes onto the plates. The start is one of the farthest states within the depth band, with
+  the entry in the player's region and no crate on a plate or on the entry, whose way switches
+  between crates at least as often as there are crates (no one crate after the other).
 - **Themes:** mines, ruins, forge, hive (wax blocks), any.
-- **As built** (`grid.js`, `solve.js makeCrates`, `solveSokoban`; `game/trials.js stepCrates`): a
-  6x6 field with two crates (7x7 with three from depth 10; 4x4 with two on a sunken platform) in a
-  rim, the rubble walls up to the rim's height, the way in a gap with the reset lever in front of it.
-  Pushes needed: 4-10 (8-16 from depth 10). A crate is a box in the way; walking square into one for
-  0.3 s pushes it. Playing together the crates' cells go to the others with the puzzle's bits.
+- **As built** (`grid.js`, `solve.js makeCrates`, `pullSearch`, `solveSokoban`; `game/trials.js
+  stepCrates`): a 6x6 field with three crates (7x7 from depth 10; 4x4 with two on a sunken
+  platform) in a rim, 10-18% of it rubble walls up to the rim's height, the plates not on the entry
+  nor beside it, the way in a gap with the reset lever in front of it. Pushes needed: 10-18 (16-26
+  from depth 10, 5-10 on a platform), as many as the field gives within that. A crate is a box in
+  the way; walking square into one for 0.3 s pushes it. Playing together the crates' cells go to
+  the others with the puzzle's bits.
 
 ### `timedgate`: Timed gate
 

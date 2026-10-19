@@ -695,7 +695,7 @@ test('Sokoban: a crate pushed (never pulled) onto its plate in the fewest pushes
   // a wall in the way: round it
   const W = { w: 4, h: 3, walls: [6], plates: [7], entry: { x: 0, z: 1, side: 1 } };
   assert.equal(solveSokoban(W, [5], 4).pushes, Infinity);
-  assert.ok(platesHeld(F, [7]) && !platesHeld(F, [6]) && platesHeld(F, [6], [7]));
+  assert.ok(platesHeld(F, [7]) && !platesHeld(F, [6]));
 });
 
 test('every crates room generates: solvable in its band from the way in, no crate on a plate at the start', () => {
@@ -706,8 +706,9 @@ test('every crates room generates: solvable in its band from the way in, no crat
     const entry = F.entry.z * F.w + F.entry.x;
     assert.ok(!crates.some(c => F.plates.includes(c)), `${seed}/${d}: a crate on a plate`);
     assert.ok(pz.parts.some(p => p.type === 'reset'), `${seed}/${d}: no reset lever`);
-    const s = solveSokoban(F, crates, entry);
-    assert.ok(s.pushes === pz.check.pushes && s.pushes >= (d >= 10 ? 8 : 4), `${seed}/${d}: ${s.pushes} pushes`);
+    const s = solveSokoban(F, crates, entry, F.plates, 1e6);
+    assert.ok(s.pushes === pz.check.pushes && s.pushes >= (d >= 10 ? 16 : 10), `${seed}/${d}: ${s.pushes} pushes`);
+    assert.ok(pz.check.switches >= crates.length, `${seed}/${d}: ${pz.check.switches} switches`);
     assert.equal(crates.length, F.plates.length);
   }
   assert.ok(n > 30, `${n}`);

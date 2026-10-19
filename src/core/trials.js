@@ -395,5 +395,5 @@ export function pushTarget(F, crates, c, d) {
   const n = z * F.w + x;
   return F.walls.includes(n) || crates.includes(n) ? null : n;
 }
-// is every plate held? by a crate, or by a body standing on it (cells: the bodies' field cells)
-export const platesHeld = (F, crates, cells = []) => F.plates.every(p => crates.includes(p) || cells.includes(p));
+// is every plate held? by a crate (a body standing on one does not count: the puzzle is the crates)
+export const platesHeld = (F, crates) => F.plates.every(p => crates.includes(p));

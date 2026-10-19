@@ -258,35 +258,106 @@ export function solveSokoban(F, crates, p, goal = F.plates, max = 40000) {
   return { pushes: Infinity, way: null };
 }
 
-// Crates on plates on w x h: rubble walls inside, n plates, as many crates; made backwards (the
-// crates on the plates, pulled off at random 20-60 times), kept when the fewest pushes from the
-// entry are in `band` and no crate starts on a plate
-export function makeCrates(R, w, h, band, n, entrySide, tries = 300) {
+// Every state the crates can be pulled into from the crates on the plates: the pull search (a
+// pull is a push backwards, so a state's depth is its fewest pushes onto the plates). A state is
+// the crates' cells (sorted) and the player's region (its least cell); `link` leads each one back a
+// push towards the plates: { from (the crate's cell), d (the push), up (the state it gives) }.
+//   -> { list: [{ cs, p, depth, link }], max } (cut off at `max` states)
+export function pullSearch(F, max = 200000) {
+  const { w, h } = F, cells = w * h, wall = new Uint8Array(cells), mark = new Uint8Array(cells);
+  for (const c of F.walls) wall[c] = 1;
+  let stamp = 0;
+  const seen = new Uint16Array(cells);
+  // the player's region from p among crates `cs`: its least cell (the cells marked with `stamp`)
+  const fill = (cs, p) => {
+    if (++stamp === 65536) { seen.fill(0); stamp = 1; }
+    for (const c of cs) mark[c] = 1;
+    let least = p, stack = [p];
+    seen[p] = stamp;
+    while (stack.length) {
+      const c = stack.pop(), x = c % w, z = (c / w) | 0;
+      if (c < least) least = c;
+      for (const [dx, dz] of SD) {
+        const nx = x + dx, nz = z + dz, n = nz * w + nx;
+        if (nx < 0 || nz < 0 || nx >= w || nz >= h || seen[n] === stamp || wall[n] || mark[n]) continue;
+        seen[n] = stamp; stack.push(n);
+      }
+    }
+    for (const c of cs) mark[c] = 0;
+    return least;
+  };
+  const keyOf = (cs, least) => cs.reduce((k, c) => k * 128 + c, 0) * 128 + least;
+  const list = [], index = new Map();
+  const add = (cs, p, depth, link) => {
+    const least = fill(cs, p), k = keyOf(cs, least);
+    if (index.has(k)) return;
+    index.set(k, list.length); list.push({ cs, p, depth, link });
+  };
+  // the plates covered, the player in any region round them
+  const goal = [...F.plates].sort((a, b) => a - b);
+  for (let c = 0; c < cells; c++) if (!wall[c] && !goal.includes(c)) add(goal, c, 0, null);
+  const reg = new Uint8Array(cells);
+  for (let q = 0; q < list.length && list.length < max; q++) {
+    const st = list[q];
+    fill(st.cs, st.p);
+    for (let c = 0; c < cells; c++) reg[c] = seen[c] === stamp ? 1 : 0;
+    for (let i = 0; i < st.cs.length; i++) for (let d = 0; d < 4; d++) {
+      // the player beside the crate on side d steps on away from it, the crate following
+      const c = st.cs[i], x = c % w + SD[d][0], z = ((c / w) | 0) + SD[d][1], x2 = x + SD[d][0], z2 = z + SD[d][1];
+      if (x2 < 0 || z2 < 0 || x2 >= w || z2 >= h) continue;
+      const s = z * w + x, b = z2 * w + x2;
+      if (!reg[s] || wall[b] || st.cs.includes(b)) continue;
+      const cs = st.cs.slice(); cs[i] = s; cs.sort((a, b2) => a - b2);
+      add(cs, b, st.depth + 1, { from: s, d: d ^ 1, up: q });
+    }
+  }
+  // the region of state i, as a test for a cell
+  const regionOf = i => { fill(list[i].cs, list[i].p); const here = stamp; return c => seen[c] === here; };
+  return { list, regionOf };
+}
+
+// Crates on plates on w x h: rubble walls inside, n plates, as many crates. Made backwards: the pull
+// search from the crates on the plates; the start a state that is as far from them as the band
+// allows (the far end of it, by chance among the farthest), the player coming in at the entry, no
+// crate on a plate or the entry, and more than one crate moved in turns (switches: how often the
+// way goes over from one crate to another, at least n). Its way is the pull search's, read forwards.
+//   -> { field, start: [cells], solution: { pushes, way: [[crate index, dir], ...], switches } } or null
+export function makeCrates(R, w, h, band, n, entrySide, tries = 60) {
   const ri = (a, b) => a + Math.floor(R() * (b - a + 1)), cells = w * h;
   for (let k = 0; k < tries; k++) {
     const t = ri(1, (entrySide < 2 ? h : w) - 2), [ex, ez] = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][entrySide], entry = ez * w + ex;
-    const walls = [];
-    for (let c = 0; c < cells; c++) if (c !== entry && R() < 0.12) walls.push(c);
+    const walls = [], share = 0.1 + R() * 0.08;
+    for (let c = 0; c < cells; c++) if (c !== entry && R() < share) walls.push(c);
     const F = { w, h, walls, plates: [], entry: { x: ex, z: ez, side: entrySide } };
     if (region(F, [], entry).size !== cells - walls.length) continue;   // (every floor cell joined up)
-    const free = [...region(F, [], entry)].filter(c => c !== entry);
+    // the plates: not on the entry nor beside it, not in a corner (a crate there is pushed in last)
+    const free = [...region(F, [], entry)].filter(c => Math.abs(c % w - ex) + Math.abs(Math.floor(c / w) - ez) > 1);
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
     F.plates = free.slice(0, n);
-    const crates = F.plates.slice();
-    let p = free[n];
-    // pull them off: stand beside a crate, step back from it, it follows
-    const want = ri(20, 60);
-    for (let done = 0, m = 0; m < want * 8 && done < want; m++) {
-      const reg = region(F, crates, p), i = ri(0, n - 1), c = crates[i], d = ri(0, 3);
-      const sx = c % w + SD[d][0], sz = Math.floor(c / w) + SD[d][1], s = sz * w + sx;
-      const bx = sx + SD[d][0], bz = sz + SD[d][1], b = bz * w + bx;
-      if (sx < 0 || sz < 0 || sx >= w || sz >= h || bx < 0 || bz < 0 || bx >= w || bz >= h) continue;
-      if (!reg.has(s) || walls.includes(b) || crates.includes(b)) continue;
-      crates[i] = s; p = b; done++;
+    const { list, regionOf } = pullSearch(F);
+    // the starts that fit, the farthest first
+    const fits = [];
+    for (let i = 0; i < list.length; i++) {
+      const st = list[i];
+      if (st.depth < band[0] || st.depth > band[1] || st.cs.some(c => F.plates.includes(c) || c === entry)) continue;
+      fits.push(i);
     }
-    if (crates.some(c => F.plates.includes(c) || c === entry)) continue;
-    const sol = solveSokoban(F, crates, entry);
-    if (sol.pushes >= band[0] && sol.pushes <= band[1]) return { field: F, start: crates, solution: sol };
+    fits.sort((a, b) => list[b].depth - list[a].depth || R() - 0.5);
+    for (const i of fits.slice(0, 400)) {
+      if (list[i].depth < list[fits[0]].depth - 2) break;
+      if (!regionOf(i)(entry)) continue;
+      // the way: each state's link, read forwards (which crate: by where it stands)
+      const start = list[i].cs.slice();
+      for (let a = start.length - 1; a > 0; a--) { const b = Math.floor(R() * (a + 1)); [start[a], start[b]] = [start[b], start[a]]; }
+      const at = start.slice(), way = [];
+      for (let q = i; list[q].link; q = list[q].link.up) {
+        const { from, d } = list[q].link, j = at.indexOf(from);
+        way.push([j, d]); at[j] = from + SD[d][0] + SD[d][1] * w;
+      }
+      const switches = way.filter((m, j) => j && m[0] !== way[j - 1][0]).length;
+      if (switches < n) continue;
+      return { field: F, start, solution: { pushes: way.length, way, switches } };
+    }
   }
   return null;
 }

@@ -23,11 +23,11 @@ import { makeMirror, makeBraziers, makeCrates } from './solve.js';
 // a field's size and how hard it is: in a room of its own by depth, on a platform small
 export function gridSize(kind, depth, small) {
   if (small) return { mirror: { size: 3, band: [2, 3], turns: 2 }, braziers: { size: 3, band: [3, 4] },
-    crates: { size: 4, band: [3, 8], crates: 2 } }[kind];
+    crates: { size: 4, band: [5, 10], crates: 2 } }[kind];
   const deep = depth >= 10;
   return { mirror: { size: deep ? 7 : 6, band: deep ? [4, 6] : [3, 4], turns: deep ? 5 : 3 },
     braziers: { size: 5, band: deep ? [4, 6] : [3, 4] },
-    crates: { size: deep ? 7 : 6, band: deep ? [8, 16] : [4, 10], crates: deep ? 3 : 2 }, runes: { size: 5 } }[kind];
+    crates: { size: deep ? 7 : 6, band: deep ? [16, 26] : [10, 18], crates: 3 }, runes: { size: 5 } }[kind];
 }
 // the kinds walled in by a rim, their one way in a gap in it (the crates' rubble keeps you to pushing)
 const WALLED = new Set(['crates']);
@@ -85,7 +85,7 @@ export function gridRecord(pz, id) {
     // the reset lever: in front of the gap, a little to the side
     const g = pz.approach, side = F.entry.side, along = side < 2 ? [0, 0.32] : [0.32, 0];
     parts.push({ id: `${id}:reset`, type: 'reset', x: g % N + 0.5 + along[0], y, z: Math.floor(g / N) + 0.5 + along[1], yaw: [Math.PI / 2, -Math.PI / 2, 0, Math.PI][side] });
-    return { parts, start, field: F, entryGap: pz.entryGap, check: { pushes: made.solution.pushes, solution: made.solution.way } };
+    return { parts, start, field: F, entryGap: pz.entryGap, check: { pushes: made.solution.pushes, switches: made.solution.switches, solution: made.solution.way } };
   }
   return null;
 }
