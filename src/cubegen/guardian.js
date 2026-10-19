@@ -14,6 +14,7 @@ import { groundHeights } from './ground.js';
 import { placePortals } from './portals.js';
 import { SHAPES } from './arenashapes.js';
 import { dressArena } from './arenaprops.js';
+import { BOSS_ARENAS } from '../core/bosses.js';
 
 const inner = (x, z) => x > 0 && z > 0 && x < N - 1 && z < N - 1;
 const FLAT = { rel: new Int8Array(N * N), zone: new Uint8Array(N * N).fill(1),
@@ -117,13 +118,15 @@ export function generateGuardian(spec) {
 
   const requested = spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills';
   const theme = themeOf(spec), tint = theme.side[1][1];
+  // a boss who makes it dark has braziers lit round its arena (core/bosses.js)
+  const braziers = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss]?.braziers ?? 0 : 0;
   let arena = null;
   for (const type of [...new Set([requested, 'hills', 'crater'])]) {
     const shape = SHAPES[type](frame), floors = buildFloors(ctx, base, shape, level);
     const start = floors[idx(ex, ez)], guard = floors[idx(...U)], gate = floors[idx(px, pz)];
     if (!terrainOK(floors, start, [guard, gate])) continue;
     for (const clutter of [1, .5, 0]) {
-      const dress = dressArena({ type, shape, floors, frame, R, biome: spec.biome, tint, clutter });
+      const dress = dressArena({ type, shape, floors, frame, R, biome: spec.biome, tint, clutter, braziers });
       if (!roomFor(floors, dress.blocked, start, gate, need)) continue;
       arena = { type, shape, floors, dress };
       break;
@@ -132,7 +135,7 @@ export function generateGuardian(spec) {
   }
   if (!arena) {   // the plain flat arena of old: always fits
     const floors = buildFloors(ctx, base, FLAT, level);
-    arena = { type: 'plain', shape: FLAT, floors, dress: dressArena({ type: 'hills', shape: FLAT, floors, frame, R, biome: spec.biome, tint, clutter: 0 }) };
+    arena = { type: 'plain', shape: FLAT, floors, dress: dressArena({ type: 'hills', shape: FLAT, floors, frame, R, biome: spec.biome, tint, clutter: 0, braziers }) };
   }
   const { floors, dress } = arena;
   for (const f of floors) ctx.cols[f.c].push(f);

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { assets } from './paths.js';
 import { flatMap } from './fixtures.js';
 import { toOklch, fromOklch, parseColor, recolorFn, recolorTable, toHex, toLinear } from '../src/core/oklch.js';
-import { ENEMY_KINDS, ENEMY_PROFILES, BOSS_PROFILES, SNAKE, SAND_VIPER, BLOOD_VIPER, SHADOW_MAMBA, OCTONAUT, SHRAPS, SPICY, enemyKind, enemyRoll, makeEnemy, GROWTH } from '../src/core/enemies.js';
+import { ENEMY_KINDS, ENEMY_PROFILES, BOSS_PROFILES, MINION_PROFILES, SNAKE, SAND_VIPER, BLOOD_VIPER, SHADOW_MAMBA, OCTONAUT, SHRAPS, SPICY, enemyKind, enemyRoll, makeEnemy, GROWTH } from '../src/core/enemies.js';
 import { DEPTH_SPAWNS } from '../src/core/spawns.js';
 import { enemySpots, pickKind } from '../src/game/enemyspawn.js';
 
@@ -58,8 +58,8 @@ test('a recolour table touches only the listed materials, emissive included', ()
 
 test('every kind recolours materials its species model has, and only those', () => {
   assert.equal(new Set(Object.values(ENEMY_KINDS).map(k => k.type)).size, Object.keys(ENEMY_KINDS).length);
-  const species = new Map([...ENEMY_PROFILES, ...BOSS_PROFILES].map(p => [p.type, p]));
-  for (const p of [...ENEMY_PROFILES, ...BOSS_PROFILES]) {
+  const species = new Map([...ENEMY_PROFILES, ...BOSS_PROFILES, ...MINION_PROFILES].map(p => [p.type, p]));
+  for (const p of [...ENEMY_PROFILES, ...BOSS_PROFILES, ...MINION_PROFILES]) {
     const m = materials(p.species);
     for (const [role, names] of Object.entries(p.parts)) for (const name of names) assert.ok(m[name], `${p.type} ${role}: ${name}`);
     for (const name of Object.keys(m)) if (/Teeth|Fangs|Pupils|Mouth/.test(name) && name !== 'StunderMouth')

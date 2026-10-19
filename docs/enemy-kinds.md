@@ -110,7 +110,9 @@ attack clip's hit frame. `?bg=%23202020` sets the backdrop colour.
 | Ember wolla | Wolla | `oklch(0.72 0.17 52)` orange | ×1.45 | ×1.4 | ×1.1 | 1.12 | ×1.42 | 18–19 |
 
 Gusto's Custo triangle (half size, light blue, 1.9× as fast, `minion`: in no roster, only he
-summons it) is a Triangle kind too; see [bosses.md](bosses.md).
+summons it) is a Triangle kind too, and Totnar's Twig spider (0.55×) and Bramble stunder
+(0.72×) are a Spider and a Stunder kind; his snapping skull is a species of its own that only he
+brings (`MINION_PROFILES`); see [bosses.md](bosses.md).
 
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red

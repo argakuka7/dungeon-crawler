@@ -3,7 +3,8 @@
 // Travel and level resets clear them. Playing together, the projectiles of the player who runs
 // this cube's enemies are shown to the others there too (`mirror`): they fly the same way
 // there, but only the runner decides whom they hit (game/party.js), and says where they end
-// (net/session.js).
+// (net/session.js). A projectile that `becomes` something (Totnar's skulls) tells its thrower where
+// it ended (`landed`, game/totnar.js), on the runner's game alone.
 import { player } from './state.js';
 import { party, alive } from './party.js';
 import { insideSolid } from '../physics/collide.js';
@@ -22,6 +23,7 @@ export function launchProjectile(e, a) {
   const p = e.target?.here ? e.target : player, pr = launch(e, a.projectile, { x: p.x, y: p.y + p.h * 0.55, z: p.z });
   pr.blow = { ...blowOf(e.profile, a), by: attacker(e) };
   pr.profile = e.profile;   // the thrower's kind colours it
+  if (a.projectile.becomes) pr.thrower = e;
   pr.n = ++serial;
   projectiles.push(pr);
   projectileFx(pr, 'launch');
@@ -52,6 +54,7 @@ export function updateProjectiles(dt) {
       hitBody(pr.victim, pr.blow, pr.x - pr.vx / l, pr.z - pr.vz / l, pr.vx / l, pr.vz / l);
     }
     if (!pr.mirror) relay.landed?.(pr, end);
+    pr.thrower?.landed?.(pr, end);
     projectileFx(pr, end);
     removeProjectileViews([pr]);
     return false;

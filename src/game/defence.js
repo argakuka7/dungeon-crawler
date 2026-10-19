@@ -24,8 +24,9 @@ export function coordinateDefence(map, run, list, player) {
   const defenders = list.filter(e => !e.guardian && !e.summoned && !e.raid && !e.siege && e.mode !== 'dead');
   const nearest = [...defenders].sort((a, b) => Math.hypot(a.x - player.x, a.z - player.z) - Math.hypot(b.x - player.x, b.z - player.z));
   const pursuers = new Set(nearest.slice(0, Math.max(1, Math.ceil(defenders.length / 3))));
-  // a boss, once hurt, fights on wherever the player goes (game/gusto.js)
-  guardian.defence = { post: guardian.home, engage: alive && (distance < 4.5 || !!guardian.boss && alarm) };
+  // a boss, once hurt or once it has struck, fights on wherever the player goes (game/gusto.js,
+  // game/totnar.js: his skulls push the player back out of the 4.5 cells)
+  guardian.defence = { post: guardian.home, engage: alive && (distance < 4.5 || !!guardian.boss && (alarm || guardian.attacks > 0)) };
   const claimed = [{ x: guardian.x, z: guardian.z, radius: guardian.profile.radius }];
   for (const e of defenders) {
     const cfg = e.profile, dist = Math.hypot(e.x - player.x, e.z - player.z);

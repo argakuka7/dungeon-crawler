@@ -362,6 +362,32 @@ const SOUNDS = {
     sweep(t, 0.16, 900 * p, 2400 * p, 1200 * p, 2, 0.4, out, 0.01);
     tone('sine', 180 * p, 110 * p, t + 0.08, 0.12, amp(t + 0.08, 0.004, 0.6, 0.12, out));
   },
+  skullthrow(t, out, p) {   // Totnar hurling a skull: a whoosh and its teeth chattering as it flies
+    sweep(t, 0.35, 500 * p, 1500 * p, 700 * p, 1.5, 0.5, out, 0.03);
+    for (let i = 0; i < 6; i++) { const at = t + 0.05 + i * 0.05; noise(at, 0.015, filter('bandpass', 2400 * p, 6, amp(at, 0.001, 0.3, 0.015, out))); }
+  },
+  bonk(t, out, p) {      // a thrown skull landing: a hollow bony knock and a clack
+    tone('sine', 420 * p, 180 * p, t, 0.1, amp(t, 0.001, 0.6, 0.1, out));
+    noise(t, 0.05, filter('bandpass', 1800 * p, 3, amp(t, 0.001, 0.5, 0.05, out)));
+    noise(t + 0.07, 0.02, filter('bandpass', 2600 * p, 6, amp(t + 0.07, 0.001, 0.4, 0.02, out)));
+  },
+  rustle(t, out, p) {    // twigs and leaves: a dry crackling rustle (Totnar rolling off, tearing himself open)
+    noise(t, 0.5, filter('bandpass', 2200 * p, 0.7, amp(t, 0.04, 0.35, 0.45, out)));
+    for (let i = 0; i < 10; i++) { const at = t + Math.random() * 0.45; noise(at, 0.01, filter('highpass', 3000 * p, 1, amp(at, 0.001, 0.25, 0.01, out))); }
+  },
+  gloom(t, out, p) {     // the light going out: a deep falling whoosh and a low drone
+    sweep(t, 1.1, 1400 * p, 600 * p, 120 * p, 1.2, 0.5, out, 0.15, 'lowpass');
+    tone('sawtooth', 70 * p, 45 * p, t, 1.2, filter('lowpass', 260 * p, 2, amp(t, 0.3, 0.25, 0.9, out)));
+  },
+  dawn(t, out, p) {      // the light coming back: a rising rush with a shimmer
+    sweep(t, 0.9, 200 * p, 900 * p, 2400 * p, 1.2, 0.35, out, 0.3);
+    for (const [i, hz] of [784, 1175, 1568].entries()) { const at = t + 0.35 + i * 0.08; tone('triangle', hz * p, hz * p, at, 0.4, amp(at, 0.01, 0.06, 0.4, out)); }
+  },
+  shed(t, out, p) {      // a skull bursting off Totnar: a bony crack and sticks flying
+    noise(t, 0.07, filter('highpass', 2000 * p, 0.7, amp(t, 0.001, 0.8, 0.07, out)));
+    tone('sine', 180 * p, 60 * p, t, 0.25, amp(t, 0.002, 0.7, 0.25, out));
+    for (let i = 0; i < 14; i++) { const at = t + 0.03 + Math.random() * 0.5; noise(at, 0.012, filter('bandpass', (1500 + Math.random() * 2000) * p, 4, amp(at, 0.001, 0.3, 0.012, out))); }
+  },
   poof(t, out, p) {      // a proxy (or a summoned triangle) going up in a cloud: a soft puff and a sparkle
     noise(t, 0.3, filter('lowpass', 1300 * p, 0.8, amp(t, 0.01, 0.7, 0.28, out)));
     tone('sine', 880 * p, 1760 * p, t + 0.02, 0.18, amp(t + 0.02, 0.005, 0.12, 0.18, out));

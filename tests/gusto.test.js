@@ -21,14 +21,14 @@ const firstDescent = seed => {
 };
 
 test('Gusto takes the place of the first descent guardian, and only that one', () => {
-  assert.deepEqual(BOSSES, { 0: 'gusto' });
-  assert.equal(bossAt(0), 'gusto'); assert.equal(bossAt(0, 'side'), null); assert.equal(bossAt(1), null);
+  assert.equal(BOSSES[0], 'gusto');
+  assert.equal(bossAt(0), 'gusto'); assert.equal(bossAt(0, 'side'), null); assert.notEqual(bossAt(1), 'gusto');
   for (const seed of [0, 1, 7, 42, 123]) {
     const w = new World(seed);
     for (let d = 0; d < 20; d++) for (const [key, g] of w.layout(d).guardians) {
       const boss = d === 0 && g.role === 'descent';
-      assert.equal(g.boss ?? null, boss ? 'gusto' : null, `${seed} ${d} ${key}`);
-      if (!boss) continue;
+      if (!boss) { assert.notEqual(g.boss, 'gusto', `${seed} ${d} ${key}`); continue; }
+      assert.equal(g.boss, 'gusto', `${seed} ${d} ${key}`);
       const map = w.cube(key).map;
       assert.equal(map.guardian.boss, 'gusto'); assert.equal(map.guardian.bossPlaceholder, false);
       assert.equal(guardianLockMessage(map), 'Defeat Gusto to unlock this descent');

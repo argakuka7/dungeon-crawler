@@ -76,10 +76,11 @@ const SALT = 0x3e1a5c7;
 // map.spawns (a row like the ones above) replaces the depth's row, for test arenas.
 export function population(map) {
   if (map.enemyFree) return new Map();
-  // a boss's arena (core/bosses.js): the boss alone; `also`: the kinds it brings along (its minions)
+  // a boss's arena (core/bosses.js): the boss alone; `also`: the kinds it brings along (its
+  // minions, summoned or come to life where its projectiles land)
   const boss = map.guardian?.boss && ENEMY_KINDS[map.guardian.boss];
   if (boss) return new Map([[boss.species, { count: 1, pack: 1, lead: true, kinds: { [boss.type]: 1 },
-    also: (boss.attacks ?? []).flatMap(a => a.summon ? [a.summon.kind] : []) }]]);
+    also: [...new Set((boss.attacks ?? []).flatMap(a => [a.summon?.kind, a.projectile?.becomes].filter(Boolean)))] }]]);
   if (map.horde) {
     const { kind, count } = map.horde, base = ENEMY_KINDS[kind];
     const ordinary = population({ ...map, horde: null, populationScale: 1 });

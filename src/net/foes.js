@@ -143,8 +143,10 @@ export class Viewer {
       e.lastHit = e.predUntil > now ? null : Number.isInteger(b[13]) ? b[13] : null;
       e.burning = b[11] & BURNING ? e.burning || { shown: true } : null;
       e.toxic = b[11] & TOXIC ? e.toxic || { shown: true } : null;
-      if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.beam && mirrorBeam(e, null); return; }
-      mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null);
+      if (Number.isInteger(b[14]) && b[14] > 0) e.stage = b[14];   // a boss's stage and light (game/totnar.js)
+      e.dark = b[15] === 1 ? 1 : 0;
+      if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.dark = 0; (e.beam || e.bolts) && mirrorBeam(e, null); return; }
+      mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null, Array.isArray(b[16]) ? b[16] : null);
     });
     // corpses go once they have lain their time
     const gone = this.mirror.list.filter(e => e.mode === 'dead' && e.deadT >= e.profile.corpseTime);

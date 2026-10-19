@@ -17,6 +17,7 @@ globalThis.location = { search: '' };
 const { makeLayouts } = await import('../src/world/layout.js');
 const { enemyFreeAt } = await import('../src/world/town.js');
 const { population } = await import('../src/core/spawns.js');
+const { BOSSES } = await import('../src/core/bosses.js');
 const { swarmKind } = await import('../src/core/hordes.js');
 const { ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, enemyProfile, enemyRoll, guardianLevel, threat, attackDamage, depthLevel } =
   await import('../src/core/enemies.js');
@@ -45,7 +46,7 @@ const dps = p => { const s = combatStats(p); return s ? weaponDps(s) : 0; };
 if (process.argv[2] === 'farm') { farm(Number(process.argv[3] || 6), Number(process.argv[4] || 200)); process.exit(0); }
 
 const rows = [];
-let beforeBoss = 0;   // runs that saw a ranged weapon drop before fighting a real boss (Gusto)
+let beforeBoss = 0;   // runs that saw a ranged weapon drop before fighting the first real boss (Gusto)
 for (let seed = 1; seed <= SEEDS; seed++) {
   const R = mulberry32(hash32(seed * 7919)), layouts = makeLayouts(seed);
   const p = { ...P.createPlayerStats(), x: 0, y: 0, z: 0, yaw: 0, stun: 0, sword: swordState() }, run = P.createRun();
@@ -106,7 +107,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
         const ttk = prof.hp / dps(p);
         row.guards[g.role].push({ type: chosen, level, hp: prof.hp, ttk, php: p.maxHp,
           blows: p.maxHp / attackDamage(prof), brawl: threat(prof) * ttk / p.maxHp, hits: prof.hp / hit });
-        if (g.boss) beforeBoss += seenRanged;
+        if (g.boss === BOSSES[0]) beforeBoss += seenRanged;
         kill(kind, level, { guardian: true, guardianRole: g.role });
       }
       for (const site of L.sitePlans.get(k) || []) { const c = chestLoot(site, depth, seed, favoredKind(p)); take(c.items, 'chest'); copper += c.copper; row.chests++; }

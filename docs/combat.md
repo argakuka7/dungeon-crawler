@@ -149,6 +149,12 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   tentacles. He grabs and throws, spits Custo triangles (half-size, light blue, fast Triangles),
   splits into three at half health (two proxies that any hit dispels) and blows a vortex through
   his hands. See [bosses.md](bosses.md).
+- Totnar (`blender/totnar.py`), the second real boss, in place of the descent guardian of depth
+  1: a tumbleweed of sticks and dry leaves with a glowing red heart and three skulls floating
+  above it. He makes the arena dark and light again all fight long, throws skulls that push you
+  back and come to life (snapping skulls), loses a skull at two thirds and at a third of his
+  health, then pours out twig spiders and rolls at you, and at the last calls lightning out of
+  the sky and summons bramble Stunders. See [bosses.md](bosses.md).
 - Wolk (`blender/wolk.py`): a sad little light blue cloud with a tear on its cheek, walking on
   two long stick legs, two thin arms with three-fingered hands hanging from its belly. It
   fights from afar (`style: 'ranged'`, 2.6–4.2 cells, from 4.5 cells). To strike it closes its

@@ -138,7 +138,7 @@ function variantsOf(base) {
   return variants.get(base);
 }
 
-// arena: { type, shape, floors, frame, R, biome, tint, clutter } -> { placements, blockers, blocked }
+// arena: { type, shape, floors, frame, R, biome, tint, clutter, braziers } -> { placements, blockers, blocked }
 export function dressArena(arena) {
   const { type, shape, floors, frame: fr, R, tint, clutter: k } = arena;
   const pal = PALETTES[arena.biome] || PALETTES.meadow;
@@ -353,6 +353,13 @@ export function dressArena(arena) {
       faces(.35, .35, ['ruins_wall_relief', TORCH, ...pal.wall]);
       break;
     }
+  }
+  // a boss who makes it dark (core/bosses.js BOSS_ARENAS): braziers round the edge of the fight
+  // zone, away from its post and the gate (a big body would stand in them)
+  if (arena.braziers) {
+    const clear = f => Math.hypot(f.x - fr.U[0], f.z - fr.U[1]) > 3 && Math.hypot(f.x - fr.G[0], f.z - fr.G[1]) > 2.5;
+    const edge = edgeZone.filter(clear);
+    scatter(edge.length >= arena.braziers ? edge : open.filter(clear), arena.braziers, [BRAZIER], { gap: 3 });
   }
   return { placements: out, blockers, blocked };
 }

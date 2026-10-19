@@ -27,7 +27,13 @@
 // eyes flare while it winds up an attack (`flare` in GLOW).
 // Clouds: a boss's proxy that is felled, and a body that goes away (mode 'gone') or comes back,
 // jumps across the level or first turns up as a proxy or a summoned minion, does so in a puff
-// of cloud (game/gusto.js). While it splits (mode 'split') it shudders, steaming.
+// of cloud (game/gusto.js; a kind's `puff`: Totnar's minions go in dust and leaves). While it
+// splits (mode 'split') it shudders, steaming.
+// Totnar (game/totnar.js): his ball of sticks rolls by the distance he covers (the bone `brush`, a
+// species that `tumble`s: its radius), spinning up in place before a roll and shedding leaves and
+// twigs (`litter`) as it goes, with a thump and dust where it bounces off something. What he has
+// lost by his `stage` (`shed`: bones) is scaled away; losing it bursts it apart. His heart's light
+// grows as it shows more (`grow` in GLOW), and the light changing (his `dark`) flares it.
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
 import { spiderModel } from './spidermodel.js';
@@ -42,6 +48,8 @@ import { spicyModel } from './spicymodel.js';
 import { wollaModel } from './wollamodel.js';
 import { wolkModel } from './wolkmodel.js';
 import { gustoModel } from './gustomodel.js';
+import { totnarModel } from './totnarmodel.js';
+import { snapSkullModel } from './snapskullmodel.js';
 import { sfx } from '../audio/sfx.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { glow, soft, emit, rand } from './particles.js';
@@ -51,10 +59,12 @@ import { attackOf, makeEnemy, ENEMY_KINDS } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { player } from '../game/state.js';
+import { cameraKick } from '../game/juice.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
-  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel };
+  fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
+  totnar: totnarModel, snapskull: snapSkullModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -66,6 +76,8 @@ const GLOW = {
   firecat: { light: [0xff7a2a, 1.6, 2.6, 0.75], flicker: 1, embers: { rate: 5, from: 'flame_tail', spread: 0.06 } },
   fireshraps: { light: [0xff6a20, 2.4, 3.5, 1.35], flicker: 1, embers: { rate: 6, from: 'flame0_a', spread: 0.15 } },
   gusto: { light: [0xff3020, 1.8, 3.5, 1.75], flare: 1.6 },
+  totnar: { light: [0xff4018, 2.6, 5, 0.95], flare: 1.2, grow: [1, 1.45, 2] },
+  snapskull: { light: [0xff5a1e, 0.8, 1.8, 0.4] },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -194,6 +206,7 @@ function flail(v, e, life) {
 }
 // a puff of cloud where e is (a proxy felled, a body gone or come back)
 const PUFF = { colors: ['#ffffff', '#e8edf5', '#cdd3de'], size: 1 }, MINION_PUFF = { colors: ['#e0f6ff', '#9fdcff', '#ffffff'], size: 0.5 };
+const puffOf = e => e.profile.puff ?? (e.summoned ? MINION_PUFF : PUFF);
 function poof(e, look = PUFF, x = e.x, z = e.z) {
   const s = look.size, h = e.profile.height * 0.5, y = e.y + h, c = look.colors;
   if (Math.hypot(x - player.x, z - player.z) > 18) return;
@@ -212,7 +225,7 @@ function poof(e, look = PUFF, x = e.x, z = e.z) {
 // positions are the cube's own)
 function clouds(v, e) {
   const w = v.was, gone = e.mode === 'gone';
-  if (gone !== (w.mode === 'gone') && w.mode !== 'dead') poof(e, e.summoned ? MINION_PUFF : PUFF, gone ? w.x : e.x, gone ? w.z : e.z);
+  if (gone !== (w.mode === 'gone') && w.mode !== 'dead') poof(e, puffOf(e), gone ? w.x : e.x, gone ? w.z : e.z);
   else if (!gone && Math.hypot(e.x - w.x, e.z - w.z) > 1.5) { poof(e, PUFF, w.x, w.z); poof(e); }
   w.mode = e.mode; w.x = e.x; w.z = e.z;
 }
@@ -222,6 +235,107 @@ function shudder(v, e, dt) {
   v.group.position.x += rand(-k, k); v.group.position.z += rand(-k, k);
   if (Math.random() < dt * 30) emit(soft, e.x + rand(-0.6, 0.6), e.y + rand(0.8, 2.2), e.z + rand(-0.6, 0.6),
     { v: [rand(-0.4, 0.4), rand(0.4, 1.2), rand(-0.4, 0.4)], life: rand(0.5, 0.8), size: rand(0.2, 0.35), grow: 1.4, color: '#eef2f8', alpha: 0.5, drag: 1 });
+}
+
+// Totnar's parts lost by stage ({ stage: [bone names] } -> [{ stage, bones }])
+function findShed(model, shed) {
+  if (!shed) return null;
+  return Object.entries(shed).map(([stage, names]) => ({ stage: +stage, bones: names.map(n => model.getObjectByName(n)).filter(Boolean) }));
+}
+// the bone that rolls (`brush`) and the axis it rolls about in its own frame: the model's +x (a
+// forward roll), found in the rest pose
+function findBall(model, radius) {
+  const bone = radius ? model.getObjectByName('brush') : null;
+  if (!bone) return null;
+  model.updateMatrixWorld(true);
+  return { bone, axis: new THREE.Vector3(1, 0, 0).applyQuaternion(bone.getWorldQuaternion(new THREE.Quaternion()).invert()).normalize() };
+}
+const HIDDEN = 1e-4, BONE_BITS = ['#efe6cf', '#ffffff', '#cfc4a8'], STICK_BITS = ['#8a6440', '#5a3e26', '#7d8a3c'];
+// what e has lost by its stage, scaled away; what it loses now bursts apart first: bone shards
+// for a skull, sticks and leaves for a shell, a crack and a flash of its heart
+function shedParts(v, e) {
+  if (!v.shed) return;
+  const stage = e.stage ?? 1;
+  for (const s of v.shed) {
+    if (s.stage > stage) continue;
+    if (s.stage > v.stage) burst(v, e, s.bones);
+    for (const b of s.bones) b.scale.setScalar(HIDDEN);
+  }
+  if (stage > v.stage) v.flash2 = 1;
+  v.stage = Math.max(v.stage, stage);
+}
+function burst(v, e, bones) {
+  v.model.updateMatrixWorld(true);
+  for (const b of bones) {
+    const skull = /^skull/.test(b.name), p = b.getWorldPosition(tmp), colors = skull ? BONE_BITS : STICK_BITS;
+    const r = skull ? 0.25 : 0.75 * v.size, n = skull ? 26 : 40;
+    emit(glow, p.x, p.y, p.z, { life: 0.25, size: skull ? 0.9 : 1.6, grow: 1.3, color: skull ? '#ffffff' : '#ffb070', alpha: 0.7 });
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), u = rand(-1, 1), w = Math.sqrt(1 - u * u), sp = rand(1.5, skull ? 4 : 3.2);
+      emit(skull || i % 3 ? soft : glow, p.x + Math.cos(a) * w * r, p.y + u * r, p.z + Math.sin(a) * w * r,
+        { v: [Math.cos(a) * w * sp, rand(0.5, 3.5), Math.sin(a) * w * sp], life: rand(0.5, 1.1), size: rand(0.05, skull ? 0.12 : 0.1),
+          color: colors[i % 3], alpha: 0.95, gravity: 9, drag: 0.8 });
+    }
+  }
+  if (Math.hypot(e.x - player.x, e.z - player.z) < 20) sfx('shed', { at: e });
+}
+// The ball rolls by the distance covered along the heading; before a roll it spins up in place,
+// and once dead it spins down. Rolling fast it sheds leaves and twigs; a sudden turn while it
+// rolls is a bounce off something: a thump and dust.
+function tumble(v, e, dt) {
+  if (!v.ball) return;
+  const a = e.mode === 'attack' ? attackOf(e) : null, roll = a?.roll, radius = e.profile.tumble * v.size;
+  let rate;
+  if (e.mode === 'dead') rate = v.tumble * Math.exp(-dt * 3);
+  else if (roll && e.t < roll.from) rate = roll.speed / radius * Math.min(1, e.t / roll.from) ** 2;
+  else {
+    const d = dt > 1e-4 && v.rolled ? (e.x - v.rolled.x) * Math.sin(e.yaw) + (e.z - v.rolled.z) * Math.cos(e.yaw) : 0;
+    rate = Math.abs(d) < 0.6 && dt > 1e-4 ? d / dt / radius : 0;
+  }
+  v.tumble += (rate - v.tumble) * Math.min(1, dt * 12);
+  v.rolled = { x: e.x, z: e.z };
+  v.turned = (v.turned + v.tumble * dt) % (2 * Math.PI);
+  v.ball.bone.quaternion.multiply(spin.setFromAxisAngle(v.ball.axis, v.turned));
+  const rolling = roll && e.t >= roll.from && e.t < roll.to, near = Math.hypot(e.x - player.x, e.z - player.z) < 14;
+  if (rolling && v.lastYaw !== undefined && Math.abs(Math.atan2(Math.sin(e.yaw - v.lastYaw), Math.cos(e.yaw - v.lastYaw))) > 0.6) {
+    sfx('thud', { at: e, pitch: 0.6 }); sfx('rustle', { at: e });
+    for (let i = 0; i < 16; i++) {
+      const ang = rand(0, Math.PI * 2), s = rand(1, 2.6);
+      emit(soft, e.x, e.y + 0.2, e.z, { v: [Math.cos(ang) * s, rand(0.3, 1.2), Math.sin(ang) * s], life: rand(0.5, 0.9),
+        size: rand(0.25, 0.4), grow: 1.2, color: '#c9c0ae', alpha: 0.45, drag: 2.5 });
+    }
+    if (Math.hypot(e.x - player.x, e.z - player.z) < 7) cameraKick(0, 0, 0, 0.07);
+  }
+  v.lastYaw = e.yaw;
+  const litter = e.profile.litter, fast = Math.abs(v.tumble) * radius;
+  if (litter && near && fast > 2) for (let i = Math.floor(fast * 3 * dt + Math.random()); i > 0; i--) {
+    const ang = rand(0, Math.PI * 2);
+    emit(soft, e.x + Math.cos(ang) * radius * 0.8, e.y + rand(0.2, 1.4), e.z + Math.sin(ang) * radius * 0.8,
+      { v: [rand(-0.6, 0.6), rand(0.4, 1.4), rand(-0.6, 0.6)], life: rand(0.6, 1.1), size: rand(0.05, 0.09), color: litter[i % litter.length],
+        alpha: 0.95, gravity: 3, drag: 1.2 });
+  }
+  if (rolling && near && Math.random() < dt * 20)   // dust kicked up
+    emit(soft, e.x + rand(-0.4, 0.4), e.y + 0.1, e.z + rand(-0.4, 0.4), { v: [rand(-0.5, 0.5), rand(0.2, 0.7), rand(-0.5, 0.5)],
+      life: rand(0.5, 0.8), size: rand(0.25, 0.4), grow: 1.2, color: '#c9c0ae', alpha: 0.35, drag: 1.5 });
+}
+// his `dark` changing (game/totnar.js): his heart flares, the darkness sucked into him or the
+// light bursting out of him, with a sound
+function lightTurns(v, e, dt) {
+  v.flash2 = Math.max(0, (v.flash2 ?? 0) - dt * 1.5);
+  const dark = e.dark ?? 0;
+  if (dark === v.dark) return;
+  v.dark = dark; v.flash2 = 1;
+  if (Math.hypot(e.x - player.x, e.z - player.z) > 24) return;
+  sfx(dark ? 'gloom' : 'dawn', { at: e });
+  const y = e.y + 1.1 * v.size;
+  emit(glow, e.x, y, e.z, { life: 0.4, size: 2.4, grow: dark ? -0.8 : 2, color: dark ? '#ff4018' : '#fff0c0', alpha: 0.7 });
+  for (let i = 0; i < 40; i++) {
+    const a = rand(0, Math.PI * 2), u = rand(-0.3, 1), r = rand(2, 4), life = rand(0.5, 0.8);
+    const x = e.x + Math.cos(a) * r, z = e.z + Math.sin(a) * r, yy = y + u * 1.5;
+    emit(soft, dark ? x : e.x, dark ? yy : y, dark ? z : e.z, { v: dark ? [(e.x - x) / life, (y - yy) / life, (e.z - z) / life]
+      : [Math.cos(a) * r / life, u * 2, Math.sin(a) * r / life], life, size: rand(0.25, 0.45), grow: dark ? -0.5 : 1,
+      color: dark ? '#14101c' : '#fff4d8', alpha: dark ? 0.6 : 0.4, drag: dark ? 0 : 1.5 });
+  }
 }
 
 function makeView(e, prefab) {
@@ -272,10 +386,11 @@ function makeView(e, prefab) {
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
   const tentacles = [];
   if (e.profile.flail) model.traverse(o => { const m = o.isBone && /^tentacle(\d+)_(\d+)$/.exec(o.name); if (m) tentacles.push({ bone: o, i: +m[1], j: +m[2] }); });
-  if (e.proxy || e.summoned) poof(e, e.summoned ? MINION_PUFF : PUFF);   // it turns up
+  if (e.proxy || e.summoned) poof(e, puffOf(e));   // it turns up
   return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
-    gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0 };
+    gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0,
+    shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0 };
 }
 // the hover clip's beat (matches blender/triangle.py): sharp, twice per loop
 const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
@@ -287,7 +402,8 @@ function glowFx(v, e, dt, life) {
     b.quaternion.multiply(wobble.setFromAxisAngle(axis, 0.12 * Math.sin(t * 9 + i * 1.7)));
   });
   const swing = fx.pulse ? 1 + fx.pulse * (beat(v.phase) - 0.3) : 0.82 + 0.18 * Math.sin(t * 23) * Math.sin(t * 7.1);
-  if (v.light) v.light.intensity = fx.light[1] * swing * life;
+  const grow = fx.grow?.[(e.stage ?? 1) - 1] ?? 1;
+  if (v.light) v.light.intensity = fx.light[1] * swing * life * grow * (1 + 2.5 * v.flash2);
   if (fx.pulse) v.material.emissiveIntensity = (0.6 + 0.4 * life) * swing;   // every part's glow (times its own strength)
   if (fx.flare) {   // eyes flaring up to the strike
     const a = e.mode === 'attack' ? attackOf(e) : null, up = a ? Math.min(1, e.t / Math.max(0.1, a.hitAt)) : 0;
@@ -324,6 +440,7 @@ function dying(v, e, dt, off) {
   v.group.visible = fade > 0;
   v.mixer.update(0);
   spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
+  shedParts(v, e); tumble(v, e, dt);
   flail(v, e, Math.max(0, 1 - e.deadT / (e.profile.deathTime * 0.5)));
   glowFx(v, e, 0, Math.max(0, 1 - e.deadT / e.profile.deathTime) * fade);   // the glow dies with it
 }
@@ -376,6 +493,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mark.scale.setScalar(0.5 * (e.mode === 'alert' ? 1 + 0.35 * Math.sin(Math.PI * v.markT) : v.markT));
     v.mixer.update(0);
     spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
+    shedParts(v, e); tumble(v, e, dt); lightTurns(v, e, dt);
     glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }

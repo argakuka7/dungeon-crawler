@@ -7,7 +7,13 @@
 // level or the target's body stops it, or for spec.range. After spec.time it bursts: a target within spec.radius
 // of the beam (body radius included) is hit.
 // A bolt (spec.aim 'feet') aims at the target's feet and runs no further than just past the aim:
-// it strikes the floor there. With spec.lock its aim holds still for the last `lock` s.
+// it strikes the floor there. With spec.lock its aim holds still for the last `lock` s. A bolt
+// with spec.sky comes out of the sky, from that high above its aim (Totnar's storm), and runs on
+// a little further below its aim (so one aimed beside a ledge still finds the floor).
+// An `offset` ({ x, z }) aims a beam that far beside its target (the other bolts of a storm).
+
+// where a beam of `spec` from enemy e starts, aimed at `aim` ({ x, y, z })
+export const originOf = (e, spec, aim) => spec.sky ? { x: aim.x, y: aim.y + spec.sky, z: aim.z } : muzzleAt(e, spec.muzzle);
 
 // where the muzzle of enemy e is in the world
 export function muzzleAt(e, muzzle) {
@@ -16,7 +22,7 @@ export function muzzleAt(e, muzzle) {
 }
 // a beam from enemy e, aimed at target ({ x, y, z }); its end is where it would run out
 export function startBeam(e, spec, target) {
-  const o = muzzleAt(e, spec.muzzle), b = { kind: spec.kind, spec, t: 0, ...o, ax: target.x, ay: target.y, az: target.z };
+  const o = originOf(e, spec, target), b = { kind: spec.kind, spec, t: 0, ...o, ax: target.x, ay: target.y, az: target.z };
   return runTo(b, spec.range);
 }
 // the aim moves towards target at spec.track cells/s
@@ -28,11 +34,13 @@ export function aimBeam(b, target, dt) {
 // does the aim still follow the target?
 export const aiming = b => !b.spec.lock || b.t < b.spec.time - b.spec.lock;
 // the point on body p ({ x, y, z, h }) a beam of `spec` aims at: the chest, or a bolt's the feet
-export const aimPoint = (p, spec) => spec.aim === 'feet' ? { x: p.x, y: p.y + 0.05, z: p.z } : { x: p.x, y: p.y + p.h * 0.55, z: p.z };
+// (`offset` beside them)
+export const aimPoint = (p, spec, offset = null) => spec.aim === 'feet' ? { x: p.x + (offset?.x ?? 0), y: p.y + 0.05, z: p.z + (offset?.z ?? 0) }
+  : { x: p.x, y: p.y + p.h * 0.55, z: p.z };
 // how far the beam may run: its range, a bolt's only just past its aim
 function reachOf(b) {
   if (b.spec.aim !== 'feet') return b.spec.range;
-  return Math.min(b.spec.range, Math.hypot(b.ax - b.x, b.ay - b.y, b.az - b.z) + 0.3);
+  return Math.min(b.spec.range, Math.hypot(b.ax - b.x, b.ay - b.y, b.az - b.z) + (b.spec.sky ? 2.5 : 0.3));
 }
 // the beam's direction (unit) from its origin through the aim
 export function beamDir(b) {
@@ -72,3 +80,12 @@ export function beamDistance(b, p) {
   return best - p.r;
 }
 export const beamHits = (b, p) => beamDistance(b, p) < b.spec.radius;
+// Where the bolts of a storm of n (spec.bolts) strike beside their target, besides the one at
+// it: round it, evenly, from a random start, spec.spread[0] to [1] cells off (r: random in 0..1).
+export function boltOffsets(spec, r = Math.random) {
+  const n = (spec.bolts ?? 1) - 1, start = r() * Math.PI * 2, [lo, hi] = spec.spread ?? [1.5, 1.5];
+  return Array.from({ length: n }, (_, i) => {
+    const a = start + Math.PI * 2 * i / n + (r() - 0.5) * 0.6, d = lo + (hi - lo) * r();
+    return { x: Math.sin(a) * d, z: Math.cos(a) * d };
+  });
+}

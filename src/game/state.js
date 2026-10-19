@@ -47,6 +47,8 @@ export const state = {
   cubes: null, cubeKey: '', arrival: null, portalLock: 0, portalCharge: null, showNeighbors: true, lookDepth: 0,   // showNeighbors: tests only
   openedFaces: new Set(), boundaryLock: -1,   // shared side faces unlocked this world
   enemyGrace: 0,     // s left before enemies may attack (game/enemies.js ENTRY_GRACE)
+  dark: 0,           // 1 while a boss keeps this cube dark (Totnar, game/totnar.js)
+  lookDark: 0,       // how dark it looks, following `dark` (main.js, render/look.js)
   cast: null,        // reading a portal scroll: { kind, t, duration, ... } (game/townportal.js startCast)
   visit: null,       // this cube as you came in: what a death restores (game/flow.js)
   fallFrom: null,    // falling through cubes: the cube the fall started in (game/fall.js)

@@ -185,7 +185,7 @@ test('leaving an arena while its guardian lives asks, and only when steered out'
     const map = w.cube(key).map, entry = map.portals[0];
     assert.equal(leavingFight(map, run, entry.dir), true, `${g.role} arena entrance asks`);
     assert.equal(leavingFight(map, run, 4), false, 'wells are not faces');
-    assert.match(guardianName(map), depth === 0 && g.role === 'descent' ? /^Gusto$/ : /guardian$/);
+    assert.match(guardianName(map), g.role !== 'descent' ? /guardian$/ : depth === 0 ? /^Gusto$/ : /^Totnar$/);
     run.unlockedGates.add(map.key);
     assert.equal(leavingFight(map, run, entry.dir), false, 'not once it is dead');
   }

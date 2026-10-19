@@ -157,7 +157,9 @@ function frame(now = performance.now()) {
   tickTeach();   // what the Teacher draws over the world (game/teach.js)
   // the look follows the depth smoothly (also while sliding down / up)
   if (state.cubeKey) state.lookDepth += (depthOf(state.cubeKey) - state.lookDepth) * Math.min(1, dt * 2.5);
-  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes);
+  // and a boss's darkness comes and goes over a second or so (game/totnar.js)
+  state.lookDark += (state.dark - state.lookDark) * Math.min(1, dt * (state.dark ? 1.6 : 2.2));
+  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark);
   followHero();   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)

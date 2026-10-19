@@ -11,16 +11,15 @@
 // nearest player has kept away from it (`far`) and how long only a grab may follow its breath
 // (`follow`). While he splits or is away (modes 'split' and 'gone') the AI leaves him be.
 // Only the game that runs the enemies runs the fight; the others see its result (net/foes.js).
-import { player, state, setStatus } from './state.js';
-import { party, alive } from './party.js';
+import { state, setStatus } from './state.js';
 import { GUSTO, GUSTO_SPLIT, ENEMY_KINDS, enemyProfile, makeEnemy, attackOf } from '../core/enemies.js';
 import { GUSTO_FIGHT as G, splitHp, summonCount } from '../core/gusto.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
 import { stepEnemies } from './enemyai.js';
-import { playerFloor } from './enemycombat.js';
-import { walkable, floorAt, groundY } from '../physics/enemynav.js';
+import { groundY } from '../physics/enemynav.js';
 import { removeEnemyViews } from '../render/enemies.js';
+import { players, living, nearest, engage, put, fitting, leave as letGo, minionFloors, minion, sweep } from './bossfight.js';
 import { summonFx } from './juice.js';
 
 export let gustos = [];
@@ -52,12 +51,7 @@ export function updateGustos(dt) {
   for (const f of fights) run(f, dt);
   for (const e of gustos) if (e.shield > 0) e.shield = Math.max(0, e.shield - dt);
   stepEnemies(gustos.filter(e => e.mode !== 'gone' && e.mode !== 'split'), dt);
-  gustos = gustos.filter(e => {
-    const over = e.mode === 'gone' ? e.leaving !== undefined && (e.leaving -= dt) <= 0
-      : e.mode === 'dead' && e.deadT >= e.profile.corpseTime;
-    if (over) removeEnemyViews([e]);
-    return !over;
-  });
+  gustos = sweep(gustos, dt);
   fights = fights.filter(f => gustos.includes(f.e));
 }
 
@@ -67,7 +61,6 @@ function hook(f, b) {
   b.summon = a => summon(f, b, a);
 }
 const phaseOf = f => f.phase === 1 ? 1 : 2;
-const living = b => b.mode !== 'dead' && b.mode !== 'gone';
 
 function run(f, dt) {
   const e = f.e;
@@ -142,29 +135,8 @@ function proxy(f, s) {
   return p;
 }
 // a proxy or a triangle he takes along: gone at once (a cloud, render/enemies.js), let go soon
-function leave(b) { Object.assign(b, { mode: 'gone', speed: 0, path: null, noReward: true, leaving: G.leave }); }
+const leave = b => letGo(b, G.leave);
 
-// into the fight at once, after the nearest player
-function engage(b) {
-  const p = nearest(b);
-  Object.assign(b, { mode: 'chase', think: 0, path: null, target: p, provoked: 6, lost: 0,
-    seen: { x: p.x, y: p.y, z: p.z, f: playerFloor(b.profile.height, p) }, yaw: Math.atan2(p.x - b.x, p.z - b.z) });
-}
-const players = () => party().filter(b => alive(b) && (b === player || b.here));
-function nearest(b) {
-  const list = players();
-  return list.reduce((best, p) => Math.hypot(p.x - b.x, p.z - b.z) < Math.hypot(best.x - b.x, best.z - b.z) ? p : best, list[0] ?? player);
-}
-function put(b, s) {
-  Object.assign(b, { f: s, x: s.x + 0.5, z: s.z + 0.5, y: groundY(s, s.x + 0.5, s.z + 0.5), path: null, kbx: 0, kbz: 0 });
-}
-
-// floors a body of kind `cfg` fits on (in a guardian's arena, its fight zone)
-function fitting(cfg) {
-  const arena = !!state.map.guardian, h = cfg.height, r = cfg.radius;
-  return state.map.floors.filter(f => (!arena || f.encounter) && walkable(f, h)
-    && [[r, 0], [-r, 0], [0, r], [0, -r]].every(([dx, dz]) => floorAt(f, f.x + 0.5 + dx, f.z + 0.5 + dz, h)));
-}
 // n spots for the three of him: apart from each other and from the players (as far as the
 // level allows: the rule loosens until there are enough), at random
 function places(e, n) {
@@ -189,21 +161,9 @@ function summon(f, b, a) {
   f.cool = G.summonCool[phaseOf(f) - 1];
   if (!n) return;
   const kind = ENEMY_KINDS[a.summon.kind], mouth = muzzleAt(b, a.summon.muzzle);
-  const fx = Math.sin(b.yaw), fz = Math.cos(b.yaw), tx = b.x + fx * 2.2, tz = b.z + fz * 2.2;
-  const others = gustos.filter(living), spots = [];
-  const floors = fitting(kind).filter(g => {
-    const x = g.x + 0.5, z = g.z + 0.5, d = Math.hypot(x - b.x, z - b.z);
-    return d > b.profile.radius + 0.6 && d < 4.5 && Math.abs(groundY(g, x, z) - b.y) < 1.2
-      && others.every(o => Math.hypot(o.x - x, o.z - z) > o.profile.radius + kind.radius + 0.2);
-  }).sort((p, q) => Math.hypot(p.x + 0.5 - tx, p.z + 0.5 - tz) - Math.hypot(q.x + 0.5 - tx, q.z + 0.5 - tz));
-  for (const g of floors) {
-    if (spots.length === n) break;
-    if (spots.every(s => Math.hypot(s.x - g.x, s.z - g.z) >= 1)) spots.push(g);
-  }
-  const list = spots.map(s => {
-    const m = makeEnemy({ id: `${f.e.id}:minion:${f.nonce}${++f.n}`, level: f.e.level, coinDrop: 0, kind, summoned: true,
-      f: s, x: s.x + 0.5, y: groundY(s, s.x + 0.5, s.z + 0.5), z: s.z + 0.5, yaw: b.yaw }, kind, f.n);
-    engage(m); m.cool = 0.8 + Math.random();
+  const list = minionFloors(b, kind, n, gustos.filter(living)).map(s => {
+    const m = minion(f.e, `${f.e.id}:minion:${f.nonce}${++f.n}`, kind, s, b.yaw, f.n);
+    m.cool = 0.8 + Math.random();
     return m;
   });
   gustos.push(...list); f.minions.push(...list);

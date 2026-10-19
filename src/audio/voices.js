@@ -138,6 +138,24 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         noise(t + 0.95, 0.35, filter('lowpass', 380 * p, 0.8, amp(t + 0.95, 0.01, 0.6, 0.33, out)));   // the flop onto the floor
       },
     },
+    totnar: {   // the tumbleweed boss: a dry cackle through three sets of teeth, a rattle, a creaking collapse
+      alert: (t, out, p) => {
+        for (let i = 0; i < 4; i++) bend(t + i * 0.13, 0.11, 210 * p, 240 * p, 180 * p, 900 * p, 0.32, out);   // "heh-heh-heh"
+        clicks(t, 9, 0.045, 2200 * p, 0.35, out);   // the jaws clacking along
+        noise(t, 0.55, filter('bandpass', 1400 * p, 0.8, amp(t, 0.05, 0.08, 0.45, out)));   // dry leaves
+      },
+      windup: (t, out, p) => { clicks(t, 6, 0.035, 1800 * p, 0.3, out); bend(t, 0.35, 120 * p, 150 * p, 100 * p, 600 * p, 0.3, out); },
+      death: (t, out, p) => {
+        bend(t, 1.3, 240 * p, 180 * p, 60 * p, 700 * p, 0.45, out);
+        for (let i = 0; i < 5; i++) clicks(t + 0.5 + i * 0.12, 3, 0.03, (1200 + 300 * i) * p, 0.35, out);   // sticks and skulls clattering down
+        noise(t + 0.9, 0.5, filter('lowpass', 900 * p, 0.8, amp(t + 0.9, 0.02, 0.4, 0.45, out)));
+      },
+    },
+    snapskull: {   // a skull come to life: chattering teeth, a hollow clack, a crack
+      alert: (t, out, p) => clicks(t, 7, 0.04, 2600 * p, 0.45, out),
+      windup: (t, out, p) => { clicks(t, 3, 0.05, 2000 * p, 0.35, out); tone('sine', 520 * p, 300 * p, t, 0.08, amp(t, 0.002, 0.2, 0.08, out)); },
+      death: (t, out, p) => { noise(t, 0.06, filter('highpass', 2500 * p, 0.8, amp(t, 0.001, 0.5, 0.06, out))); clicks(t + 0.05, 5, 0.04, 1500 * p, 0.35, out); },
+    },
   };
   const out = {};
   for (const [species, kinds] of Object.entries(V)) for (const k of VOICE_KINDS) out[`${species}_${k}`] = kinds[k];

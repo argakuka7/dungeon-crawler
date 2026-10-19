@@ -322,7 +322,67 @@ export const GUSTO = {
 };
 // from half his health on: the three of him blow vortexes too
 export const GUSTO_SPLIT = { ...GUSTO, attacks: [GUSTO_GRAB, GUSTO_VORTEX, GUSTO_SUMMON, GUSTO_INHALE, GUSTO_STUCK], phase: 2 };
-export const BOSS_PROFILES = [GUSTO];
+
+// Totnar, the second real boss (blender/totnar.py), in place of the descent guardian of depth 1
+// (core/bosses.js): a tumbleweed of sticks and dry leaves with a glowing red heart, three skulls
+// floating above it and two stick arms. game/totnar.js runs his fight, core/totnar.js holds its
+// rules: three stages, one per skull he has left (`stage` on the enemy), each with its own attacks
+// (all of them are on the one profile; the fight bars the others). The game rolls his ball by the
+// distance he covers (`tumble`: its radius, render/enemies.js).
+// A projectile that `becomes` a kind comes to life where it lands (game/totnar.js: the snapping
+// skulls), and one with a `push` blows the player back like a gust (`pushTime` s). A `cast` does
+// its boss's thing at the hit frame (the gloom: the light changes, game/totnar.js). A `roll`
+// rolls it along its heading from roll.from to roll.to at roll.speed, steering towards the player
+// at roll.steer rad/s, bouncing off what stops it (roll.bounces times, then it stops) and running
+// over every player within roll.reach of its body once (game/enemyai.js); while it rolls
+// (`steady`) no blow staggers it. A beam with `sky` strikes from that high above its aim, and
+// `bolts` of them strike at once: one at the player, the others `spread` cells round them.
+const TOTNAR_THROW = {
+  name: 'throw', clip: 'throw', weight: 3, reach: 7.5, hitAt: 24 / 30, trackUntil: 0.7, attackTime: 42 / 30, hitReach: 0,
+  arc: 0.5, power: 0.7, knock: 4, knockDown: false, hop: 3, reason: 'Hit by a flying skull!',
+  projectile: { kind: 'skull', speed: 7.5, radius: 0.22, range: 9, tumble: 11, push: 7, pushTime: 0.45, becomes: 'snapskull', converge: true,
+    muzzle: [-0.473, 1.053, 1.401] },
+};
+const TOTNAR_GLOOM = {
+  name: 'gloom', clip: 'gloom', weight: 1, reach: 30, hitAt: 27 / 30, trackUntil: 0.5, attackTime: 51 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Totnar', cast: 'gloom',
+};
+const TOTNAR_SPIDERS = {
+  name: 'spiders', clip: 'summon', weight: 3, reach: 9, hitAt: 27 / 30, trackUntil: 0.6, attackTime: 48 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Totnar',
+  summon: { kind: 'totspider', muzzle: [-0.046, 0.609, 0.547] },
+};
+const TOTNAR_STUNDERS = { ...TOTNAR_SPIDERS, name: 'stunders', summon: { ...TOTNAR_SPIDERS.summon, kind: 'totstunder' } };
+const TOTNAR_ROLL = {
+  name: 'roll', clip: 'roll', weight: 3, reach: 8, minReach: 1.6, hitAt: 24 / 30, trackUntil: 24 / 30, attackTime: 105 / 30, hitReach: 0,
+  arc: 0.5, power: 1.3, knock: 7, knockDown: true, hop: 3.8, reason: 'Run over by Totnar!',
+  roll: { from: 24 / 30, to: 78 / 30, speed: 7, steer: 0.8, bounces: 2, reach: 0.2 }, steady: { from: 24 / 30, to: 78 / 30 },
+};
+const TOTNAR_STORM = {
+  name: 'storm', clip: 'storm', weight: 3, reach: 9, hitAt: 42 / 30, trackUntil: 0.4, attackTime: 57 / 30, hitReach: 0,
+  arc: 0.5, power: 0.9, knock: 2, knockDown: false, hop: 3, reason: 'Struck by Totnar\'s lightning!',
+  beam: { kind: 'bolt', aim: 'feet', time: 1, track: 1.5, lock: 0.35, radius: 0.35, range: 14, shock: 0.8, color: '#ffe9a0',
+    muzzle: [0.015, 2.537, -0.153], sky: 7, bolts: 3, spread: [1.4, 2.4] },
+};
+export const TOTNAR = {
+  type: 'totnar', species: 'totnar', label: 'Totnar', hp: 1000, damage: 24, knock: 4,
+  xp: 650, coins: [140, 240],
+  radius: 0.78, height: 2.45, bodyHeight: 1.75, mass: 9, hover: true, tumble: 0.8,
+  aggro: 7, giveUp: 14, chase: 1.3, wander: 0.4, homeSpeed: 0.9,
+  ...TOTNAR_THROW, cooldown: 1.1, ichor: ['#b08a58', '#4a3018'], pitch: 0.75,
+  attacks: [TOTNAR_THROW, TOTNAR_GLOOM, TOTNAR_SPIDERS, TOTNAR_ROLL, TOTNAR_STORM, TOTNAR_STUNDERS],
+  poise: 2, hitStun: 0.25, deathTime: 2.2, corpseTime: 5,
+  parts: { sticks: ['TotnarSticks', 'TotnarBark'], leaves: ['TotnarLeaves'], bone: ['TotnarBone'], heart: ['TotnarHeart_glow'],
+    eyes: ['TotnarEyes_glow'] },
+  // what goes with each skull he loses (render/enemies.js): at stage 2 the right one and the outer
+  // shell of sticks, at stage 3 the left one and the middle shell: his heart shows more and more
+  shed: { 2: ['skull2', 'shell0'], 3: ['skull0', 'shell1'] },
+  litter: ['#8a6440', '#7d8a3c', '#5a3e26'],   // leaves and twigs falling off as he rolls
+  light: '#ff4018', sparks: ['#ffb070', '#ff5a20'],
+  style: 'brute', guardian: true, guardianRole: 'descent', boss: 'totnar',
+  seedSalt: 0x7a7a12, spacing: 6,
+};
+export const BOSS_PROFILES = [GUSTO, TOTNAR];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -533,9 +593,47 @@ export const CUSTO_TRIANGLE = enemyKind(TRIANGLE, {
   drops: { weapons: false, potion: 0.08, potions: ['item_potion_health_minor'] },
   mods: { hp: 0.17, damage: 0.25, speed: 1.9, size: 0.5, xp: 0.1 },
 });
+// Totnar's minions (game/totnar.js): never in a roster, a little XP, no coins, no weapons, now and
+// then a minor health potion. They turn up (and go) in a puff of dust and leaves (`puff`,
+// render/enemies.js).
+const MINION_DROPS = chance => ({ weapons: false, potion: chance, potions: ['item_potion_health_minor'] });
+const LEAF_PUFF = { colors: ['#b8a07a', '#8a6440', '#9aa456'], size: 0.5 };
+// The snapping skull: a skull he throws, come to life where it lands (blender/totnar.py, its own
+// model). It hops after the player and bites, and after `lifetime` s it crumbles (game/totnar.js).
+export const SNAP_SKULL = {
+  type: 'snapskull', species: 'snapskull', label: 'Snapping skull', hp: 18, damage: 11, knock: 3,
+  xp: 6, coins: [0, 0], minion: true, lifetime: 7,
+  radius: 0.24, height: 0.55, bodyHeight: 0.45, mass: 0.5,
+  aggro: 9, giveUp: 14, chase: 2.6, wander: 0.6, homeSpeed: 1.2,
+  reach: 1.5, hitReach: 0.85, hitAt: 12 / 30, trackUntil: 0.3, attackTime: 0.8, cooldown: 0.9,
+  arc: 0.5, knockDown: false, hop: 3, reason: 'Bitten by a snapping skull!', ichor: ['#efe6cf', '#8a8070'], pitch: 1.35,
+  lunge: { from: 0.12, to: 0.38, max: 1.1, stop: 0.45 },
+  poise: 0, hitStun: 0.2, deathTime: 1, corpseTime: 2,
+  parts: { bone: ['SnapBone'], eyes: ['SnapEyes_glow'] },
+  light: '#ff5a1e', puff: { colors: ['#efe6cf', '#d8cdb0', '#a89a80'], size: 0.45 },
+  drops: MINION_DROPS(0.03),
+  style: 'brute', charge: 1.3,
+  seedSalt: 0x5ca115, spacing: 2,
+};
+// the species that are only ever a boss's minions (each its own model)
+export const MINION_PROFILES = [SNAP_SKULL];
+// small spiders of twigs, poured out of his ball by the dozen
+export const TOT_SPIDER = enemyKind(SPIDER, {
+  type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
+  colors: { body: 'oklch(0.46 0.06 62)', eyes: 'oklch(0.68 0.21 35)' }, ichor: ['#b08a58', '#4a3018'],
+  aggro: 9, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.02), puff: LEAF_PUFF,
+  mods: { hp: 0.4, damage: 0.45, speed: 1.2, size: 0.55, xp: 0.12 },
+});
+// and, at the last, Stunders of brambles: smaller, weaker, and their rams do not knock you over
+export const TOT_STUNDER = enemyKind(STUNDER, {
+  type: 'totstunder', label: 'Bramble stunder', reason: 'Rammed by a bramble stunder!', minion: true, knockDown: false,
+  colors: { skin: 'oklch(0.44 0.05 55)', eyes: 'oklch(0.7 0.2 35)' }, ichor: ['#b08a58', '#4a3018'],
+  aggro: 9, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.12), puff: { ...LEAF_PUFF, size: 0.8 },
+  mods: { hp: 0.55, damage: 0.55, speed: 1.1, size: 0.72, xp: 0.12 },
+});
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
-  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, ...BOSS_PROFILES, CUSTO_TRIANGLE].map(k => [k.type, k]));
+  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js): it
 // cannot be seen, hit or touched, like the dead
 export const absent = e => e.mode === 'dead' || e.mode === 'gone';
@@ -546,6 +644,11 @@ export const attackOf = e => e.profile.attacks?.[e.attack] ?? e.profile;
 export function exposedBy(e) {
   const x = e.mode === 'attack' ? attackOf(e).exposed : null;
   return x && e.t < x.until ? x.damage : 1;
+}
+// is e in the `steady` part of an attack now (Totnar rolling): blows hurt it but do not stagger it
+export function steadyNow(e) {
+  const s = e.mode === 'attack' ? attackOf(e).steady : null;
+  return !!s && e.t >= s.from && e.t < s.to;
 }
 // the index of an attack, picked by weight among `allowed` (indices; default: all of them)
 export function pickAttack(profile, r = Math.random(), allowed = null) {
@@ -561,11 +664,11 @@ export const isRanged = profile => !!(shotOf(profile) || profile.attacks?.some(s
 // which attacks (indices; [0] for a species with one) can start against a target d away
 // across the floor and dy above or below: within the attack's reach (else the profile's) and
 // beyond its minReach; a throw (or a beam) allows more height, a blow enough for the next step
-// of a stair or a ramp. A clear line for throws is the caller's.
+// of a stair or a ramp, a cast any. A clear line for throws is the caller's.
 export function attacksInReach(profile, d, dy) {
   const list = profile.attacks ?? [profile], out = [];
   list.forEach((a, i) => {
-    if (d < (a.reach ?? profile.reach) && d >= (a.minReach ?? 0) && dy < (shotOf(a) ? 1.5 : 0.75)) out.push(i);
+    if (d < (a.reach ?? profile.reach) && d >= (a.minReach ?? 0) && dy < (a.cast ? Infinity : shotOf(a) ? 1.5 : 0.75)) out.push(i);
   });
   return out;
 }
@@ -590,6 +693,7 @@ export function blowOf(profile, a = profile) {
     knockDown: !!a.knockDown, hop: a.hop, reason: a.reason, burn: a.projectile?.burn ?? a.burn ?? null,
     chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage),
     ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }),
+    ...(a.projectile?.push && { push: { speed: a.projectile.push, time: a.projectile.pushTime } }),
     ...(a.beam?.shock && { shock: a.beam.shock }) };
 }
 

@@ -14,6 +14,7 @@ import { spicies, resetSpicies, updateSpicies, detachSpicies } from './spicy.js'
 import { wollas, resetWollas, updateWollas, detachWollas } from './wolla.js';
 import { wolks, resetWolks, updateWolks, detachWolks } from './wolk.js';
 import { gustos, resetGustos, updateGustos, detachGustos } from './gusto.js';
+import { totnars, resetTotnars, updateTotnars, detachTotnars } from './totnar.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
 import { removeEnemyViews } from '../render/enemies.js';
@@ -78,13 +79,14 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...gustos, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...gustos, ...totnars, ...spawned];
 export function resetEnemies() {
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
+  state.dark = 0;
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetGustos();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetGustos(); resetTotnars();
   for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
@@ -187,12 +189,15 @@ export function updateEnemies(dt) {
   if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateGustos(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateGustos(dt); updateTotnars(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
   updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(allEnemies(), dt);
+  state.dark = darkness(allEnemies());
 }
+// a boss keeping the cube dark (Totnar, game/totnar.js; shown one, its `dark` comes with it)
+const darkness = list => list.some(e => e.dark && e.mode !== 'dead') ? 1 : 0;
 // shown another player's enemies: the runner moves them; we fight them (our hits go to the
 // runner, game/sword.js) and get our XP and loot from those that die
 function followEnemies(dt) {
@@ -202,6 +207,7 @@ function followEnemies(dt) {
   awardKills(list);
   updateProjectiles(dt); updateGusts(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(list, dt, false);
+  state.dark = darkness(list);
 }
 export function drawEnemies(dt, off) { animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawAllShots(dt, off); drawThrows(dt, off); }
 function detachSpawned() { const list = spawned; spawned = []; return list; }
@@ -210,5 +216,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachGustos(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachGustos(), ...detachTotnars(), ...detachSpawned()];
 }

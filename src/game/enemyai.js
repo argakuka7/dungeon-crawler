@@ -26,11 +26,11 @@
 // little ahead of a running player.
 import { player, state } from './state.js';
 import { party, chooseTarget, alive as canHurt } from './party.js';
-import { playerFloor, strikePlayer } from './enemycombat.js';
+import { playerFloor, strikePlayer, hitBody, attacker } from './enemycombat.js';
 import { stepEnemy, findPath, pathToward, around, clearLine } from '../physics/enemynav.js';
 import { postPath, coverPath, covered } from './tactics.js';
 import { combatStats } from '../core/combat.js';
-import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, shotOf } from '../core/enemies.js';
+import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, shotOf, blowOf } from '../core/enemies.js';
 import { launchProjectile } from './projectiles.js';
 import { fireBeam } from './beams.js';
 import { tryHordeAttack } from './hordes.js';
@@ -269,6 +269,38 @@ function backOff(e, retreat, t0) {
   const step = retreatAt(retreat, e.t) - retreatAt(retreat, t0);
   if (step > 0) stepEnemy(e, -Math.sin(e.yaw) * step, -Math.cos(e.yaw) * step);
 }
+// A roll (Totnar's): from roll.from to roll.to it rolls along its heading at roll.speed (picking
+// up speed at first), turning towards the player at no more than roll.steer rad/s. What stops it
+// (a wall, an edge: it never rolls off) bounces it off, towards the player if they are that way;
+// after roll.bounces bounces the next stop ends the roll (it sits dizzy for the rest of the attack).
+// Every player it touches (within roll.reach of its body) is run over, once a roll.
+function rollOn(e, a, t0, dt) {
+  const r = a.roll;
+  if (e.t < r.from || t0 >= r.to) return;
+  if (t0 < r.from || !e.rolling) e.rolling = { over: new Set(), bounces: 0 };
+  const p = foe(e), want = Math.atan2(p.x - e.x, p.z - e.z), off = Math.atan2(Math.sin(want - e.yaw), Math.cos(want - e.yaw));
+  e.yaw += Math.max(-r.steer * dt, Math.min(r.steer * dt, off));
+  const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), step = r.speed * Math.min(1, (e.t - r.from) / 0.2 + 0.2) * dt;
+  const x0 = e.x, z0 = e.z;
+  stepEnemy(e, fx * step, fz * step);
+  const mx = e.x - x0, mz = e.z - z0;
+  e.speed = Math.hypot(mx, mz) / dt;
+  const bx = Math.abs(fx * step) > 0.01 && Math.abs(mx) < Math.abs(fx * step) * 0.5;
+  const bz = Math.abs(fz * step) > 0.01 && Math.abs(mz) < Math.abs(fz * step) * 0.5;
+  if (bx || bz) {
+    if (e.rolling.bounces >= r.bounces) { e.t = Math.max(e.t, r.to); e.speed = 0; return; }
+    e.rolling.bounces++;
+    const back = Math.atan2(bx ? -fx : fx, bz ? -fz : fz);
+    e.yaw = Math.cos(want - back) > 0.3 ? want : back;
+  }
+  for (const b of party()) {
+    if (!canHurt(b) || !(b === player || b.here) || e.rolling.over.has(b) || b.ragdoll || b.held) continue;
+    const dx = b.x - e.x, dz = b.z - e.z, d = Math.hypot(dx, dz);
+    if (d > e.profile.radius + (b.r ?? 0.3) + r.reach || Math.abs(b.y - e.y) > 1.2) continue;
+    e.rolling.over.add(b);
+    hitBody(b, { ...blowOf(e.profile, a), by: attacker(e) }, e.x, e.z, d ? dx / d : fx, d ? dz / d : fz);
+  }
+}
 // Between blows, by style. Returns false where it should simply close in.
 //   skirmish: backs off after a blow, circles at `circle` cells (sidestepping if it `strafe`s,
 //     else walking round), then darts in when it can strike again
@@ -341,12 +373,15 @@ function act(e, dt) {
     else if (e.beam) turn(e, Math.atan2(e.beam.ax - e.x, e.beam.az - e.z), dt, 10);   // follows its laser's aim
     if (a.lunge) leap(e, a.lunge, t0, dx, dz);
     if (a.retreat) backOff(e, a.retreat, t0);
+    if (a.roll) rollOn(e, a, t0, dt);
     if (!e.bit && e.t >= fireAt(a)) {
       e.bit = true;
-      // (a gust blows and a breath pulls on from here by themselves: game/gusts.js; a summon is
-      // its boss's, game/gusto.js)
+      // (a gust blows and a breath pulls on from here by themselves: game/gusts.js; a roll runs
+      // over whom it touches as it goes; a summon and a cast are its boss's, game/gusto.js,
+      // game/totnar.js)
       if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a);
-      else if (a.summon) e.summon?.(a); else if (!a.gust && !a.pull && !strikePlayer(e) && a.miss) whiff(e, a);
+      else if (a.summon) e.summon?.(a); else if (a.cast) e.cast?.(a);
+      else if (!a.gust && !a.pull && !a.roll && !strikePlayer(e) && a.miss) whiff(e, a);
     }
     if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = (a.recover ?? cfg.cooldown) * (0.8 + Math.random() * 0.4); e.side = side(); }
     return;

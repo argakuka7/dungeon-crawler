@@ -36,8 +36,8 @@ silver cloud. The HP bar and the label keep the tier's colour.
 `map.guardian.role` and `.bossPlaceholder`, spawn/enemy fields, kind profiles, and
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
-instead, alone and with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names
-him and `bossPlaceholder` is false there.
+instead, the second (depth 1) by **Totnar**, each alone and with a fight of his own
+([bosses.md](bosses.md)); `map.guardian.boss` names him and `bossPlaceholder` is false there.
 
 Each tier sets level-1 floors (`GUARDIAN_TIERS` in `core/enemies.js`), so the promoted
 species decides how a guardian fights, not how strong it is:

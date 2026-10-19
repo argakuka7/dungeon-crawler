@@ -106,6 +106,7 @@ export function burnHurtFx(dmg) {
 // a projectile was thrown ('launch'), or ended: 'hit' (the player), 'blocked' (the level), 'spent'
 export function projectileFx(pr, what) {
   const fire = pr.kind === 'fireball', ice = pr.kind === 'iceball', { x, y, z } = pr;
+  if (pr.kind === 'skull') { skullFx(pr, what); return; }
   if (what === 'launch') { sfx(fire ? 'fireball' : ice ? 'frost' : 'zap', { at: pr }); return; }
   const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
   const n = what === 'spent' ? 6 : 18, s = what === 'spent' ? 1 : 2.6;
@@ -120,6 +121,18 @@ export function projectileFx(pr, what) {
     emit(soft, x, y, z, { v: [rand(-0.4, 0.4), rand(-0.1, 0.3), rand(-0.4, 0.4)], life: rand(0.6, 0.9), size: rand(0.2, 0.3),
       grow: 0.9, color: '#d8f2ff', alpha: 0.35, drag: 0.8 });
   if (what !== 'spent') sfx(fire ? 'whump' : ice ? 'icecrack' : 'shatter', { at: pr, volume: 0.8 });
+}
+
+// Totnar's skull: hurled with a whoosh and chattering teeth, and where it ends a bony knock and a
+// spray of bone dust (it comes to life there, game/totnar.js)
+function skullFx(pr, what) {
+  if (what === 'launch') { sfx('skullthrow', { at: pr }); return; }
+  const { x, y, z } = pr;
+  for (let i = 0; i < 12; i++)
+    emit(soft, x, y, z, { v: [rand(-1.8, 1.8), rand(0.3, 2), rand(-1.8, 1.8)], life: rand(0.4, 0.7), size: rand(0.08, 0.16),
+      color: ['#efe6cf', '#d8cdb0', '#bfb49a'][i % 3], alpha: 0.8, gravity: 5, drag: 2 });
+  sfx('bonk', { at: pr });
+  if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.08, 0.02);
 }
 
 // the Spicy's laser (game/beams.js) switched on ('start'), went off ('burst') or was put out
@@ -161,7 +174,7 @@ const THUNDER_DELAY = 0.45, THUNDER_PER_CELL = 0.11;
 export const thunderDelay = d => Math.min(2, THUNDER_DELAY + THUNDER_PER_CELL * d);
 function boltFx(b, what) {
   const color = b.profile?.beamColor ?? b.spec.color ?? '#fff6b0', colors = ['#ffffff', color, '#9fd0ff'];
-  if (what === 'start') { sfx('charge', { at: b }); return; }
+  if (what === 'start') { if (!b.quiet) sfx('charge', { at: b }); return; }
   if (what === 'fizzle') {
     for (let i = 0; i < 8; i++)
       emit(glow, b.x, b.y, b.z, { v: [rand(-1, 1), rand(-0.5, 0.8), rand(-1, 1)], life: rand(0.15, 0.3), size: rand(0.04, 0.08), color: colors[i % 3], drag: 2 });
@@ -179,7 +192,7 @@ function boltFx(b, what) {
     emit(soft, x + rand(-0.15, 0.15), y + 0.1, z + rand(-0.15, 0.15), { v: [rand(-0.3, 0.3), rand(0.4, 0.9), rand(-0.3, 0.3)],
       life: rand(0.8, 1.3), size: rand(0.2, 0.32), grow: 0.9, color: '#5a5f68', alpha: 0.4, drag: 0.6 });
   sfx('lightning', { at: { x, y, z } });
-  sfx('rumble', { at: { x, y, z }, delay: thunderDelay(d), volume: Math.max(0.5, 1 - d / 14) });
+  if (!b.quiet) sfx('rumble', { at: { x, y, z }, delay: thunderDelay(d), volume: Math.max(0.5, 1 - d / 14) });
   if (d < 4) cameraKick(x - player.x || 0.01, z - player.z, 0.08, 0.05);
 }
 // the player stunned by a bolt (game/enemycombat.js)
@@ -316,14 +329,18 @@ function vortexFx(e, g, what, dt) {
 }
 
 // Gusto spits his Custo triangles (game/gusto.js): a burst at his mouth and a light blue streak
-// to each of them (they appear there in a puff, render/enemies.js)
-export function summonFx(mouth, list) {
-  sfx('summon', { at: mouth });
-  emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: '#9fdcff', alpha: 0.9 });
-  for (const m of list) for (let i = 0; i < 10; i++) {
-    const k = i / 10, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
-    emit(glow, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
-      size: rand(0.08, 0.13), color: i % 2 ? '#e0f6ff' : '#7fd0ff', drag: 2 });
+// to each of them (they appear there in a puff, render/enemies.js). Totnar tears himself open
+// (look 'leaves', game/totnar.js): a rustle and a spray of leaves and twigs towards each of his.
+const SUMMONS = { triangles: { sound: 'summon', flash: '#9fdcff', colors: ['#e0f6ff', '#7fd0ff'], streak: 10 },
+  leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 } };
+export function summonFx(mouth, list, look = 'triangles') {
+  const s = SUMMONS[look];
+  sfx(s.sound, { at: mouth });
+  emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: s.flash, alpha: 0.9 });
+  for (const m of list) for (let i = 0; i < s.streak; i++) {
+    const k = i / s.streak, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
+    emit(look === 'leaves' ? soft : glow, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
+      size: rand(0.08, 0.13), color: s.colors[i % s.colors.length], drag: 2 });
   }
 }
 

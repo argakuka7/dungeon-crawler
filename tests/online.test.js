@@ -149,10 +149,13 @@ test('the runner describes its enemies compactly for the others', () => {
     x: 1.23456, y: 2, z: 3, yaw: 0.5, hp: 40, mode: 'attack', t: 0.333, attacks: 3, attack: 1, speed: 0,
     burning: {}, toxic: null, beam: { t: 0.2, ex: 4, ey: 1, ez: 5 } };
   const row = rowOf(e, 7);
-  assert.deepEqual(row, [7, 1.23, 2, 3, 0.5, MODES.indexOf('attack'), 0.33, 3, 1, 0, 40, 1, [0.2, 4, 1, 5], 0]);
+  assert.deepEqual(row, [7, 1.23, 2, 3, 0.5, MODES.indexOf('attack'), 0.33, 3, 1, 0, 40, 1, [0.2, 4, 1, 5], 0, 0, 0, 0]);
   // who hit it last: the runner (player 2 here) unless a friend did
   assert.equal(rowOf(e, 7, 2)[13], 2);
   assert.equal(rowOf({ ...e, lastHit: 3 }, 7, 2)[13], 3);
+  // a boss's stage, its dark and the other bolts of its storm (game/totnar.js)
+  const storm = rowOf({ ...e, stage: 3, dark: 1, bolts: [{ t: 0.2, ex: 6, ey: 1, ez: 5 }, { t: 0.2, ex: 2, ey: 1.004, ez: 4 }] }, 7);
+  assert.deepEqual(storm.slice(14), [3, 1, [[0.2, 6, 1, 5], [0.2, 2, 1, 4]]]);
   const roster = rosterOf([e, { ...e, id: 'k:snake:2' }], 'k', 9);
   assert.equal(roster.profiles.length, 1);   // a pack shares its profile
   assert.deepEqual(roster.list.map(x => x.p), [0, 0]);

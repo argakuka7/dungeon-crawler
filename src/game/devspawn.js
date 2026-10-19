@@ -10,6 +10,7 @@ import { removeEnemyViews } from '../render/enemies.js';
 import { player, state } from './state.js';
 import { addEnemies, allEnemies, detachEnemies } from './enemies.js';
 import { addGustos } from './gusto.js';
+import { addTotnars } from './totnar.js';
 import { pickFloor, pointer } from './pointer.js';
 
 const SPREAD = 1.1;   // the least distance between enemies of one spawn
@@ -49,7 +50,8 @@ export function spawnEnemies(type, { level = null, n = 1, at = null } = {}) {
       ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, boss: kind.boss }),
     }, kind, i);
   });
-  if (kind.boss) addGustos(list); else addEnemies(list);   // a boss fights its own fight (game/gusto.js)
+  // a boss fights its own fight (game/gusto.js, game/totnar.js)
+  if (kind.boss) ({ gusto: addGustos, totnar: addTotnars })[kind.boss](list); else addEnemies(list);
   return list;
 }
 

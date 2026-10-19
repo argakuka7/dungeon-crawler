@@ -7,10 +7,11 @@
 // and flashes once it holds still (drawn plainly, not added on, so it reads on bright floors),
 // sparks gathering under the cloud, and in its last moments faint leaders flickering down
 // towards the spot. The strike itself (strikeBolt, from game/juice.js) is a jagged flash from
-// the cloud to the spot, with a branch or two, that flickers twice and lights up the floor.
+// the cloud to the spot, with a branch or two, that flickers twice and lights up the floor. A
+// bolt out of the sky (Totnar's) gathers a dark storm cloud high above its spot.
 import * as THREE from 'three';
 import { scene } from './scene.js';
-import { glow, emit, rand } from './particles.js';
+import { glow, soft, emit, rand } from './particles.js';
 import { trackLight, untrackLight } from './lightpool.js';
 
 const tube = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).translate(0, 0.5, 0);   // +Y, 0 to 1
@@ -154,6 +155,9 @@ function drawBolt(b, v, dt, off) {
       life: rand(0.12, 0.25), size: rand(0.04, 0.07), color: v.colors[i % 3], gravity: 3, drag: 2 });
   }
   v.from.set(b.x + off.x, b.y + off.y, b.z + off.z);
+  if (b.spec.sky) for (let i = Math.floor((10 + 20 * k) * dt + Math.random()); i > 0; i--)   // a storm cloud gathering up there
+    emit(soft, v.from.x + rand(-0.9, 0.9), v.from.y + rand(-0.2, 0.3), v.from.z + rand(-0.9, 0.9), { v: [rand(-0.3, 0.3), rand(-0.1, 0.1), rand(-0.3, 0.3)],
+      life: rand(0.5, 0.9), size: rand(0.5, 0.9), grow: 0.6, color: i % 2 ? '#2a2e3a' : '#3c4252', alpha: 0.5 + 0.3 * k, drag: 0.5 });
   for (let i = Math.floor((8 + 30 * k) * dt + Math.random()); i > 0; i--)
     emit(glow, v.from.x + rand(-0.25, 0.25), v.from.y + rand(-0.05, 0.1), v.from.z + rand(-0.15, 0.15),
       { v: [rand(-0.6, 0.6), rand(-0.8, 0.2), rand(-0.6, 0.6)], life: rand(0.08, 0.18), size: rand(0.03, 0.06), color: v.colors[i % 3], drag: 3 });

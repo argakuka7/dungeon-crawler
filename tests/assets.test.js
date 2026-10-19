@@ -7,7 +7,7 @@ import { readdirSync } from 'node:fs';
 import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } from '../src/core/combat.js';
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, fireAt } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -32,7 +32,7 @@ const BUDGETS = {
   character: { Character: 6000 }, spider: { Spider: 6000 }, stunder: { Stunder: 6000 }, snake: { Snake: 6000 },
   octonaut: { Octonaut: 6000 }, fireface: { FireFace: 6000, FireFaceBall: 1500 }, triangle: { Triangle: 6000, TrianglePunch: 1500 },
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
-  gusto: { Gusto: 8000 },
+  gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -369,4 +369,39 @@ test('Gusto: his clips match his attacks, the grip and the muzzles come from the
   assert.ok(Math.max(...body.slice(0, 3)) - Math.min(...body.slice(0, 3)) < 0.12 && body[0] > 0.45, 'white-grey');
   const eye = j.materials.find(m => m.name === 'GustoEyes_glow').emissiveFactor;
   assert.ok(eye[0] > 0.8 && eye[1] < 0.2, 'red eyes');
+});
+
+test('Totnar: his clips match his attacks, the throw, summon and storm points come from them, and he has what he sheds', () => {
+  const { json: j, duration } = glb('totnar'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['TotnarDeath', 'TotnarDrift', 'TotnarGloom', 'TotnarRoll', 'TotnarStorm', 'TotnarSummon', 'TotnarThrow']);
+  assert.equal(a.TotnarDrift.extras.loop, true);
+  assert.ok(Math.abs(duration(a.TotnarDeath) - TOTNAR.deathTime) < 1e-5); assert.equal(a.TotnarDeath.extras.hold_last_frame, true);
+  const clip = { throw: 'TotnarThrow', gloom: 'TotnarGloom', summon: 'TotnarSummon', roll: 'TotnarRoll', storm: 'TotnarStorm' };
+  for (const at of TOTNAR.attacks) {
+    const c = a[clip[at.clip]];
+    assert.equal(c.extras.hit_frame / 30, at.hitAt, at.name);
+    assert.ok(Math.abs(duration(c) - at.attackTime) < 1e-5, at.name);
+  }
+  const roll = TOTNAR.attacks.find(t => t.roll).roll, r = a.TotnarRoll.extras;
+  assert.equal(r.roll_from / 30, roll.from); assert.equal(r.roll_to / 30, roll.to);
+  assert.deepEqual(a.TotnarThrow.extras.muzzle, TOTNAR.attacks.find(t => t.projectile).projectile.muzzle);
+  for (const t of TOTNAR.attacks.filter(t => t.summon)) assert.deepEqual(a.TotnarSummon.extras.muzzle, t.summon.muzzle);
+  assert.deepEqual(a.TotnarStorm.extras.muzzle, TOTNAR.attacks.find(t => t.beam).beam.muzzle);
+  const names = new Set(j.materials.map(m => m.name)), nodes = new Set(j.nodes.map(n => n.name));
+  for (const m of Object.values(TOTNAR.parts).flat()) assert.ok(names.has(m), m);
+  for (const b of ['brush', 'heart', 'held', ...Object.values(TOTNAR.shed).flat(), 'skull1']) assert.ok(nodes.has(b), b);
+  const heart = j.materials.find(m => m.name === 'TotnarHeart_glow').emissiveFactor;
+  assert.ok(heart[0] > 0.8 && heart[1] < 0.2, 'a red heart');
+  const sticks = j.materials.find(m => m.name === 'TotnarSticks').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(sticks[0] > sticks[2] * 1.5, 'brown sticks');
+});
+test('the snapping skull hops, bites at its hit frame and crumbles', () => {
+  const { json: j, duration } = glb('snapskull'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['SnapBite', 'SnapDeath', 'SnapHop']);
+  assert.equal(a.SnapHop.extras.loop, true);
+  assert.equal(a.SnapBite.extras.hit_frame / 30, SNAP_SKULL.hitAt);
+  assert.ok(Math.abs(duration(a.SnapBite) - SNAP_SKULL.attackTime) < 1e-5);
+  assert.ok(Math.abs(duration(a.SnapDeath) - SNAP_SKULL.deathTime) < 1e-5);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(SNAP_SKULL.parts).flat()) assert.ok(names.has(m), m);
 });

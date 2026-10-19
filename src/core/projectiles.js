@@ -3,10 +3,16 @@
 
 // A projectile leaves the muzzle (model space: x, up, forward) of enemy e and flies straight
 // along e's heading, pitched towards the target's height (at most ~24 degrees), so stepping
-// aside during the wind-up dodges it.
+// aside during the wind-up dodges it. One thrown from a hand off to the side (`converge`:
+// Totnar's) is turned to cross the line of e's heading where the target is as far.
 export function launch(e, spec, target) {
-  const [mx, my, mz] = spec.muzzle, s = Math.sin(e.yaw), c = Math.cos(e.yaw);
+  const [mx, my, mz] = spec.muzzle;
+  let s = Math.sin(e.yaw), c = Math.cos(e.yaw);
   const x = e.x + mx * c + mz * s, y = e.y + my, z = e.z - mx * s + mz * c;
+  if (spec.converge) {
+    const d = Math.max(mz + 1, Math.hypot(target.x - e.x, target.z - e.z)), ax = e.x + s * d - x, az = e.z + c * d - z, l = Math.hypot(ax, az);
+    s = ax / l; c = az / l;
+  }
   const flat = Math.max(0.5, Math.hypot(target.x - x, target.z - z));
   const slope = Math.max(-0.45, Math.min(0.45, (target.y - y) / flat)), l = Math.hypot(1, slope);
   return { kind: spec.kind, spec, x, y, z, vx: s * spec.speed / l, vy: slope * spec.speed / l, vz: c * spec.speed / l,
