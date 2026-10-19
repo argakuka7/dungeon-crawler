@@ -119,38 +119,30 @@ scene.add(fluidCaps);
 // (a fluid's cap: its palette's, render/fluidpal.js)
 const capColor = row => C(paletteOf(row).hex.cap);
 
-// A trial's rising fluid (render/trials.js) is one box over the whole cube, inside the solids
-// too. A cut solid shows its back faces as its cap, below the cut, so the fluid inside it would
-// show in front of them (its surface, and its sides at the cube's edge, which the solids'
-// insides are seen through to): per cell, the two highest solids under its surface or around
-// it (WATER_SOLID: bottom, top in r, g and b, a; none: 0, 0; the lowest reaches through the
-// cube's base), where the fluid draws nothing. Nor where the cube's own fluid takes its level
-// (WATER_OWN: 1 in r; render/surface.js ownTakes). Its shores (materials.js cellMaterial): per
-// cell the corners of the floor it meets there, the highest under its surface (WATER_SHORE;
-// none: far under). The cutaway drops it above the cut, and its cap
-// covers only the cells open at the cut height. level: its level (world units; null: none)
+// A standing fluid (render/trials.js: a trial's, a boss's tide) is drawn over the ground it stands
+// on (render/shore.js), not inside the solids. It is not drawn where the cube's own fluid takes
+// its level (WATER_OWN: 1 in r; render/surface.js ownTakes). Its walls (materials.js cellMaterial):
+// per cell the corners of the floor it meets there, the highest under its surface (WATER_SHORE;
+// none: far under). The cutaway drops it above the cut, and its cap covers only the cells open
+// at the cut height. level: its level (world units; null: none)
 let trialWater = null, solidKey = '', solidMap = null;
 export function setTrialWaterCap(level, fluid, pal = palRow(0, fluid, 0)) {
   trialWater = level == null ? null : { level, fluid, pal };
 }
 const cellTexture = () => ({ value: new THREE.DataTexture(new Float32Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.FloatType) });
-export const WATER_SOLID = cellTexture(), WATER_OWN = cellTexture(), WATER_SHORE = cellTexture();
-function waterSolids(map) {
+export const WATER_OWN = cellTexture(), WATER_SHORE = cellTexture();
+function standingCells(map) {
   const level = trialWater?.level, k = map && level != null ? level.toFixed(3) : '';
   if (k === solidKey && map === solidMap) return;
   solidKey = k; solidMap = map;
-  const tex = WATER_SOLID.value, a = tex.image.data, own = WATER_OWN.value.image.data, shore = WATER_SHORE.value.image.data;
-  a.fill(0); own.fill(0); shore.fill(-1e3);
+  const own = WATER_OWN.value.image.data, shore = WATER_SHORE.value.image.data;
+  own.fill(0); shore.fill(-1e3);
   if (k) for (let i = 0; i < N * N; i++) {
     own[i * 4] = ownTakes(map.cols[i], level) ? 1 : 0;
     const meets = map.cols[i].filter(f => !f.crust && f.bottom * LH < restY(level)).sort((p, q) => q.top - p.top)[0];
-    if (meets) for (let k = 0; k < 4; k++) shore[i * 4 + k] = meets.cs[k];
-    // (a floor right at the surface keeps it off too: the two would flicker)
-    const spans = map.cols[i].filter(f => f.bottom * LH < level).map(f => [f.bottom * LH, floorY(f, 0.5, 0.5)])
-      .sort((p, q) => q[1] - p[1]).slice(0, 2);
-    spans.forEach(([b, t], j) => { a[i * 4 + j * 2] = b <= 0 ? -1e3 : b; a[i * 4 + j * 2 + 1] = t > level - 0.01 ? Math.max(t, level + 0.01) : t; });
+    if (meets) for (let c = 0; c < 4; c++) shore[i * 4 + c] = meets.cs[c];
   }
-  tex.needsUpdate = true; WATER_OWN.value.needsUpdate = true; WATER_SHORE.value.needsUpdate = true;
+  WATER_OWN.value.needsUpdate = true; WATER_SHORE.value.needsUpdate = true;
 }
 // is the middle of cell i solid at height y (a floor's column or a structure piece)?
 function solidAt(map, i, y) {
@@ -238,7 +230,7 @@ export function setCut(y, map, px, py, pz, walls = true) {
   U.uRadius.value = Math.hypot((right.x - tmp.x) * camera.aspect, right.y - tmp.y);
   capColors(map, on ? y : py + 1);
 
-  waterSolids(map);
+  standingCells(map);
   const water = on && trialWater && restY(trialWater.level) > y ? trialWater.pal : null;
   const k = on ? y.toFixed(3) + ':' + (water ?? '') : 'off';
   if (k === key && map === fluidCaps.userData.map) return;

@@ -13,7 +13,8 @@ import { restY, tideY } from './surface.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
-import { cutMaterial, setTrialWaterCap, WATER_SOLID, WATER_OWN, WATER_SHORE } from './section.js';
+import { cutMaterial, setTrialWaterCap, WATER_OWN, WATER_SHORE } from './section.js';
+import { groundAt, slopeAt } from './shore.js';
 import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
 import { palRow } from '../themes/fluids.js';
@@ -364,34 +365,28 @@ function tideView(m, group, over) {
 // A fluid standing over the cells of `box` ([x0, z0, x1, z1]: a trial's whole cube, a tide's
 // basin) at one level, rising and falling (setTrialWater): its surface and the wet bands it
 // leaves on the walls. over: the cube's own fluids' (render/world.js), hidden under it in its box.
-function standingWater(m, fluid, view, group, [x0, z0, x1, z1], over) {
-  // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID), nor
-  // where the cube's own fluid takes its level (WATER_OWN: that one is drawn); dropped above the
-  // cut inside the cutaway (its cap there: section.js setTrialWaterCap), not where cave walls come
-  // down (it stays to the cube's edge)
-  const surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid, uWaterOwn;\n' + fs.replace('#include <clipping_planes_fragment>', `{
-      ivec2 cell = clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1}));
-      vec4 solid = texelFetch(uWaterSolid, cell, 0);
-      if (vCutW.y > solid.x && vCutW.y < solid.y || vCutW.y > solid.z && vCutW.y < solid.w) discard;
-      if (texelFetch(uWaterOwn, cell, 0).r > 0.5) discard;
-    }
+function standingWater(m, fluid, view, group, box, over) {
+  // nothing where the cube's own fluid takes its level (WATER_OWN: that one is drawn); dropped
+  // above the cut inside the cutaway (its cap there: section.js setTrialWaterCap), not where cave
+  // walls come down (it stays to the cube's edge)
+  const surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterOwn;\n' + fs.replace('#include <clipping_planes_fragment>', `
+    if (texelFetch(uWaterOwn, clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1})), 0).r > 0.5) discard;
     if (cutRegion(true) > 0.5) discard;
     #include <clipping_planes_fragment>`), 'cut-trial-fluid');
   const compile = surface.onBeforeCompile;
-  surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; sh.uniforms.uWaterOwn = WATER_OWN; };
-  if (over) { over.box.value.set(x0, z0, x1, z1); view.over = over; }
-  // (its geometry in the cube's coordinates, four vertices a cell: the cells' pattern and waves go
-  // by them, materials.js cellMaterial; its uvs zero: all of it rises and falls). Its shores are
-  // the cells solid at its level, and the room's walls stay wet where it has just been (wetBands,
-  // with the same material: its level and wet line in `waterTide`, tickTrialView).
-  // (its colours: the cube's of its fluid, its depth's running one: cubegen/fluidbodies.js)
+  surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterOwn = WATER_OWN; };
+  if (over) { over.box.value.set(...box); view.over = over; }
+  // Its shores are the ground's (materials.js cellMaterial: the walls round each cell, section.js
+  // WATER_SHORE, and the ground under it, its `shore`), and the room's walls stay wet where it has
+  // just been (wetBands, with the same material: its level and wet line in `waterTide`,
+  // tickTrialView). (its colours: the cube's of its fluid, its depth's running one:
+  // cubegen/fluidbodies.js)
   const pal = m.fluidRows?.[fluid] ?? palRow(m.depth ?? 0, fluid, 0);
-  const w = x1 - x0, d = z1 - z0;
-  const box = new THREE.BoxGeometry(w - 0.04, 1, d - 0.04, w * 4, 1, d * 4).translate(x0 + w / 2, 0, z0 + d / 2);
-  box.getAttribute('uv').array.fill(0);
-  box.setAttribute('pal', palAttribute(box, pal));
+  const geo = standingSurface(m, box);
+  geo.setAttribute('pal', palAttribute(geo, pal));
   const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, shore: WATER_SHORE } : null;
-  const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
+  const water = new THREE.Mesh(geo, cellMaterial(surface, fluid, tide));
+  water.frustumCulled = false;   // (its heights are the shader's)
   water.material.side = THREE.DoubleSide;   // (it writes depth, like every fluid: materials.js fluidMaterial)
   water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
   group.add(water);
@@ -465,6 +460,56 @@ function wetBands(m, pal) {
   return geo;
 }
 
+// The surface of a standing fluid over the cells of box [x0, z0, x1, z1], built like the cube's
+// own fluids' (render/floors.js fluidVolume) but at every height it may stand at: over each floor
+// of a column (and over nothing where there is none), SUB x SUB quads a cell, split along the
+// floor's own diagonal, each corner with the ground under it, its slope and the floor's ceiling
+// (the bottom of the next floor up; render/shore.js) in its `shore`. The shader puts the surface
+// at the fluid's level (materials.js cellMaterial, trial) and draws only where it stands over
+// that ground and under that ceiling. Round the box, its sides (uv -2), from the ground up to
+// the surface (their upper corners: shore w 2, the shader raises them).
+const SUB = 4;
+function standingSurface(m, [x0, z0, x1, z1]) {
+  const b = new GeoBuilder({ uvs: true }), white = new THREE.Color(1, 1, 1);
+  b.shoreAt = v => v[3];
+  for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
+    const col = m.cols[z * N + x].filter(f => !f.crust).sort((p, q) => p.bottom - q.bottom);
+    // the grounds the fluid may stand over here: every floor up to the next one's underside, and
+    // the depths under the lowest (when it does not stand on the cube's base)
+    const grounds = col.map((f, i) => ({ f, ceiling: col[i + 1] ? col[i + 1].bottom * LH : 0 }));
+    if (!col.length || col[0].bottom > 0) grounds.unshift({ f: null, ceiling: col.length ? col[0].bottom * LH : 0 });
+    for (const { f, ceiling } of grounds) {
+      const ground = (px, pz) => f ? groundAt(f, px, pz) : -BASE, slope = (px, pz) => f ? slopeAt(m, f, px, pz) : 0;
+      const at = (px, pz) => [px, 0, pz, [ground(px, pz), slope(px, pz), ceiling, 0]];
+      b.uvNow = [0, 0];
+      for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
+        const xa = x + i / SUB, xb = x + (i + 1) / SUB, za = z + j / SUB, zb = z + (j + 1) / SUB;
+        if (f?.split) b.quad(at(xa, zb), at(xb, zb), at(xb, za), at(xa, za), [0, 1, 0], white);
+        else b.quad(at(xa, za), at(xa, zb), at(xb, zb), at(xb, za), [0, 1, 0], white);
+      }
+      // its sides round the box (just inside it)
+      b.uvNow = [-2, 0];
+      for (let d = 0; d < 4; d++) {
+        const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
+        if (nx >= x0 && nz >= z0 && nx < x1 && nz < z1) continue;
+        const [[ax, az], [bx, bz]] = edgePts(x, z, d), ix = -DIRS[d][0] * 0.01, iz = -DIRS[d][1] * 0.01;
+        for (let k = 0; k < SUB; k++) {
+          const pa = [ax + (bx - ax) * k / SUB + ix, az + (bz - az) * k / SUB + iz], pb = [ax + (bx - ax) * (k + 1) / SUB + ix, az + (bz - az) * (k + 1) / SUB + iz];
+          const lo = ([px, pz]) => [px, ground(px, pz), pz, [ground(px, pz), 0, ceiling, 1]];
+          const hi = ([px, pz]) => [px, ground(px, pz) + 1, pz, [ground(px, pz), 0, ceiling, 2]];
+          b.quad(lo(pa), lo(pb), hi(pb), hi(pa), [DIRS[d][0], 0, DIRS[d][1]], white);
+        }
+      }
+    }
+  }
+  const a = b.arrays(), geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(a.pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(a.nor, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(a.uv, 2));
+  geo.setAttribute('shore', new THREE.BufferAttribute(a.shore, 4));
+  return geo;
+}
+
 // the fluid's surface at y (world units; null: none), the trial's phase (the tide lines show while idle)
 export function setTrialWater(world, y, phase) {
   const v = world?.trialView;
@@ -481,9 +526,7 @@ export function setTrialWater(world, y, phase) {
   if (!v.water.visible) { v.wetAt = null; return; }
   setTrialWaterCap(y, v.water.userData.fluid, v.water.userData.pal);
   // (drawn where every fluid's surface is: render/surface.js)
-  const top = restY(y), h = top + BASE;
-  if (v.waterTide) v.waterTide.level.value = top;
-  v.water.scale.y = h; v.water.position.y = -BASE + h / 2;
+  if (v.waterTide) v.waterTide.level.value = restY(y);
 }
 
 // the crust as the trial says (states: cell -> 'whole' | 'shaking' | 'gone'): a cell shakes, cracks

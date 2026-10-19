@@ -191,8 +191,10 @@ export function cellMaterial(mat, t, trial = null, over = null) {
     // the cube's own coordinates in texture tiles (the matrix's scale is the part's)
     const tile = (C.tile / C.perUnit).toFixed(4);
     // the swell moves the tops and the sides' upper edges (render/floors.js fluidVolume uvs: v,
-    // the rest height), not the bed or the wet bands; with zero uvs (the trial's box) every
-    // vertex, undoing the matrix's scale y (it is scaled to its depth)
+    // the rest height), not the bed or the wet bands; a standing fluid's tops and its sides'
+    // upper corners (render/trials.js standingSurface: shore w 2) stand at its rest height and
+    // move with it, its sides' no higher than their ceiling nor lower than their ground (it is
+    // drawn unscaled, in the cube's coordinates)
     sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal, shore;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nvarying vec4 vShore;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
@@ -204,7 +206,9 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         float cy = position.y * length(cellM[1].xyz);
         bool band = uv.x < -0.5 && uv.x > -1.5, upper = uv.x > -0.5 || abs(cy - uv.y) < 0.004;
         vCellWave = swellW(cw, uCellTime);
-        if (!band && upper) transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);
+        ${trial ? `if (uv.x > -0.5) transformed.y = uTrialLevel + swellY(cw, uCellTime);
+        else if (shore.w > 1.5) transformed.y = clamp(uTrialLevel + swellY(cw, uCellTime), shore.x, shore.z > 0.0 ? shore.z : 1e4);`
+        : 'if (!band && upper) transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);'}
         vCellP = cw / ${tile}; vCellW = cw; vCellUv = uv; vCellY = cy - ${trial ? 'uTrialLevel' : 'uv.y'};
         vCellN = normal; vPalRows = pal.xy; vShore = shore;
       }`);
@@ -246,9 +250,10 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         vec2 w = vCellW;
         // (no further than the foam reaches: a cell further out knows no shores, so it must not jump there)
         float water = ${trial ? 'uTrialLevel' : 'vCellUv.y'} + swellY(w, tm);
-        // (nothing where the ground stands over it: hidden by the ground anyway, but shown where
-        // the ground is cut open)
-        if (vCellUv.x > -0.5 && vShore.w < 0.5 && water < vShore.x - 0.05) discard;
+        // (nothing where the ground stands over it, nor over its ceiling (the next floor up: a
+        // standing fluid's, render/trials.js): hidden by the ground anyway, but shown where the
+        // ground is cut open)
+        if (vCellUv.x > -0.5 && vShore.w < 0.5 && (water < vShore.x - 0.05 || vShore.z > 0.0 && water > vShore.z - 0.01)) discard;
         float sd = vCellUv.x > -0.5 ? min(shoreDist(w, vCellUv.x, water), 0.7) : 0.7;
         sd += 0.022 * sin(w.x * 5.7 + w.y * 3.1 + tm * 1.9) + 0.016 * sin(w.y * 6.7 - w.x * 3.3 - tm * 2.4) + 0.008 * sin(w.x * 13.0 + w.y * 11.0 + tm * 3.1);
         // the slope of the waves: the pattern rides over them, and the side of a wave away from
