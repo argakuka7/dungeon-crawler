@@ -591,10 +591,10 @@ function pushCrateAt(pz, i, d, fromOther = false) {
   updateCrateBlockers(pz, s);
   return true;
 }
+// (every trial's parts are drawn as the state says: the puzzles', the fires of the cold and the siege)
 function stepParts(m, s) {
-  if (!m.puzzles) return;
   const bodies = [player, ...online.buddies.filter(b => b.here && b.hp > 0)];
-  for (const pz of m.puzzles) {
+  for (const pz of m.puzzles || []) {
     const met = RULES[pz.kind]?.(pz, s, bodies);
     if (met && !puzzleSolved(s, pz.index) && s.phase !== 'resolved') solvePuzzle(pz.index);
   }

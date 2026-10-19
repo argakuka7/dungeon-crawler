@@ -38,7 +38,7 @@ export function updateLightPool(focus) {
     s.pos.copy(s.l.position).applyMatrix4(s.parent.matrixWorld);
     s.d = s.pos.distanceToSquared(focus);
   }
-  const best = sources.filter(s => s.group.visible && s.parent.visible).sort((a, b) => a.d - b.d).slice(0, POOL);
+  const best = sources.filter(s => s.group.visible && s.parent.visible && s.l.visible).sort((a, b) => a.d - b.d).slice(0, POOL);
   pool.forEach((l, i) => {
     const s = best[i];
     if (!s) { l.intensity = 0; return; }

@@ -8,9 +8,20 @@ import { props, signatureProp, CLUTTER } from '../core/propcatalog.js';
 // the prop sets ambient props come from in a theme
 const ambientSets = theme => [theme.props, 'any', ...(theme.cave ? ['relics'] : [])];
 
+// The props a trial room's parts borrow (render/trials.js): its braziers (the cold's to warm
+// at too) and the crates of a crate puzzle; the rest of its parts are the trials' library
+// (assets/trials.glb, set `trial`), a rune room's clue tablet too.
+export const TRIAL_PROPS = { brazier: 'ruins_brazier_a', warm: 'ruins_brazier_a', crate: 'mines_crate_a' };
+function trialSets(m, of) {
+  if (!m.trial && !m.clues?.length) return;
+  of({ name: 'trial_button' });
+  for (const p of m.trial?.parts || []) if (TRIAL_PROPS[p.type]) of({ name: TRIAL_PROPS[p.type] });
+}
+
 // the prop sets a cube shows (render/props.js loads them before the cube is entered)
 export function propSetsOf(m, theme) {
   const sets = new Set(), of = q => { const p = props.byName.get(q.name); if (p) sets.add(p.set); };
+  trialSets(m, of);
   if (m.authoredProps) { m.authoredProps.forEach(of); return [...sets]; }
   if (theme.props) ambientSets(theme).forEach(s => sets.add(s));
   [...(m.sitePlacements || []), ...(m.arenaPlacements || [])].forEach(of);

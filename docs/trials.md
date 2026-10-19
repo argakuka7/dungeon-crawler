@@ -180,7 +180,7 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 - As built: `core/trials.js` holds the parts' rules (`useBit`, `plateHeld`; a puzzle's bits in
   `state.trial.bits`, its start in `map.trial.start`), `game/trials.js` runs them (plates held by
   any player standing on them, a kind's rule in `RULES` solving it), `render/trials.js` draws them
-  (made in code: the parts' assets are still to come). A shut gate is a box in the way
+  (their models: "Assets" below). A shut gate is a box in the way
   (`physics/collide.js setPartBlockers`).
 - The state is a few bits and small integers per part (`map.trial.state`), easy to roll
   back, save and send.
@@ -649,12 +649,37 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 
 ## Assets (Blender, `assets/trials.glb`)
 
-Lever, button, plate, portcullis (1–3 cells), brazier (and lit flame), great fire pit,
-crate, mirror on a turntable, emitter crystal, receiver, channel tiles (straight, bend, tee),
-water wheel, lava gear, sluice lever, tank with marks and float, runestone (glyph decals per
-theme), tablet, beacon, spawn mouth arch, lightning rod, vent valve, waypad, summit button,
-tide-line decals. The hunter reuses an enemy model. Each in the theme's materials where it
-fits (`themes/builds.js`).
+`blender/trials.py` builds the parts in the props' style (flat-shaded, vertex colours, a
+`_glow` material on what glows) into `assets/trials.glb`, the prop set `trial`: in the prop
+metadata like every library (never scattered: no theme lists it), loaded with a cube's prop
+sets when it is a trial room or holds a clue tablet (`render/propplace.js propSetsOf`), the
+cube built again if it came late. A part is made of **pieces**, each its own mesh, so the
+game moves them: `trial_lever` and its `trial_lever_arm` and `trial_lever_knob`, the
+portcullis's `post`, `lintel` (a cell each) and `bars` (a cell each), the mirror's base,
+`frame` and `pane`. Pieces are authored where they sit in their part, but those that turn
+about a point off the ground carry it (`pivot` in their extras: the lever's arm, the wheel,
+the flames).
+
+| Part | Pieces |
+|---|---|
+| button, lightning rod, vent valve | `trial_button`, `trial_rod`, `trial_valve`; their knob `trial_knob` (glows in the trial's colour, sinks and goes green once done) |
+| plate, waypad | `trial_plate` + `trial_plate_rune`, `trial_waypad` + `trial_waypad_rune` (the runes drawn with the game's glow) |
+| gate, portcullis | `trial_portcullis_post` (two, the right one turned), `_lintel`, `_bars`: the grate rises into the lintel's slot, clipped there |
+| vault cage | `trial_cage`, sinking into the ground (clipped at it) |
+| lever (reset, sluice) | `trial_lever`, `_arm`, `_knob` (the reset's red) |
+| mirror, emitter, receiver | `trial_mirror`, `_frame`, `_pane`; `trial_emitter`, `trial_receiver` with `trial_gem` |
+| brazier, the cold's warming braziers | the ruins' `ruins_brazier_a` (borrowed: `TRIAL_PROPS`), its glowing part the flame |
+| great fire, beacon | `trial_great_fire`, `trial_beacon` and their `_flame` |
+| channel tiles, spout, wheel | `trial_tile_I/L/T` with their `_water`, `trial_spout` + `_stream`, `trial_wheel_frame` + `trial_wheel` |
+| sluice tank | `trial_tank` (its walls stretched to what it holds), `_floor`, `_rim`, `trial_float` |
+| crate | the mines' `mines_crate_a` (borrowed), a cell big |
+| runestone, tablet | `trial_runestone`, `trial_tablet` (the glyphs drawn on them in code) |
+| siege mouth | `trial_mouth` |
+
+A fire is lit or out (`render/trials.js fire`): out, no flame and no light; lit, its flame
+shows and flickers and its light shines (its intensity: the light pool takes no light with
+intensity 0, nor one hidden). The hunter is still made in code. The seals, the beacon's ring,
+the beam, the tide lines and the fog are effects, drawn in code.
 
 ## Code layout
 
@@ -762,8 +787,7 @@ Trials stay off in real worlds until the last phase: the planner's chance is 0 u
 - A trial route (`routeTrial`, like `routeSites`): from the entry portal's floor to the
   summit, with `search` and `take`, so what it needs gets built and kept.
 - `map.trial = { id, kind, gate, summit: { c, level }, button: { x, y, z }, path }` out of
-  `tryGenerate`. A placeholder button (a pedestal with a glowing knob made in code) until the
-  parts' assets come in step 3.
+  `tryGenerate`. The button is the trials' library's (`trial_button` with its `trial_knob`).
 - **Done when** every `flood` room over many seeds generates (attempts reported), the summit is
   the highest floor, it is reachable from every portal, and every portal still leads to the
   exit.

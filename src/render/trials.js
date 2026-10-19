@@ -1,8 +1,10 @@
-// What a trial room shows (docs/trials.md): its parts (the flood's button on the summit, made in
-// code until the parts' assets come in), the rising fluid (one surface clipped to the cube's box:
-// the room fills like an aquarium) and the tide lines on the glass that warn of it.
-// buildTrialView adds them to a cube being built (render/world.js); game/trials.js sets the level
-// and the parts' state every frame.
+// What a trial room shows (docs/trials.md): its parts, the rising fluid (one surface clipped to
+// the cube's box: the room fills like an aquarium) and the tide lines on the glass that warn of it.
+// The parts are models: the trials' library (assets/trials.glb, blender/trials.py; loaded with
+// the cube's prop sets, render/propplace.js), each part of pieces that move on their own (a
+// lever's arm, a gate's bars, a flame), and the props it borrows (the ruins' brazier, the mines'
+// crate: TRIAL_PROPS). buildTrialView adds them to a cube being built (render/world.js);
+// game/trials.js sets the level and the parts' state every frame.
 import * as THREE from 'three';
 import { N, BASE, LH } from '../core/constants.js';
 import { EDGE_CORNERS, edgePts } from '../core/constants.js';
@@ -13,203 +15,197 @@ import { gradient } from './palette.js';
 import { cutMaterial } from './section.js';
 import { themeOf } from '../themes/depth.js';
 import { soft, rand, emit } from './particles.js';
+import { props } from './props.js';
+import { TRIAL_PROPS } from './propplace.js';
 
 const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
-// the button: a stone pedestal with a glowing knob on top
-function button(p, color) {
-  const g = new THREE.Group(), stone = new THREE.MeshStandardMaterial({ color: 0x8c8f99, roughness: 0.85, flatShading: true });
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.7, 8), stone);
-  base.position.y = 0.35; base.castShadow = true;
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.3, 0.08, 8), stone);
-  cap.position.y = 0.74;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.4 }));
-  knob.position.y = 0.78;
+// --- the models ----------------------------------------------------------------------------------
+// The materials of the cube being built: one per material of the library, cloned for the cube
+// like the props' (render/props.js); a piece that changes colour gets its own.
+let shared = new Map();
+const cut = m => shared.get(m) ?? shared.set(m, cutMaterial(m.clone())).get(m);
+const isGlow = m => m.name.endsWith('_glow');
+// A piece of the trials' library or a borrowed prop (its catalog geometry): its mesh, or a group
+// of its meshes (a glowing part is a mesh of its own: userData.glow). own: its own materials;
+// mat: drawn with this one. Not loaded (yet: the cube is built again once it is, game/flow.js):
+// an empty mesh, so the setters still find a material.
+function piece(name, { own = false, mat = null } = {}) {
+  const parts = props.byName.get(name)?.parts;
+  if (!parts) return new THREE.Mesh(new THREE.BufferGeometry(), mat ?? new THREE.MeshStandardMaterial());
+  const meshes = parts.map(part => {
+    const m = new THREE.Mesh(part.geometry, mat ?? (own ? cutMaterial(part.material.clone()) : cut(part.material)));
+    m.userData.sharedGeo = true;   // the catalog owns the geometry
+    m.userData.glow = isGlow(part.material);
+    m.castShadow = !m.userData.glow; m.receiveShadow = true;
+    return m;
+  });
+  if (meshes.length === 1) return meshes[0];
+  const g = new THREE.Group();
+  g.add(...meshes);
+  return g;
+}
+// what a piece turns round (its extras), in its part
+const pivotOf = name => props.byName.get(name)?.pivot ?? [0, 0, 0];
+// the glowing mesh of a piece (a prop's flame), or a stand-in
+const glowOf = obj => obj.children?.find(c => c.userData.glow) ?? (obj.userData.glow ? obj : new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial()));
+// cut off beyond a plane (a gate's bars where they rise into the lintel, a cage below the ground)
+function clipTo(obj, plane) {
+  obj.traverse(o => { if (o.material) { o.material.clippingPlanes = [plane]; o.material.clipShadows = true; } });
+}
+const at = (g, p) => { g.position.set(p.x, p.y, p.z); return g; };
+
+// the button (and the parts built like one: the lightning rod, the vent valve): its model with
+// a glowing knob in its cup (rest: the knob's height; pressed it sinks), a halo on the ground
+function button(p, color, model = 'trial_button', knobAt = [0, 0.74, 0]) {
+  const g = new THREE.Group(), knob = piece('trial_knob', { own: true });
+  knob.material.color.set(color); knob.material.emissive.set(color); knob.material.emissiveIntensity = 1.4;
+  knob.position.set(...knobAt);
   const halo = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.62, 24), glow(color, 0.35));
   halo.rotation.x = -Math.PI / 2; halo.position.y = 0.04;
   const light = new THREE.PointLight(color, 2.5, 4, 2);
-  light.position.y = 1.1;
-  g.add(base, cap, knob, halo, light);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, knob, halo, light };
+  light.position.set(knobAt[0], knobAt[1] + 0.35, knobAt[2]);
+  g.add(piece(model), knob, halo, light);
+  return { obj: at(g, p), knob, halo, light, rest: knobAt[1] };
 }
-
-const IRON = () => new THREE.MeshStandardMaterial({ color: 0x4a4d55, roughness: 0.55, metalness: 0.6, flatShading: true });
-const STONE = () => new THREE.MeshStandardMaterial({ color: 0x8c8f99, roughness: 0.85, flatShading: true });
 
 // a pressure plate: a stone slab, its rune glowing once it holds
 function plate(p, color) {
-  const g = new THREE.Group();
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.8), STONE());
-  slab.position.y = 0.04; slab.receiveShadow = true;
-  const rune = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.26, 4), glow(color, 0.5));
-  rune.rotation.x = -Math.PI / 2; rune.rotation.z = Math.PI / 4; rune.position.y = 0.085;
-  g.add(slab, rune);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, rune, color: new THREE.Color(color) };
+  const g = new THREE.Group(), rune = piece('trial_plate_rune', { mat: glow(color, 0.5) });
+  g.add(piece('trial_plate'), rune);
+  return { obj: at(g, p), rune, color: new THREE.Color(color) };
 }
-// a portcullis across a gap (across the way through, side: the way), w cells wide; it rises open
+// a portcullis across a gap (across the way through, side: the way), w cells wide: stone posts,
+// a lintel, the iron grate (a piece a cell) that rises open into the lintel's slot
+const SLOT = 2.55;   // the lintel's underside: the grate is cut off above it
 function portcullis(p) {
-  const g = new THREE.Group(), w = p.w ?? 1, bars = new THREE.Group(), iron = IRON();
-  for (let i = 0; i <= 4 * w; i++) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.2, 0.06), iron);
-    b.position.set(-w / 2 + 0.06 + i * (w - 0.12) / (4 * w), 1.1, 0); b.castShadow = true; bars.add(b);
+  const g = new THREE.Group(), w = p.w ?? 1, bars = new THREE.Group(), clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+  for (let i = 0; i < w; i++) {
+    const x = -w / 2 + 0.5 + i, grate = piece('trial_portcullis_bars', { own: true }), lintel = piece('trial_portcullis_lintel');
+    grate.position.x = lintel.position.x = x;
+    bars.add(grate); g.add(lintel);
   }
-  for (const y of [0.5, 1.3, 2.05]) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 0.07, 0.08), iron); r.position.y = y; bars.add(r); }
-  const stone = STONE();
-  for (const x of [-w / 2 - 0.08, w / 2 + 0.08]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 0.3), stone); post.position.set(x, 1.3, 0); post.castShadow = true; g.add(post); }
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(w + 0.32, 0.2, 0.32), stone); lintel.position.y = 2.65; g.add(lintel);
+  for (const s of [-1, 1]) {   // (the right-hand post turned round: its groove faces the grate)
+    const post = piece('trial_portcullis_post'), end = piece('trial_portcullis_lintel');
+    post.position.x = s * (w / 2 + 0.12); if (s > 0) post.rotation.y = Math.PI;
+    end.position.x = s * (w / 2 + 0.14); end.scale.x = 0.3;
+    g.add(post, end);
+  }
+  clipTo(bars, clip);
   g.add(bars);
-  g.position.set(p.x, p.y, p.z);
-  if (p.side >= 2) g.rotation.y = 0; else g.rotation.y = Math.PI / 2;
-  return { obj: g, bars, open: 0, want: 0 };
+  if (p.side < 2) g.rotation.y = Math.PI / 2;
+  return { obj: at(g, p), bars, clip, open: 0, want: 0 };
 }
-// a lever on a stone block: its handle leans one way or the other (the reset lever: red knob)
+// a lever on a stone block: its arm leans one way or the other (the reset lever: red knob)
 function lever(p, color) {
-  const g = new THREE.Group(), base = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.3), STONE());
-  base.position.y = 0.175; base.castShadow = true;
-  const arm = new THREE.Group(), stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.7, 6), IRON());
-  stick.position.y = 0.35;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshStandardMaterial({ color: p.type === 'reset' ? 0xd04030 : color, roughness: 0.5 }));
-  knob.position.y = 0.72;
-  arm.add(stick, knob); arm.position.y = 0.32;
-  g.add(base, arm);
-  g.position.set(p.x, p.y, p.z);
+  const g = new THREE.Group(), arm = new THREE.Group(), knob = piece('trial_lever_knob', { own: true });
+  knob.material.color.set(p.type === 'reset' ? 0xd04030 : color);
+  arm.add(piece('trial_lever_arm'), knob);
+  arm.position.set(...pivotOf('trial_lever_arm'));
+  g.add(piece('trial_lever'), arm);
   g.rotation.y = p.yaw ?? 0;
-  return { obj: g, arm, angle: -0.6, want: -0.6 };
+  return { obj: at(g, p), arm, angle: -0.6, want: -0.6 };
 }
-// a cage round a vault's chest: bars on all four sides; it sinks into the ground open
+// a cage round a vault's chest; it sinks into the ground open
 function cage(a) {
-  const g = new THREE.Group(), bars = new THREE.Group(), iron = IRON();
-  for (let s = 0; s < 4; s++) for (let i = 0; i < 5; i++) {
-    const t = -0.5 + i * 0.25, [x, z] = [[t, -0.55], [t, 0.55], [-0.55, t], [0.55, t]][s];
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.3, 0.05), iron); b.position.set(x, 0.65, z); bars.add(b);
-  }
-  const top = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.06, 1.16), iron); top.position.y = 1.32; bars.add(top);
+  const g = new THREE.Group(), bars = piece('trial_cage', { own: true }), clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  clipTo(bars, clip);
   g.add(bars);
-  g.position.set(a.x, a.y, a.z);
-  return { obj: g, bars, open: 0, want: 0 };
+  return { obj: at(g, a), bars, clip, open: 0, want: 0 };
 }
 
 // --- the grid puzzles' parts (mirror, braziers, channels) ---------------------------------------
 const BEAM_Y = 0.75;   // how high over the field the beam runs
 // a mirror on a turntable: a pane at 45 degrees, turned the other way by its bit
 function mirrorPart(p) {
-  const g = new THREE.Group(), stand = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.18, 10), STONE());
-  stand.position.y = 0.09;
-  const turn = new THREE.Group(), pane = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.05),
-    new THREE.MeshStandardMaterial({ color: 0xd8e6f0, roughness: 0.08, metalness: 0.9 }));
-  pane.position.y = BEAM_Y; pane.castShadow = true;
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.08, 0.08), IRON()); frame.position.y = BEAM_Y - 0.34;
-  turn.add(pane, frame);
-  g.add(stand, turn);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, turn, angle: 0 };
+  const g = new THREE.Group(), turn = new THREE.Group();
+  const glass = cutMaterial(new THREE.MeshStandardMaterial({ color: 0xe8f2fa, emissive: 0x5a7486, roughness: 0.2, metalness: 0.25 }));
+  turn.add(piece('trial_mirror_frame'), piece('trial_mirror_pane', { mat: glass }));
+  g.add(piece('trial_mirror'), turn);
+  return { obj: at(g, p), turn, angle: 0 };
 }
 // the emitter (a crystal that shines its beam) and the receiver (a crystal that lights when hit)
-function crystal(p, color) {
-  const g = new THREE.Group(), base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.5, 6), STONE());
-  base.position.y = 0.25;
-  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.8 }));
-  gem.position.y = BEAM_Y;
+function crystal(p, color, model) {
+  const g = new THREE.Group(), gem = piece('trial_gem', { own: true });
+  gem.material.color.set(color); gem.material.emissive.set(color); gem.material.emissiveIntensity = 0.8;
   const light = new THREE.PointLight(color, 1, 3, 2); light.position.y = BEAM_Y;
-  g.add(base, gem, light);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, gem, light };
+  g.add(piece(model), gem, light);
+  return { obj: at(g, p), gem, light };
 }
-// a brazier: a bowl on a stand, its flame when lit
-function brazierPart(p) {
-  const g = new THREE.Group(), iron = IRON();
-  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.6, 6), iron); leg.position.y = 0.3;
-  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.16, 0.2, 10, 1, true), iron); bowl.position.y = 0.66; bowl.material.side = THREE.DoubleSide;
-  const coals = new THREE.Mesh(new THREE.CircleGeometry(0.27, 10), new THREE.MeshStandardMaterial({ color: 0x2a1a14, emissive: 0x401000 }));
-  coals.rotation.x = -Math.PI / 2; coals.position.y = 0.7;
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 8), new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85 }));
-  flame.position.y = 0.98;
-  const light = new THREE.PointLight(0xff9040, 2.2, 4, 2); light.position.y = 1.1;
-  g.add(leg, bowl, coals, flame, light);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, flame, light, lit: null };
+// A fire (a brazier, the cold's great fire, the beacon): its model, its flame (shown while lit)
+// and the light it gives (none while out; game/trials.js lights it, tickTrialView flickers it).
+// The brazier is the ruins' (its flame its glowing part); the others have a flame of their own,
+// standing at its pivot, that stretches as it flickers.
+function fire(p, { model, flame = null, scale = 1, light = 2.2, reach = 4, high = 1.1 }) {
+  const g = new THREE.Group(), body = piece(model, { own: !flame });
+  body.scale.setScalar(scale);
+  g.add(body);
+  let tongues = glowOf(body);
+  if (flame) { tongues = piece(flame, { own: true }); tongues.position.set(...pivotOf(flame)); g.add(tongues); }
+  tongues.visible = false;
+  const glowing = new THREE.PointLight(0xff9040, 0, reach, 2); glowing.position.y = high;
+  g.add(glowing);
+  return { obj: at(g, p), flame: tongues, light: glowing, gain: light, stretch: !!flame, lit: false };
 }
-// a channel tile: a stone slab with its grooves (unturned: I along x, L to +x and +z, T to +x, -x
-// and +z), the water in them when wet; turned a quarter clockwise per bit
+const brazierPart = p => fire(p, { model: TRIAL_PROPS.brazier, scale: 1.25 });
+const greatFire = p => fire(p, { model: 'trial_great_fire', flame: 'trial_great_fire_flame', light: 3, reach: 8, high: 1.2 });
+const beaconPart = p => fire(p, { model: 'trial_beacon', flame: 'trial_beacon_flame', light: 3.2, reach: 7, high: 2.1 });
+const FIRES = new Set(['brazier', 'warm', 'fire', 'beacon']);
+
+// a channel tile: a stone slab with its channel (unturned: I along x, L to +x and +z, T to +x, -x
+// and +z), the water in it when wet; turned a quarter clockwise per bit
+let waterMat = null;
 function tilePart(p) {
-  const g = new THREE.Group(), turn = new THREE.Group(), slab = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.1, 0.96), STONE());
-  slab.position.y = 0.05; slab.receiveShadow = true;
-  const water = new THREE.MeshStandardMaterial({ color: 0x2e86de, emissive: 0x0a2a4a, transparent: true, opacity: 0.85 });
-  const groove = new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 1 });
-  const arms = { I: [0, 1], L: [0, 2], T: [0, 1, 2] }[p.shape], wet = [];
-  for (const d of [...arms, 'c']) {
-    const [w, l, x, z] = d === 'c' ? [0.26, 0.26, 0, 0] : d < 2 ? [0.5, 0.26, d ? -0.24 : 0.24, 0] : [0.26, 0.5, 0, 0.24];
-    const gr = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, l), groove); gr.position.set(x, 0.105, z); turn.add(gr);
-    const wa = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.02, l * 0.8), water); wa.position.set(x, 0.12, z); wa.visible = false; turn.add(wa); wet.push(wa);
-  }
-  g.add(slab, turn);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, turn, wet, angle: 0 };
+  const g = new THREE.Group(), turn = new THREE.Group(), water = piece(`trial_tile_${p.shape}_water`, { mat: waterMat });
+  water.visible = false;
+  turn.add(piece(`trial_tile_${p.shape}`), water);
+  g.add(turn);
+  return { obj: at(g, p), turn, wet: [water], angle: 0 };
 }
 // the spout (a pipe pouring onto the field) and the wheel (it turns while the water drives it)
 function spoutPart(p, lava) {
-  const g = new THREE.Group(), pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.7, 8), IRON());
-  pipe.rotation.z = Math.PI / 2; pipe.position.y = 0.35;
-  const stream = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.14), new THREE.MeshStandardMaterial({ color: lava ? 0xff6a00 : 0x3f8fe0, emissive: lava ? 0xff3a00 : 0x0a2a4a }));
-  stream.position.set(0.35, 0.18, 0);
-  g.add(pipe, stream);
-  g.position.set(p.x, p.y, p.z); g.rotation.y = [Math.PI, 0, Math.PI / 2, -Math.PI / 2][p.side];
-  return { obj: g };
+  const g = new THREE.Group(), stream = cutMaterial(new THREE.MeshStandardMaterial({ color: lava ? 0xff6a00 : 0x3f8fe0, emissive: lava ? 0xff3a00 : 0x0a2a4a, transparent: !lava, opacity: 0.9 }));
+  g.add(piece('trial_spout'), piece('trial_spout_stream', { mat: stream }));
+  g.rotation.y = [Math.PI, 0, Math.PI / 2, -Math.PI / 2][p.side];
+  return { obj: at(g, p) };
 }
 function wheelPart(p) {
-  const g = new THREE.Group(), wheel = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.8 });
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 6, 16), wood); wheel.add(rim);
-  for (let i = 0; i < 6; i++) { const paddle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 0.2), wood); paddle.position.set(Math.cos(i * Math.PI / 3) * 0.42, Math.sin(i * Math.PI / 3) * 0.42, 0); paddle.rotation.z = i * Math.PI / 3; wheel.add(paddle); }
-  wheel.position.y = 0.5;
-  g.add(wheel);
-  g.position.set(p.x, p.y, p.z); g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
-  return { obj: g, wheel, spin: 0 };
+  const g = new THREE.Group(), wheel = piece('trial_wheel');
+  wheel.position.set(...pivotOf('trial_wheel'));
+  g.add(piece('trial_wheel_frame'), wheel);
+  g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
+  return { obj: at(g, p), wheel, spin: 0 };
 }
-// a sluice basin: a stone tank as tall as it holds (UNIT a level), notches up its front, the water
-// in it; the marked one a red line at its mark and a float on the water
+// a sluice basin: a stone tank as tall as it holds (UNIT a level: its walls stretched to that,
+// the coping on top), notches up its front, the water in it; the marked one a red line at its
+// mark and a float on the water
 const UNIT = 0.11, TANK_BASE = 0.25;
 function basinPart(p) {
-  const g = new THREE.Group(), stone = STONE(), H = TANK_BASE + p.cap * UNIT + 0.05, wall = 0.07;
-  for (const [w, d, x, z] of [[0.9, wall, 0, -0.42], [0.9, wall, 0, 0.42], [wall, 0.9, -0.42, 0], [wall, 0.9, 0.42, 0]]) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), stone); m.position.set(x, H / 2, z); m.castShadow = true; m.receiveShadow = true; g.add(m);
-  }
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(0.84, TANK_BASE, 0.84), stone); floor.position.y = TANK_BASE / 2; g.add(floor);
+  const g = new THREE.Group(), H = TANK_BASE + p.cap * UNIT + 0.05, walls = piece('trial_tank'), rim = piece('trial_tank_rim');
+  walls.scale.y = H; rim.position.y = H;
+  g.add(piece('trial_tank_floor'), walls, rim);
   const notch = new THREE.MeshBasicMaterial({ color: 0x202020 });
   for (let k = 1; k <= p.cap; k++) {
     const n = new THREE.Mesh(new THREE.BoxGeometry(k % 5 ? 0.12 : 0.24, 0.012, 0.01), notch);
-    n.position.set(-0.3, TANK_BASE + k * UNIT, 0.46); g.add(n);
+    n.position.set(-0.24, TANK_BASE + k * UNIT, 0.462); g.add(n);
   }
   const water = new THREE.Mesh(new THREE.BoxGeometry(0.78, 1, 0.78), fluidMaterial(1, 'full'));
   water.position.y = TANK_BASE; g.add(water);
   let float = null;
   if (p.mark != null) {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.03, 0.94), new THREE.MeshBasicMaterial({ color: 0xe03020 }));
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.93, 0.03, 0.93), new THREE.MeshBasicMaterial({ color: 0xe03020 }));
     line.position.y = TANK_BASE + p.mark * UNIT; g.add(line);
-    float = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd0a040, roughness: 0.6 }));
+    float = piece('trial_float');
     g.add(float);
   }
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g, water, float, level: -1 };
+  return { obj: at(g, p), water, float, level: -1 };
 }
-// the great fire: a brazier twice the size on a ring of stones
-function greatFire(p) {
-  const b = brazierPart(p);
-  b.obj.scale.setScalar(1.8);
-  b.light.distance = 8;
-  return b;
-}
-// a heavy crate: planks round a box, iron at its corners
+// a heavy crate: the mines' crate, a cell big
 function cratePart(p) {
-  const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.85, flatShading: true });
-  const box = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.84, 0.84), wood); box.position.y = 0.42; box.castShadow = true; box.receiveShadow = true;
-  const band = IRON();
-  for (const y of [0.1, 0.74]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.07, 0.88), band); b.position.y = y; g.add(b); }
+  const g = new THREE.Group(), box = piece(TRIAL_PROPS.crate);
+  box.scale.setScalar(1.75);
   g.add(box);
-  g.position.set(p.x, p.y, p.z);
-  return { obj: g };
+  return { obj: at(g, p) };
 }
 // the carved lines between linked braziers
 function linkLines(pz) {
@@ -281,32 +277,37 @@ function glyphTexture(glyph, color = '#e8d8ff') {
   glyphTextures.set(k, tex);
   return tex;
 }
-// a runestone: a standing stone, its glyph on the face towards the field's middle; lit once pressed in turn
+// a runestone: a standing stone, its glyph on the panels front and back; lit once pressed in turn
 function runestone(p) {
-  const g = new THREE.Group(), stone = STONE();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.3), stone); body.position.y = 0.55; body.castShadow = true;
+  const g = new THREE.Group();
   const face = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshStandardMaterial({ map: glyphTexture(p.glyph), emissive: 0x000000, emissiveMap: glyphTexture(p.glyph), roughness: 0.8 }));
   face.position.set(0, 0.72, 0.151);
-  const back = face.clone(); back.rotation.y = Math.PI; back.position.z = -0.151;
-  g.add(body, face, back); g.position.set(p.x, p.y, p.z);
-  return { obj: g, face: [face, back], lit: null };
+  const back = face.clone(); back.material = face.material.clone(); back.rotation.y = Math.PI; back.position.z = -0.151;
+  g.add(piece('trial_runestone'), face, back);
+  return { obj: at(g, p), face: [face, back], lit: null };
 }
 // the carved tablet (a rune room's clue, in another room): a slab on a plinth with the glyphs in order
 function tablet(c) {
-  const g = new THREE.Group(), stone = STONE();
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.4), stone); plinth.position.y = 0.15;
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.12), stone); slab.position.y = 0.65; slab.castShadow = true;
-  g.add(plinth, slab);
+  const g = new THREE.Group();
+  g.add(piece('trial_tablet'));
   c.glyphs.forEach((gl, i) => {
-    const q = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), new THREE.MeshBasicMaterial({ map: glyphTexture(gl, '#f0d890') }));
-    q.position.set((i - (c.glyphs.length - 1) / 2) * 0.17, 0.68, 0.061); g.add(q);
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), new THREE.MeshBasicMaterial({ map: glyphTexture(gl, '#f0d890') }));
+    q.position.set((i - (c.glyphs.length - 1) / 2) * 0.16, 0.68, 0.061); g.add(q);
   });
-  g.position.set(c.x, c.y, c.z);
-  return g;
+  return at(g, c);
+}
+// the drift's waypad: a round slab, its rune lit while the pad is (setWaypads), a light over it
+function waypad(p) {
+  const g = new THREE.Group(), rune = piece('trial_waypad_rune', { mat: glow(0x504060, 0.35) });
+  const light = new THREE.PointLight(0xd080ff, 0, 4, 2); light.position.y = 0.8;
+  g.add(piece('trial_waypad'), rune, light);
+  return { obj: at(g, p), rune, light };
 }
 
 export function buildTrialView(m, group) {
   const t = m.trial;
+  shared = new Map();
+  waterMat = cutMaterial(new THREE.MeshStandardMaterial({ color: 0x2e86de, emissive: 0x0a2a4a, transparent: true, opacity: 0.85 }));
   for (const c of m.clues || []) group.add(tablet(c));
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
@@ -328,39 +329,21 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
-    if (p.type === 'beacon') {   // the beacon: a great fire basket on a pillar; its ring marked on the ground
-      const b = brazierPart(p); b.obj.scale.setScalar(1.6); b.part = p; group.add(b.obj); view.grid.set(p.id, b);
+    if (p.type === 'rod') { const b = button(p, color, 'trial_rod', [0, 0.68, 0.2]); group.add(b.obj); view.parts.set(p.id, b); }
+    if (p.type === 'valve') { const b = button(p, color, 'trial_valve', [0, 0.89, 0]); group.add(b.obj); view.parts.set(p.id, b); }
+    if (p.type === 'beacon') {   // its ring marked on the ground
       const ring = new THREE.Mesh(new THREE.RingGeometry(t.ring.r - 0.06, t.ring.r + 0.06, 48), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, depthWrite: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.ring.x, t.ring.y + 0.04, t.ring.z); group.add(ring);
     }
-    if (p.type === 'waypad') {   // a waypad: a round slab with a rune, and a light over it while lit
-      const g = new THREE.Group(), slab = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.5, 0.08, 20), STONE());
-      slab.position.y = 0.04; slab.receiveShadow = true;
-      const rune = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.34, 6), new THREE.MeshBasicMaterial({ color: 0x504060, transparent: true, opacity: 0.35, depthWrite: false }));
-      rune.rotation.x = -Math.PI / 2; rune.position.y = 0.09;
-      const light = new THREE.PointLight(0xd080ff, 0, 4, 2); light.position.y = 0.8;
-      g.add(slab, rune, light); g.position.set(p.x, p.y, p.z); group.add(g);
-      (view.waypads ??= new Map()).set(p.id, { rune, light });
-    }
+    if (p.type === 'waypad') { const b = waypad(p); group.add(b.obj); (view.waypads ??= new Map()).set(p.id, b); }
     if (p.type === 'portcullis') { const b = portcullis({ ...p, side: p.side }); b.puzzle = -1; b.chase = true; group.add(b.obj); view.gates.set(p.id, b); }
-    if (p.type === 'rod') {   // the lightning rod: an iron mast with a copper spike and a lever at its foot
-      const b = button(p, color), mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 3, 6), IRON());
-      mast.position.y = 1.5;
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.35, 6), new THREE.MeshStandardMaterial({ color: 0xc87533, metalness: 0.7, roughness: 0.35 }));
-      tip.position.y = 3.15;
-      b.obj.add(mast, tip); group.add(b.obj); view.parts.set(p.id, b);
-    }
-    if (p.type === 'valve') {   // the vent valve: the button's pulsing post with an iron wheel over it
-      const b = button(p, color), wheel = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 6, 16), IRON());
-      wheel.rotation.x = Math.PI / 2; wheel.position.y = 0.9;
-      b.obj.add(wheel); group.add(b.obj); view.parts.set(p.id, b);
-    }
     if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; b.cell = p.cell; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset' || p.type === 'sluice') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
-    const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
-      : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
-        : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : p.type === 'runestone' ? runestone(p) : null;
+    const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060, 'trial_emitter') : p.type === 'receiver' ? crystal(p, 0x6080a0, 'trial_receiver')
+      : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'beacon' ? beaconPart(p)
+        : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
+          : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : p.type === 'runestone' ? runestone(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
@@ -368,13 +351,7 @@ export function buildTrialView(m, group) {
     if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '' }); }
   }
   // the siege's mouths: dark arches the waves come out of
-  for (const mo of t.mouths || []) {
-    const g = new THREE.Group(), stone = STONE();
-    for (const x of [-0.55, 0.55]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.6, 0.3), stone); post.position.set(x, 0.8, 0); post.castShadow = true; g.add(post); }
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 0.35), stone); lintel.position.y = 1.7; g.add(lintel);
-    const dark = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.55), new THREE.MeshBasicMaterial({ color: 0x050308 })); dark.position.set(0, 0.78, -0.02); g.add(dark);
-    g.position.set(mo.x, mo.y, mo.z); g.rotation.y = mo.yaw; group.add(g);
-  }
+  for (const mo of t.mouths || []) { const g = at(piece('trial_mouth'), mo); g.rotation.y = mo.yaw; group.add(g); }
   if (t.kind === 'chase') { view.hunter = hunterMesh(); group.add(view.hunter); }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
@@ -528,9 +505,9 @@ export function setGridParts(world, m, s, shown) {
   for (const [id, g] of v.grid) {
     const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
     if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
-    else if (p.type === 'brazier' || p.type === 'warm' || p.type === 'fire' || p.type === 'beacon') {   // (the cold's: lit for good once resolved; the beacon once lit)
+    else if (FIRES.has(p.type)) {   // (the cold's: lit for good once resolved; the beacon once lit; its light: tickTrialView)
       const lit = p.type === 'brazier' ? !!bit : p.type === 'beacon' ? s.phase !== 'idle' : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
-      if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; g.light.visible = lit; }
+      if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; }
     }
     else if (p.type === 'tile') {
       g.angle += (-bit * Math.PI / 2 - g.angle) * 0.3; g.turn.rotation.y = g.angle;
@@ -545,7 +522,7 @@ export function setGridParts(world, m, s, shown) {
       g.level = g.level < 0 ? bit : g.level + (bit - g.level) * 0.08;
       const h = Math.max(0.001, g.level * UNIT);
       g.water.scale.y = h; g.water.position.y = TANK_BASE + h / 2; g.water.visible = g.level > 0.02;
-      if (g.float) g.float.position.y = TANK_BASE + h + 0.04;
+      if (g.float) g.float.position.y = TANK_BASE + h;
     } else if (p.type === 'crate') {   // where its bit says (a field cell), slid there
       const pz = m.puzzles[p.puzzle ?? 0], F = pz.field, D = pz.deck;
       const x = D.x0 + bit % F.w + 0.5, z = D.z0 + Math.floor(bit / F.w) + 0.5, o = g.obj.position;
@@ -602,23 +579,38 @@ export function setTrialParts(world, s, immediate = false) {
     const done = s.phase === 'resolved';
     if (b.done === done) continue;
     b.done = done;
-    b.knob.position.y = done ? 0.72 : 0.78;
+    b.knob.position.y = done ? b.rest - 0.06 : b.rest;
     const c = new THREE.Color(done ? 0x6cff8a : TRIALS[v.kind].color);
     b.knob.material.color.copy(c); b.knob.material.emissive.copy(c); b.halo.material.color.copy(c); b.light.color.copy(c);
   }
 }
 
+const slot = new THREE.Vector3();
 export function tickTrialView(world, time) {
   const v = world?.trialView;
   if (!v) return;
-  for (const [, g] of v.gates) { g.open += (g.want - g.open) * 0.06; g.bars.position.y = g.open * 2.1; }
+  // a gate's grate rises into its lintel (cut off at its slot); a cage sinks into the ground
+  for (const [, g] of v.gates) {
+    g.open += (g.want - g.open) * 0.06; g.bars.position.y = g.open * 2.1;
+    g.clip.constant = g.obj.localToWorld(slot.set(0, SLOT, 0)).y;
+  }
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
   for (const [, g] of v.grid) {
     if (g.part.type === 'wheel' && g.driven) g.wheel.rotation.z -= 0.04;
-    if ((g.part.type === 'brazier' || g.part.type === 'warm' || g.part.type === 'fire' || g.part.type === 'beacon') && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + (g.part.i ?? 0)) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + (g.part.i ?? 0)) * 0.4; }
+    if (FIRES.has(g.part.type)) {   // out: no light at all; lit: it flickers
+      const k = g.part.i ?? 0;
+      g.light.intensity = g.lit ? g.gain * (1 + Math.sin(time * 7 + k) * 0.18) : 0;
+      if (g.lit) {
+        g.flame.material.emissiveIntensity = 1.3 + Math.sin(time * 11 + k) * 0.35;
+        if (g.stretch) g.flame.scale.y = 1 + Math.sin(time * 9 + k) * 0.12;
+      }
+    }
     if (g.part.type === 'emitter') g.gem.rotation.y = time;
   }
-  if (v.cage) { v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98; }
+  if (v.cage) {
+    v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98;
+    v.cage.clip.constant = -v.cage.obj.localToWorld(slot.set(0, 0, 0)).y;
+  }
   for (const [, pl] of v.plates) pl.rune.material.opacity = 0.45 + Math.sin(time * 2.6) * 0.2;
   for (const [, b] of v.parts) {
     const pulse = b.done ? 0.2 : 0.5 + Math.sin(time * 3.2) * 0.25;

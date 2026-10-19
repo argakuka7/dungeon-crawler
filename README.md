@@ -150,6 +150,7 @@ Blender -b --python blender/props.py          # likewise character, spider, stun
                                               # fireface, triangle, firecat, shraps, spicy, wolla, wolk, gusto, sword
 Blender -b --python blender/clutter.py        # libraries: clutter, items, town, town_trees
 Blender -b --python blender/tests/test_clutter.py
+Blender -b --python blender/trials.py         # the trial rooms' parts (assets/trials.glb, docs/trials.md)
 Blender -b --python blender/themes.py         # the alternative themes' library and every theme's
                                               # landmarks (assets/themes/; see docs/assets/themes.md)
 npm run compress-assets                       # after any export, before committing
