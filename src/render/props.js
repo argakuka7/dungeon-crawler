@@ -117,7 +117,7 @@ export function buildProps(placed, group) {
     if (p?.template) { buildChests(p, list, group); continue; }
     if (!p?.parts) continue;
     for (const part of p.parts) {
-      const c = cutMaterial(part.material.clone(), false, true);
+      const c = cutMaterial(part.material.clone(), 'self', true);
       const mesh = new THREE.InstancedMesh(part.geometry, p.sway ? swayMaterial(c, p.sway) : c, list.length);
       mesh.name = p.name;
       mesh.userData.sharedGeo = true;   // the catalog owns the geometry

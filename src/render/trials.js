@@ -12,7 +12,8 @@ import { fluidMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
-import { cutMaterial } from './section.js';
+import { cutMaterial, setTrialWaterCap, WATER_SOLID } from './section.js';
+import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
 import { soft, glow as glowLayer, rand, emit } from './particles.js';
 import { props } from './props.js';
@@ -26,7 +27,9 @@ const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparen
 // The materials of the cube being built: one per material of the library, cloned for the cube
 // like the props' (render/props.js); a piece that changes colour gets its own.
 let shared = new Map();
-const cut = m => shared.get(m) ?? shared.set(m, cutMaterial(m.clone())).get(m);
+// (cut open, their insides show in their own colour)
+const cutPart = m => cutMaterial(m, 'self', false);
+const cut = m => shared.get(m) ?? shared.set(m, cutPart(m.clone())).get(m);
 const isGlow = m => m.name.endsWith('_glow');
 // A piece of the trials' library or a borrowed prop (its catalog geometry): its mesh, or a group
 // of its meshes (a glowing part is a mesh of its own: userData.glow). own: its own materials;
@@ -36,7 +39,7 @@ function piece(name, { own = false, mat = null } = {}) {
   const parts = props.byName.get(name)?.parts;
   if (!parts) return new THREE.Mesh(new THREE.BufferGeometry(), mat ?? new THREE.MeshStandardMaterial());
   const meshes = parts.map(part => {
-    const m = new THREE.Mesh(part.geometry, mat ?? (own ? cutMaterial(part.material.clone()) : cut(part.material)));
+    const m = new THREE.Mesh(part.geometry, mat ?? (own ? cutPart(part.material.clone()) : cut(part.material)));
     m.userData.sharedGeo = true;   // the catalog owns the geometry
     m.userData.glow = isGlow(part.material);
     m.castShadow = !m.userData.glow; m.receiveShadow = true;
@@ -341,7 +344,18 @@ export function buildTrialView(m, group) {
     view.fog = fog; view.fogTop = (t.timeline.top + 8) * LH;
   }
   if (t.kind === 'flood' || t.kind === 'sunken') {
-    const fluid = t.fluid, water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), fluidMaterial(fluid, 'full'));
+    // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID);
+    // dropped above the cut inside the cutaway (its cap there: section.js setTrialWaterCap), not
+    // where cave walls come down (it stays to the cube's edge)
+    const fluid = t.fluid, surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid;\n' + fs.replace('#include <clipping_planes_fragment>', `{
+        vec4 solid = texelFetch(uWaterSolid, clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1})), 0);
+        if (vCutW.y > solid.x && vCutW.y < solid.y || vCutW.y > solid.z && vCutW.y < solid.w) discard;
+      }
+      if (cutRegion(true) > 0.5) discard;
+      #include <clipping_planes_fragment>`), 'cut-trial-fluid');
+    const compile = surface.onBeforeCompile;
+    surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; };
+    const water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), surface);
     water.material.side = THREE.DoubleSide;
     water.userData.fluid = fluid; water.visible = false; water.renderOrder = 5;
     water.position.set(N / 2, 0, N / 2);
@@ -381,12 +395,14 @@ export function setTrialFog(world, y) {
 // the fluid's surface at y (world units; null: none), the trial's phase (the tide lines show while idle)
 export function setTrialWater(world, y, phase) {
   const v = world?.trialView;
+  setTrialWaterCap(null);
   if (!v) return;
   v.level = y; v.phase = phase;
   if (v.tide) v.tide.visible = phase === 'idle' || phase === 'armed';
   if (!v.water) return;
   v.water.visible = y != null && y > -BASE + 0.01;
   if (!v.water.visible) return;
+  setTrialWaterCap(y, v.water.userData.fluid);
   const h = y + BASE;
   v.water.scale.y = h; v.water.position.y = -BASE + h / 2;
 }

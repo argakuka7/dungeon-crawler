@@ -17,7 +17,7 @@ const playing = new Set();   // mixers with a clip running
 // placements in this cube. The chests share their materials, cloned per cube like other props.
 export function buildChests(p, list, group) {
   const materials = new Map();
-  const material = m => materials.get(m) ?? materials.set(m, cutMaterial(m.clone(), false, true)).get(m);
+  const material = m => materials.get(m) ?? materials.set(m, cutMaterial(m.clone(), 'self', true)).get(m);
   for (const q of list) {
     const chest = p.template.clone();
     chest.traverse(o => {

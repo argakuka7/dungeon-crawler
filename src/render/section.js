@@ -5,9 +5,11 @@
 // faces are drawn as a flat cap, and the cut-away part as faint glass (ghosts.js). The cap
 // has one colour per kind of solid (rock strata at the cut height, structure stone, wood), so
 // the inner faces seen through the cut read as a single flat lid.
-// Cut fluids get flat caps.
+// Cut fluids get flat caps. Props (and the trials' parts) are cut too; their insides show as a
+// cap in their own colour ('self').
 import * as THREE from 'three';
 import { N, LH, CUBE_H } from '../core/constants.js';
+import { floorY, runY } from '../core/surfaces.js';
 import { GeoBuilder } from './builder.js';
 import { C, gradient } from './palette.js';
 import { FLUID_LOOK } from './materials.js';
@@ -23,7 +25,7 @@ const RADIUS = 2.8;   // world units around the character
 // how much darker a cap is than an unshadowed floor of the same colour
 const CAP_SHADE = 0.68;
 
-const CAP_UNIFORM = { rock: 'uCapRock', stone: 'uCapStone', wood: 'uCapWood' };
+const CAP_UNIFORM = { rock: 'uCapRock', stone: 'uCapStone', wood: 'uCapWood', self: 'diffuseColor.rgb' };
 
 // a cap's colour: the kind's flat colour, lit like an upward-facing floor (sky + sun, no
 // shadows), a little darker; tint: GLSL the colour is multiplied with (the proxies' darkening)
@@ -37,25 +39,43 @@ export const capLight = (caps, tint = 'vec3(1.0)') => `{
         #endif
         outgoingLight = BRDF_Lambert(${CAP_UNIFORM[caps]} * ${tint}) * capIrr * ${CAP_SHADE.toFixed(3)};
       }`;
+// A prop stands a little sunk into the ground, so where a cut opens one its underside, the cap
+// there, lies just under the ground's surface, and the ground showed through: its back faces
+// count as a few centimetres nearer the camera (only they: what sits on the prop's surface, a
+// rune, a glowing pane, must not go under it).
+const PROP_AHEAD = 0.03;   // world units
+const PROP_AHEAD_DEPTH = `gl_FragDepth = gl_FragCoord.z;
+      if (!gl_FrontFacing) {
+        vec4 capClip = projectionMatrix * viewMatrix * vec4(vCutW + normalize(cameraPosition - vCutW) * ${PROP_AHEAD.toFixed(3)}, 1.0);
+        gl_FragDepth = clamp(capClip.z / capClip.w * 0.5 + 0.5, 0.0, 1.0);
+      }`;
 const CUT_DISCARD = 'if (cutRegion(true) > 0.5 || frontWall()) discard;\n#include <clipping_planes_fragment>';
 
 // a material that gets cut away; caps ('rock' | 'stone' | 'wood'): its back faces show as
-// the flat cap in that kind's colour (capLight; the mesh also gets a capTwin); ghost: the
-// cut-away part is drawn again as glass (ghosts.js)
+// the flat cap in that kind's colour (capLight; the mesh also gets a capTwin); 'self': in the
+// material's own colour, and only under a cut (a prop's model need not be closed: its back faces
+// stay hidden elsewhere); ghost: the cut-away part is drawn again as glass (ghosts.js)
 export function cutMaterial(mat, caps = false, ghost = !!caps) {
+  // (unlit materials have no light to give a cap)
+  if (caps === 'self' && !(mat.isMeshStandardMaterial || mat.isMeshLambertMaterial || mat.isMeshPhongMaterial)) caps = false;
+  const self = caps === 'self';
   if (caps) { mat.side = THREE.DoubleSide; mat.shadowSide = THREE.BackSide; }
   mat.userData.ghost = ghost;
-  return inject(mat, fs => {
+  inject(mat, fs => {
     fs = fs.replace('#include <clipping_planes_fragment>', CUT_DISCARD);
+    if (self) fs = 'uniform mat4 projectionMatrix;\n' + fs.replace('#include <clipping_planes_fragment>', `if (!gl_FrontFacing && !underCut()) discard;
+      ${PROP_AHEAD_DEPTH}
+      #include <clipping_planes_fragment>`);
     // cap-only faces (palette.js CAP_ONLY) are not drawn from the front
-    if (caps) fs = fs.replace('#include <clipping_planes_fragment>', `#ifdef USE_COLOR
+    if (caps && !self) fs = fs.replace('#include <clipping_planes_fragment>', `#ifdef USE_COLOR
         if (gl_FrontFacing && vColor.r + vColor.g + vColor.b < 1e-4) discard;
       #endif
       #include <clipping_planes_fragment>`);
     if (caps) fs = fs.replace('#include <opaque_fragment>', `if (!gl_FrontFacing) ${capLight(caps)}
       #include <opaque_fragment>`);
     return fs;
-  }, caps ? 'cut-caps-' + caps : 'cut', caps ? CUT_KINDS[caps] : 3);
+  }, caps ? 'cut-caps-' + caps : 'cut', CUT_KINDS[caps] ?? 3);
+  return mat;
 }
 
 // Solids are built of boxes that touch (stair steps, a stair on the ground or against a cliff,
@@ -95,6 +115,43 @@ const fluidCaps = new THREE.Mesh(new THREE.BufferGeometry(), inject(new THREE.Me
   fs => fs.replace('#include <clipping_planes_fragment>', 'if (cutRegion(false) < 0.5) discard;\n#include <clipping_planes_fragment>'), 'cut-fluid-cap'));
 scene.add(fluidCaps);
 const capColor = t => C(FLUID_LOOK[t].cap);
+
+// A trial's rising fluid (render/trials.js) is one box over the whole cube, inside the solids
+// too. A cut solid shows its back faces as its cap, below the cut, so the fluid inside it would
+// show in front of them (its surface, and its sides at the cube's edge, which the solids'
+// insides are seen through to): per cell, the two highest solids under its surface or around
+// it (WATER_SOLID: bottom, top in r, g and b, a; none: 0, 0; the lowest reaches through the
+// cube's base), where the fluid draws nothing. The cutaway drops it above the cut, and its cap
+// covers only the cells open at the cut height. level: its surface (world units; null: none)
+let trialWater = null, solidKey = '', solidMap = null;
+export function setTrialWaterCap(level, fluid) {
+  trialWater = level == null ? null : { level, fluid };
+}
+export const WATER_SOLID = { value: new THREE.DataTexture(new Float32Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.FloatType) };
+function waterSolids(map) {
+  const level = trialWater?.level, k = map && level != null ? level.toFixed(3) : '';
+  if (k === solidKey && map === solidMap) return;
+  solidKey = k; solidMap = map;
+  const tex = WATER_SOLID.value, a = tex.image.data;
+  a.fill(0);
+  if (k) for (let i = 0; i < N * N; i++) {
+    // (a floor right at the surface keeps it off too: the two would flicker)
+    const spans = map.cols[i].filter(f => f.bottom * LH < level).map(f => [f.bottom * LH, floorY(f, 0.5, 0.5)])
+      .sort((p, q) => q[1] - p[1]).slice(0, 2);
+    spans.forEach(([b, t], j) => { a[i * 4 + j * 2] = b <= 0 ? -1e3 : b; a[i * 4 + j * 2 + 1] = t > level - 0.01 ? Math.max(t, level + 0.01) : t; });
+  }
+  tex.needsUpdate = true;
+}
+// is the middle of cell i solid at height y (a floor's column or a structure piece)?
+function solidAt(map, i, y) {
+  for (const f of map.cols[i]) if (f.bottom * LH < y && floorY(f, 0.5, 0.5) > y) return true;
+  for (const p of map.pieces?.[i] || []) {
+    if (p.kind === 'pillar') continue;
+    const t = runY(p, 0.5, 0.5);
+    if (t > y && (p.kind === 'bridge' ? t - 0.2 : p.base) < y) return true;
+  }
+  return false;
+}
 
 const tmp = new THREE.Vector3(), right = new THREE.Vector3();
 let key = '', capKey = '';
@@ -171,13 +228,21 @@ export function setCut(y, map, px, py, pz, walls = true) {
   U.uRadius.value = Math.hypot((right.x - tmp.x) * camera.aspect, right.y - tmp.y);
   capColors(map, on ? y : py + 1);
 
-  const k = on ? y.toFixed(3) : 'off';
+  waterSolids(map);
+  const water = on && trialWater && trialWater.level - 0.06 > y ? trialWater.fluid : null;
+  const k = on ? y.toFixed(3) + ':' + (water ?? '') : 'off';
   if (k === key && map === fluidCaps.userData.map) return;
   key = k; fluidCaps.userData.map = map;
-  const b = new GeoBuilder();
+  const b = new GeoBuilder(), capped = new Set();
   if (on && map) for (const f of map.floors) {
     if (!f.fluid || f.top * LH >= y || f.surf * LH - 0.06 <= y) continue;
     b.quad([f.x, y, f.z], [f.x + 1, y, f.z], [f.x + 1, y, f.z + 1], [f.x, y, f.z + 1], [0, 1, 0], capColor(f.fluid));
+    capped.add(f.z * N + f.x);
+  }
+  if (water != null && map) for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
+    const i = z * N + x;
+    if (capped.has(i) || solidAt(map, i, y)) continue;
+    b.quad([x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1], [0, 1, 0], capColor(water));
   }
   fluidCaps.geometry.dispose();
   fluidCaps.geometry = b.build();
