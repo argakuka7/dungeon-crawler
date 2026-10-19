@@ -67,7 +67,19 @@ export function smooth(ctx) {
     // a little jitter for the low-poly look (identical for every floor sharing the corner)
     if (!group.some(g => g.prot || g.fluid || g.covered || g.site || g.spot))
       mean += ((hash32(X * 7919 + Z * 104729 + Math.round(mean * 8) * 31337) % 1000) / 1000 - 0.5) * 0.08;
-    return mean;
+    // A bank (a floor at a fluid's level or over it, reaching down beside it) keeps its corners
+    // next to the fluid out of it: a slope sagging it under the surface would put the waterline in
+    // a cell no fluid is drawn in (render/shore.js shoreIssues). Only a fluid's own cells reach
+    // under its surface.
+    return Math.max(mean, bankAt(group, X, Z));
+  }
+  function bankAt(group, X, Z) {
+    let bank = -Infinity;
+    if (!group[0].fluid) for (const [x, z] of [[X - 1, Z - 1], [X, Z - 1], [X - 1, Z], [X, Z]]) {
+      if (!inb(x, z)) continue;
+      for (const w of ctx.cols[idx(x, z)]) if (w.fluid && group.some(g => g.top >= w.surf && g.bottom < w.surf)) bank = Math.max(bank, w.surf * LH);
+    }
+    return bank;
   }
   // the ground a stair rests on sinks a little: its terraces meet the flight's heights at the
   // cell edges, and would show through between steps that straddle a cell edge (or lie flush with
@@ -75,7 +87,7 @@ export function smooth(ctx) {
   const pinnedAt = f => [0, 1, 2, 3].some(k => pins.has(f.id + ':' + (f.x + (k & 1)) + ',' + (f.z + (k >> 1))));
   for (const f of floors) {
     f.cs = [0, 1, 2, 3].map(k => computeCorner(f, k & 1, k >> 1));
-    if (f.underStair && !f.fluid && !pinnedAt(f)) f.cs = f.cs.map(v => v - STAIR_SINK);
+    if (f.underStair && !f.fluid && !pinnedAt(f)) f.cs = f.cs.map((v, k) => Math.max(v - STAIR_SINK, bankAt([f], f.x + (k & 1), f.z + (k >> 1))));
     f.split = Math.abs(f.cs[0] - f.cs[3]) <= Math.abs(f.cs[1] - f.cs[2]) ? 0 : 1;
   }
 }

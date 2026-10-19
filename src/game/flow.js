@@ -28,6 +28,7 @@ import { syncEquippedWeapon } from './equipment.js';
 import { clearInput } from './inputstate.js';
 import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
+import { shoreIssues } from '../render/shore.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
 import { isTestRoom } from '../world/testrooms.js';
@@ -240,6 +241,7 @@ export const portalSeen = (k, m) => Object.fromEntries(m.portals.map(p => [p.id,
 // learn: architecture.html#cube-journey (see learn/README.md)
 export function enterCube(c, from = null, back = null, at = null) {
   const k = c.key;
+  devShores(c.map);
   if (!back) discover(c);
   state.cubeKey = k; state.map = c.map; state.lookDepth = c.map.depth;
   questWorld(c.map);   // the people living here, and what the quests put here (game/questworld.js)
@@ -405,3 +407,13 @@ export function nextCube() {
   setTimeout(() => newWorld().then(() => setStatus('A new world')), 380);
 }
 export const loadCube = () => newWorld(state.baseSeed);
+
+// (dev: what of the cube breaks the rules its fluids are drawn by, render/shore.js shoreIssues;
+// once a cube)
+const shoresChecked = new Set();
+export function devShores(m) {
+  if (!state.dev || shoresChecked.has(m.key)) return;
+  shoresChecked.add(m.key);
+  const issues = shoreIssues(m);
+  if (issues.length) console.warn(`${m.key}: ${issues.length} shore issue(s)\n` + issues.join('\n'));
+}

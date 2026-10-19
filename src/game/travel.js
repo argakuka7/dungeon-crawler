@@ -22,7 +22,7 @@ import { whenReady } from './hud.js';
 import { resetEnemies, detachEnemies, drawEnemies, allEnemies } from './enemies.js';
 import { cancelSword } from './sword.js';
 import { clearMouseInput } from './orders.js';
-import { arrivalPoint, portalSeen, spawnAt, settleIn, visitedNeighbors, discover, beginVisit } from './flow.js';
+import { arrivalPoint, portalSeen, spawnAt, settleIn, visitedNeighbors, discover, beginVisit, devShores } from './flow.js';
 import { enterTrial, warnTrials } from './trials.js';
 import { slideVisuals, endVisuals } from './travelfx.js';
 import { fallPoint } from './fall.js';
@@ -103,6 +103,7 @@ function slide(p, c, cloud) {
   state.boundaryLock = p.kind === 'side' ? OPP6[p.dir] : -1;
   tr.A0 = A;
   warnTrials(m);   // (the portals into trial rooms warn of them)
+  devShores(m);
   state.world = buildWorld(m, state.showPath, portalSeen(k, m), c.geo, openedSides(state.openedFaces, k), gateLocked(m, state.run), townPadIn(m, state.run), state.run.chests);
   enterTrial(m);   // its trial, as built or resolved (game/trials.js)
   // Live crossings retain their height/motion; the death entry must be supported and dry.

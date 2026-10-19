@@ -8,7 +8,8 @@
 // The same for the cube's own fluids (render/floors.js fluidVolume) and the standing ones
 // (render/trials.js), so a shore looks the same whichever fluid it is. Pure: the world worker
 // builds the cube's fluids with it.
-import { N, LH, DIRS } from '../core/constants.js';
+import { N, LH, DIRS, OPP, EDGE_CORNERS } from '../core/constants.js';
+import { restY, ownTakes, ownUnder } from './surface.js';
 import { floorY, runY } from '../core/surfaces.js';
 
 // how far a fluid's wet band on sloping ground stands over it (render/floors.js wetSlope)
@@ -98,4 +99,43 @@ export function slopeAt(m, f, x, z) {
     sum += triangleSlope(g, px - g.x, pz - g.z); n++;
   }
   return n ? sum / n : 0;
+}
+
+// What the fluids are drawn by and a map must keep to (the generator's rules), for the dev
+// checks (game/flow.js devShores, the tests): every line a place that breaks one.
+// - Only a fluid's own cells reach under its surface: a floor beside it at its level or over it
+//   (a bank) has the corners next to it at its surface or over it (cubegen/smooth.js), or the
+//   waterline would run through a cell no fluid is drawn in (its side would show there instead,
+//   with no foam and no wet band). (A corner a stair or ladder pins may win; structures standing
+//   in a fluid are its boxes, waterBoxes.)
+// - No column shows two fluid surfaces close together: two of the cube's own stacked, or the
+//   cube's own and its standing fluid (a trial's, a boss's tide) at any level it may stand at,
+//   in its box (render/surface.js ownTakes, ownUnder).
+export function shoreIssues(m) {
+  const out = [];
+  for (const f of m.floors) if (f.fluid && !f.crust) for (let d = 0; d < 4; d++) {
+    const x = f.x + DIRS[d][0], z = f.z + DIRS[d][1];
+    if (x < 0 || z < 0 || x >= N || z >= N) continue;
+    const [a, b] = EDGE_CORNERS[OPP[d]], rest = restY(f.surf * LH), bed = f.top * LH;
+    for (const g of waterSolids(m, z * N + x)) {
+      if (g.fluid || g.piece || g.top < f.surf || g.bottom * LH >= rest || Math.max(g.cs[a], g.cs[b]) <= bed + 0.01) continue;
+      const lo = Math.min(g.cs[a], g.cs[b]);
+      if (lo < rest) out.push(`bank under the surface: (${x}, ${z}) beside the fluid in (${f.x}, ${f.z}), ${(rest - lo).toFixed(2)} under`);
+    }
+  }
+  const standing = m.trial?.fluid && (m.trial.kind === 'flood' || m.trial.kind === 'sunken') ? [0, 0, N, N] : m.tide?.box;
+  for (let c = 0; c < N * N; c++) {
+    const own = m.cols[c].filter(f => f.fluid && !f.crust);
+    for (let i = 0; i < own.length; i++) for (let j = i + 1; j < own.length; j++)
+      if (Math.abs(own[i].surf - own[j].surf) * LH < 0.3) out.push(`two fluids in (${c % N}, ${c / N | 0}) at levels ${own[i].surf}, ${own[j].surf}`);
+    const [x0, z0, x1, z1] = standing ?? [0, 0, 0, 0], x = c % N, z = c / N | 0;
+    if (!own.length || x < x0 || z < z0 || x >= x1 || z >= z1) continue;
+    for (let level = 0; level <= 40; level += 0.25) {
+      const y = level * LH;
+      if (ownTakes(m.cols[c], y)) continue;   // (the standing fluid is not drawn here)
+      for (const f of own) if (!ownUnder(f.surf * LH, y) && Math.abs(f.surf * LH - y) < 0.3)
+        out.push(`two fluids in (${x}, ${z}): its own at ${f.surf}, the standing one at ${level}`);
+    }
+  }
+  return out;
 }
