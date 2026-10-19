@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, DRIFT, driftLit, holdTime, HUNTER, hunterAt } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, DRIFT, driftLit, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
 import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban, solveSluices, sluiceWay } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -937,4 +937,32 @@ test('the hunter walks its path at its speed from ARM_TIME; every chase room\'s 
     n++;
   }
   assert.ok(n > 15, `${n}`);
+});
+
+// --- runes -------------------------------------------------------------------------------------------
+
+test('a rune order comes from the trial\'s id alone: 4 stones to depth 9, 5-6 from 10, each glyph once', () => {
+  const a = runeOrder('7:1,-3,2:trial', 4), b = runeOrder('7:1,-3,2:trial', 4), c = runeOrder('7:1,-3,2:trial', 12);
+  assert.deepEqual(a, b);
+  assert.equal(a.glyphs.length, 4); assert.ok(c.glyphs.length === 5 || c.glyphs.length === 6);
+  assert.equal(new Set(a.glyphs).size, 4);
+  assert.deepEqual([...a.order].sort(), [0, 1, 2, 3]);
+});
+
+test('every rune room has its clue in an ordinary room the way passes before it, the tablet there telling its order', () => {
+  let n = 0;
+  for (const seed of [0, 1, 2]) {
+    const w = new World(seed, { trial: 'runes' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'runes') {
+      const L = w.layout(d), route = L.route, at = route.indexOf(t.role === 'route' ? t.key : t.from);
+      assert.ok(t.clue && route.indexOf(t.clue) >= 1 && route.indexOf(t.clue) <= at, `${seed}/${d}: the clue at ${route.indexOf(t.clue)}, the room at ${at}`);
+      assert.ok(!L.trialCells.has(t.clue) && L.trialClues.get(t.clue).includes(t));
+      const tab = w.cube(t.clue).map.clues.find(c => c.key === t.key), pz = w.cube(t.key).map.trial.puzzles[0];
+      assert.ok(tab && tab.key === t.key, `${seed}/${d}: no tablet`);
+      assert.deepEqual(tab.glyphs, pz.field.order.map(i => pz.field.glyphs[i]));
+      assert.equal(pz.parts.filter(p => p.type === 'runestone').length, pz.field.glyphs.length);
+      n++;
+    }
+  }
+  assert.ok(n > 20, `${n}`);
 });

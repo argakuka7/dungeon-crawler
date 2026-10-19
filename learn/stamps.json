@@ -100,7 +100,7 @@
     "src/cubegen/heights.js#shapePinnacle": "611834f5",
     "src/cubegen/heights.js#shapeShaft": "1184ee1d",
     "src/cubegen/index.js#generate": "ee1656ca",
-    "src/cubegen/index.js#tryGenerate": "99450eca",
+    "src/cubegen/index.js#tryGenerate": "bc445e44",
     "src/cubegen/reach.js#reachTo": "f03a56c3",
     "src/cubegen/route.js#search": "cdae09bf",
     "src/cubegen/setpieces.js#shapeLake": "563ed8c1",
@@ -223,7 +223,7 @@
     "src/world/worker.js": "c256536c",
     "src/world/world.js#archetype": "7f631674",
     "src/world/world.js#prepare": "a88aec54",
-    "src/world/world.js#spec": "940e7b10"
+    "src/world/world.js#spec": "593722eb"
   },
   "outdated": {}
 }

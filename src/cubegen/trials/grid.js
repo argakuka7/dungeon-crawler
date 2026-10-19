@@ -6,6 +6,18 @@
 import { N } from '../../core/constants.js';
 import { idx } from '../../core/util.js';
 import { placeDeck, openGap, RIM } from './deck.js';
+import { runeOrder } from '../../core/trials.js';
+
+// the rune stones: round the edge of a size x size field, evenly spaced
+function makeRunes(id, depth, size) {
+  const { glyphs, order } = runeOrder(id, depth), ring = [];
+  for (let x = 0; x < size; x++) ring.push([x, 0]);
+  for (let z = 1; z < size; z++) ring.push([size - 1, z]);
+  for (let x = size - 2; x >= 0; x--) ring.push([x, size - 1]);
+  for (let z = size - 2; z > 0; z--) ring.push([0, z]);
+  const stones = glyphs.map((g, i) => ring[Math.round(i * ring.length / glyphs.length)]);
+  return { field: { glyphs, order, stones } };
+}
 import { makeMirror, makeBraziers, makeChannels, makeCrates, makePlates, makeStones, makeSluices } from './solve.js';
 
 // a field's size and how hard it is: in a room of its own by depth, on a platform small
@@ -17,7 +29,7 @@ export function gridSize(kind, depth, small) {
     braziers: { size: 5, band: deep ? [4, 6] : [3, 4] }, channels: { size: deep ? 6 : 5, band: deep ? [6, 12] : [4, 8] },
     crates: { size: deep ? 7 : 6, band: deep ? [8, 16] : [4, 10], crates: deep ? 3 : 2 }, plates: { size: 7 },
     stones: { size: deep ? 7 : 5, band: deep ? [22, 30] : [12, 16], branches: deep ? 4 : 2 },
-    sluices: { size: deep ? 7 : 5, h: 3, basins: deep ? 4 : 3, band: deep ? [6, 9] : [4, 6] } }[kind];
+    sluices: { size: deep ? 7 : 5, h: 3, basins: deep ? 4 : 3, band: deep ? [6, 9] : [4, 6] }, runes: { size: 5 } }[kind];
 }
 // the kinds walled in by a rim, their one way in a gap in it (the crates' rubble keeps you to pushing)
 const WALLED = new Set(['crates', 'plates', 'stones']);
@@ -36,6 +48,7 @@ export function buildGrid(ctx, kind, { size, h, band, turns, crates, branches, b
         : kind === 'plates' ? makePlates(ctx.R, size, size)
           : kind === 'stones' ? makeStones(ctx.R, size, size, ctx.ri(band[0], band[1]), branches, side)
             : kind === 'sluices' ? makeSluices(ctx.R, basins, band)
+              : kind === 'runes' ? makeRunes(ctx.spec.trial.id, ctx.spec.depth, size)
             : makeChannels(ctx.R, size, size, band);
   if (!made) return null;
   if (kind === 'stones') {   // the stones over a pit of the depth's fluid (cubegen/river.js: its sea)
@@ -72,6 +85,12 @@ export function gridRecord(pz, id) {
     return { parts, start, field: { pattern: made.pattern, at: made.at, links: made.links }, check: { presses: made.solution.presses, solution: made.solution.which } };
   }
   if (kind === 'stones') return { parts, start, field: made.field, entryGap: pz.entryGap, check: { stones: made.stones.length, branchPoints: made.branchPoints } };
+  if (kind === 'runes') {   // the stones round the field's edge, evenly; the order from the trial's id
+    const F = made.field;
+    F.stones.forEach(([x, z], i) => { const [px, pz2] = at(x, z); parts.push({ id: `${id}:r${i}`, type: 'runestone', x: px, y, z: pz2, i, glyph: F.glyphs[i] }); });
+    start[`${id}:n`] = 0;
+    return { parts, start, field: F, check: { presses: F.order.length } };
+  }
   if (kind === 'sluices') {
     // the basins along the back row (every other cell), the pour levers between them (to the right
     // in the middle row, to the left in the front one), a spring's lever before its basin, a

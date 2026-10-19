@@ -26,7 +26,7 @@ import { shapeDrift, driftGoal } from './drift.js';
 import { shapeSiege, siegeGoal, RING } from './siege.js';
 import { shapeChase, chaseGoal } from './chase.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
-import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, DRIFT, HUNTER } from '../../core/trials.js';
+import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, DRIFT, HUNTER, runeOrder } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
@@ -46,6 +46,7 @@ const KINDS = {
   plates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   stones: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sluices: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  runes: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   timedgate: { shape: shapeTimed, goal: timedGoal, costs: null, finish: finishTimed },
 };
 
@@ -380,7 +381,7 @@ function gateAt(deck, x, z, side, id) {
 
 // Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
 // map.trial.parts), checked against the built ground
-const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid, stones: finishStones, sluices: finishGrid };
+const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid, stones: finishStones, sluices: finishGrid, runes: finishGrid };
 function finishPuzzles(ctx, t) {
   const puzzles = [], parts = [], start = {};
   for (const [i, pz] of t.puzzles.entries()) {
@@ -463,6 +464,31 @@ function finishTimed(ctx, t, out) {
   const lever = { id: 'p0:lever', type: 'lever', x: perch.x + 0.5, y, z: perch.z + 0.5, puzzle: 0, yaw: 0 };
   return { puzzles: [{ id: 'p0', kind: 'timedgate', index: 0, T, pad, parts: [lever], check: { run: Math.round(run * 100) / 100 } }],
     parts: [lever], start: {}, check: { slack: Math.round((T - run) * 100) / 100, path: checkPath(path, arr, () => null) } };
+}
+
+// --- the runes' clue ---------------------------------------------------------------------------------
+
+// The rune rooms' tablets in an ordinary room before them (spec.clues, world/trials.js): each on the
+// dry, flat ground nearest the room's middle that leads to the exit, off the portals' pads and the
+// spots, apart; no props on them. Chosen without the generator's random stream (the room is as it
+// would be without them).
+export function placeClues(ctx, safe) {
+  const out = { clues: [], reservations: [] };
+  for (const clue of ctx.spec.clues || []) {
+    const one = placeClue(ctx, safe, clue, out.clues);
+    if (one) { out.clues.push(one.clue); out.reservations.push(...one.reservations); }
+  }
+  return out;
+}
+function placeClue(ctx, safe, clue, taken) {
+  const pads = new Set(ctx.portals.flatMap(p => p.cells || []));
+  const ok = f => !f.fluid && f.layer === 0 && !f.landing && !pads.has(f.c) && (!safe || safe.has(f.id)) && Math.max(...f.cs) - Math.min(...f.cs) <= 0.2
+    && !ctx.pieces[f.c].length && !(ctx.spots || []).some(s => s.cells?.includes(f.c)) && taken.every(t => Math.hypot(t.x - f.x - 0.5, t.z - f.z - 0.5) >= 2.5);
+  const f = ctx.floors.filter(ok).sort((a, b) => Math.hypot(a.x - 7.5, a.z - 7.5) - Math.hypot(b.x - 7.5, b.z - 7.5))[0];
+  if (!f) return null;
+  f.noSpawn = true;
+  const { glyphs, order } = runeOrder(clue.id, clue.depth);
+  return { clue: { key: clue.key, x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5, glyphs: order.map(i => glyphs[i]) }, reservations: [{ c: f.c, layer: 0 }] };
 }
 
 // --- sunken ------------------------------------------------------------------------------------------

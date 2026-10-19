@@ -268,8 +268,46 @@ function crustCell(m, f, theme, stone = false) {
   return mesh;
 }
 
+// a glyph carved and lit: a texture of the glyph in `color` on a dark stone face
+const glyphTextures = new Map();
+function glyphTexture(glyph, color = '#e8d8ff') {
+  const k = glyph + color;
+  if (glyphTextures.has(k)) return glyphTextures.get(k);
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#3a3640'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = color; g.font = 'bold 44px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(glyph, 32, 34);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  glyphTextures.set(k, tex);
+  return tex;
+}
+// a runestone: a standing stone, its glyph on the face towards the field's middle; lit once pressed in turn
+function runestone(p) {
+  const g = new THREE.Group(), stone = STONE();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.3), stone); body.position.y = 0.55; body.castShadow = true;
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), new THREE.MeshStandardMaterial({ map: glyphTexture(p.glyph), emissive: 0x000000, emissiveMap: glyphTexture(p.glyph), roughness: 0.8 }));
+  face.position.set(0, 0.72, 0.151);
+  const back = face.clone(); back.rotation.y = Math.PI; back.position.z = -0.151;
+  g.add(body, face, back); g.position.set(p.x, p.y, p.z);
+  return { obj: g, face: [face, back], lit: null };
+}
+// the carved tablet (a rune room's clue, in another room): a slab on a plinth with the glyphs in order
+function tablet(c) {
+  const g = new THREE.Group(), stone = STONE();
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.4), stone); plinth.position.y = 0.15;
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.12), stone); slab.position.y = 0.65; slab.castShadow = true;
+  g.add(plinth, slab);
+  c.glyphs.forEach((gl, i) => {
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), new THREE.MeshBasicMaterial({ map: glyphTexture(gl, '#f0d890') }));
+    q.position.set((i - (c.glyphs.length - 1) / 2) * 0.17, 0.68, 0.061); g.add(q);
+  });
+  g.position.set(c.x, c.y, c.z);
+  return g;
+}
+
 export function buildTrialView(m, group) {
   const t = m.trial;
+  for (const c of m.clues || []) group.add(tablet(c));
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
@@ -322,7 +360,7 @@ export function buildTrialView(m, group) {
     if (p.type === 'lever' || p.type === 'reset' || p.type === 'sluice') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
       : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
-        : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : null;
+        : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : p.type === 'runestone' ? runestone(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
@@ -500,7 +538,10 @@ export function setGridParts(world, m, s, shown) {
       for (const w of g.wet) w.visible = wet;
     } else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
     else if (p.type === 'wheel') g.driven = !!info?.wheel;
-    else if (p.type === 'basin') {   // its water at its level, filling or emptying smoothly
+    else if (p.type === 'runestone') {   // lit: pressed in turn so far (the order's first n)
+      const pz = m.puzzles[p.puzzle ?? 0], n = s.bits?.[`${pz.id}:n`] ?? 0, lit = s.phase === 'resolved' || pz.field.order.slice(0, n).includes(p.i);
+      if (g.lit !== lit) { g.lit = lit; for (const f of g.face) f.material.emissive.set(lit ? 0xc0a0ff : 0x000000); }
+    } else if (p.type === 'basin') {   // its water at its level, filling or emptying smoothly
       g.level = g.level < 0 ? bit : g.level + (bit - g.level) * 0.08;
       const h = Math.max(0.001, g.level * UNIT);
       g.water.scale.y = h; g.water.position.y = TANK_BASE + h / 2; g.water.visible = g.level > 0.02;

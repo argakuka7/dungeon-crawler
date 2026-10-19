@@ -308,6 +308,51 @@ export async function runTimedChecks() {
   return ['timedgate', `${pz.check.run} s run, open ${pz.T} s`];
 }
 
+// The runes (?trial=runes): no order shown before the tablet is read; the tablet in its room (one
+// before the rune room) read; a wrong press puts the stones out; the order pressed: solved
+export async function runRunesChecks() {
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'runes' && t.role === 'route'));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=runes');
+  const t = all[0];
+  check(t.clue && state.cubes.layout(t.depth).route.indexOf(t.clue) < state.cubes.layout(t.depth).route.indexOf(t.key), 'the clue room before the rune room');
+  const { whenReady } = await import('../../src/game/hud.js');
+  const { enterCube } = await import('../../src/game/flow.js');
+  const c = await whenReady(state.cubes.get(t.clue));
+  enterCube(c, c.map.portals.find(p => p.kind === 'side').dir);
+  await until(() => state.cubeKey === t.clue && !state.transitioning, 'into the clue room');
+  const tab = state.map.clues.find(c => c.key === t.key);
+  check(tab && tab.key === t.key, 'the tablet is here');
+  await delay(500);
+  Object.assign(player, { x: tab.x + 0.7, y: tab.y, z: tab.z, vx: 0, vz: 0 });
+  await until(() => pendingAction()?.target?.type === 'tablet', 'the tablet in reach', 2000);
+  useAction();
+  check(state.run.trials.has(`clue:${t.key}`), 'read: remembered');
+  await goTrial('runes', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the rune room');
+  const pz = state.map.trial.puzzles[0], stones = pz.parts.filter(p => p.type === 'runestone');
+  check(pz.field.order.map(i => pz.field.glyphs[i]).join('') === tab.glyphs.join(''), 'the tablet tells the room\'s order');
+  const press = async i => {
+    const p = stones.find(q => q.i === i);
+    Object.assign(player, { x: p.x + 0.6, y: p.y, z: p.z, vx: 0, vz: 0 });
+    await delay(100);
+    check(pendingAction()?.target?.id === p.id, `stone ${i} in reach`);
+    useAction();
+    await delay(50);
+  };
+  const n = () => state.trial.bits[`${pz.id}:n`] ?? 0;
+  await press(pz.field.order[0]);
+  check(n() === 1, 'the first lights');
+  await press(pz.field.order[2]);
+  check(n() === 0, 'a wrong one puts them out');
+  for (const i of pz.field.order) await press(i);
+  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return ['runes', tab.glyphs.join('')];
+}
+
 export async function runTrialChecks(kind = 'flood') {
   const results = [];
   const all = [];

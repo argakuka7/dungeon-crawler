@@ -105,6 +105,7 @@ export class World {
       trial: trial && { id: trial.id, key: trial.key, kind: trial.kind, role: trial.role, from: trial.from, fromDir: trial.fromDir,
         exit: trial.exit, gate: trial.gate, stages: trial.stages || null, depth: trial.depth, entry: trial.fromDir ^ 1 },
       trialFaces: trialFaces(L, k),   // the kind of trial behind each side face (the warning on its portal)
+      clues: (L.trialClues?.get(k) ?? []).map(t => ({ key: t.key, id: t.id, depth: t.depth })),   // rune rooms' tablets (world/trials.js)
       archetype: trial ? 'trial' : span ? span.role : area ? area.role : height ? height.role : pinnacle ? 'pinnacle' : peak ? 'peak' : lake ? 'lake' : -Y === 0 || annex ? 'plain'
         : this.opts.arche || archetype(theme, t.kind, this.wfc.rng(k, 0xa7c4)), span,
       forceBridge: this.opts.bridge || null, forceLadder: this.opts.ladder || null,

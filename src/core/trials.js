@@ -46,7 +46,8 @@ export const TRIALS = {
     built: true, population: 0.5 },
   timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0', built: true,
     population: 0.5 },
-  runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff' },
+  runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff',
+    built: true, population: 0.5 },
   plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0', built: true,
     population: 0.5 },
 };
@@ -216,6 +217,23 @@ export function hunterAt(path, t) {
   return { ...e, yaw: 0, at: path.length, done: true };
 }
 
+// --- runes ---------------------------------------------------------------------------------------------
+// A rune room's stones and the order to press them in, from the trial's id alone (the clue's tablet,
+// in another room, says the same): 4 stones at depths 1-9, 5-6 from 10, each a glyph of the set.
+export const RUNE_GLYPHS = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+export function runeOrder(id, depth) {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  const R = () => { h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const n = depth < 10 ? 4 : 5 + (R() < 0.5 ? 0 : 1), pool = [...RUNE_GLYPHS], glyphs = [];
+  for (let i = 0; i < n; i++) glyphs.push(pool.splice(Math.floor(R() * pool.length), 1)[0]);
+  const order = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  return { glyphs, order };
+}
+// the clue read for good (the hero remembers it): kept in run.trials (saved, like a sunken room's stage)
+export const clueMark = key => `clue:${key}`;
+
 // --- states (docs/trials.md "States") ------------------------------------------------------------
 //   idle      the room as built; an event arms when a player steps off the arrival pad
 //   armed     ARM_TIME s of telegraph: the banner, the rumble; nothing hurts yet
@@ -314,7 +332,7 @@ export function crustState(m, s, q) {
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
   mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice', valve: 'Open the vent valve',
   warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod', beacon: 'Light the beacon',
-  portcullis: null, waypad: null };
+  portcullis: null, waypad: null, runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------

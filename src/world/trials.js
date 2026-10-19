@@ -141,7 +141,7 @@ function routeRooms(plan, spine, K, blocked, pinned, guarded = () => false) {
   for (let i = 2; i <= spine.length - 2; i++) {
     const c = spine[i];
     if (blocked(c) || blocked(spine[i - 1]) || guarded(spine[i + 1]) || nb(c).some(pinned) || pinned(c)) continue;
-    if ([c, ...nb(c)].some(n => plan.cells.has(K(n)))) continue;
+    if ([c, ...nb(c)].some(n => plan.cells.has(K(n))) || plan.clues?.has(K(c))) continue;   // (nor a rune room's clue room)
     out.push(i);
   }
   return out;
@@ -168,26 +168,43 @@ export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches
     const kind = weighted(puzzles, kindRoll);
     // a forced puzzle: the first slot in a branch, the second on the route (both get tried)
     // (the timed gate: on the route only, its gate the exit)
-    const vaults = force && slot === 1 || kind === 'timedgate' ? [] : branches.filter(b => !blocked(b.cell) && !pinned(b.cell) && !nb(b.cell).some(pinned)
+    const vaults = force && slot === 1 || kind === 'timedgate' ? [] : branches.filter(b => !blocked(b.cell) && !pinned(b.cell) && !nb(b.cell).some(pinned) && !plan.clues?.has(K(b.cell))
       && !near(b.cell) && !near(b.parent) && !busy(K(b.cell)) && !busy(K(b.parent)));
     if (vaults.length) {
       const b = vaults[Math.floor(roomRoll * vaults.length)];
-      add(plan, { kind, role: 'branch', key: K(b.cell), from: K(b.parent), fromDir: direction(b.parent, b.cell), exit: null }, b.cell, d, theme);
+      const t = add(plan, { kind, role: 'branch', key: K(b.cell), from: K(b.parent), fromDir: direction(b.parent, b.cell), exit: null }, b.cell, d, theme);
+      if (kind === 'runes') clueFor(plan, t, spine, K, blocked, spine.findIndex(c => K(c) === t.from) + 1);
       continue;
     }
     const rooms = routeRooms(plan, spine, K, c => blocked(c) || busy(K(c)), pinned, guarded);
     if (!rooms.length) continue;
     const i = rooms[Math.floor(roomRoll * rooms.length)];
-    add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),
+    const t = add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),
       exit: direction(spine[i], spine[i + 1]) }, spine[i], d, theme);
+    if (kind === 'runes') clueFor(plan, t, spine, K, blocked, i);
   }
   return plan;
+}
+
+// The rune room's clue: a route room the way passes before it (before the room it is entered from,
+// for a vault: up to that one), not a trial's, nor one the trials keep out of; drawn by a hash of the
+// trial's id (not the plan's stream: the rest of the plan stays as it was). t.clue: its key. (Two
+// rune rooms at a depth may share one: it holds both tablets.)
+function clueFor(plan, t, spine, K, blocked, before) {
+  const rooms = spine.slice(1, Math.max(1, before)).filter(c => !blocked(c) && !plan.cells.has(K(c)));
+  const list = rooms.length ? rooms : spine.slice(1, Math.max(2, before)).filter(c => !plan.cells.has(K(c)));
+  if (!list.length) return;
+  const c = list[hash32(hashKey(t.id)) % list.length];
+  t.clue = K(c);
+  plan.clues ??= new Map();
+  plan.clues.set(t.clue, [...plan.clues.get(t.clue) ?? [], t]);
 }
 
 // the layout's lookup tables (world/layout.js)
 export function indexTrials(layout, plan) {
   layout.trials = plan.list;
   layout.trialCells = plan.cells;
+  layout.trialClues = plan.clues ?? new Map();   // the rune rooms' clues: a room holding tablets -> their trials
   return layout;
 }
 

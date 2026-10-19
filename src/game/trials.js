@@ -9,7 +9,7 @@ import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, fogY, fogLevel, fogHurt, COLD, coldStep, STORM, stormPhase, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
   nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage,
-  traceBeam, allLit, channelFlow, pressBrazier, pushTarget, pourSluice } from '../core/trials.js';
+  traceBeam, allLit, channelFlow, pressBrazier, pushTarget, pourSluice, clueMark } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts, setTrialFog, setStorm } from '../render/trials.js';
@@ -39,6 +39,7 @@ const PUZZLE_HINT = {
   plates: 'Hold both plates down at once: a friend, or the crate',
   sluices: 'Bring the marked basin to its red line: each sluice pours till one basin is empty or the other full',
   timedgate: 'Pull the lever on the rock, then run for the exit before it shuts',
+  runes: 'Press the runestones in the order the carved tablet tells',
   stones: 'Stand on every stone once and end on the bright one: each sinks as you leave it',
   channels: 'Turn the channels till the water drives the wheel',
 };
@@ -285,6 +286,9 @@ function drown(m, s) {
 // the part the player stands at, if any: { id, type, label, x, y, z }
 export function partInReach() {
   const m = mapTrial(), s = state.trial;
+  // a rune room's tablet (in a room before it)
+  const c = (state.map?.clues || []).find(q => Math.hypot(q.x - player.x, q.z - player.z) < PART_REACH + 0.3 && Math.abs(q.y - player.y) < 1.2);
+  if (c) return { id: 'tablet', type: 'tablet', key: c.key, x: c.x, y: c.y, z: c.z, label: PART_LABELS.tablet };
   if (!m?.parts || !s || s.phase === 'resolved') return null;
   // (a channel tile: the one in front of you, the field being all tiles; else the nearest part)
   const fx = player.x + Math.sin(player.yaw) * 0.8, fz = player.z + Math.cos(player.yaw) * 0.8;
@@ -302,13 +306,14 @@ const sluiceLabel = p => {
   const l = p.lever, s = state.trial, pid = p.id.split(':')[0], basin = i => `${BASIN[i]} (${s?.bits[`${pid}:b${i}`] ?? 0}/${mapTrial().puzzles.find(q => q.id === pid).field.cap[i]})`;
   return l.spring != null ? `Open the spring into ${basin(l.spring)}` : l.drain != null ? `Drain ${basin(l.drain)}` : `Pour ${basin(l.from)} into ${basin(l.to)}`;
 };
-const partLabel = p => p.type === 'sluice' ? sluiceLabel(p) : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
+const partLabel = p => p.type === 'runestone' ? `Press the runestone ${p.glyph}` : p.type === 'sluice' ? sluiceLabel(p) : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
   : PART_LABELS[p.type] ?? 'Use it';
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's
 // trial, the press goes to its owner.
 export function usePart(p, fromOther = false) {
   const s = state.trial, m = mapTrial();
+  if (p.type === 'tablet') { readTablet(p.key); return true; }
   if (!s || !m) return false;
   if (!fromOther && mirroring()) { sfx('clink'); relay.trialAct?.({ key: s.key, act: 'part', id: p.id }); return true; }
   if (p.type === 'button' && m.kind === 'flood') { if (!fromOther) sfx('clink'); resolve(); return true; }
@@ -326,6 +331,11 @@ export function usePart(p, fromOther = false) {
   if (m.kind === 'timedgate' && p.type === 'lever') { s.bits[p.id] = 1; timed.t = 0; setStatus(`The gate is open: ${pz.T} s to reach it`); sfx('gate', { delay: 0.2 }); }
   else if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
   else if (p.type === 'tile') s.bits[p.id] = ((s.bits[p.id] ?? 0) + 1) & 3;
+  else if (p.type === 'runestone') {   // the next in the order lights; a wrong one puts them all out
+    const key = `${pz.id}:n`, n = s.bits[key] ?? 0;
+    if (pz.field.order[n] === p.i) s.bits[key] = n + 1;
+    else { s.bits[key] = 0; if (!fromOther) { sfx('thud'); setStatus('The stones go dark: start over'); } }
+  }
   else if (p.type === 'sluice') {   // pour (the lever's own bit only swings it)
     const levels = pourSluice(pz.field.cap, bitsOf(pz, s, 'basin'), p.lever);
     for (const q of pz.parts) if (q.type === 'basin') s.bits[q.id] = levels[q.i];
@@ -362,6 +372,17 @@ export function resolve(tell = true) {
   return true;
 }
 
+// --- the runes' clue -----------------------------------------------------------------------------
+// Reading the carved tablet: its glyphs in order, and the hero remembers them (run.trials, saved)
+function readTablet(key) {
+  const c = (state.map?.clues || []).find(q => q.key === key);
+  if (!c) return;
+  state.run.trials.set(clueMark(c.key), 1);
+  sfx('clink');
+  banner('A carved tablet', `Press them in this order:  ${c.glyphs.join('  ')}`);
+  setStatus(`The tablet reads ${c.glyphs.join(' ')}: you will remember it`);
+}
+
 // --- the HUD: the banner on arming, the trial's line while it runs -------------------------------
 
 let bannerUntil = 0;
@@ -390,6 +411,12 @@ function hud() {
     fill = Math.min(1, s.t / floodEnd(tl));
   }
   if (isPuzzle(s.kind)) line = PUZZLE_HINT[s.kind] ?? '';
+  if (s.kind === 'runes') {   // read the clue: the order shows; else where to find it
+    const pz = m.puzzles[0], order = pz.field.order.map(i => pz.field.glyphs[i]), n = s.bits[`${pz.id}:n`] ?? 0;
+    line = state.run.trials.has(clueMark(m.key)) ? `The order: ${order.map((g, i) => i < n ? `[${g}]` : g).join('  ')}`
+      : 'Press the runestones in the right order: a carved tablet in a room before this one tells it';
+    fill = n / order.length;
+  }
   if (s.kind === 'timedgate' && timedOpen(m, s)) { const T = m.puzzles[0].T; line = `The gate is open: ${Math.max(0, Math.ceil(T - timed.t))} s`; fill = Math.max(0, 1 - timed.t / T); }
   if (s.kind === 'sunken') {
     line = `Stage ${(s.stage ?? 0) + 1} of ${m.stages}: solve the dry platform's puzzle to drain the room`;
@@ -427,6 +454,7 @@ function hud() {
 const bitsOf = (pz, s, type) => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i).map(p => s.bits[p.id] ?? 0);
 const shown = new Map();   // puzzle index -> { beam: { cells, lit } } | { wet: Set } | {}
 const RULES = {
+  runes: (pz, s) => (s.bits[`${pz.id}:n`] ?? 0) >= pz.field.order.length,
   sluices: (pz, s) => (s.bits[`${pz.id}:b${pz.field.float}`] ?? 0) === pz.field.mark,
   mirror(pz, s, bodies) {
     const D = pz.deck, y = D.level * LH;

@@ -1,8 +1,8 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 9 are done: the framework, `flood`, `collapse`, `miasma`, `cold`, `storm`,
-`siege`, `chase`, `drift`, the puzzle parts, `slide`, `sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`,
-`sluices` and `timedgate` are planned, built, checked, playable (alone and
+Status: steps 1 to 10 are done: every kind (`flood`, `collapse`, `miasma`, `cold`, `storm`,
+`siege`, `chase`, `drift`, `sunken`, and the puzzles `slide`, `mirror`, `braziers`, `channels`,
+`crates`, `plates`, `stones`, `sluices`, `timedgate`, `runes`) is planned, built, checked, playable (alone and
 together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
 "Implementation order" at the end).
@@ -620,6 +620,16 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 - **Generator:** plans the clue room with the trial (depth level); the order is seeded, 4 long
   at depths 1–9, 5–6 from 10.
 - **Themes:** ruins, highlands, ossuary, karst, abyss.
+- **As built** (`core/trials.js runeOrder`, `world/trials.js clueFor`, `grid.js`, `index.js
+  placeClues`): the glyphs (Elder Futhark, one set for every theme) and the order come from the
+  trial's id alone, so the room and the tablet agree without sharing anything. The clue room is a
+  route room before the rune room (before the room a vault is entered from), drawn by a hash of
+  the id (the plan's own stream is untouched), not a trial's; no later trial takes it; two rune
+  rooms of a depth may share it (a tablet each). The tablet stands on the flat, dry ground nearest
+  the clue room's middle, placed after the room is built (the room is as it would be without it).
+  Reading it puts `clue:<key>` into `run.trials` (saved and shared like a sunken room's stage); in
+  the rune room the HUD then shows the order, the pressed ones bracketed. The stones stand round
+  the edge of a 5x5 walk-on deck. Not a sunken stage.
 
 ### `plates`: Two plates
 
@@ -687,7 +697,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 7. [x] **`stones`, `sluices`, `timedgate`.**
 8. [x] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
 9. [x] **`siege`, `chase`, `drift`.**
-10. [ ] **`runes`** (the clue room across cubes).
+10. [x] **`runes`** (the clue room across cubes).
 11. [ ] Weights and numbers tuned in play; the balance simulation (`docs/balance.md`) counts
     trial time and rewards.
 
