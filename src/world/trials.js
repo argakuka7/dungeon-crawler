@@ -22,6 +22,7 @@ import { TRIALS, TRIAL_KINDS, trialGate, trialFits, trialWeight, parseForce, isE
 import { faceKey, hashKey, step, parse } from './coords.js';
 import { N } from '../core/constants.js';
 import { sunkenPath } from '../cubegen/trials/sunken.js';
+import { cornerOf, fromCorner, COURT } from '../cubegen/trials/chase.js';
 
 // Where the portal on side face d of trial room k stands along the face: a trial room's faces are
 // flat (LLLL, no river) and nothing else moves their portals, so it is the face's own first draw
@@ -36,6 +37,11 @@ function roomFits(kind, seed, k, entry, exit, depth) {
   if (kind === 'sunken') {
     const q = ([x, z]) => [x >= 8 ? 1 : 0, z >= 8 ? 1 : 0];
     return exit != null && !!sunkenPath(q(at(entry, 1)), q(at(exit, 1)), sunkenCount(depth), smallStages());
+  }
+  // (the relic: in and out on two faces meeting at a corner, both portals near it, in its courtyard)
+  if (kind === 'chase') {
+    const corner = exit != null && cornerOf(entry, exit);
+    return !!corner && [entry, exit].every(d => fromCorner(d, portalPos(seed, k, d), corner) + 2 <= COURT.most);
   }
   // (the cold: its ridges across the way, from one face to the opposite one)
   if (kind === 'cold') return exit != null && (entry ^ 1) === exit;

@@ -304,10 +304,11 @@ export async function runTrialChecks(kind = 'flood') {
   // stepping off the pad arms it, and seals every portal
   const [ax, az] = DIRS[t.fromDir];
   player.autoDir = [ax, az];
-  if (kind === 'siege') {   // (armed by lighting the beacon, not by stepping off the pad)
+  if (kind === 'siege' || kind === 'chase') {   // (armed by lighting the beacon or taking the relic, not by stepping off the pad)
     await delay(1000);
     player.autoDir = null;
-    const b = state.map.trial.parts.find(p => p.type === 'beacon');
+    check(state.trial.phase === 'idle', 'stepping off the pad arms nothing');
+    const b = state.map.trial.parts.find(p => p.type === 'beacon' || p.type === 'relic');
     Object.assign(player, { x: b.x + 0.8, y: b.y, z: b.z, vx: 0, vz: 0 });
     await delay(150);
     useAction();
@@ -417,25 +418,43 @@ export async function runTrialChecks(kind = 'flood') {
     check(!allEnemies().some(e => e.id.startsWith(`trial:${t.key}:siege`) && e.mode !== 'dead'), 'the rest fled');
     results.push('held');
   }
-  // the chase: the hunter breaks out after ARM_TIME and comes along the way; the lever crushes it
+  // the relic: taken, its warden (a known kind, stronger) breaks out and hunts at the player's own
+  // running speed (a swiftness potion quickens it too); the run back along the checked way at
+  // RUN_SPEED beats it to the lever, which drops the portcullis with the warden shut in the hall
   if (kind === 'chase') {
-    const m = state.map.trial, lever = m.parts.find(p => p.type === 'lever'), path = m.check.path;
-    player.autoDir = DIRS[t.fromDir];
-    await until(() => state.trial.phase !== 'idle', 'armed', 4000);
-    player.autoDir = null;
-    // the run, at RUN_SPEED along the checked way: the hunter never catches it
+    const m = state.map.trial, relic = m.parts.find(p => p.type === 'relic'), lever = m.parts.find(p => p.type === 'lever'), path = m.check.path;
+    const { allEnemies } = await import('../../src/game/enemies.js');
+    const { HUNTER } = await import('../../src/core/trials.js');
+    const { RUN_SPEED } = await import('../../src/core/constants.js');
+    Object.assign(player, { x: relic.x + 0.8, y: relic.y, z: relic.z, vx: 0, vz: 0 });
+    await delay(150);
+    check(pendingAction()?.target?.id === 'relic', 'the relic in reach');
+    useAction();
+    check(state.trial.phase === 'armed', 'taking it arms the room');
     const t0 = performance.now();
+    await until(() => allEnemies().some(e => e.warden), 'the warden breaks out', 4000);
+    const w = allEnemies().find(e => e.warden);
+    check(w.profile.label.startsWith('Raging') && w.profile.hp > w.profile.damage, `a known kind, stronger: ${w.profile.label}`);
+    await delay(100);
+    check(Math.abs(w.profile.chase - RUN_SPEED * HUNTER.ratio) < 1e-6, `it runs as fast as we do (${w.profile.chase})`);
+    player.effects ??= {};
+    player.effects['buff:moveSpeed'] = { kind: 'buff', buff: 'moveSpeed', value: 0.3, until: Infinity };
+    await delay(100);
+    check(Math.abs(w.profile.chase - RUN_SPEED * 1.3 * HUNTER.ratio) < 1e-6, `quicker with us (${w.profile.chase})`);
+    delete player.effects['buff:moveSpeed'];
+    // the run, at RUN_SPEED along the checked way from the moment it was taken
     for (const p of path) {
       await until(() => (performance.now() - t0) / 1000 >= p.t, 'the run', 60000);
       check(state.trial.phase === 'armed' || state.trial.phase === 'running', `still running (${state.trial.phase})`);
       Object.assign(player, { x: p.x, y: p.y, z: p.z, vx: 0, vz: 0 });
     }
-    check(state.world.trialView.hunter.visible, 'the hunter is out');
     Object.assign(player, { x: lever.x, y: lever.y, z: lever.z + 0.5, vx: 0, vz: 0 });
     await delay(100);
     check(pendingAction()?.target?.id === 'lever', 'the lever in reach');
     useAction();
-    check(state.trial.phase === 'resolved', 'the portcullis dropped on it');
+    check(state.trial.phase === 'resolved', 'the portcullis dropped');
+    const hall = new Set(m.hall), still = allEnemies().find(e => e.warden && e.mode !== 'dead');
+    check(!still || hall.has(Math.floor(still.z) * 16 + Math.floor(still.x)), 'the warden shut in the hall, or gone');
     results.push('outran it');
   }
   if (kind === 'flood' || kind === 'miasma' || kind === 'cold' || kind === 'storm') {

@@ -1,9 +1,12 @@
 // The events with actors of their own (docs/trials.md): `siege` (waves for the beacon's ring) and
-// `chase` (the hunter on the way behind you). Stepped from game/trials.js updateTrial; the game that
-// owns the trial (net/trials.js) spawns the waves and counts the hold (the trial's bits, told to
-// the others); each game checks its own player against the hunter.
-import { ARM_TIME, TRIALS, SIEGE, holdTime, HUNTER, hunterAt } from '../core/trials.js';
-import { ENEMY_KINDS, isRanged, makeEnemy, coinRange, depthLevel } from '../core/enemies.js';
+// `chase` (the relic's warden hunting you back to the gate). Stepped from game/trials.js
+// updateTrial; the game that owns the trial (net/trials.js) spawns the waves and the warden and
+// counts the hold (the trial's bits, told to the others); the enemies go to the others as any do.
+import { ARM_TIME, TRIALS, SIEGE, holdTime, HUNTER } from '../core/trials.js';
+import { ENEMY_KINDS, isRanged, makeEnemy, coinRange, depthLevel, enemyKind } from '../core/enemies.js';
+import { RUN_SPEED, N } from '../core/constants.js';
+import { chillFactor } from '../core/projectiles.js';
+import { effectMod } from '../core/potions.js';
 import { swarmKind } from '../core/hordes.js';
 import { DEPTH_SPAWNS } from '../core/spawns.js';
 import { hordeKinds, hordeSize } from '../world/hordes.js';
@@ -13,28 +16,30 @@ import { hashString } from '../core/gear/drops.js';
 import { player, state, setStatus } from './state.js';
 import { addEnemies, removeEnemies, mirroring, allEnemies } from './enemies.js';
 import { online } from '../net/online.js';
-import { hurt } from './flow.js';
 import { sfx } from '../audio/sfx.js';
-import { setHunter } from '../render/trials.js';
 
 const bodies = () => [player, ...online.buddies.filter(b => b.here && b.hp > 0)].filter(b => b.hp > 0);
 
 // --- siege ---------------------------------------------------------------------------------------
 
 let raiders = new Set(), attempt = 0;
-// the room put back (a fail, a death, coming in): the attackers gone
+// the room put back (a fail, a death, coming in): the attackers and the warden gone
 export function resetEvents() {
   if (raiders.size) { const ids = raiders; removeEnemies(e => ids.has(e.id)); }
   raiders = new Set(); attempt++;
+  dropWarden();
 }
 
+// the depth's heaviest kind that fights up close (of its roster)
+function heaviest(depth) {
+  const roster = DEPTH_SPAWNS[Math.min(depth, DEPTH_SPAWNS.length - 1)].roster.flatMap(r => Object.keys(r.kinds)).map(k => ENEMY_KINDS[k])
+    .filter(k => k && !k.boss && !isRanged(k));
+  return roster.sort((a, b) => b.hp - a.hp)[0] ?? null;
+}
 // the depth's light kinds (the horde's) and its heaviest that fights up close
 function waveKinds(depth) {
   const light = hordeKinds(depth).map(k => ENEMY_KINDS[k]).filter(Boolean).map(k => swarmKind(k, 0.5));
-  const roster = DEPTH_SPAWNS[Math.min(depth, DEPTH_SPAWNS.length - 1)].roster.flatMap(r => Object.keys(r.kinds)).map(k => ENEMY_KINDS[k])
-    .filter(k => k && !k.boss && !isRanged(k));
-  const heavy = roster.sort((a, b) => b.hp - a.hp)[0] ?? light[0];
-  return { light: light.length ? light : [ENEMY_KINDS.snake], heavy };
+  return { light: light.length ? light : [ENEMY_KINDS.snake], heavy: heaviest(depth) ?? light[0] };
 }
 
 function spawnWave(m, s, k) {
@@ -86,27 +91,70 @@ export function lightBeacon(s) {
   return true;
 }
 
-// --- chase -----------------------------------------------------------------------------------------
+// --- chase: the relic ------------------------------------------------------------------------------
 
-// the hunter where the clock says; within reach of us it grabs: the owner's grab fails the trial
-// (everyone back), another's grab is that player's death (back in the room before)
-export function stepChase(m, s, dt, failTrial) {
-  if (m.kind !== 'chase') return;
-  const out = s.phase === 'running' && s.t >= ARM_TIME, h = out ? hunterAt(m.hunterPath, s.t) : null;
-  setHunter(state.world, h, s.phase === 'resolved');
-  if (!h || player.hp <= 0) return;
-  if (Math.hypot(player.x - h.x, player.z - h.z) < HUNTER.grab && Math.abs(player.y - h.y) < 1.5) {
-    sfx('rumble', { pitch: 0.6 });
-    if (mirroring()) hurt(player.hp + 1, 'Caught by the hunter');
-    else failTrial('The hunter caught you');
-  }
+// The warden: the depth's heaviest close fighter, HUNTER.mods stronger, out of its lair HUNTER.wake s
+// after the relic is taken (the owner spawns it), hunting the players (posted at its lair, always
+// engaged: game/enemyai.js) at HUNTER.ratio times the speed its quarry can run at now. The
+// portcullis dropped: trapped in the hall it stays there, glaring, and is gone once the room is left;
+// one already through is gone at once (it slinks back into its lair a while later either way).
+// Killed, the hunt is over too.
+let warden = null;   // its id
+const wardens = new Map();   // kind -> the warden's kind
+function wardenKind(base) {
+  if (!wardens.has(base)) wardens.set(base, enemyKind(base, { mods: HUNTER.mods, type: base.type, label: `Raging ${base.label.toLowerCase()}`,
+    mass: base.mass * HUNTER.mass, knock: base.knock * 1.3, reason: `Caught by the raging ${base.label.toLowerCase()}!` }));
+  return wardens.get(base);
 }
-// how far behind us it is along its way (cells), for the HUD
-export function hunterGap(m, s) {
-  const h = hunterAt(m.hunterPath, s.t), path = m.hunterPath;
-  let best = 0, bd = Infinity;
-  path.forEach((p, i) => { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < bd) { bd = d; best = i; } });
-  return Math.max(0, best - h.at);
+function dropWarden() {
+  if (warden) { const id = warden; removeEnemies(e => e.id === id); }
+  warden = null;
+}
+const wardenOf = () => warden && allEnemies().find(e => e.id === warden);
+// how fast body b can run now (a chill slows it, a swiftness potion quickens it)
+const runSpeed = b => RUN_SPEED * (b === player ? chillFactor(player.chilled) * (1 + effectMod(player, 'moveSpeed')) : 1);
+export function stepChase(m, s, dt, resolve) {
+  if (m.kind !== 'chase') return;
+  const live = s.phase === 'armed' || s.phase === 'running';
+  if (mirroring()) return;   // (the owner runs it; the warden comes to the others as any enemy)
+  if (live && !warden && s.t >= HUNTER.wake) spawnWarden(m);
+  const e = wardenOf();
+  if (!e) return;
+  if (e.mode === 'dead') { if (live) resolve(); warden = null; return; }
+  if (s.phase === 'resolved') {   // trapped behind the portcullis: back to its lair, and gone a while later
+    if (e.defence) { e.defence.engage = false; e.provoked = 0; e.profile.chase = runSpeed(player) * 0.5; }
+    if (s.done > HUNTER.linger) dropWarden();
+    return;
+  }
+  const quarry = e.target && e.target !== player && e.target.here ? e.target : player;
+  e.profile.chase = runSpeed(quarry) * HUNTER.ratio;
+  if (e.defence) e.defence.engage = true;
+}
+function spawnWarden(m) {
+  const depth = state.map.depth, base = heaviest(depth) ?? ENEMY_KINDS.stunder, kind = wardenKind(base), level = depthLevel(depth);
+  const f = state.map.floors[m.lair.f];
+  if (!f) return;
+  const [clo, chi] = coinRange(kind, level), id = `trial:${m.key}:warden${attempt}`;
+  const e = makeEnemy({ id, level, coinDrop: Math.round((clo + chi) / 2), kind, f, x: m.lair.x, y: m.lair.y, z: m.lair.z, yaw: m.lair.yaw }, kind, 0);
+  e.siege = m.key;   // (kept out of a guardian room's posting, game/defence.js)
+  e.defence = { post: f, engage: true };
+  e.warden = true;
+  warden = id;
+  addEnemies([e]);
+  sfx('rumble', { volume: 0.7, pitch: 0.5 });
+  setStatus(`A ${kind.label.toLowerCase()} breaks out of its lair!`);
+}
+// the lever dropped the portcullis: one already through the gate is gone, one in the hall trapped
+export function dropPortcullis(m) {
+  const e = wardenOf();
+  if (!e || mirroring()) return;
+  const c = Math.floor(e.z) * N + Math.floor(e.x);
+  if (!new Set(m.hall).has(c)) dropWarden();
+}
+// how far the warden is from us (cells), for the HUD; null: not out
+export function wardenGap() {
+  const e = wardenOf() ?? allEnemies().find(q => q.warden || q.id.includes(':warden'));
+  return e && e.mode !== 'dead' ? Math.round(Math.hypot(e.x - player.x, e.z - player.z)) : null;
 }
 
 // the HUD's line for these kinds: { line, fill } (null: not one of them)
@@ -118,19 +166,20 @@ export function eventHud(m, s) {
     return { line: bodies().some(b => inRing(m, b)) ? `Hold the ring: ${Math.floor(k * 100)}%` : `Get back in the ring! (${Math.floor(k * 100)}%)`, fill: k };
   }
   if (s.kind === 'chase') {
-    if (s.phase === 'armed') return { line: 'Something is breaking through the wall behind you…', fill: 0 };
-    const h = hunterAt(m.hunterPath, s.t);
-    return { line: `Run! It is ${hunterGap(m, s)} cells behind you: pull the lever past the portcullis`, fill: Math.min(1, h.at / m.hunterPath.length) };
+    if (s.phase === 'idle') return { line: 'Take the relic from its altar, then run for the gate', fill: 0 };
+    const gap = wardenGap();
+    if (gap == null) return { line: 'The relic is taken: something stirs in its lair…', fill: 0 };
+    return { line: `Run! It is ${gap} cells away: through the gate and pull the lever`, fill: Math.max(0, Math.min(1, 1 - gap / 12)) };
   }
   return null;
 }
 export const EVENT_HOW = {
   siege: 'Hold the beacon\'s ring against the waves!',
-  chase: 'Something that cannot be hurt is coming. Run, and drop the portcullis on it!',
+  chase: 'The relic is taken, and its warden wakes. Run back through the gate and drop the portcullis!',
 };
 export const EVENT_DONE = {
   siege: 'The beacon flares: they flee into the dark.',
-  chase: 'The portcullis crashes down on the hunter.',
+  chase: 'The portcullis crashes down: the warden is shut in with its hall.',
 };
 export const isActorEvent = kind => kind === 'siege' || kind === 'chase';
 export { TRIALS };

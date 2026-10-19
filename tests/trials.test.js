@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, beamDone, pressBrazier, allLit, pushTarget, platesHeld, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, beamDone, pressBrazier, allLit, pushTarget, platesHeld, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, holdTime, HUNTER, runeOrder } from '../src/core/trials.js';
 import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, solveSokoban } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -868,17 +868,24 @@ test('every siege room: the ring flat round the beacon, 2-3 mouths far from it, 
   assert.equal(holdTime(2), 45); assert.equal(holdTime(19), 90);
 });
 
-test('the hunter walks its path at its speed from ARM_TIME; every chase room\'s race is won running', () => {
-  const path = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }];
-  assert.equal(hunterAt(path, 1).x, 0);
-  assert.ok(Math.abs(hunterAt(path, ARM_TIME + 2).x - 2 * HUNTER.speed) < 1e-9);
-  assert.ok(hunterAt(path, ARM_TIME + 100).done);
+test('every relic room: a courtyard with both portals walled off from the hall but for its gate; the race to the lever won running', () => {
   let n = 0;
-  for (const { seed, d, m } of events('chase', [0, 1, 2])) {
-    const c = m.trial.check;
-    assert.ok(c.lever < c.hunter && c.cells >= HUNTER.least, `${seed}/${d}: lever ${c.lever} s, hunter ${c.hunter} s, ${c.cells} cells`);
-    assert.equal(m.populationScale, 0);
-    n++;
+  for (const seed of [0, 1, 2, 3, 4]) {
+    const w = new World(seed, { trial: 'chase' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'chase') {
+      const m = w.cube(t.key).map, tr = m.trial, c = tr.check, hall = new Set(tr.hall);
+      assert.ok(c.lever < c.hunter && c.cells >= HUNTER.least, `${seed}/${d}: lever ${c.lever} s, warden ${c.hunter} s, ${c.cells} cells`);
+      assert.ok(c.hunter - c.lever < 6, `${seed}/${d}: the warden ${c.hunter - c.lever} s behind: no race`);
+      const cellOf = p => Math.floor(p.z) * 16 + Math.floor(p.x), part = type => tr.parts.find(p => p.type === type);
+      // the relic and the lair in the hall, the lever and both portals' pads out of it
+      assert.ok(hall.has(cellOf(part('relic'))) && hall.has(cellOf(tr.lair)), `${seed}/${d}: relic or lair outside the hall`);
+      assert.ok(!hall.has(cellOf(part('lever'))) && !hall.has(cellOf(part('portcullis'))), `${seed}/${d}: the lever in the hall`);
+      for (const p of m.portals.filter(q => q.kind === 'side')) assert.ok(!hall.has(cellOf(p)), `${seed}/${d}: a portal in the hall`);
+      // the run goes through the gate
+      assert.ok(c.path.some(p => cellOf(p) === cellOf(part('portcullis'))), `${seed}/${d}: the run misses the gate`);
+      assert.equal(m.populationScale, 0);
+      n++;
+    }
   }
   assert.ok(n > 15, `${n}`);
 });

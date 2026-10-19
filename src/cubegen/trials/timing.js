@@ -34,8 +34,9 @@ function duration(a, b, move, speed) {
 
 // earliest arrival (s) at every node from `start`, at `speed`: { time: Map(id -> s), prev, node }.
 // weigh(node): a move onto it counts that many times its length (a way that keeps out of the wind:
-// time is then what is minimised, `real` the seconds it really takes)
-export function arrivals(ctx, start, speed = WALK_SPEED, weigh = null) {
+// time is then what is minimised, `real` the seconds it really takes). enemy: an enemy's ways only
+// (physics/enemynav.js): over joined ground, stairs, bridges and landings; no ladder, jump or drop
+export function arrivals(ctx, start, speed = WALK_SPEED, weigh = null, enemy = false) {
   const adj = graph(ctx, true), moves = new Map();
   for (const m of ctx.moves) {
     moves.set(m.from.id + '>' + m.to.id, m);
@@ -53,6 +54,7 @@ export function arrivals(ctx, start, speed = WALK_SPEED, weigh = null) {
     for (const b of adj.get(a.id) || []) {
       const move = moves.get(a.id + '>' + b.id);
       if (!move && !fits(b)) continue;
+      if (enemy && !(a.link?.some(l => l === b) || (move && !['walk', 'ladder', 'jump', 'drop'].includes(move.kind)))) continue;
       const dur = duration(a, b, move, speed), t = time.get(a.id) + dur * (weigh ? weigh(b) : 1);
       if (t < (time.get(b.id) ?? Infinity)) { time.set(b.id, t); real.set(b.id, real.get(a.id) + dur); prev.set(b.id, a); node.set(b.id, b); open.push(t, b); }
     }

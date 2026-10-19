@@ -23,7 +23,7 @@ import { shapeMiasma, miasmaGoal } from './miasma.js';
 import { shapeCold, coldGoal, coldRoute } from './cold.js';
 import { shapeStorm, stormGoal, stormRoute } from './storm.js';
 import { shapeSiege, siegeGoal, RING } from './siege.js';
-import { shapeChase, chaseGoal } from './chase.js';
+import { shapeChase, chaseGoal, chaseRoute } from './chase.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, HUNTER, runeOrder } from '../../core/trials.js';
 
@@ -34,7 +34,7 @@ const KINDS = {
   cold: { shape: shapeCold, goal: coldGoal, costs: coldRoute, finish: finishCold },
   storm: { shape: shapeStorm, goal: stormGoal, costs: stormRoute, finish: finishStorm },
   siege: { shape: shapeSiege, goal: siegeGoal, costs: null, finish: finishSiege },
-  chase: { shape: shapeChase, goal: chaseGoal, costs: collapseRoute, finish: finishChase },
+  chase: { shape: shapeChase, goal: chaseGoal, costs: chaseRoute, finish: finishChase },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
   mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
@@ -267,24 +267,30 @@ function finishSiege(ctx, t, out) {
   return { beacon: at, ring: { x: at.x, z: at.z, r: RING, y: at.y }, mouths, parts: [{ id: 'beacon', type: 'beacon', ...at }] };
 }
 
-// --- chase --------------------------------------------------------------------------------------------
+// --- chase: the relic -------------------------------------------------------------------------------
 
-// The race: a player running from the entry reaches the lever (x 1.2, + 1 s) before the hunter,
-// breaking out at the entry ARM_TIME after arming and walking the same way at HUNTER.speed, is at
-// the portcullis. The way it takes is the checked path (to the lever).
+// The race: a player running from the relic (taken: the clock starts) to the lever, x HUNTER.race
+// + USE_TIME, is there before the warden, out HUNTER.wake s later and hunting at HUNTER.ratio x
+// RUN_SPEED over an enemy's ways only, is at the gate; and the warden can get there at all (or it
+// is no chase). The player's way is the checked path. Everything at the gate, the lever, the relic
+// and the lair is on dry, walkable ground.
 function finishChase(ctx, t, out) {
-  const lever = t.goal, gate = ctx.layerFloor(t.gate.c, 0);
-  if (!gate) return null;
-  const run = arrivals(ctx, t.entry, RUN_SPEED), path = pathOf(run, lever);
-  if (!path || path.length < HUNTER.least) return null;
-  const hunter = arrivals(ctx, t.entry, HUNTER.speed), tGate = ARM_TIME + (hunter.time.get(gate.id) ?? 0);
-  const tLever = run.time.get(lever.id) * 1.2 + 1;
+  const relic = t.goal, lever = ctx.layerFloor(t.lever.c, 0), gate = ctx.layerFloor(t.gate.c, 0), lair = ctx.layerFloor(t.lair.c, 0);
+  if (!lever || !gate || !lair || [lever, gate, lair].some(f => f.fluid)) return null;
+  if (!reachFrom(ctx, [t.entry], true).has(relic.id)) return null;
+  const run = arrivals(ctx, relic, RUN_SPEED), path = pathOf(run, lever);
+  if (!path || path.length < HUNTER.least || !path.some(n => n === gate)) return null;
+  const hunter = arrivals(ctx, lair, RUN_SPEED * HUNTER.ratio, null, true);
+  if (!hunter.time.has(gate.id) || !hunter.time.has(relic.id)) return null;
+  const tLever = run.time.get(lever.id) * HUNTER.race + USE_TIME, tGate = HUNTER.wake + hunter.time.get(gate.id);
   if (!(tLever < tGate)) return null;
   const at = f => ({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 });
-  const d = t.gate.dir, side = d;
-  return { parts: [{ id: 'lever', type: 'lever', ...at(lever), yaw: [Math.PI / 2, -Math.PI / 2, 0, Math.PI][d] },
-      { id: 'portcullis', type: 'portcullis', ...at(gate), side, w: 1 }],
-    hunterPath: checkPath(path, hunter, () => null).map(({ x, y, z }) => ({ x, y, z })),
+  const d = t.gate.dir, toward = [Math.PI / 2, -Math.PI / 2, 0, Math.PI][d];
+  for (const c of [...t.altar.cells, t.lair.c]) for (const f of ctx.cols[c]) f.noSpawn = true;
+  return { parts: [{ id: 'relic', type: 'relic', ...at(relic) },
+      { id: 'lever', type: 'lever', ...at(lever), yaw: toward },
+      { id: 'portcullis', type: 'portcullis', ...at(gate), side: d, w: 1 }],
+    lair: { ...at(lair), yaw: t.lair.yaw, f: lair.id }, hall: [...t.hall],
     check: { lever: Math.round(tLever * 100) / 100, hunter: Math.round(tGate * 100) / 100, cells: path.length, path: checkPath(path, run, () => null) } };
 }
 

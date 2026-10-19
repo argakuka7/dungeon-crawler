@@ -24,8 +24,8 @@ export const TRIALS = {
     population: 0.3 },
   siege: { name: 'Hold the beacon', family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a', built: true,
     population: 0.3, armByPart: true },
-  chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
-    population: 0 },
+  chase: { name: 'The relic', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
+    population: 0, armByPart: true },
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
     population: 0.5 },
   slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['peaks', 'frozen'], strict: true, weight: 2, color: '#bfe8ff', built: true,
@@ -184,21 +184,13 @@ export function stormPhase(t) {
 export const SIEGE = { waves: 4 };
 export const holdTime = depth => Math.round(45 + 45 * Math.max(0, Math.min(1, (depth - 2) / 17)));
 
-// --- chase ---------------------------------------------------------------------------------------------
-// The hunter breaks out at the entry ARM_TIME after arming and walks the way at HUNTER.speed cells/s;
-// within HUNTER.grab of a player it grabs them.
-export const HUNTER = { speed: 2.3, grab: 0.9, least: 30 };
-// where it is t s into the trial along its path ([{ x, y, z }]): { x, y, z, yaw, at (the index past), done }
-export function hunterAt(path, t) {
-  let d = Math.max(0, t - ARM_TIME) * HUNTER.speed;
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1], b = path[i], len = Math.hypot(b.x - a.x, b.z - a.z) || 0.001;
-    if (d <= len) { const k = d / len; return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k, yaw: Math.atan2(b.x - a.x, b.z - a.z), at: i, done: false }; }
-    d -= len;
-  }
-  const e = path.at(-1);
-  return { ...e, yaw: 0, at: path.length, done: true };
-}
+// --- chase: the relic ---------------------------------------------------------------------------------
+// Taking the relic arms the room; HUNTER.wake s later its warden breaks out of its lair: a kind of the
+// depth's roster (its heaviest that fights up close), HUNTER.mods stronger, hunting the players over
+// the floor graph (no ladders, no jumps) at HUNTER.ratio times the speed its quarry runs at now (a
+// swiftness potion quickens it too, a chill slows it). Dropping the portcullis (the lever inside the
+// gate) traps it; killing it ends the hunt as well.
+export const HUNTER = { wake: 1.5, ratio: 1, mods: { hp: 6, damage: 2, size: 1.35, xp: 2 }, mass: 4, race: 1.15, least: 12, linger: 6 };
 
 // --- runes ---------------------------------------------------------------------------------------------
 // A rune room's stones and the order to press them in, from the trial's id alone (the clue's tablet,
@@ -288,7 +280,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
 export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, crates: 120, timedgate: 40,
-  miasma: 55, cold: 40, storm: 50, siege: 75, chase: 30, runes: 45 };
+  miasma: 55, cold: 40, storm: 50, siege: 75, chase: 45, runes: 45 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -314,7 +306,7 @@ export function crustState(m, s, q) {
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
   mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', crate: null, valve: 'Open the vent valve',
   warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod', beacon: 'Light the beacon',
-  portcullis: null, runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
+  portcullis: null, relic: 'Take the relic', runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------

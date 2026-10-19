@@ -26,7 +26,7 @@ import { solveMirror, solveBraziers } from '../cubegen/trials/solve.js';
 import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld, hurt } from './flow.js';
 import { CHAR_H } from '../core/constants.js';
 import { emit, soft, rand } from '../render/particles.js';
-import { stepSiege, stepChase, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
+import { stepSiege, stepChase, dropPortcullis, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
@@ -219,7 +219,7 @@ export function updateTrial(dt) {
   stepCold(m, s, dt);
   stepStorm(m, s, dt);
   stepSiege(m, s, dt, resolve);
-  stepChase(m, s, dt, failTrial);
+  stepChase(m, s, dt, resolve);
   keystone(m, s);
   stepCrates(m, s, dt);
   stepTimed(m, s, dt);
@@ -295,7 +295,8 @@ export function usableParts() {
   if (!m?.parts || !s || s.phase === 'resolved') return out;
   for (const p of m.parts) {
     if (!PART_LABELS[p.type] || (p.puzzle != null && puzzleSolved(s, p.puzzle)) || (p.type === 'warm' && s.bits[p.id])) continue;
-    if ((p.type === 'beacon' && s.phase !== 'idle') || (m.kind === 'chase' && s.phase !== 'running')) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
+    if ((p.type === 'beacon' && s.phase !== 'idle') || (p.type === 'relic' && s.phase !== 'idle')) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
+    if (m.kind === 'chase' && p.type === 'lever' && s.phase !== 'armed' && s.phase !== 'running') continue;   // (the relic's gate: only once it is taken)
     out.push(p);
   }
   return out;
@@ -326,7 +327,11 @@ export function usePart(p, fromOther = false) {
   if (p.type === 'valve') { if (!fromOther) sfx('door'); resolve(); return true; }
   if (p.type === 'fire') { if (!fromOther) sfx('fireball'); resolve(); return true; }
   if (p.type === 'rod') { if (!fromOther) sfx('unlock'); resolve(); return true; }
-  if (p.type === 'lever' && m.kind === 'chase') { if (!fromOther) sfx('door'); sfx('gate', { delay: 0.1 }); resolve(); return true; }
+  if (p.type === 'lever' && m.kind === 'chase') { if (!fromOther) sfx('door'); sfx('gate', { delay: 0.1 }); dropPortcullis(m); resolve(); return true; }
+  if (p.type === 'relic') {   // taken: the room arms, and its warden wakes (game/trialevents.js)
+    if (lightBeacon(s)) { s.bits.relic = 1; if (!fromOther) sfx('pickup'); sfx('rumble', { delay: 0.3, volume: 0.5, pitch: 0.6 }); announce(s, 'armed'); showTrial(); }
+    return true;
+  }
   if (p.type === 'beacon') {
     if (lightBeacon(s)) { if (!fromOther) sfx('fireball'); announce(s, 'armed'); showTrial(); }
     return true;
@@ -656,7 +661,7 @@ let partCells = null, partBoxes = [];
 function partBlockers(m) {
   partBoxes = []; crateBoxes.clear();
   partCells = Array.from({ length: N * N }, () => []);
-  for (const p of m?.parts || []) if (p.type === 'gate') {
+  for (const p of m?.parts || []) if (p.type === 'gate' || p.type === 'portcullis') {
     const half = (p.w ?? 1) / 2, across = p.side < 2;
     const b = { shape: 'box', part: p, bottom: p.y - 0.1, top: p.y + 2.4,
       x0: across ? p.x - 0.14 : p.x - half, x1: across ? p.x + 0.14 : p.x + half, z0: across ? p.z - half : p.z - 0.14, z1: across ? p.z + half : p.z + 0.14 };
@@ -667,7 +672,7 @@ function partBlockers(m) {
   setPartBlockers(partCells);
 }
 function updatePartBlockers(m, s) {
-  for (const b of partBoxes) b.off = gateOpen(s, b.part);
+  for (const b of partBoxes) b.off = b.part.type === 'portcullis' ? s?.phase !== 'resolved' : gateOpen(s, b.part);   // (the relic's: up until it drops)
   for (const pz of m?.puzzles || []) if (pz.kind === 'crates') updateCrateBlockers(pz, s);
 }
 // the crates where they stand now: boxes in the way (moved by a push, a reset, the owner's word)

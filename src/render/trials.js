@@ -312,7 +312,7 @@ export function buildTrialView(m, group) {
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060, 'trial_emitter') : p.type === 'receiver' ? crystal(p, 0x6080a0, 'trial_receiver')
-      : p.type === 'lens' ? crystal(p, 0x7a5aa0, 'trial_receiver')
+      : p.type === 'lens' ? crystal(p, 0x7a5aa0, 'trial_receiver') : p.type === 'relic' ? crystal(p, 0xffc040, 'trial_emitter')
       : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'beacon' ? beaconPart(p)
         : p.type === 'crate' ? cratePart(p) : p.type === 'runestone' ? runestone(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
@@ -324,7 +324,8 @@ export function buildTrialView(m, group) {
   // the siege's mouths: dark arches the waves come out of
   for (const mo of t.mouths || []) { const g = at(piece('trial_mouth'), mo); g.rotation.y = mo.yaw; group.add(g); }
   if (fires.specs.length) { view.fires = flameSet(fires.specs, fires.lights); group.add(view.fires.mesh); }
-  if (t.kind === 'chase') { view.hunter = hunterMesh(); group.add(view.hunter); }
+  // the relic's warden's lair: a dark arch in the wall it breaks out of
+  if (t.lair) { const g = at(piece('trial_mouth'), t.lair); g.rotation.y = t.lair.yaw; group.add(g); }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
   if (site) { view.cage = cage(site.anchor); group.add(view.cage.obj); }
@@ -351,31 +352,6 @@ export function buildTrialView(m, group) {
   return view;
 }
 
-// the hunter (chase): a hulking shadow with burning eyes where the clock says (h: core/trials.js
-// hunterAt, null: not out); crushed (the trial resolved) it is gone
-export function setHunter(world, h, crushed) {
-  const v = world?.trialView;
-  if (!v?.hunter) return;
-  v.hunter.visible = !!h && !crushed;
-  if (!v.hunter.visible) return;
-  v.hunter.position.set(h.x, h.y, h.z);
-  v.hunter.rotation.y = h.yaw;
-  const t = performance.now() / 1000;
-  v.hunter.children[0].position.y = 1.05 + Math.abs(Math.sin(t * 7)) * 0.08;
-}
-function hunterMesh() {
-  const g = new THREE.Group(), dark = new THREE.MeshStandardMaterial({ color: 0x1a1218, roughness: 0.9 });
-  const body = new THREE.Group();
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.9, 4, 10), dark); torso.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), dark); head.position.set(0, 0.8, 0.12);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff3020 });
-  for (const x of [-0.11, 0.11]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), eyeMat); e.position.set(x, 0.86, 0.38); body.add(e); }
-  for (const x of [-0.55, 0.55]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.8, 4, 8), dark); arm.position.set(x, -0.1, 0.15); arm.rotation.x = -0.5; body.add(arm); }
-  body.add(torso, head);
-  const light = new THREE.PointLight(0xff3020, 1.2, 3, 2); light.position.set(0, 1.9, 0.5);
-  g.add(body, light); g.scale.setScalar(1.6); g.visible = false;
-  return g;
-}
 // the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; eye: the hill's middle, cells):
 // streaks tearing outwards off the hill and round it, a few in the warning, many in the gust
 export function setStorm(world, phase, eye, dt) {
@@ -525,6 +501,11 @@ export function setGridParts(world, m, s, shown, nearId = null) {
       g.glow = (g.glow ?? 0) + ((lit ? 1 : 0) - (g.glow ?? 0)) * 0.12;
       g.gem.material.emissiveIntensity = 0.4 + g.glow * (2.1 + Math.sin(now * 6) * 0.3); g.light.intensity = 0.3 + g.glow * 2.7;
     }
+    else if (p.type === 'relic') {   // on its altar, glowing, until it is taken
+      const here = s.phase === 'idle';
+      g.gem.visible = here; g.light.intensity = here ? 1.6 + Math.sin(now * 3) * 0.5 : 0;
+      if (here) g.gem.rotation.y = now * 0.8;
+    }
     else if (p.type === 'runestone') {   // lit: pressed in turn so far (the order's first n)
       const pz = m.puzzles[p.puzzle ?? 0], n = s.bits?.[`${pz.id}:n`] ?? 0, lit = s.phase === 'resolved' || pz.field.order.slice(0, n).includes(p.i);
       if (g.lit !== lit) { g.lit = lit; for (const f of g.face) f.material.emissive.set(lit ? 0xc0a0ff : 0x000000); }
@@ -556,8 +537,8 @@ export function setTrialParts(world, s, immediate = false) {
   const solved = s.phase === 'resolved', done = i => solved || (s.stage ?? 0) > i;   // (game/trials.js puzzleSolved)
   for (const [, pl] of v.plates) pl.rune.material.color.set(done(pl.puzzle) ? 0x6cff8a : pl.color);
   for (const [, g] of v.gates) {
-    // (the chase's portcullis: up, but down on the hunter for a moment once the lever is pulled)
-    g.want = g.chase ? (solved && s.done < 1.5 ? 0 : 1) : done(g.puzzle) ? 1 : 0;
+    // (the relic's portcullis: up until the lever drops it, then shut for good)
+    g.want = g.chase ? (solved ? 0 : 1) : done(g.puzzle) ? 1 : 0;
     if (immediate) g.open = g.want;
   }
   for (const [id, l] of v.levers) { l.want = s.bits?.[id] ? 0.6 : -0.6; if (immediate) l.angle = l.want; }

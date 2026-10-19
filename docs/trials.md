@@ -33,7 +33,7 @@ above, and every puzzle you solve drains it one stage further.
 | `cold` | event | yes | meter | light the great fire | freezing | peaks, frozen caves (3, 9–10) |
 | `storm` | event | yes | gusts | pull the lightning rod on top of the hill | (blown off: a fall) | sky and surface themes (1–6) |
 | `siege` | event | yes | yes | hold the beacon long enough | death | 2–19, any |
-| `chase` | event | yes | yes | drop the portcullis on the hunter | being grabbed | 4–19, any |
+| `chase` | event | yes | yes | take the relic, run, drop the portcullis on its warden | death | 4–19, any |
 | `miasma` | event | yes | yes | open the vent valve at the bottom | the fog (damage) | walled: canyon 5–6, caves 7–19 |
 | `slide` | puzzle | no | no | slide across the ice to the goal | – | ice only: peaks, frozen caves (3, 9–10) |
 | `mirror` | puzzle | no | no | the beam through every lens into the receiver | – | mines, forge, ruins, abyss, highlands |
@@ -148,7 +148,7 @@ Every timed event is checked against a slow player, not a perfect one:
   (the summit, the apron, the valve's ledge).
 - **Gaps** (`cold`, `storm`): the longest stretch between two safe spots must take at most
   the allowance (below), at walking speed × `SLACK`.
-- **Races** (`chase`): compare two travel times (below).
+- **Races** (`chase`): compare two travel times (below), the warden's over an enemy's ways only.
 - Enemies in a timed room are placed off the checked path and outside its 2-cell band.
 
 Each kind's tests also run the real character along the checked path with the real physics
@@ -390,32 +390,40 @@ Light the beacon and hold its ring against waves from the room's edges.
   `game/defence.js`, from taking them over). The trial's owner spawns them and counts the hold
   (`bits.hold`, `bits.wave`).
 
-### `chase`: The hunter
+### `chase`: The relic
 
-Something that cannot be hurt comes through the wall behind you. Run, and drop the portcullis
-on it at the end.
+You walk in calmly and learn the room. Taking the relic from its altar at the far end wakes its
+warden; run back through the gate and drop the portcullis on it.
 
-- **Room:** one layer, a winding way 35–50 cells long (stairs, ladders, a narrow bridge) from
-  the entry to a **portcullis** gap, with the **lever** just past it.
-- **The hunter:** a big species of the depth's roster at 1.6× size, with no HP bar ("Unstoppable"),
-  immune to damage and knockback. It breaks out at the entry `ARM_TIME` after arming and
-  follows the nearest player along the way at 2.3 cells/s (half that on ladders). It grabs
-  (like Gusto); a grab fails the trial.
-- **Goal:** the lever (`F`) drops the portcullis; the hunter is crushed under it, and the
-  portcullis rises again.
-- **Check:** races: at `RUN_SPEED`, `arrival(lever) × 1.2 + 1 s` comes before the hunter's
-  arrival at the portcullis. There is no shortcut for the hunter (it walks the same graph).
-- **Population:** none but the hunter.
-- **As built** (`cubegen/trials/chase.js`, `index.js finishChase`; `game/trialevents.js`): the
-  room is rock (six levels over the highest pad, its outer ring too) but for a corridor one cell
-  wide: a self-avoiding walk of 17-24 steps over the room's odd cells from the entry's pad to the
-  exit's (35-52 cells), its levels going evenly from the entry's to the exit's, and a straight
-  passage from any other portal. Walks, jumps and drops only (no structure over the rock). The
-  portcullis stands five cells before the exit's pad, the lever two past it. The hunter is not an
-  enemy but an actor of the trial: a hulking shadow with burning eyes that walks the checked way
-  (`hunterAt`, from the clock) at 2.3 cells/s; within 0.9 cells of a player it grabs them (the
-  owner's grab fails the trial, another's is their death). The lever works only while it runs.
-  `population: 0` now means no enemies at all (`core/spawns.js`).
+- **Room:** one layer, entered and left on two faces that meet at a corner. Both portals stand in
+  a **courtyard** at that corner, walled off (rock, six levels up) from the rest of the room, the
+  **hall**, but for one gate with a portcullis (up), its **lever** just inside. In the hall's far
+  corner the **relic** on its altar, and behind it, in the corner, the warden's **lair** (a dark
+  arch). Rocks stand about the hall.
+- **Running:** starts when the relic is taken (`F`), not on stepping off the pad: look around and
+  learn the way first. `HUNTER.wake` (1.5 s) later the **warden** breaks out of its lair: the depth's
+  heaviest kind that fights up close, `HUNTER.mods` stronger (six times the health, twice the damage,
+  bigger, heavier: "Raging stunder"). It is an ordinary enemy (it fights, it can be hit), always
+  hunting the nearest player over the floor graph: no ladders, no jumps. It runs at `HUNTER.ratio`
+  (1) times the speed its quarry can run at now: a swiftness potion quickens it too, a chill slows
+  it. Out-running it on the straight is not enough; jumps and ladders it cannot take are.
+- **Goal:** the lever (`F`, only once the relic is taken) drops the portcullis for good: a warden
+  in the hall is shut in (it goes back to its lair and is gone a while later), one already through
+  is gone at once. Killing it ends the hunt too.
+- **Fails by:** death (back in the room before, the relic back on its altar).
+- **Check:** races: a player running from the relic to the lever at `RUN_SPEED` (`x HUNTER.race`
+  1.15, plus a second for the lever) gets there before the warden, out `HUNTER.wake` s later and
+  running at `RUN_SPEED x HUNTER.ratio` over an enemy's ways only (`timing.js arrivals`, `enemy`),
+  reaches the gate; the warden can reach the gate at all; the run goes through the gate.
+- **Population:** none but the warden.
+- **As built** (`cubegen/trials/chase.js`, `index.js finishChase`; `core/trials.js HUNTER`,
+  `game/trialevents.js stepChase`): the planner asks for faces that meet at a corner with both
+  portals at most six cells from it (`world/trials.js roomFits`), the courtyard 4-8 cells each way
+  from the corner, the gate in the middle of the wall's longer arm, the altar a flat 3x3 two cells in
+  from the far corner, nothing built onto or over the wall and the rocks (`chaseRoute`). The owner of
+  the trial spawns the warden and sets its speed every frame; it comes to the others like any enemy.
+  The relic's model is the emitter's for now, the lair the siege's mouth. The races come out close:
+  the warden a third to half a second behind the lever.
 
 ### `miasma`: Sinking fog
 
@@ -600,7 +608,7 @@ the sluice tank and float, the waypad); nothing uses them.
 
 A fire is lit or out (`render/trials.js fire`): out, no flame and no light; lit, its flame
 flares up and flickers with its light (its intensity: the light pool takes no light with
-intensity 0, nor one hidden). The flames are the world's fire (`render/flames.js`, below). The hunter is still made in code. The seals, the beacon's ring,
+intensity 0, nor one hidden). The flames are the world's fire (`render/flames.js`, below). The relic's warden is an enemy of the depth. The seals, the beacon's ring,
 the beam, the tide lines and the fog are effects, drawn in code.
 
 ### Fire (`render/flames.js`)
