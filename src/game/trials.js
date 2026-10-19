@@ -9,7 +9,7 @@ import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, fogY, fogLevel, fogHurt, COLD, coldStep, STORM, stormPhase, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
   nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage,
-  traceBeam, allLit, pressBrazier, pushTarget, clueMark } from '../core/trials.js';
+  traceBeam, beamDone, allLit, pressBrazier, pushTarget, clueMark } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts, setTrialFog, setStorm } from '../render/trials.js';
@@ -34,7 +34,7 @@ const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // what the HUD says while a puzzle waits to be solved
 const PUZZLE_HINT = {
   slide: 'Slide across the ice onto the plate by the closed gate',
-  mirror: 'Turn the mirrors till the beam lights the receiver',
+  mirror: 'Turn the mirrors till the beam shines through every crystal into the receiver',
   braziers: 'Light every brazier: each one lights or puts out those it is linked to',
   crates: 'Push a crate onto every plate (the lever by the way in puts them back)',
   timedgate: 'Pull the lever, then run the causeway to the exit before the gate shuts',
@@ -332,7 +332,7 @@ export function usePart(p, fromOther = false) {
     return true;
   }
   if (p.type === 'warm') { if (!fromOther) sfx('fireball'); s.bits[p.id] = 1; showTrial(); return true; }
-  if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' ? 'door' : p.type === 'brazier' ? 'fireball' : 'clink');
+  if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' ? 'door' : p.type === 'brazier' ? 'fireball' : p.type === 'mirror' ? 'thunk' : 'clink');
   const pz = m.puzzles?.[p.puzzle ?? 0];
   if (m.kind === 'timedgate' && p.type === 'lever') { s.bits[p.id] = 1; timed.t = 0; setStatus(`The gate is open: ${pz.T} s to reach it`); sfx('gate', { delay: 0.2 }); }
   else if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
@@ -459,7 +459,7 @@ const RULES = {
     const blocked = (x, z) => bodies.some(b => Math.floor(b.x) === D.x0 + x && Math.floor(b.z) === D.z0 + z && Math.abs(b.y - y) < 1);
     const beam = traceBeam(pz.field, bitsOf(pz, s, 'mirror'), blocked);
     shown.set(pz.index, { beam });
-    return beam.lit;
+    return beamDone(pz.field, beam);
   },
   braziers: (pz, s) => allLit(bitsOf(pz, s, 'brazier')),
   // every plate held at once by a crate (standing on one does not count)

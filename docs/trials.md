@@ -36,7 +36,7 @@ above, and every puzzle you solve drains it one stage further.
 | `chase` | event | yes | yes | drop the portcullis on the hunter | being grabbed | 4–19, any |
 | `miasma` | event | yes | yes | open the vent valve at the bottom | the fog (damage) | walled: canyon 5–6, caves 7–19 |
 | `slide` | puzzle | no | no | slide across the ice to the goal | – | ice only: peaks, frozen caves (3, 9–10) |
-| `mirror` | puzzle | no | no | the beam hits the receiver | – | mines, forge, ruins, abyss, highlands |
+| `mirror` | puzzle | no | no | the beam through every lens into the receiver | – | mines, forge, ruins, abyss, highlands |
 | `braziers` | puzzle | no | no | every brazier lit | – | any |
 | `crates` | puzzle | no | no | a crate on every plate | – | any |
 | `timedgate` | puzzle | no | no | run the causeway through the gate before it shuts | – | any |
@@ -475,21 +475,25 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 
 ### `mirror`: Mirror beam
 
-- **Field:** 8×8 cells. An emitter crystal on one edge shoots a beam along its row; a receiver
-  stands on another edge. Mirrors on some cells (rotors, `/` or `\`), and a few fixed
-  blockers.
-- **Rules:** `F` flips a mirror. The beam is traced live (`core/beams.js` style, drawn by
-  `render/beams.js`); a body in it blocks it. Harmless.
-- **Generator:** a random lattice path from emitter to receiver with 3–6 turns, mirrors at the
-  turns, 2–4 decoy mirrors off the path, all orientations scrambled. BFS over the `2^M`
-  orientations (M ≤ 10): it must be solvable, unsolved at the start, minimal flips ≥ 3.
+- **Field:** 6×6 or 7×7 cells. An emitter crystal on one edge shoots a beam along its row; a
+  receiver stands on another edge. Mirrors on some cells (rotors, `/` or `\`), lenses (crystals the
+  beam shines through) on others, and a few fixed blockers.
+- **Rules:** `F` flips a mirror. The beam is traced live; a body in it blocks it. Harmless. Solved
+  when it shines through every lens into the receiver.
+- **Generator:** a random lattice path from emitter to receiver with 4 turns (5 from depth 10),
+  mirrors at the turns, a lens (two from depth 10) on its straight stretches, 4-6 decoy mirrors
+  and 1-3 rocks off it, the start scrambled (the way's mirrors mostly wrong). Every setting is
+  tried (`2^M`, M ≤ 12): the fewest flips must be 3-4 (4-6 from depth 10), and some other setting
+  must light the receiver while missing a lens (a trap: following the beam to the receiver is not
+  enough); of the fields found, the one with the most traps.
 - **Themes:** mines, forge, ruins, abyss, highlands (sun mirrors).
-- **As built** (`cubegen/trials/grid.js`, `solve.js makeMirror`, `core/trials.js traceBeam`): the
-  field is 6x6 (7x7 from depth 10; 3x3 on a sunken platform), on a deck without a rim (you walk
-  among the mirrors: a mirror's stand is in the way, its cell is not). The way is laid first (3
-  turns, 5 from depth 10), then 2-4 decoys and 1-3 rocks (stone columns) off it, then the start
-  scrambled till its fewest flips are 3-4 (4-6 from depth 10). The emitter and the receiver stand
-  on the ring round the field.
+- **As built** (`cubegen/trials/grid.js`, `solve.js makeMirror`, `core/trials.js traceBeam`,
+  `beamDone`; `render/trials.js setGridParts`): on a deck without a rim (you walk among the
+  mirrors: a mirror's stand is in the way, its cell is not); on a sunken platform 3x3 with two
+  turns and no lenses. The emitter and the receiver stand on the ring round the field, a lens on
+  its cell (for now the receiver's model, violet). A flipped mirror swings round on its turntable
+  with a little overshoot; a changed beam grows anew from the emitter (24 cells/s), sparking where
+  it turns, and a lens or the receiver lights only once the beam gets there.
 
 ### `braziers`: Lights out
 

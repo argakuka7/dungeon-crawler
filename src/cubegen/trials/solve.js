@@ -1,7 +1,7 @@
 // The puzzle solvers (docs/trials.md "Puzzles"): every puzzle is made together with its solution
 // and checked by one of these before the cube is handed out. Pure, no generator state: the tests
 // and the game's /trial solve use them too.
-import { slideStop, traceBeam, pressBrazier, allLit, pushTarget } from '../../core/trials.js';
+import { slideStop, traceBeam, beamDone, pressBrazier, allLit, pushTarget } from '../../core/trials.js';
 
 // --- slide ---------------------------------------------------------------------------------------
 
@@ -82,29 +82,34 @@ const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const SLASH = [3, 2, 1, 0];
 const popcount = x => { let n = 0; for (; x; x &= x - 1) n++; return n; };
 
-// The fewest flips from `start` (bits) to a state that lights the receiver: { flips, solution }
-// over every state (2^M, M at most 10)
+// The fewest flips from `start` (bits) to a state that solves it (the receiver lit through every
+// lens): { flips, solution, traps } over every state (2^M, M at most 12); traps: the states that
+// light the receiver but miss a lens (a wrong way that looks right)
 export function solveMirror(F, start) {
   const M = F.mirrors.length, s0 = start.reduce((a, b, i) => a | (b << i), 0);
-  let best = Infinity, solution = null;
+  let best = Infinity, solution = null, traps = 0;
   for (let s = 0; s < 1 << M; s++) {
-    const bits = Array.from({ length: M }, (_, i) => (s >> i) & 1);
-    if (!traceBeam(F, bits).lit) continue;
+    const bits = Array.from({ length: M }, (_, i) => (s >> i) & 1), beam = traceBeam(F, bits);
+    if (!beam.lit) continue;
+    if (!beamDone(F, beam)) { traps++; continue; }
     const f = popcount(s ^ s0);
     if (f < best) { best = f; solution = bits; }
   }
-  return { flips: best, solution };
+  return { flips: best, solution, traps };
 }
 
 // A mirror field of w x h: a beam's way from an emitter with `turns` turns (a mirror at each), the
-// receiver where it leaves; 2-4 decoy mirrors and 1-3 rocks off it; the start scrambled so the
-// fewest flips are in `band`. null: none found in `tries`.
-export function makeMirror(R, w, h, band, turns, tries = 400) {
+// receiver where it leaves, `lenses` lenses on its straight stretches; decoy mirrors and rocks off
+// it; the start scrambled so the fewest flips are in `band`. With lenses, kept only where some
+// other setting lights the receiver but misses a lens (a trap: following the beam to the receiver is
+// not enough), the field with the most of them. null: none found in `tries`.
+export function makeMirror(R, w, h, band, turns, lenses = 0, tries = 400) {
   const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
-  for (let n = 0; n < tries; n++) {
+  let best = null;
+  for (let n = 0; n < tries && !(best && n > tries / 4); n++) {
     const side = ri(0, 3), along = side < 2 ? h : w, t = ri(0, along - 1), dir = side ^ 1;
     let [x, z] = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side], d = dir;
-    const emitter = { x, z, dir }, path = new Set([`${x},${z}`]), mirrors = [], solution = [];
+    const emitter = { x, z, dir }, path = new Set([`${x},${z}`]), straight = [], mirrors = [], solution = [];
     let ok = true, k = 0;
     for (let turn = 0; turn <= turns && ok; turn++) {
       // run straight on 1..4 cells (the last stretch: to the edge)
@@ -113,35 +118,45 @@ export function makeMirror(R, w, h, band, turns, tries = 400) {
         const nx = x + SD[d][0], nz = z + SD[d][1];
         if (nx < 0 || nz < 0 || nx >= w || nz >= h) { if (turn < turns) ok = false; break; }
         if (path.has(`${nx},${nz}`)) { ok = false; break; }
-        x = nx; z = nz; path.add(`${x},${z}`);
+        x = nx; z = nz; path.add(`${x},${z}`); straight.push([x, z]);
       }
       if (!ok || turn === turns) break;
       // turn here: a mirror
       if (mirrors.some(([mx, mz]) => mx === x && mz === z) || (x === emitter.x && z === emitter.z)) { ok = false; break; }
+      straight.pop();
       const nd = R() < 0.5 ? [2, 3, 0, 1][d] : [3, 2, 1, 0][d];   // left or right
       mirrors.push([x, z]); solution.push(SLASH[d] === nd ? 0 : 1); d = nd; k++;
     }
     if (!ok || k !== turns) continue;
     const receiver = { x, z, side: d };
     if (x === emitter.x && z === emitter.z) continue;
+    // the lenses: on the way's straight stretches, after its first turn, not on the emitter's cell
+    const onWay = straight.filter(([sx, sz], i) => i > 1 && !(sx === emitter.x && sz === emitter.z) && !(sx === x && sz === z));
+    if (onWay.length < lenses) continue;
+    for (let i = onWay.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [onWay[i], onWay[j]] = [onWay[j], onWay[i]]; }
+    const lensCells = onWay.slice(0, lenses);
     // decoys and rocks, off the way
     const free = [];
     for (let fz = 0; fz < h; fz++) for (let fx = 0; fx < w; fx++) if (!path.has(`${fx},${fz}`)) free.push([fx, fz]);
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
-    const decoys = Math.min(free.length, ri(2, 4)), rocks = Math.min(free.length - decoys, ri(1, 3));
+    const decoys = Math.min(free.length, lenses ? ri(4, 6) : ri(2, 4)), rocks = Math.min(free.length - decoys, ri(1, 3));
     for (let i = 0; i < decoys; i++) { mirrors.push(free[i]); solution.push(R() < 0.5 ? 1 : 0); }
     const blockers = free.slice(decoys, decoys + rocks);
-    const F = { w, h, mirrors, blockers, emitter, receiver };
-    if (!traceBeam(F, solution).lit || mirrors.length > 10) continue;
+    const F = { w, h, mirrors, blockers, lenses: lensCells, emitter, receiver };
+    if (!beamDone(F, traceBeam(F, solution)) || mirrors.length > 12) continue;
     // scramble: flip at random until the fewest flips back are in the band
     for (let m = 0; m < 30; m++) {
-      const start = solution.map(b => (R() < 0.5 ? b ^ 1 : b));
+      const start = solution.map((b, i) => (R() < (i < k ? 0.7 : 0.5) ? b ^ 1 : b));   // (the way's mirrors mostly wrong)
       if (traceBeam(F, start).lit) continue;
       const s = solveMirror(F, start);
-      if (s.flips >= band[0] && s.flips <= band[1]) return { field: F, start, solution: s };
+      if (s.flips < band[0] || s.flips > band[1]) continue;
+      if (lenses && !s.traps) break;
+      if (!lenses) return { field: F, start, solution: s };
+      if (!best || s.traps > best.solution.traps) best = { field: F, start, solution: s };
+      break;
     }
   }
-  return null;
+  return best;
 }
 
 // --- braziers ---------------------------------------------------------------------------------------

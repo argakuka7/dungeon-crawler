@@ -361,27 +361,36 @@ export function sinkStage(m, s, i) {
 
 // --- mirror (docs/trials.md, `mirror`) -----------------------------------------------------------
 // A field of w x h cells; an emitter beside it shoots a beam into cell `from` heading `dir`; mirrors
-// stand on some cells ('/' or '\', bit 0 or 1 of their state), blockers (rocks) on others. The beam
-// runs on until it leaves the field: where it leaves says whether it reached the receiver.
-//   field: { w, h, mirrors: [[x, z], ...], blockers: [[x, z], ...], emitter: { x, z, dir }, receiver: { x, z, side } }
+// stand on some cells ('/' or '\', bit 0 or 1 of their state), blockers (rocks) on others, lenses
+// (crystals the beam shines through, lighting them) on others. The beam runs on until it leaves the
+// field: where it leaves says whether it reached the receiver. Solved: the receiver lit and every
+// lens with it (beamDone).
+//   field: { w, h, mirrors: [[x, z], ...], blockers: [[x, z], ...], lenses: [[x, z], ...],
+//            emitter: { x, z, dir }, receiver: { x, z, side } }
 // (a mirror's bit: 0 '/' (turns +x into -z), 1 '\' (turns +x into +z); sides and directions as DIRS)
+// -> { cells, lit, end, stopped, hits (the lenses it shines through, by index), turns (the mirror
+//    cells it turns at, in order) }
 const SLASH = [3, 2, 1, 0], BACK = [2, 3, 0, 1];   // the new heading after a '/' or a '\' mirror
 export function traceBeam(F, bits, blocked = () => false) {
   let [x, z] = [F.emitter.x, F.emitter.z], d = F.emitter.dir;
-  const cells = [], seen = new Set();
+  const cells = [], seen = new Set(), hits = [], turns = [];
   const mirrorAt = new Map(F.mirrors.map(([mx, mz], i) => [`${mx},${mz}`, i])), rock = new Set(F.blockers.map(b => `${b[0]},${b[1]}`));
+  const lensAt = new Map((F.lenses || []).map(([lx, lz], i) => [`${lx},${lz}`, i]));
   while (x >= 0 && z >= 0 && x < F.w && z < F.h) {
     const k = `${x},${z}`;
-    if (seen.has(k + d) || rock.has(k) || blocked(x, z)) return { cells: [...cells, [x, z]], lit: false, end: [x, z], stopped: true };
+    if (seen.has(k + d) || rock.has(k) || blocked(x, z)) return { cells: [...cells, [x, z]], lit: false, end: [x, z], stopped: true, hits, turns };
     seen.add(k + d); cells.push([x, z]);
-    const m = mirrorAt.get(k);
-    if (m !== undefined) d = bits[m] ? BACK[d] : SLASH[d];
+    const m = mirrorAt.get(k), l = lensAt.get(k);
+    if (l !== undefined && !hits.includes(l)) hits.push(l);
+    if (m !== undefined) { d = bits[m] ? BACK[d] : SLASH[d]; turns.push([x, z]); }
     x += SD[d][0]; z += SD[d][1];
   }
   // it leaves the field through side `d` beside (x - dx, z - dz)
   const [ex, ez] = [x - SD[d][0], z - SD[d][1]];
-  return { cells, lit: d === F.receiver.side && ex === F.receiver.x && ez === F.receiver.z, end: [x, z], stopped: false };
+  return { cells, lit: d === F.receiver.side && ex === F.receiver.x && ez === F.receiver.z, end: [x, z], stopped: false, hits, turns };
 }
+// is the mirror puzzle solved by this beam: the receiver lit, every lens on the way?
+export const beamDone = (F, beam) => beam.lit && beam.hits.length === (F.lenses || []).length;
 
 // --- braziers: lights out (docs/trials.md, `braziers`) --------------------------------------------
 // links[i]: the braziers lit or put out with brazier i (and i itself). bits[i]: lit.

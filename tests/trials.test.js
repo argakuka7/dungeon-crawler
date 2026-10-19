@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, pushTarget, platesHeld, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, beamDone, pressBrazier, allLit, pushTarget, platesHeld, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
 import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, solveSokoban } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -637,7 +637,12 @@ test('the beam: straight on, turned by each mirror the way its bit says, stopped
   assert.ok(!traceBeam(F, [1]).lit, "'\\' turns it into +z");
   assert.deepEqual(traceBeam(F, [1]).end, [2, 3]);   // (the first place off the field)
   assert.ok(!traceBeam(F, [0], (x, z) => x === 1 && z === 1).lit, 'a body in the way');
-  assert.deepEqual(solveMirror(F, [1]), { flips: 1, solution: [0] });
+  assert.deepEqual(solveMirror(F, [1]), { flips: 1, solution: [0], traps: 0 });
+  // a lens on (1, 1): the beam lights it on its way; one off the way leaves it unsolved
+  assert.deepEqual(traceBeam({ ...F, lenses: [[1, 1]] }, [0]).hits, [0]);
+  assert.ok(beamDone({ ...F, lenses: [[1, 1]] }, traceBeam({ ...F, lenses: [[1, 1]] }, [0])));
+  assert.ok(!beamDone({ ...F, lenses: [[0, 2]] }, traceBeam({ ...F, lenses: [[0, 2]] }, [0])));
+  assert.equal(solveMirror({ ...F, lenses: [[0, 2]] }, [1]).traps, 1);
 });
 
 test('lights out: pressing toggles a brazier and its links; the solver finds the fewest presses', () => {
@@ -672,7 +677,11 @@ test('every mirror and braziers room generates, unsolved, with its fewest moves 
     if (kind === 'mirror') {
       assert.ok(!traceBeam(pz.field, bits('mirror')).lit, `${seed}/${d}: lit at the start`);
       const s = solveMirror(pz.field, bits('mirror'));
-      assert.ok(s.flips >= (deep ? 4 : 3) && pz.field.mirrors.length <= 10, `${seed}/${d}: ${s.flips} flips`);
+      assert.ok(s.flips >= (deep ? 4 : 3) && pz.field.mirrors.length <= 12, `${seed}/${d}: ${s.flips} flips`);
+      // the lenses: one (two from depth 10), on the way, and a way to the receiver that misses one
+      assert.equal(pz.field.lenses.length, deep ? 2 : 1);
+      assert.equal(pz.parts.filter(p => p.type === 'lens').length, pz.field.lenses.length);
+      assert.ok(s.traps >= 1 && beamDone(pz.field, traceBeam(pz.field, s.solution)), `${seed}/${d}: ${s.traps} traps`);
     } else {
       assert.ok(!allLit(bits('brazier')));
       assert.ok(solveBraziers(pz.field.links, bits('brazier')).presses >= 3, `${seed}/${d}`);

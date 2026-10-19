@@ -14,7 +14,7 @@ import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
 import { cutMaterial } from './section.js';
 import { themeOf } from '../themes/depth.js';
-import { soft, rand, emit } from './particles.js';
+import { soft, glow as glowLayer, rand, emit } from './particles.js';
 import { props } from './props.js';
 import { TRIAL_PROPS } from './propplace.js';
 import { flameSet } from './flames.js';
@@ -312,13 +312,14 @@ export function buildTrialView(m, group) {
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060, 'trial_emitter') : p.type === 'receiver' ? crystal(p, 0x6080a0, 'trial_receiver')
+      : p.type === 'lens' ? crystal(p, 0x7a5aa0, 'trial_receiver')
       : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'beacon' ? beaconPart(p)
         : p.type === 'crate' ? cratePart(p) : p.type === 'runestone' ? runestone(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
     if (pz.kind === 'braziers') { const lk = linkLines(pz); group.add(lk.group); view.links.set(pz.index, lk); }
-    if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '' }); }
+    if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '', segs: [], t0: 0, reach: 0, sparked: 0 }); }
   }
   // the siege's mouths: dark arches the waves come out of
   for (const mo of t.mouths || []) { const g = at(piece('trial_mouth'), mo); g.rotation.y = mo.yaw; group.add(g); }
@@ -453,20 +454,77 @@ function dust(mesh, n) {
 }
 
 // The grid puzzles as their bits say (game/trials.js): mirrors turned, braziers lit, crates pushed,
-// the beam along its way (shown: puzzle index -> { beam: { cells, lit } } | { held })
+// the beam along its way (shown: puzzle index -> { beam: { cells, lit, hits, turns } } | { held }).
+// A mirror swings round on its turntable with a little overshoot; a changed beam grows anew from
+// the emitter at BEAM_SPEED cells/s, sparking where it turns, and a lens or the receiver lights
+// only once it gets there.
 const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0.85, depthWrite: false });
+const beamCore = new THREE.CylinderGeometry(1, 1, 1, 6);
+const BEAM_SPEED = 24;
 export function setGridParts(world, m, s, shown, nearId = null) {
   const v = world?.trialView;
   if (!v || !s) return;
+  const now = performance.now() / 1000;
   for (const [i, lk] of v.links) if (m.puzzles?.[i]) setLinks(lk, m.puzzles[i], nearId);
+  // the beams first: how far each has grown (what it lights depends on it)
+  const reached = new Map();   // puzzle index -> { lit, lenses: Set (lit) }
+  for (const [i, b] of v.beams) {
+    const beam = shown.get(i)?.beam, pz = m.puzzles[i];
+    if (!beam || !pz) continue;
+    const key = beam.cells.map(c => c.join(',')).join(' ') + beam.lit;
+    const D = pz.deck, y = D.level * 0.5 + BEAM_Y, cell = ([x, z]) => [D.x0 + x + 0.5, D.z0 + z + 0.5];
+    if (key !== b.key) {   // a new way: lay it out, to grow from the emitter
+      b.key = key;
+      for (const c of [...b.group.children]) b.group.remove(c);
+      const em = pz.parts.find(p => p.type === 'emitter');
+      const pts = [[em.x, em.z], ...beam.cells.map(cell)];
+      if (!beam.stopped) pts.push(cell(beam.end));
+      // the turns' points along the way (its length to each), the lenses' too
+      const turnAt = new Set(beam.turns.map(c => c.join(','))), lensAt = new Map((pz.field.lenses || []).map((c, k) => [c.join(','), k]));
+      b.segs = []; b.marks = []; b.lensAt = [];
+      let along = 0;
+      for (let k = 1; k < pts.length; k++) {
+        const [ax, az] = pts[k - 1], [bx, bz] = pts[k], len = Math.hypot(bx - ax, bz - az);
+        if (len < 0.01) continue;
+        const mesh = new THREE.Mesh(beamCore, beamMat);
+        mesh.rotation.z = Math.PI / 2; mesh.rotation.y = -Math.atan2(bz - az, bx - ax); mesh.visible = false;
+        b.group.add(mesh); b.segs.push({ mesh, ax, az, ux: (bx - ax) / len, uz: (bz - az) / len, from: along, len });
+        along += len;
+        const c = beam.cells[k - 1];
+        if (c && turnAt.has(c.join(','))) b.marks.push({ at: along, x: bx, z: bz });
+        if (c && lensAt.has(c.join(','))) b.lensAt.push({ at: along, k: lensAt.get(c.join(',')) });
+      }
+      b.total = along; b.t0 = now; b.sparked = 0;
+    }
+    const grown = (now - b.t0) * BEAM_SPEED, done = grown >= b.total;
+    for (const sg of b.segs) {
+      const seen = Math.max(0, Math.min(sg.len, grown - sg.from)), wide = 0.035 + 0.012 * Math.sin(now * 9 + sg.from);
+      sg.mesh.visible = seen > 0.01;
+      if (!sg.mesh.visible) continue;
+      sg.mesh.scale.set(wide, seen, wide);
+      sg.mesh.position.set(sg.ax + sg.ux * seen / 2, y, sg.az + sg.uz * seen / 2);
+    }
+    while (b.sparked < b.marks.length && b.marks[b.sparked].at <= grown) {   // a spark where it turns
+      const mk = b.marks[b.sparked++];
+      for (let n = 0; n < 6; n++) emit(glowLayer, mk.x, y, mk.z, { v: [rand(-1, 1), rand(0, 1.2), rand(-1, 1)], life: 0.35, size: 0.08, color: '#fff2b0', alpha: 0.9, gravity: 2 });
+    }
+    reached.set(i, { lit: done && beam.lit, lenses: new Set(b.lensAt.filter(l => l.at <= grown).map(l => l.k)) });
+  }
   for (const [id, g] of v.grid) {
-    const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
-    if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
+    const p = g.part, bit = s.bits?.[id] ?? 0;
+    if (p.type === 'mirror') {   // swung round on its turntable, overshooting a little
+      g.av = (g.av ?? 0) * 0.72 + (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.09;
+      g.angle += g.av; g.turn.rotation.y = g.angle;
+    }
     else if (FIRES.has(p.type)) {   // (the cold's: lit for good once resolved; the beacon once lit; its flame and light: render/flames.js)
       const lit = p.type === 'brazier' ? !!bit : p.type === 'beacon' ? s.phase !== 'idle' : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
       if (g.lit !== lit) { g.lit = lit; v.fires?.power(g.flame, lit ? 1 : 0); }
     }
-    else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
+    else if (p.type === 'receiver' || p.type === 'lens') {   // lit once the beam gets there (the receiver: through every lens)
+      const r = reached.get(p.puzzle ?? 0), lit = s.phase === 'resolved' || (p.type === 'receiver' ? !!r?.lit : !!r?.lenses.has(p.i));
+      g.glow = (g.glow ?? 0) + ((lit ? 1 : 0) - (g.glow ?? 0)) * 0.12;
+      g.gem.material.emissiveIntensity = 0.4 + g.glow * (2.1 + Math.sin(now * 6) * 0.3); g.light.intensity = 0.3 + g.glow * 2.7;
+    }
     else if (p.type === 'runestone') {   // lit: pressed in turn so far (the order's first n)
       const pz = m.puzzles[p.puzzle ?? 0], n = s.bits?.[`${pz.id}:n`] ?? 0, lit = s.phase === 'resolved' || pz.field.order.slice(0, n).includes(p.i);
       if (g.lit !== lit) { g.lit = lit; for (const f of g.face) f.material.emissive.set(lit ? 0xc0a0ff : 0x000000); }
@@ -480,24 +538,6 @@ export function setGridParts(world, m, s, shown, nearId = null) {
   for (const [id, pl] of v.plates) {
     const held = shown.get(pl.puzzle)?.held;
     if (held && !(s.phase === 'resolved' || (s.stage ?? 0) > pl.puzzle)) pl.rune.material.color.set(held.has(pl.cell) ? 0xffe070 : pl.color);
-  }
-  for (const [i, b] of v.beams) {
-    const beam = shown.get(i)?.beam, pz = m.puzzles[i];
-    if (!beam || !pz) continue;
-    const key = beam.cells.map(c => c.join(',')).join(' ') + beam.lit;
-    if (key === b.key) continue;
-    b.key = key;
-    for (const c of [...b.group.children]) { c.geometry.dispose(); b.group.remove(c); }
-    const D = pz.deck, y = D.level * 0.5 + BEAM_Y, em = pz.parts.find(p => p.type === 'emitter');
-    const pts = [[em.x, em.z], ...beam.cells.map(([x, z]) => [D.x0 + x + 0.5, D.z0 + z + 0.5])];
-    if (!beam.stopped) { const [ex, ez] = beam.end; pts.push([D.x0 + ex + 0.5, D.z0 + ez + 0.5]); }
-    for (let k = 1; k < pts.length; k++) {
-      const [ax, az] = pts[k - 1], [bx, bz] = pts[k], len = Math.hypot(bx - ax, bz - az);
-      if (len < 0.01) continue;
-      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 6), beamMat);
-      seg.position.set((ax + bx) / 2, y, (az + bz) / 2); seg.rotation.z = Math.PI / 2; seg.rotation.y = -Math.atan2(bz - az, bx - ax);
-      b.group.add(seg);
-    }
   }
 }
 

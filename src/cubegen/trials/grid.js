@@ -25,7 +25,7 @@ export function gridSize(kind, depth, small) {
   if (small) return { mirror: { size: 3, band: [2, 3], turns: 2 }, braziers: { size: 3, band: [3, 4] },
     crates: { size: 4, band: [5, 10], crates: 2 } }[kind];
   const deep = depth >= 10;
-  return { mirror: { size: deep ? 7 : 6, band: deep ? [4, 6] : [3, 4], turns: deep ? 5 : 3 },
+  return { mirror: { size: deep ? 7 : 6, band: deep ? [4, 6] : [3, 4], turns: deep ? 5 : 4, lenses: deep ? 2 : 1 },
     braziers: { size: 5, band: deep ? [4, 6] : [3, 4] },
     crates: { size: deep ? 7 : 6, band: deep ? [16, 26] : [10, 18], crates: 3 }, runes: { size: 5 } }[kind];
 }
@@ -36,11 +36,11 @@ const WALLED = new Set(['crates']);
 const beside = (deck, x, z, side) => [deck.x0 + x + [1, -1, 0, 0][side] + 0.5, deck.z0 + z + [0, 0, 1, -1][side] + 0.5];
 
 // a grid puzzle: { size, band, turns?, towards, within } -> { kind, deck, made } or null
-export function buildGrid(ctx, kind, { size, band, turns, crates, towards, within = null, entrySide = null }) {
+export function buildGrid(ctx, kind, { size, band, turns, lenses, crates, towards, within = null, entrySide = null }) {
   const deck = placeDeck(ctx, size, size, towards, within, WALLED.has(kind));
   if (!deck) return null;
   const side = entrySide ?? deck.side(towards);
-  const made = kind === 'mirror' ? makeMirror(ctx.R, size, size, band, turns ?? 3)
+  const made = kind === 'mirror' ? makeMirror(ctx.R, size, size, band, turns ?? 3, lenses ?? 0, lenses ? 1500 : 400)
     : kind === 'braziers' ? makeBraziers(ctx.R, size, band, 200, size < 5 ? ['ring'] : null)
       : kind === 'crates' ? makeCrates(ctx.R, size, size, band, crates ?? 2, side)
         : kind === 'runes' ? makeRunes(ctx.spec.trial.id, ctx.spec.depth, size) : null;
@@ -66,7 +66,8 @@ export function gridRecord(pz, id) {
     F.mirrors.forEach(([x, z], i) => { const [px, pz2] = at(x, z), p = { id: `${id}:m${i}`, type: 'mirror', x: px, y, z: pz2, i }; parts.push(p); start[p.id] = made.start[i]; });
     const [ex, ez] = beside(deck, F.emitter.x, F.emitter.z, F.emitter.dir ^ 1), [rx, rz] = beside(deck, F.receiver.x, F.receiver.z, F.receiver.side);
     parts.push({ id: `${id}:emitter`, type: 'emitter', x: ex, y, z: ez, dir: F.emitter.dir }, { id: `${id}:receiver`, type: 'receiver', x: rx, y, z: rz, side: F.receiver.side });
-    return { parts, start, field: F, check: { flips: made.solution.flips, solution: made.solution.solution } };
+    (F.lenses || []).forEach(([x, z], i) => { const [px, pz2] = at(x, z); parts.push({ id: `${id}:l${i}`, type: 'lens', x: px, y, z: pz2, i }); });
+    return { parts, start, field: F, check: { flips: made.solution.flips, solution: made.solution.solution, traps: made.solution.traps } };
   }
   if (kind === 'braziers') {
     made.at.forEach(([x, z], i) => { const [px, pz2] = at(x, z), p = { id: `${id}:b${i}`, type: 'brazier', x: px, y, z: pz2, i }; parts.push(p); start[p.id] = made.start[i]; });
