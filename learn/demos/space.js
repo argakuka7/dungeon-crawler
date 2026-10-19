@@ -24,7 +24,7 @@ export default function mount(el) {
     if (L > 6) { g.beginPath(); g.moveTo(px(x2), px(z2)); g.lineTo(px(x2) - Math.cos(a - 0.4) * 11, px(z2) - Math.sin(a - 0.4) * 11); g.lineTo(px(x2) - Math.cos(a + 0.4) * 11, px(z2) - Math.sin(a + 0.4) * 11); g.fill(); }
   }
   function label(text, x, y, color = '#d8dde6', align = 'center') {
-    g.font = '12px ui-monospace, monospace'; g.textAlign = align; g.fillStyle = '#0b0d12cc';
+    g.font = "15px 'Crimson Text', serif"; g.textAlign = align; g.fillStyle = '#0b0d12cc';
     const w = g.measureText(text).width + 8;
     g.fillRect(align === 'center' ? x - w / 2 : align === 'left' ? x - 4 : x - w + 4, y - 11, w, 16);
     g.fillStyle = color; g.fillText(text, x, y + 1);
@@ -41,7 +41,7 @@ export default function mount(el) {
     g.fillStyle = '#1b2a1c'; g.fillRect(M, M, N * S, N * S);
     g.strokeStyle = '#ffffff14'; g.lineWidth = 1;
     for (let i = 0; i <= N; i++) { g.beginPath(); g.moveTo(px(i), M); g.lineTo(px(i), M + N * S); g.moveTo(M, px(i)); g.lineTo(M + N * S, px(i)); g.stroke(); }
-    g.font = '10px ui-monospace, monospace'; g.fillStyle = '#8a96a8'; g.textAlign = 'center';
+    g.font = "13px 'Crimson Text', serif"; g.fillStyle = '#8a96a8'; g.textAlign = 'center';
     for (let i = 0; i < N; i += show === 'where' ? 1 : 3) { g.fillText(i, px(i + 0.5), M - 8); g.fillText(i, M - 12, px(i + 0.5) + 3); }
     g.fillStyle = '#ffcf7a'; g.textAlign = 'left'; g.fillText('x \u2192', px(N) + 3, M - 8); g.textAlign = 'center'; g.fillText('z \u2193', M - 12, px(N) + 14);
 

@@ -5,6 +5,7 @@
 // Directions are the game's yaw: 0 looks along +z, and yaw a points at (sin a, cos a).
 import * as THREE from 'three';
 import { scene } from './scene.js';
+import { BODY } from './fonts.js';
 
 export const overlay = new THREE.Group();
 overlay.name = 'overlay';
@@ -98,7 +99,7 @@ export function pin({ color = '#ffcf4a', height = 1.1 } = {}) {
 // words on a dark bubble, always facing the camera; size: world height of one line
 export function label(text, { color = '#ffe4ae', size = 0.26, background = '#1b1710' } = {}) {
   const lines = String(text).split('\n'), px = 40, pad = 14, canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
-  const font = `bold ${px}px ui-rounded, system-ui, sans-serif`;
+  const font = `bold ${px}px ${BODY}`;
   ctx.font = font;
   canvas.width = Math.ceil(Math.max(...lines.map(l => ctx.measureText(l).width))) + pad * 2;
   canvas.height = lines.length * px * 1.2 + pad * 2;

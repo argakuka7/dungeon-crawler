@@ -42,7 +42,7 @@ export default function mount(el) {
       g.beginPath(); g.moveTo(...center(k)); g.lineTo(cx(x + dx) + S / 2, cz(z + dz) + S / 2); g.stroke(); g.setLineDash([]);
     }
     // the rooms
-    g.font = 'bold 13px ui-monospace, monospace'; g.textAlign = 'center';
+    g.font = "bold 13px 'Cinzel', serif"; g.textAlign = 'center';
     for (const k of cells) {
       const [x, z] = pos(k), i = spine.indexOf(k), role = L.roles.get(k) || '';
       const guard = L.guardians.get(k);
@@ -61,7 +61,7 @@ export default function mount(el) {
     if (L.up) ring(L.up);
     if (L.down) { const [a, b] = center(L.down); g.fillStyle = '#05070a'; g.beginPath(); g.arc(a + 13, b - 12, 6, 0, 7); g.fill(); g.strokeStyle = '#ffc94a'; g.lineWidth = 2; g.stroke(); }
     // legend
-    g.textAlign = 'left'; g.font = '12px ui-monospace, monospace';
+    g.textAlign = 'left'; g.font = "15px 'Crimson Text', serif";
     const lx = ox + (2 * R + 1) * S + 14;
     [['#ffc94a', tr('the route', 'die Route')], ['#70d6aa', tr('side room (+)', 'Nebenraum (+)')], ['#ff5ab4', tr('side guardian', 'Torwächter')], ['#ffb000', tr('descent guardian', 'Brunnenwächter')], ['#5fd3ff', tr('way in (ring up)', 'Eingang (Ring)')], ['#ffc94a', tr('well down', 'Brunnen runter')], ['#ffcf7a', tr('treasure site', 'Schatzplatz')], ['#ff5a4a', tr('horde', 'Horde')]]
       .forEach(([c, t], j) => { g.fillStyle = c; g.fillRect(lx, 20 + j * 22, 12, 12); g.fillStyle = '#aab3c2'; g.fillText(t, lx + 18, 31 + j * 22); });

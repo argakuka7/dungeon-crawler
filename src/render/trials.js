@@ -18,6 +18,7 @@ import { soft, rand, emit } from './particles.js';
 import { props } from './props.js';
 import { TRIAL_PROPS } from './propplace.js';
 import { flameSet } from './flames.js';
+import { BODY } from './fonts.js';
 
 const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
@@ -256,7 +257,7 @@ function glyphTexture(glyph, color = '#e8d8ff') {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d');
   g.fillStyle = '#3a3640'; g.fillRect(0, 0, 64, 64);
-  g.fillStyle = color; g.font = 'bold 44px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(glyph, 32, 34);
+  g.fillStyle = color; g.font = `bold 44px ${BODY}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(glyph, 32, 34);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   glyphTextures.set(k, tex);
   return tex;

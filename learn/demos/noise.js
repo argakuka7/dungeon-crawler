@@ -36,7 +36,7 @@ export default function mount(el) {
       g.strokeStyle = on[o] ? colors[o] : '#2a2f3a'; g.lineWidth = 1.5; g.beginPath();
       for (let px = 0; px <= W; px += 2) { const y = 8 + o * 34 + (1 - octave(o, px / cw / zoom)) * 28; px ? g.lineTo(px, y) : g.moveTo(px, y); }
       g.stroke();
-      g.fillStyle = on[o] ? colors[o] : '#5a6678'; g.font = '11px ui-monospace, monospace';
+      g.fillStyle = on[o] ? colors[o] : '#5a6678'; g.font = "14px 'Crimson Text', serif";
       g.fillText([tr('big hills \u00D71', 'große Hügel \u00D71'), tr('medium \u00D7\u00BD', 'mittel \u00D7\u00BD'), tr('small \u00D7\u00BC', 'klein \u00D7\u00BC')][o], W - 118, 20 + o * 34);
     }
     // their sum, normalised like the game's (each layer half as strong as the one before)

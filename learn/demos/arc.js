@@ -47,12 +47,12 @@ export default function mount(el) {
     g.lineTo(X(player.x + Math.sin(yaw) * stats.range), Y(player.z + Math.cos(yaw) * stats.range)); g.stroke();
     g.fillStyle = hit ? '#ffcf7a' : '#ff6a5a'; g.globalAlpha = 0.85;
     g.beginPath(); g.arc(X(enemy.x), Y(enemy.z), enemy.profile.radius * PX, 0, 7); g.fill(); g.globalAlpha = 1;
-    g.fillStyle = '#0b0d12'; g.font = 'bold 11px ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillStyle = '#0b0d12'; g.font = "bold 11px 'Cinzel', serif"; g.textAlign = 'center';
     g.fillText(hit ? tr('HIT', 'TREFFER') : tr('drag me', 'zieh mich'), X(enemy.x), Y(enemy.z) + 4); g.textAlign = 'left';
     // side view of the heights, bottom right
     const sx = W - 150, sy = H - 20, S = 60;
     g.fillStyle = '#0b0d12cc'; g.fillRect(sx - 10, sy - 170, 150, 180);
-    g.fillStyle = '#8a96a8'; g.font = '11px ui-monospace, monospace'; g.fillText(tr('from the side', 'von der Seite'), sx, sy - 155);
+    g.fillStyle = '#8a96a8'; g.font = "14px 'Crimson Text', serif"; g.fillText(tr('from the side', 'von der Seite'), sx, sy - 155);
     g.fillStyle = '#ffcf7a33'; g.fillRect(sx, sy - (0.85) * S, 130, (0.85 - 0.08) * S);
     g.fillStyle = '#ffcf7a'; g.fillText(tr('blade height', 'Klingenhöhe'), sx + 40, sy - 0.5 * S);
     g.fillStyle = '#e6e9ef'; g.fillRect(sx + 6, sy - 0.85 * S, 12, 0.85 * S);

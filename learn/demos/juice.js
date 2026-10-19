@@ -76,7 +76,7 @@ export default function mount(el) {
     g.fillStyle = '#2a2f3a'; g.fillRect(blob.x - 40, 90, 80, 6); g.fillStyle = '#ff6a5a'; g.fillRect(blob.x - 40, 90, 80 * blob.hp / 100, 6);
     for (const p of parts) { g.fillStyle = p.col; g.globalAlpha = Math.min(1, p.life * 4); g.beginPath(); g.arc(p.x, p.y, p.r, 0, 7); g.fill(); }
     g.globalAlpha = 1;
-    for (const n of nums) { g.fillStyle = n.big ? '#ffb347' : '#fff'; g.globalAlpha = Math.min(1, n.t * 3); g.font = `bold ${n.big ? 26 : 20}px ui-monospace, monospace`; g.fillText(n.text, n.x - 10, n.y); }
+    for (const n of nums) { g.fillStyle = n.big ? '#ffb347' : '#fff'; g.globalAlpha = Math.min(1, n.t * 3); g.font = `bold ${n.big ? 26 : 20}px 'Cinzel', serif`; g.fillText(n.text, n.x - 10, n.y); }
     g.globalAlpha = 1; g.restore();
   });
 }

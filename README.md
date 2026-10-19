@@ -87,7 +87,10 @@ docs that explain how the game works, from the big ideas down to the real code:
   GLBs, `addons/libs/`); `vendor/scrimshaw/`: the music score parser and synth;
   `vendor/peerjs/`: PeerJS for playing together, loaded only when someone hosts or joins;
   `vendor/pi-durable/`: Pi's durable agent harness and model access for the tutor, one bundle built
-  by `node tools/vendor-pi-durable.mjs <pi checkout>`.
+  by `node tools/vendor-pi-durable.mjs <pi checkout>`; `vendor/fonts/`: the type, from Google Fonts
+  by `node tools/vendor-fonts.mjs` (`fonts.css` sets `--font-display`, Cinzel, for buttons, headings
+  and labels; `--font-body`, Crimson Text, for the rest; `--font-mono`, IBM Plex Mono, only for code
+  and the dev panel; canvas text takes the same faces from `src/render/fonts.js`).
 
 ## Running
 

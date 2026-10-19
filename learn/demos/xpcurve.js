@@ -18,7 +18,7 @@ export default function mount(el) {
   function draw() {
     g.clearRect(0, 0, W, H);
     const y = v => H - B - v / top * (H - B - 16);
-    g.font = '10px ui-monospace, monospace'; g.textAlign = 'right'; g.fillStyle = '#8a96a8';
+    g.font = "13px 'Crimson Text', serif"; g.textAlign = 'right'; g.fillStyle = '#8a96a8';
     for (let v = 0; v <= top; v += 10000) { g.fillText(fmt(v), L - 4, y(v) + 3); g.fillStyle = '#ffffff10'; g.fillRect(L, y(v), W - L - 10, 1); g.fillStyle = '#8a96a8'; }
     for (let i = 1; i <= MAX; i++) {
       const x = L + (i - 1) * bw;

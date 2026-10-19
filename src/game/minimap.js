@@ -23,6 +23,7 @@ import { followedQuest } from './questpanel.js';
 import { questTarget, questWay } from './questworld.js';
 import { warnedFace } from './trials.js';
 import { TRIALS } from '../core/trials.js';
+import { DISPLAY, BODY } from '../render/fonts.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
@@ -181,7 +182,7 @@ export function drawMinimap() {
   // north on the rim
   const [nx, ny] = screen(0, -(R * CELL - 9));
   dot([nx, ny], 7, '#0b0d12cc');
-  g.fillStyle = '#e8ecf3'; g.font = 'bold 10px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#e8ecf3'; g.font = `bold 11px ${DISPLAY}`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('N', nx, ny + 0.5);
   g.textAlign = 'start'; g.textBaseline = 'alphabetic';
   g.strokeStyle = '#ffffff30'; g.lineWidth = 1; g.beginPath(); g.arc(C, C, R * CELL - 0.5, 0, Math.PI * 2); g.stroke();
@@ -210,6 +211,6 @@ export function drawMinimap() {
   if (inside) dot([C, C], 4, mine, OUTLINE);
   else arrow([C, C], player.yaw, mine);
   // the lines below
-  g.font = '11px ui-monospace, monospace';
+  g.font = `13px ${BODY}`;
   lines.forEach(([text, color], i) => { g.fillStyle = color; g.fillText(text, PAD, SIZE + 10 + 14 * i); });
 }

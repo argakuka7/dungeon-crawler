@@ -422,7 +422,7 @@ function spotlight(doc, el, note, seconds) {
     bubble.className = 'tutor-spot-note';
     bubble.textContent = note;
     Object.assign(bubble.style, { position: 'absolute', zIndex: 16, maxWidth: '280px', background: '#2a2416', color: '#ffe4ae', border: '1px solid #ffcf7a', borderRadius: '8px',
-      padding: '6px 10px', font: '14px/1.4 ui-rounded, system-ui, sans-serif', boxShadow: '0 6px 20px #000a', cursor: 'pointer' });
+      padding: '6px 10px', font: "16px/1.4 'Crimson Text', serif", boxShadow: '0 6px 20px #000a', cursor: 'pointer' });
   }
   const place = () => {
     const r = el.getBoundingClientRect(), w = doc.defaultView;

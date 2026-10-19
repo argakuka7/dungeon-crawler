@@ -1,5 +1,6 @@
 // Health bars and level labels floating over the player and the enemies.
 import * as THREE from 'three';
+import { DISPLAY } from './fonts.js';
 
 const INDICATOR_SCALE = 1.15;
 const barGeo = new THREE.PlaneGeometry(1, 1);
@@ -35,11 +36,11 @@ export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title 
     if (n === shown) return;
     shown = n;
     const text = title ? `${title} · Lv ${n}` : `Lv ${n}`;
-    ctx.font = 'bold 48px monospace';
+    ctx.font = `bold 48px ${DISPLAY}`;
     // Long encounter titles must not clip at the old fixed Guardian label width.
     canvas.width = Math.ceil(Math.max(title ? 640 : 256, ctx.measureText(text).width + 24));
     sprite.scale.x = canvas.width / 256 * .7 * INDICATOR_SCALE;
-    ctx.font = 'bold 48px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold 48px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const x = canvas.width / 2;
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, x, 32);
     ctx.fillStyle = color; ctx.fillText(text, x, 32);
@@ -60,9 +61,9 @@ export function makeNote() {
     sprite.visible = !!text;
     if (!text || text + color === shown) return;
     shown = text + color;
-    ctx.font = 'bold 44px monospace';
+    ctx.font = `bold 44px ${DISPLAY}`;
     canvas.width = Math.ceil(ctx.measureText(text).width + 24); canvas.height = 64;
-    ctx.font = 'bold 44px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold 44px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, canvas.width / 2, 32);
     ctx.fillStyle = color; ctx.fillText(text, canvas.width / 2, 32);
     texture.needsUpdate = true;
@@ -77,7 +78,7 @@ export function makeAlertMark() {
   if (!alertMaterial) {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
-    ctx.font = 'bold 56px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `bold 56px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText('!', 32, 34);
     ctx.fillStyle = '#ffcf4a'; ctx.fillText('!', 32, 34);
     alertMaterial = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthWrite: false });

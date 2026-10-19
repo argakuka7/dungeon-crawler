@@ -187,6 +187,11 @@ function wordTips() {
 
 // ---- demos: loaded when they come into view ----------------------------------------------------
 // a demo's default export may return a function (or a promise of one) that stops it when its page is left
+// the faces the demos draw with on their canvases (a canvas takes what is loaded when it draws, and some draw once)
+let fontsLoaded = null;
+const canvasFonts = () => fontsLoaded ??= Promise.all(["bold 16px 'Cinzel'", "16px 'Crimson Text'", "bold 16px 'Crimson Text'"]
+  .map(f => document.fonts.load(f))).catch(() => {});
+
 function demos(root, page) {
   const io = new IntersectionObserver(entries => {
     for (const { target, isIntersecting } of entries) {
@@ -196,8 +201,8 @@ function demos(root, page) {
       const box = document.createElement('div');
       box.className = 'loading'; box.textContent = t('loading\u2026', 'lädt\u2026');
       target.append(box);
-      import(`./demos/${target.dataset.demo}.js`)
-        .then(async m => { box.remove(); const stop = await m.default(target); if (typeof stop === 'function') page.cleanups.push(stop); })
+      Promise.all([import(`./demos/${target.dataset.demo}.js`), canvasFonts()])
+        .then(async ([m]) => { box.remove(); const stop = await m.default(target); if (typeof stop === 'function') page.cleanups.push(stop); })
         .catch(err => {
           console.error(err);
           target.append(box);

@@ -28,9 +28,9 @@ export default function mount(el) {
     }
     $('svg').innerHTML = `${segs}<circle cx="520" cy="60" r="34" fill="${col.skin}"/><circle cx="508" cy="50" r="8" fill="${col.eyes}"/><circle cx="534" cy="50" r="8" fill="${col.eyes}"/>
       <rect x="20" y="16" width="26" height="26" fill="${BASE.skin}"/><rect x="50" y="16" width="26" height="26" fill="${BASE.ribs}"/>
-      <text x="20" y="58" fill="#8a96a8" font-size="11" font-family="monospace">${tr('before', 'vorher')}</text>
+      <text x="20" y="58" fill="#8a96a8" font-size="14" font-family="'Crimson Text', serif">${tr('before', 'vorher')}</text>
       <rect x="110" y="16" width="26" height="26" fill="${col.skin}"/><rect x="140" y="16" width="26" height="26" fill="${col.ribs}"/>
-      <text x="110" y="58" fill="#8a96a8" font-size="11" font-family="monospace">${tr('after', 'nachher')}</text>`;
+      <text x="110" y="58" fill="#8a96a8" font-size="14" font-family="'Crimson Text', serif">${tr('after', 'nachher')}</text>`;
     out.innerHTML = tr(`skin <b>${col.skin}</b> \u00B7 ribs <b>${col.ribs}</b> (they moved together) \u00B7 recipe: <b>${typeof op === 'string' ? op : 'the original snake'}</b>`,
       `Haut <b>${col.skin}</b> \u00B7 Rippen <b>${col.ribs}</b> (sie sind zusammen gewandert) \u00B7 Rezept: <b>${typeof op === 'string' ? op : 'die ursprüngliche Schlange'}</b>`);
   }

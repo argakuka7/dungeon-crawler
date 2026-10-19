@@ -39,7 +39,7 @@ export default function mount(el) {
   function panel(x, title) {
     g.fillStyle = '#ffffff08'; g.fillRect(x, 0, PW, H);
     g.strokeStyle = '#ffffff22'; g.lineWidth = 1; g.strokeRect(x + 0.5, 0.5, PW - 1, H - 1);
-    g.fillStyle = '#aab3c2'; g.font = '12px ui-monospace, monospace'; g.textAlign = 'left';
+    g.fillStyle = '#aab3c2'; g.font = "15px 'Crimson Text', serif"; g.textAlign = 'left';
     g.fillText(title, x + 8, 16);
   }
 

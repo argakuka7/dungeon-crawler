@@ -174,7 +174,7 @@ export default function mount(el) {
     g.arc(e.x * S, e.z * S, P.aggro * S, e.yaw - cone, e.yaw + cone);
     g.arc(e.x * S, e.z * S, P.aggro * BEHIND * S, e.yaw + cone, e.yaw - cone + Math.PI * 2);
     g.closePath(); g.stroke(); g.setLineDash([]);
-    g.fillStyle = '#8a96a8'; g.font = '10px ui-monospace, monospace'; g.fillText(tr('home', 'Zuhause'), e.home[0] * S - 2 * S + 3, e.home[1] * S - 2 * S + 12);
+    g.fillStyle = '#8a96a8'; g.font = "13px 'Crimson Text', serif"; g.fillText(tr('home', 'Zuhause'), e.home[0] * S - 2 * S + 3, e.home[1] * S - 2 * S + 12);
     // what it sees
     const dist = Math.hypot(hero.x - e.x, hero.z - e.z);
     if (e.seen && (e.mode === 'chase' || e.mode === 'search')) { g.strokeStyle = '#ffcf7a'; g.strokeRect(e.seen[0] * S + 4, e.seen[1] * S + 4, S - 8, S - 8); }
@@ -194,7 +194,7 @@ export default function mount(el) {
     g.fillStyle = wind ? '#ff4a2a' : '#6a4452'; g.beginPath(); g.ellipse(0, 0, 11, 8, 0, 0, 7); g.fill();
     g.fillStyle = '#b4e67e'; g.beginPath(); g.arc(8, -3, 2, 0, 7); g.arc(8, 3, 2, 0, 7); g.fill();
     g.restore();
-    if (e.mode === 'alert' || e.mode === 'search') { g.fillStyle = '#ffcf7a'; g.font = 'bold 18px ui-monospace, monospace'; g.fillText(e.mode === 'alert' ? '!' : '?', e.x * S - 5, e.z * S - 18); }
+    if (e.mode === 'alert' || e.mode === 'search') { g.fillStyle = '#ffcf7a'; g.font = "bold 18px 'Cinzel', serif"; g.fillText(e.mode === 'alert' ? '!' : '?', e.x * S - 5, e.z * S - 18); }
     diagram.querySelectorAll('.chip').forEach(ch => { const on = ch.classList.contains('st-' + e.mode); ch.style.background = on ? '#5a4a26' : ''; ch.style.borderColor = on ? '#ffcf7a' : ''; ch.style.color = on ? '#fff' : ''; });
     out.innerHTML = `<b>${e.mode}</b>: ${SAY()[e.mode]}\n${tr('last states', 'letzte Zustände')}: ${log.join(' \u2190 ') || '-'}   ${tr('your health', 'deine Gesundheit')}: <b>${hero.hp}</b>`;
   }

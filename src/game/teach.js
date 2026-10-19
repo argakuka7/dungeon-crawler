@@ -41,6 +41,7 @@ import { travelling } from './travel.js';
 import { pace, pause, resume, step, setSpeed, resetPace } from './pace.js';
 import { tune, untune, tuned } from './tune.js';
 import { lens, lensesOn, tickLenses, resetLenses } from './lenses.js';
+import { DISPLAY } from '../render/fonts.js';
 
 const root = new THREE.Group();
 root.name = 'teach';
@@ -180,7 +181,7 @@ function showPace() {
     badge.id = 'teach-pace';
     Object.assign(badge.style, { position: 'fixed', top: 'calc(12px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 20, pointerEvents: 'none',
       padding: '4px 14px', borderRadius: '8px', background: '#1b1710dd', color: '#ffe4ae', border: '1px solid #ffcf7a',
-      font: 'bold 15px ui-rounded, system-ui, sans-serif', letterSpacing: '0.04em' });
+      font: `bold 15px ${DISPLAY}`, letterSpacing: '0.04em' });
     document.body.append(badge);
   }
   badge.textContent = text;

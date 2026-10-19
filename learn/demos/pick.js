@@ -24,7 +24,7 @@ export default function mount(el) {
     g.fillStyle = '#9a6b3c'; g.fillRect(bridge.x0, H - bridge.y - bridge.h, bridge.x1 - bridge.x0, bridge.h);
     // the screen: your picture, seen from the side
     g.strokeStyle = '#5fd3ff'; g.lineWidth = 4; g.beginPath(); g.moveTo(screen.x, screen.top); g.lineTo(screen.x, screen.bottom); g.stroke();
-    g.fillStyle = '#5fd3ff'; g.font = '11px ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillStyle = '#5fd3ff'; g.font = "14px 'Crimson Text', serif"; g.textAlign = 'center';
     g.fillText(tr('your screen', 'dein Bildschirm'), screen.x, screen.bottom + 16);
     g.fillStyle = '#ffcf7a'; g.beginPath(); g.arc(cam.x, cam.y, 9, 0, 7); g.fill();
     g.fillText(tr('camera', 'Kamera'), cam.x, cam.y - 14);

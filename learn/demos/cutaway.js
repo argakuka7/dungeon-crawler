@@ -63,7 +63,7 @@ export default function mount(el) {
     const hx = X(hero.x), hy = Y(hero.y);
     g.fillStyle = '#e6e9ef'; g.beginPath(); g.roundRect(hx - 8, hy - 0.85 * PX, 16, 0.85 * PX, 6); g.fill();
     // the camera, far up and to the right, and the probe
-    g.fillStyle = '#8a96a8'; g.font = '12px ui-monospace, monospace'; g.fillText(tr('to the camera \u2197', 'zur Kamera \u2197'), W - 130, 18);
+    g.fillStyle = '#8a96a8'; g.font = "15px 'Crimson Text', serif"; g.fillText(tr('to the camera \u2197', 'zur Kamera \u2197'), W - 130, 18);
     if ($('.ray').checked) {
       for (const [px, py] of tg.b.probes) { g.fillStyle = '#ffffffaa'; g.fillRect(X(px) - 1, Y(py) - 1, 2, 2); }
       if (tg.b.at) { g.strokeStyle = '#ff6a5a'; g.lineWidth = 2; g.beginPath(); g.arc(X(tg.b.at[0]), Y(tg.b.at[1]), 6, 0, 7); g.stroke(); }

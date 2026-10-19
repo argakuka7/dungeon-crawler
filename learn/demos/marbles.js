@@ -34,7 +34,7 @@ export default function mount(el) {
   loop(el, dt => {
     anim = Math.min(1, anim + dt * 2.5);
     g.clearRect(0, 0, w, h);
-    g.font = '12px ui-monospace, monospace';
+    g.font = "15px 'Crimson Text', serif";
     let at = 0;
     for (const it of items) {   // the line of weights
       g.fillStyle = it.color; g.globalAlpha = needle && needle.i !== items.indexOf(it) ? 0.35 : 0.9;

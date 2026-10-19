@@ -91,7 +91,7 @@ export default function mount(el) {
     for (const [p, col, label] of [[A, '#61dc6b', sight ? tr('eye', 'Auge') : 'S'], [B, '#ff6a5a', sight ? tr('you', 'du') : tr('G', 'Z')]]) {
       const [x, y] = sight ? p : [p[0] + 0.5, p[1] + 0.5];
       g.fillStyle = col; g.beginPath(); g.arc(x * S, y * S, S * 0.38, 0, 7); g.fill();
-      g.fillStyle = '#0b0d12'; g.font = `bold ${label.length > 1 ? 9 : 12}px ui-monospace, monospace`; g.textAlign = 'center'; g.fillText(label, x * S, y * S + 4); g.textAlign = 'left';
+      g.fillStyle = '#0b0d12'; g.font = `bold ${label.length > 1 ? 9 : 12}px 'Cinzel', serif`; g.textAlign = 'center'; g.fillText(label, x * S, y * S + 4); g.textAlign = 'left';
     }
     if (!sight) {
       const looked = Math.min(shown, order.length);

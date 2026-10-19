@@ -84,7 +84,7 @@ export default function mount(el) {
     }
     g.fillStyle = '#2e86de'; g.fillRect(X(4), base + 14, PX, 26);
     // levels on the side: every level is half a unit
-    g.fillStyle = '#5a6678'; g.font = '10px ui-monospace, monospace';
+    g.fillStyle = '#5a6678'; g.font = "13px 'Crimson Text', serif";
     for (let l = 1; l <= 8; l++) g.fillRect(W - 6, Y(l * 0.5), 6, 1);
     p.trail.forEach(([x, y], i) => { g.fillStyle = `rgba(255,207,122,${0.2 + 0.6 * i / p.trail.length})`; g.fillRect(X(x) - 1.5, Y(y) - 1.5, 3, 3); });
     // the hero: a capsule as tall as the collision body (CHAR_H)
@@ -92,8 +92,8 @@ export default function mount(el) {
     g.fillStyle = p.sit > 0 ? '#ff8a7a' : '#e6e9ef';
     g.beginPath(); g.roundRect(x - 0.22 * PX, y - h, 0.44 * PX, h, 10); g.fill();
     g.fillStyle = '#0b0d12'; g.fillRect(x + (p.vx >= 0 ? 2 : -6), y - h + 8, 4, 4);
-    if (p.msgT > 0) { g.fillStyle = '#ffcf7a'; g.font = 'bold 14px ui-monospace, monospace'; g.fillText(p.msg, 12, 22); }
-    if (document.activeElement !== el) { g.fillStyle = '#8a96a8'; g.font = '12px ui-monospace, monospace'; g.fillText(tr('click here to play', 'hier klicken zum Spielen'), W - 160, 22); }
+    if (p.msgT > 0) { g.fillStyle = '#ffcf7a'; g.font = "bold 17px 'Crimson Text', serif"; g.fillText(p.msg, 12, 22); }
+    if (document.activeElement !== el) { g.fillStyle = '#8a96a8'; g.font = "15px 'Crimson Text', serif"; g.fillText(tr('click here to play', 'hier klicken zum Spielen'), W - 160, 22); }
     out.innerHTML = tr(`speed <b>${Math.abs(p.vx).toFixed(2)}</b> units/s \u00B7 ${p.grounded ? 'on the ground' : 'in the air'} \u00B7 jump height <b>${(jumpV * jumpV / 2 / grav).toFixed(2)}</b> units \u00B7 last landing <b>${lastLand.toFixed(1)}</b> units/s`,
       `Tempo <b>${Math.abs(p.vx).toFixed(2)}</b> Einheiten/s \u00B7 ${p.grounded ? 'am Boden' : 'in der Luft'} \u00B7 Sprunghöhe <b>${(jumpV * jumpV / 2 / grav).toFixed(2)}</b> Einheiten \u00B7 letzte Landung <b>${lastLand.toFixed(1)}</b> Einheiten/s`);
   }

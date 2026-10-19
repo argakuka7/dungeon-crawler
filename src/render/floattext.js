@@ -2,6 +2,7 @@
 // everything. `at` is a point, or a function returning one (to follow a moving thing).
 import * as THREE from 'three';
 import { scene } from './scene.js';
+import { DISPLAY } from './fonts.js';
 
 const live = [];
 const point = new THREE.Vector3();
@@ -9,9 +10,9 @@ const point = new THREE.Vector3();
 // size: world height of the text; drift: sideways wander so stacked numbers do not overlap
 export function floatText(text, at, { color = '#ffd56a', size = 0.24, life = 1.1, rise = 0.6, drift = 0, pop = 0 } = {}) {
   const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
-  ctx.font = 'bold 30px monospace';
+  ctx.font = `bold 30px ${DISPLAY}`;
   canvas.width = Math.ceil(ctx.measureText(text).width) + 16; canvas.height = 48;
-  ctx.font = 'bold 30px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 30px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.lineWidth = 6; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, canvas.width / 2, 24);
   ctx.fillStyle = color; ctx.fillText(text, canvas.width / 2, 24);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false, depthWrite: false }));

@@ -42,7 +42,7 @@ export default function mount(el) {
     for (let v = LO; v <= HI; v++) { g.fillStyle = pass(v) ? '#3c8a4a' : '#8a3c3c'; g.fillRect(x(v), 8, w - 1, 22); }
     g.strokeStyle = '#ffcf7a'; g.lineWidth = 2; g.strokeRect(x(d) - 1, 6, w + 1, 26);
     g.fillStyle = '#ffcf7a'; g.beginPath(); const sx = x(SWORD.damage) + w / 2; g.moveTo(sx, 36); g.lineTo(sx - 6, 46); g.lineTo(sx + 6, 46); g.fill();
-    g.fillStyle = '#8a96a8'; g.font = '10px ui-monospace, monospace';
+    g.fillStyle = '#8a96a8'; g.font = "13px 'Crimson Text', serif";
     g.fillText(LO, x(LO), 48); g.fillText(HI, x(HI) - 8, 48);
   }
   function run() {

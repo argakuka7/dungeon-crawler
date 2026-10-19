@@ -56,7 +56,7 @@ export default function mount(el) {
     else {
       g.fillStyle = '#ffcf7a55'; g.fillRect(w - 40, 10, 3, H - 20);
       runner(g, A.x, 95, t, '#61dc6b'); runner(g, B.x, 190, t, '#ff8a7a');
-      g.font = '12px ui-monospace, monospace'; g.fillStyle = '#61dc6b'; g.fillText(tr('moves speed \u00D7 dt', 'bewegt sich Tempo \u00D7 dt'), 8, 20);
+      g.font = "15px 'Crimson Text', serif"; g.fillStyle = '#61dc6b'; g.fillText(tr('moves speed \u00D7 dt', 'bewegt sich Tempo \u00D7 dt'), 8, 20);
       g.fillStyle = '#ff8a7a'; g.fillText(tr('moves the same step every picture', 'macht in jedem Bild den gleichen Schritt'), 8, 115);
     }
   }
@@ -73,7 +73,7 @@ export default function mount(el) {
       PHASES().forEach((name, i) => {
         g.fillStyle = i === p ? ['#5fd3ff', '#ffcf7a', '#61dc6b'][i] : '#2a2f3a';
         g.fillRect(8 + i * 112, 164, 104, 22);
-        g.fillStyle = i === p ? '#0b0d12' : '#8a96a8'; g.font = 'bold 12px ui-monospace, monospace';
+        g.fillStyle = i === p ? '#0b0d12' : '#8a96a8'; g.font = "bold 12px 'Cinzel', serif";
         g.fillText(name, 18 + i * 112, 179);
       });
       out.innerHTML = `${tr('pictures drawn', 'gemalte Bilder')}: <b>${frames}</b>   ${tr('time between pictures', 'Zeit zwischen den Bildern')}: <b>${(1000 / fps).toFixed(1)} ms</b>`;
@@ -104,7 +104,7 @@ function follow(el) {
     trail.forEach(([x, y], i) => { g.fillStyle = `rgba(255,207,122,${i / 80})`; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); });
     g.strokeStyle = '#5fd3ff'; g.lineWidth = 2; g.beginPath(); g.arc(...target, 10, 0, 7); g.stroke();
     g.fillStyle = '#ffcf7a'; g.beginPath(); g.arc(...pos, 9, 0, 7); g.fill();
-    g.font = '12px ui-monospace, monospace'; g.fillStyle = '#8a96a8';
+    g.font = "15px 'Crimson Text', serif"; g.fillStyle = '#8a96a8';
     g.fillText(tr('blue: where it wants to be   gold: where it is (like the camera)', 'blau: wo es hin will   gold: wo es ist (wie die Kamera)'), 10, h - 10);
   });
 }

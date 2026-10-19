@@ -26,7 +26,7 @@ const box = root.querySelector('#levels');
 const draw = () => {
   const lv = +(localStorage.getItem('kids.lv') || 3);
   box.innerHTML = [1, 2, 3].map(l => `<button class="card${l === lv ? ' on' : ''}" data-lv="${l}" style="text-align:left;border-color:${l <= lv ? LEVELS[l].color : ''}">
-    <span style="color:${LEVELS[l].color}">${LEVELS[l].short} \u00B7 ${lang === 'de' ? LEVELS[l].de : LEVELS[l].name}</span><br><span style="font-family:var(--read);font-size:15px;color:var(--muted)">${blurb()[l]}</span></button>`).join('');
+    <span style="color:${LEVELS[l].color}">${LEVELS[l].short} \u00B7 ${lang === 'de' ? LEVELS[l].de : LEVELS[l].name}</span><br><span style="font-family:var(--read);font-size:16px;color:var(--muted)">${blurb()[l]}</span></button>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = () => { localStorage.setItem('kids.lv', b.dataset.lv); draw(); });
 };
 draw();

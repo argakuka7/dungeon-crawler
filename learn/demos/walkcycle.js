@@ -70,7 +70,7 @@ export default function mount(el) {
 
     // the weights as bars
     const bars = [['idle', w.idle, '#8a96a8'], ['walk', w.walk, '#51a9ff'], ['run', w.run, '#ffcf7a']];
-    g.font = '11px ui-monospace, monospace'; g.textAlign = 'left';
+    g.font = "14px 'Crimson Text', serif"; g.textAlign = 'left';
     bars.forEach(([n, v, col], i) => {
       const y = 24 + i * 28;
       g.fillStyle = '#ffffff12'; g.fillRect(400, y, 120, 12);

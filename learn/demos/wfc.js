@@ -66,15 +66,15 @@ export default function mount(el) {
         // the four edges (sockets): east, west, south, north
         const e = [[X + S - 9, Z + 6, 6, S - 12], [X + 3, Z + 6, 6, S - 12], [X + 6, Z + S - 9, S - 12, 6], [X + 6, Z + 3, S - 12, 6]];
         t.sock.forEach((s, d) => { g.fillStyle = SOCK[s]; g.fillRect(...e[d]); g.strokeStyle = '#0008'; g.lineWidth = 1; g.strokeRect(...e[d]); });
-        g.fillStyle = '#0b0d12'; g.font = 'bold 11px ui-monospace, monospace';
+        g.fillStyle = '#0b0d12'; g.font = "bold 11px 'Cinzel', serif";
         g.fillText(t.kind, X + S / 2, Z + S / 2 + 1);
-        g.font = '10px ui-monospace, monospace'; g.fillText(tr(`${t.K} layer${t.K > 1 ? 's' : ''}`, `${t.K} Ebene${t.K > 1 ? 'n' : ''}`), X + S / 2, Z + S / 2 + 14);
+        g.font = "13px 'Crimson Text', serif"; g.fillText(tr(`${t.K} layer${t.K > 1 ? 's' : ''}`, `${t.K} Ebene${t.K > 1 ? 'n' : ''}`), X + S / 2, Z + S / 2 + 14);
       } else {
         const n = wfc.domain(k).length;
         g.fillStyle = '#161b24'; g.fillRect(X + 2, Z + 2, S - 4, S - 4);
-        g.fillStyle = n < 30 ? '#ffcf7a' : '#5a6678'; g.font = 'bold 15px ui-monospace, monospace';
+        g.fillStyle = n < 30 ? '#ffcf7a' : '#5a6678'; g.font = "bold 15px 'Cinzel', serif";
         g.fillText(String(n), X + S / 2, Z + S / 2 + 2);
-        g.font = '10px ui-monospace, monospace'; g.fillStyle = '#8a96a8'; g.fillText(tr('options', 'Optionen'), X + S / 2, Z + S / 2 + 16);
+        g.font = "13px 'Crimson Text', serif"; g.fillStyle = '#8a96a8'; g.fillText(tr('options', 'Optionen'), X + S / 2, Z + S / 2 + 16);
       }
       if (nx?.k === k) { g.strokeStyle = '#ffcf7a'; g.lineWidth = 3; g.strokeRect(X + 2, Z + 2, S - 4, S - 4); }
       if (lastPick?.k === k) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(X + 4, Z + 4, S - 8, S - 8); }

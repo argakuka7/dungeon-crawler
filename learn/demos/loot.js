@@ -107,7 +107,7 @@ function odds(el) {
     RARITIES.forEach((r, i) => {
       const share = p[i], x = 20 + i * bw, h = Math.max(share > 0 ? 2 : 0, Math.sqrt(share) * 180);
       g.fillStyle = r.css; g.globalAlpha = share ? 1 : 0.25; g.fillRect(x + 6, 200 - h, bw - 12, h); g.globalAlpha = 1;
-      g.fillStyle = '#e6e9ef'; g.font = '12px ui-monospace, monospace'; g.textAlign = 'center';
+      g.fillStyle = '#e6e9ef'; g.font = "15px 'Crimson Text', serif"; g.textAlign = 'center';
       g.fillText(r.name, x + bw / 2, 218);
       g.fillStyle = share ? r.css : '#5a6678';
       g.fillText(share ? (share >= 0.01 ? (share * 100).toFixed(1) + '%' : (share * 100).toFixed(2) + '%') : r.guardianOnly ? tr('guardians', 'Wächter') : `lv ${r.minLevel}+`, x + bw / 2, 238);

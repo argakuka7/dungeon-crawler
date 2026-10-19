@@ -36,7 +36,7 @@ export default function mount(el) {
     const rows = Array.from({ length: MAX_DEPTH }, (_, i) => fight(i + 1));
     const top = Math.max(10, ...rows.map(r => Math.max(r.slashes, r.blows)));
     const y = v => H - B - Math.min(v, top) / top * (H - B - 10);
-    g.font = '10px ui-monospace, monospace'; g.fillStyle = '#8a96a8'; g.textAlign = 'right';
+    g.font = "13px 'Crimson Text', serif"; g.fillStyle = '#8a96a8'; g.textAlign = 'right';
     for (let v = 0; v <= top; v += Math.ceil(top / 5)) { g.fillText(v, L - 4, y(v) + 3); g.fillStyle = '#ffffff10'; g.fillRect(L, y(v), W - L - 8, 1); g.fillStyle = '#8a96a8'; }
     rows.forEach((r, i) => {
       const x = L + i * bw;

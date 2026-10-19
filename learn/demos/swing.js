@@ -57,12 +57,12 @@ export default function mount(el) {
     g.fillStyle = '#0b0d12'; g.beginPath(); g.arc(cx + 8, cy, 3, 0, 7); g.fill();
     // the timeline, scaled so the greatsword fits
     const x0 = 230, x1 = W - 20, max = 1.0, X = v => x0 + v / max * (x1 - x0);
-    const seg = (a0, a1, col, label) => { g.fillStyle = col; g.fillRect(X(a0), 40, X(a1) - X(a0), 34); g.fillStyle = '#0b0d12'; g.font = 'bold 11px ui-monospace, monospace';
+    const seg = (a0, a1, col, label) => { g.fillStyle = col; g.fillRect(X(a0), 40, X(a1) - X(a0), 34); g.fillStyle = '#0b0d12'; g.font = "bold 11px 'Cinzel', serif";
       if (X(a1) - X(a0) > 40) g.fillText(label, X(a0) + 4, 61); };
     seg(0, stats.activeStart, '#51a9ff', tr('wind-up', 'Ausholen'));
     seg(stats.activeStart, stats.activeEnd, '#ffcf7a', tr('HIT', 'TREFFER'));
     seg(stats.activeEnd, stats.duration, '#4a5466', tr('recovery', 'Erholung'));
-    g.font = '11px ui-monospace, monospace';
+    g.font = "14px 'Crimson Text', serif";
     const mark = (v, col, label, y) => {
       g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(X(v), 34); g.lineTo(X(v), y); g.stroke();
       g.fillStyle = col; g.fillText(label, Math.min(X(v) - 4, W - 6 - g.measureText(label).width), y + 13);
@@ -73,7 +73,7 @@ export default function mount(el) {
     for (let v = 0; v <= max + 1e-9; v += 0.2) { g.fillRect(X(v), 76, 1, 5); g.fillText(v.toFixed(1) + 's', X(v) - 8, 92); }
     if (s.active) { g.fillStyle = '#fff'; g.fillRect(X(s.t) - 1, 30, 3, 50); }
     if (s.buffer > 0 && s.active) { g.fillStyle = '#ff8adf'; g.fillText(tr('click saved for later!', 'Klick für später gemerkt!'), x0, 25); }
-    g.fillStyle = '#aab3c2'; g.font = '12px ui-monospace, monospace';
+    g.fillStyle = '#aab3c2'; g.font = "15px 'Crimson Text', serif";
     g.fillText(tr(`damage per hit: ${stats.damage}   swings per second: ${(1 / stats.interval).toFixed(1)}`, `Schaden pro Treffer: ${stats.damage}   Hiebe pro Sekunde: ${(1 / stats.interval).toFixed(1)}`), x0, 170);
     g.fillText(tr(`damage per second: ${Math.round(stats.damage / stats.interval)}`, `Schaden pro Sekunde: ${Math.round(stats.damage / stats.interval)}`), x0, 190);
   }
