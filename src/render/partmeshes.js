@@ -25,13 +25,14 @@ export const PART_ORDER = { solid: 0, fluid: 2, fall: 3 };
 
 // geo: the cube's parts (cubegeo.js buildCubeParts); returns the fluid surface meshes (animated
 // every frame); shadowless: the solids ('terrain' | 'stone' | 'wood') that cast no shadow
-// (inside houses the walls, which get cut away)
-export function partMeshes(geo, group, shadowless = []) {
+// (inside houses the walls, which get cut away); over: the cube's standing fluid, which its own
+// fluids are not drawn under (materials.js cellMaterial)
+export function partMeshes(geo, group, shadowless = [], over = null) {
   const fluidMeshes = [];
   for (const part of PARTS) {
     const arrays = geo.parts[part.name];
     if (!arrays) continue;
-    const material = fluidLook(cutMaterial(partMaterial(part, 'full'), part.cap || false), part);
+    const material = fluidLook(cutMaterial(partMaterial(part, 'full'), part.cap || false), part, over);
     const sway = m => part.sway ? swayMaterial(m, geo.scale) : m;
     const mesh = new THREE.Mesh(partGeometry(arrays), sway(material));
     mesh.scale.setScalar(geo.scale);

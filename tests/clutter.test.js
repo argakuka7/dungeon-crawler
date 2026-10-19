@@ -5,6 +5,7 @@ import { propCatalog } from '../tools/prop-metadata.mjs';
 import { PROP_METADATA, PROP_FILES } from '../src/core/propmetadata.js';
 import { props, catalogProp, signatureProp } from '../src/core/propcatalog.js';
 import { placeProps } from '../src/render/propplace.js';
+import { restY } from '../src/render/surface.js';
 import { themeById } from '../src/themes/depth.js';
 import { N, LH, WATER, LAVA, ACID, FLUID_NAME, DIRS } from '../src/core/constants.js';
 
@@ -66,7 +67,7 @@ test('water and shoreline clutter respects fluid type, surface height and neighb
       assert.ok(!signatureProp(p), 'signature assets are recipe-only');
       if (p.attach === 'water') {
         seen.add(p.fluid); assert.equal(f.fluid, fluid); assert.equal(p.fluid, FLUID_NAME[fluid]);
-        assert.equal(q.y, f.surf * LH);
+        assert.equal(q.y, restY(f.surf * LH));   // (on its surface as drawn)
       }
       if (p.shore) assert.ok(DIRS.some(([dx, dz]) => m.cols[(f.z + dz) * N + f.x + dx]?.some(g => g.fluid)));
       if (p.cover) { assert.equal(f.fluid, 0); assert.ok(q.normal); }

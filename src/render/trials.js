@@ -8,11 +8,12 @@
 import * as THREE from 'three';
 import { N, BASE, LH, DIRS, OPP } from '../core/constants.js';
 import { EDGE_CORNERS, edgePts } from '../core/constants.js';
-import { fluidMaterial, cellMaterial, FLUID_LOOK, solidMaterial, tideY, TRIAL_RISE } from './materials.js';
+import { fluidMaterial, cellMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
+import { restY, tideY } from './surface.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
-import { cutMaterial, setTrialWaterCap, WATER_SOLID } from './section.js';
+import { cutMaterial, setTrialWaterCap, WATER_SOLID, WATER_OWN } from './section.js';
 import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
 import { palRow } from '../themes/fluids.js';
@@ -285,11 +286,12 @@ function tablet(c) {
   });
   return at(g, c);
 }
-export function buildTrialView(m, group) {
+// over: the cube's own fluids' (render/world.js): not drawn under the standing fluid
+export function buildTrialView(m, group, over = null) {
   const t = m.trial;
   shared = new Map(); fires = { specs: [], lights: [] };
   for (const c of m.clues || []) group.add(tablet(c));
-  if (!t) return m.tide ? tideView(m, group) : null;
+  if (!t) return m.tide ? tideView(m, group, over) : null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
     plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), links: new Map() };
@@ -347,33 +349,37 @@ export function buildTrialView(m, group) {
     view.fog = fog; view.fogTop = (t.timeline.top + 8) * LH;
   }
   if (t.kind === 'flood' || t.kind === 'sunken') {
-    standingWater(m, t.fluid, view, group, [0, 0, N, N]);
+    standingWater(m, t.fluid, view, group, [0, 0, N, N], over);
     if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }
   }
   return view;
 }
 // a boss's tide (game/tide.js, map.tide): only the water, in its box
-function tideView(m, group) {
+function tideView(m, group, over) {
   const view = { kind: 'tide', parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
     plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), links: new Map() };
-  standingWater(m, m.tide.fluid, view, group, m.tide.box);
+  standingWater(m, m.tide.fluid, view, group, m.tide.box, over);
   return view;
 }
 // A fluid standing over the cells of `box` ([x0, z0, x1, z1]: a trial's whole cube, a tide's
 // basin) at one level, rising and falling (setTrialWater): its surface and the wet bands it
-// leaves on the walls.
-function standingWater(m, fluid, view, group, [x0, z0, x1, z1]) {
-  // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID);
-  // dropped above the cut inside the cutaway (its cap there: section.js setTrialWaterCap), not
-  // where cave walls come down (it stays to the cube's edge)
-  const surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid;\n' + fs.replace('#include <clipping_planes_fragment>', `{
-      vec4 solid = texelFetch(uWaterSolid, clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1})), 0);
+// leaves on the walls. over: the cube's own fluids' (render/world.js), hidden under it in its box.
+function standingWater(m, fluid, view, group, [x0, z0, x1, z1], over) {
+  // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID), nor
+  // where the cube's own fluid takes its level (WATER_OWN: that one is drawn); dropped above the
+  // cut inside the cutaway (its cap there: section.js setTrialWaterCap), not where cave walls come
+  // down (it stays to the cube's edge)
+  const surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid, uWaterOwn;\n' + fs.replace('#include <clipping_planes_fragment>', `{
+      ivec2 cell = clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1}));
+      vec4 solid = texelFetch(uWaterSolid, cell, 0);
       if (vCutW.y > solid.x && vCutW.y < solid.y || vCutW.y > solid.z && vCutW.y < solid.w) discard;
+      if (texelFetch(uWaterOwn, cell, 0).r > 0.5) discard;
     }
     if (cutRegion(true) > 0.5) discard;
     #include <clipping_planes_fragment>`), 'cut-trial-fluid');
   const compile = surface.onBeforeCompile;
-  surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; };
+  surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; sh.uniforms.uWaterOwn = WATER_OWN; };
+  if (over) { over.box.value.set(x0, z0, x1, z1); view.over = over; }
   // (its geometry in the cube's coordinates, four vertices a cell: the cells' pattern and waves go
   // by them, materials.js cellMaterial; its uvs zero: all of it rises and falls). Its shores are
   // the cells solid at its level, and the room's walls stay wet where it has just been (wetBands,
@@ -467,14 +473,16 @@ export function setTrialWater(world, y, phase) {
   v.level = y; v.phase = phase;
   if (v.tide) v.tide.visible = phase === 'idle' || phase === 'armed';
   if (!v.water) return;
-  v.water.visible = y != null && y > -BASE + 0.01;
+  v.water.visible = y != null && restY(y) > -BASE + 0.01;
   if (v.wetBands) v.wetBands.visible = v.water.visible;
+  if (v.over) v.over.level.value = v.water.visible ? y : -1e9;
   // the fires under it go out (the props' and the trial's own; render/flames.js)
   douseFlames(world.group, v.water.visible ? y : null, v.water.userData.fluid);
   if (!v.water.visible) { v.wetAt = null; return; }
   setTrialWaterCap(y, v.water.userData.fluid, v.water.userData.pal);
-  if (v.waterTide) v.waterTide.level.value = y;
-  const h = y + BASE;
+  // (drawn where every fluid's surface is: render/surface.js)
+  const top = restY(y), h = top + BASE;
+  if (v.waterTide) v.waterTide.level.value = top;
   v.water.scale.y = h; v.water.position.y = -BASE + h / 2;
 }
 
@@ -668,10 +676,10 @@ export function tickTrialView(world, time) {
     if (v.waterTide) {
       // the wet line: the highest the fluid stood (with the tide), drying off as it sinks, and
       // never too far over it (a drained stage leaves a band that follows it down)
-      const S = FLUID_LOOK[t].cells, high = v.level + tideY(S, time, TRIAL_RISE(S)), dt = Math.max(0, time - (v.wetTime ?? time));
+      const S = FLUID_LOOK[t].cells, rest = restY(v.level), high = rest + tideY(S, time), dt = Math.max(0, time - (v.wetTime ?? time));
       v.wetAt = v.wetAt == null ? high : Math.min(high + 0.35, Math.max(high, v.wetAt - S.dry * dt));
       v.wetTime = time;
-      v.waterTide.wet.value = v.wetAt - v.level;
+      v.waterTide.wet.value = v.wetAt - rest;
     }
     if (motion.pulse) v.water.material.emissiveIntensity = FLUID_LOOK[t].emissiveIntensity * (1 + Math.sin(time * 2) * 0.1);
   }

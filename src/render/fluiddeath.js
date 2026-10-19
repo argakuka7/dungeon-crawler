@@ -7,6 +7,8 @@ import { WATER, LAVA, ACID } from '../core/constants.js';
 import { glow, soft, emit, rand, ring, particleCount } from './particles.js';
 import { character } from './character.js';
 import { player } from '../game/state.js';
+import { WIND } from './materials.js';
+import { surfaceY } from './surface.js';
 
 // per fluid: an entry burst and a continuous emission while the effect runs
 const STYLES = {
@@ -95,8 +97,10 @@ function restoreBody() {
 export function fluidDeathFx(fluid, x, surface, z, ragdoll) {
   restoreBody();
   const style = STYLES[fluid] || STYLES[ACID];
-  fx = { style, ragdoll, t: 0, surface, x, z, tint: null };
-  style.burst(x, surface + .02, z);
+  // (on the surface as it is drawn, rising and falling with the tide: render/surface.js)
+  const at = () => surfaceY(fluid, surface, WIND.value) + .02;
+  fx = { style, ragdoll, t: 0, at, x, z, tint: null };
+  style.burst(x, at(), z);
   if (style.tint && ragdoll && character.ready) tintBody(style.tint);
 }
 
@@ -125,7 +129,7 @@ export function tickFluidDeath(dt) {
   if (alive) { fx.x = player.x; fx.z = player.z; }
   if (saved && !alive) restoreBody();
   else if (saved) animateBody();
-  if (fx.t < fx.style.duration && (alive || !fx.ragdoll)) fx.style.tick(fx.x, fx.surface + .02, fx.z, dt);
+  if (fx.t < fx.style.duration && (alive || !fx.ragdoll)) fx.style.tick(fx.x, fx.at(), fx.z, dt);
   else if (!saved) fx = null;
 }
 

@@ -20,6 +20,7 @@ import { scene, camera, renderer } from './scene.js';
 import { U, inject, turnShape, CUT_KINDS } from './cutshader.js';
 import { WALL_CUT, CUT_HEIGHT } from './interior.js';
 import { showGhosts } from './ghosts.js';
+import { restY, ownTakes } from './surface.js';
 
 const RADIUS = 2.8;   // world units around the character
 
@@ -123,26 +124,29 @@ const capColor = row => C(paletteOf(row).hex.cap);
 // show in front of them (its surface, and its sides at the cube's edge, which the solids'
 // insides are seen through to): per cell, the two highest solids under its surface or around
 // it (WATER_SOLID: bottom, top in r, g and b, a; none: 0, 0; the lowest reaches through the
-// cube's base), where the fluid draws nothing. The cutaway drops it above the cut, and its cap
-// covers only the cells open at the cut height. level: its surface (world units; null: none)
+// cube's base), where the fluid draws nothing. Nor where the cube's own fluid takes its level
+// (WATER_OWN: 1 in r; render/surface.js ownTakes). The cutaway drops it above the cut, and its cap
+// covers only the cells open at the cut height. level: its level (world units; null: none)
 let trialWater = null, solidKey = '', solidMap = null;
 export function setTrialWaterCap(level, fluid, pal = palRow(0, fluid, 0)) {
   trialWater = level == null ? null : { level, fluid, pal };
 }
-export const WATER_SOLID = { value: new THREE.DataTexture(new Float32Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.FloatType) };
+const cellTexture = () => ({ value: new THREE.DataTexture(new Float32Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.FloatType) });
+export const WATER_SOLID = cellTexture(), WATER_OWN = cellTexture();
 function waterSolids(map) {
   const level = trialWater?.level, k = map && level != null ? level.toFixed(3) : '';
   if (k === solidKey && map === solidMap) return;
   solidKey = k; solidMap = map;
-  const tex = WATER_SOLID.value, a = tex.image.data;
-  a.fill(0);
+  const tex = WATER_SOLID.value, a = tex.image.data, own = WATER_OWN.value.image.data;
+  a.fill(0); own.fill(0);
   if (k) for (let i = 0; i < N * N; i++) {
+    own[i * 4] = ownTakes(map.cols[i], level) ? 1 : 0;
     // (a floor right at the surface keeps it off too: the two would flicker)
     const spans = map.cols[i].filter(f => f.bottom * LH < level).map(f => [f.bottom * LH, floorY(f, 0.5, 0.5)])
       .sort((p, q) => q[1] - p[1]).slice(0, 2);
     spans.forEach(([b, t], j) => { a[i * 4 + j * 2] = b <= 0 ? -1e3 : b; a[i * 4 + j * 2 + 1] = t > level - 0.01 ? Math.max(t, level + 0.01) : t; });
   }
-  tex.needsUpdate = true;
+  tex.needsUpdate = true; WATER_OWN.value.needsUpdate = true;
 }
 // is the middle of cell i solid at height y (a floor's column or a structure piece)?
 function solidAt(map, i, y) {
@@ -231,13 +235,13 @@ export function setCut(y, map, px, py, pz, walls = true) {
   capColors(map, on ? y : py + 1);
 
   waterSolids(map);
-  const water = on && trialWater && trialWater.level - 0.06 > y ? trialWater.pal : null;
+  const water = on && trialWater && restY(trialWater.level) > y ? trialWater.pal : null;
   const k = on ? y.toFixed(3) + ':' + (water ?? '') : 'off';
   if (k === key && map === fluidCaps.userData.map) return;
   key = k; fluidCaps.userData.map = map;
   const b = new GeoBuilder(), capped = new Set();
   if (on && map) for (const f of map.floors) {
-    if (!f.fluid || f.top * LH >= y || f.surf * LH - 0.06 <= y) continue;
+    if (!f.fluid || f.top * LH >= y || restY(f.surf * LH) <= y) continue;
     b.quad([f.x, y, f.z], [f.x + 1, y, f.z], [f.x + 1, y, f.z + 1], [f.x, y, f.z + 1], [0, 1, 0], capColor(f.pal ?? map.fluidRows?.[f.fluid] ?? palRow(map.depth ?? 0, f.fluid, 0)));
     capped.add(f.z * N + f.x);
   }

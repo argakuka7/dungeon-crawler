@@ -5,6 +5,7 @@ import { C, gradient, TOP_STOPS, UNDERSIDE, SOFT, fluidBed, fluidBank } from './
 import { cliffWall } from './walls.js';
 import { palRow } from '../themes/fluids.js';
 import { buildInteriorFloors } from './interior.js';
+import { restY } from './surface.js';
 
 const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
@@ -55,7 +56,7 @@ function walls(m, f, b) {
 //        the surface sinks to over the highest it rises, darkened where the water has just been
 const SUB = 4, DIAG = [[1, 1], [-1, 1], [1, -1], [-1, -1]], BAND = 0.4;
 function fluidVolume(m, f, b) {
-  const x = f.x, z = f.z, sy = f.surf * LH - 0.06, by = f.top * LH;
+  const x = f.x, z = f.z, sy = restY(f.surf * LH), by = f.top * LH;
   // a solid in the neighbouring column that covers the corners of it next to us up to the surface
   const bank = (nx, nz, corners) => inb(nx, nz) && m.cols[idx(nx, nz)].find(g => !g.crust && !g.fluid
     && g.bottom * LH <= by + 0.01 && Math.min(...corners.map(k => g.cs[k])) >= sy);

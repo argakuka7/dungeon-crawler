@@ -55,6 +55,8 @@ import { squirtleModel } from './squirtlemodel.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { SQUARLO_FIGHT } from '../core/squarlo.js';
 import { standingAt } from '../physics/fluid.js';
+import { surfaceY } from './surface.js';
+import { WIND } from './materials.js';
 import { WATER } from '../core/constants.js';
 import { sfx } from '../audio/sfx.js';
 import { trackLight, untrackLight } from './lightpool.js';
@@ -298,7 +300,7 @@ function growLook(v, e, dt) {
 const swimming = e => { const s = standingAt(e.x, e.z); return !!e.profile.swims && s?.fluid === WATER && s.y - e.y > e.profile.bodyHeight * 0.3; };
 function ripples(v, e, dt) {
   if (!v.swim || Math.hypot(e.x - player.x, e.z - player.z) > 14 || e.under) return;
-  const y = standingAt(e.x, e.z).y + 0.02, n = (e.speed > 0.3 ? 14 : 3) * dt;
+  const y = surfaceY(WATER, standingAt(e.x, e.z).y, WIND.value) + 0.02, n = (e.speed > 0.3 ? 14 : 3) * dt;
   if (Math.random() < n)
     emit(soft, e.x + rand(-0.1, 0.1), y, e.z + rand(-0.1, 0.1), { v: [rand(-0.3, 0.3), 0.05, rand(-0.3, 0.3)], life: rand(0.6, 1),
       size: rand(0.12, 0.2) * Math.sqrt(v.size), grow: 2.2, color: '#f2fcff', alpha: 0.5, drag: 1 });

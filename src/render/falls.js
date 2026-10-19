@@ -2,7 +2,8 @@
 // the cube's geometry (render/parts.js), drawn by the cube and its proxy alike.
 import * as THREE from 'three';
 import { N, LH, LAVA, DIRS } from '../core/constants.js';
-import { FLUID_LOOK, swellGLSL, WIND } from './materials.js';
+import { FLUID_LOOK, WIND } from './materials.js';
+import { restY, swellGLSL } from './surface.js';
 import { CELLS, useCells } from './watercells.js';
 import { paletteOf } from './fluidpal.js';
 import { palRow } from '../themes/fluids.js';
@@ -83,13 +84,13 @@ export function buildFalls(m, group) {
   const splashes = [], lights = [];
   for (const f of m.falls) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
-    const yTop = f.top * LH - 0.04, yBot = f.bot * LH - 0.08, h = yTop - yBot;
+    const yTop = restY(f.top * LH) + 0.02, yBot = restY(f.bot * LH) - 0.02, h = yTop - yBot;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
     if (f.out) continue;   // pours out through the bottom of the cube: no splash here
     const L = FLUID_LOOK[f.type], pal = paletteOf(f.pal?.[1] ?? palRow(m.depth ?? 0, f.type, 0)), foam = pal.hex.foam, cells = L.cells;
     if (L.rides) {
       // the pool's surface (render/floors.js fluidVolume) and the foot of the sheet (parts.js)
-      const surf = f.bot * LH - 0.06, cx = ex + dx * 0.32, cz = ez + dz * 0.32;
+      const surf = restY(f.bot * LH), cx = ex + dx * 0.32, cz = ez + dz * 0.32;
       const crown = foamCrown(cx, surf, cz, dx, foam, cells, L.style), rip = ripples(cx, surf + 0.015, cz, dx, dz, foam, cells, L.style);
       crown.renderOrder = 10 * f.layer + 5; rip.renderOrder = 10 * f.layer + 4;
       group.add(crown, rip);

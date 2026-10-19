@@ -5,6 +5,7 @@
 // (render/materials.js). A new part added here shows up in both the cube and its proxy.
 import { N, LH, DIRS, FLUIDS, FLUID_NAME } from '../core/constants.js';
 import { palRow } from '../themes/fluids.js';
+import { restY } from './surface.js';
 
 // kind: 'solid' (vertex coloured, cut with a section cap of `cap`; `sway`: with uvs saying how
 // far each vertex swings in the wind, render/materials.js swayMaterial), 'fluid' (a surface of
@@ -116,7 +117,7 @@ function fallSheets(m, type) {
   for (const f of (m.falls || []).filter(f => f.type === type).sort((a, b) => a.layer - b.layer)) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
     // (its foot well under the pool's surface: the water's swell dips, render/materials.js)
-    const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.4, h = yTop - y0;
+    const yTop = restY(f.top * LH) + 0.02, y0 = restY(f.bot * LH) - 0.34, h = yTop - y0;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
     // the profile: [out from the edge, y, distance along the sheet]: flat over the pool, the
     // curl over the lip, the drop

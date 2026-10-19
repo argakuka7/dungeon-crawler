@@ -7,31 +7,29 @@ import { N, WATER, LAVA, ACID } from '../core/constants.js';
 import { CELLS, useCells } from './watercells.js';
 import { PAL_TEX, PAL_GLSL } from './fluidpal.js';
 import { FALL_WIDTH } from './parts.js';
+import { FLUID_MOTION, SINK, swellGLSL, tideY } from './surface.js';
 
 // How each fluid moves and is drawn; its colours are its palette's (themes/fluids.js, one per
 // body of fluid: render/fluidpal.js), not these.
 // style: the look of its cells (watercells.js CELLS: 'water', 'crust' for lava's plates and
 // glowing cracks, 'sludge' for acid's bubbling cells); clear: drawn see-through (its palette's
 // opacity); motion: an emissive pulse around base (none: its cells' tide moves it);
-// cells: the surface drawn as drifting cartoon cells (cellMaterial). The whole surface rises and
-// falls with the tide, `tide` from high to low water (world units) every `period` seconds, a
-// minor pattern of waves `ripple` high (crest to trough) over it; the highest crest stands
-// `lift` over the surface's rest height (which is 0.06 under its banks, render/floors.js: keep
-// lift under that). Where it meets a bank, foam hugs the shore with a second line lapping in at
-// it; the bank's wall stays dark where the water has just been (`wet`: how dark), drying off
-// `dry` world units a second (lava: a glowing seam instead).
+// cells: the surface drawn as drifting cartoon cells (cellMaterial), moving as its FLUID_MOTION
+// says (where it stands, how it rises and falls: render/surface.js). Where it meets a bank, foam
+// hugs the shore with a second line lapping in at it; the bank stays dark where the water has
+// just been (lava: a glowing seam instead).
 // fall: the sheet pouring over an edge, its cells streaming down it (fallCellMaterial: veins,
 // faster streaks over them, `flow` world units a second), lighting themselves by `glow`;
 // rides: foam and ripples where a fall lands on it (render/falls.js), else a splash ring.
 export const FLUID_LOOK = {
   [WATER]: { style: 'water', clear: true, emissiveIntensity: 1, roughness: 0.55, metalness: 0, motion: {}, rides: true,
-    cells: { tide: 0.2, period: 7, ripple: 0.02, lift: 0.02, wet: 0.55, dry: 0.012 },
+    cells: FLUID_MOTION[WATER],
     fall: { emissiveIntensity: 1, cells: { glow: 0.3, flow: 4.5 } } },
   [LAVA]: { style: 'crust', clear: false, emissiveIntensity: 1.2, roughness: 0.6, metalness: 0, motion: { pulse: 0.2, base: 1.1, rate: 3 }, rides: false,
-    cells: { tide: 0.035, period: 11, ripple: 0.008, lift: 0.012, wet: 0, dry: 0.01 },
+    cells: FLUID_MOTION[LAVA],
     fall: { emissiveIntensity: 1.3, cells: { glow: 1, flow: 1.3 } } },
   [ACID]: { style: 'sludge', clear: true, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0, motion: {}, rides: true,
-    cells: { tide: 0.07, period: 5, ripple: 0.016, lift: 0.016, wet: 0.45, dry: 0.01 },
+    cells: FLUID_MOTION[ACID],
     fall: { emissiveIntensity: 1, cells: { glow: 0.35, flow: 3.2 } } },
 };
 
@@ -98,30 +96,7 @@ export function swayMaterial(mat, scale) {
   return mat;
 }
 
-// The swell of a fluid's surface (FLUID_LOOK cells) at p (the cube's coordinates, world units) at
-// time tm: tideY the tide (the whole surface together), swellW the minor waves (-1..1, about 3.5
-// units from crest to crest), swellY where the surface is there, over its rest height (the tide
-// and the waves under it: their crests reach `lift`), swellG the waves' slope, finer ripples too
-// (for the shading only). Also what rides on the water uses it (render/falls.js), and the tide
-// on the main thread (tideY below, for the wet bands). rise: all of it that much higher (a
-// trial's fluid, TRIAL_RISE).
 const TAU = Math.PI * 2;
-export const swellGLSL = (S, rise = 0) => `
-  const vec2 SW1 = vec2(1.71, 0.76), SW2 = vec2(-0.9, 1.62), SW3 = vec2(1.26, -1.44), SW4 = vec2(3.4, -2.0), SW5 = vec2(-2.3, -3.6);
-  float tideY(float tm) { return ${(S.lift + rise).toFixed(4)} + ${(S.tide / 2).toFixed(4)} * (sin(tm * ${(TAU / S.period).toFixed(5)}) - 1.0); }
-  float swellW(vec2 p, float tm) {
-    return 0.45 * sin(dot(p, SW1) + tm * 1.3) + 0.35 * sin(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * sin(dot(p, SW3) + tm * 1.7 + 2.1);
-  }
-  float swellY(vec2 p, float tm) { return tideY(tm) + ${(S.ripple / 2).toFixed(4)} * (swellW(p, tm) - 1.0); }
-  vec2 swellG(vec2 p, float tm) {
-    return (0.45 * SW1 * cos(dot(p, SW1) + tm * 1.3) + 0.35 * SW2 * cos(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * SW3 * cos(dot(p, SW3) + tm * 1.7 + 2.1)
-      + 0.12 * SW4 * cos(dot(p, SW4) + tm * 2.3 + 0.7) + 0.1 * SW5 * cos(dot(p, SW5) + tm * 2.0 + 4.0)) * 0.55;
-  }
-`;
-export const tideY = (S, tm, rise = 0) => S.lift + rise + S.tide / 2 * (Math.sin(tm * TAU / S.period) - 1);
-// A trial's fluid stands where the trial says it does at its lowest: the floors it is about to
-// cover stay under it (and those right at it count as banks, section.js WATER_SOLID).
-export const TRIAL_RISE = S => S.tide + S.ripple - S.lift;
 
 // The wet line of each fluid with cells (FLUID_LOOK): how high (over the rest height) the banks
 // are still wet, the highest the tide stood a while back less what has dried off since. Set by
@@ -188,14 +163,17 @@ const TRIAL_SHORES = `
 // (section.js WATER_SOLID, which cells are solid where): its shores are the cells round about
 // that are solid at its level, and its wet bands (a mesh of their own with this material, uvs
 // (-1, 0)) go by its level.
+// over: the cube's own fluids under a standing one ({ level, box } uniforms: its level, world
+// units, -1e9 for none; [x0, z0, x1, z1] in the cube's coordinates) are not drawn in its box: it
+// is (render/surface.js ownUnder; the active cube's fluids only, render/partmeshes.js).
 const STYLE_ID = { water: 0, sludge: 1, crust: 2 };
-export function cellMaterial(mat, t, trial = null) {
+export function cellMaterial(mat, t, trial = null, over = null) {
   const L = FLUID_LOOK[t], S = L.cells;
   if (!S) return mat;
   const C = CELLS[L.style];
   useCells(mat, L.style);
   const uniforms = { uCellTime: WIND, uCellTex: C.tex, uPalTex: PAL_TEX, uWetLine: trial ? trial.wet : WET_LINE[t],
-    ...trial && { uTrialLevel: trial.level, uShoreSolid: trial.solid } };
+    ...trial && { uTrialLevel: trial.level, uShoreSolid: trial.solid }, ...over && { uOverLevel: over.level, uOverBox: over.box } };
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
@@ -205,8 +183,7 @@ export function cellMaterial(mat, t, trial = null) {
     // the swell moves the tops and the sides' upper edges (render/floors.js fluidVolume uvs: v,
     // the rest height), not the bed or the wet bands; with zero uvs (the trial's box) every
     // vertex, undoing the matrix's scale y (it is scaled to its depth)
-    const rise = trial ? TRIAL_RISE(S) : 0;
-    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\n' + swellGLSL(S, rise) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
           mat4 cellM = modelMatrix * batchingMatrix;
@@ -222,7 +199,7 @@ export function cellMaterial(mat, t, trial = null) {
         vCellN = normal; vPalRows = pal.xy;
       }`);
     sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
-      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreSolid;\n' : '') + swellGLSL(S, rise) + `
+      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreSolid;\n' : '') + (over ? 'uniform float uOverLevel;\nuniform vec4 uOverBox;\n' : '') + swellGLSL(S) + `
       float shoreMin(float a, float b) { float h = max(0.14 - abs(a - b), 0.0) / 0.14; return min(a, b) - h * h * 0.035; }
       // how far p is from the banks round its cell, 9 if none near
       float shoreDist(vec2 p, float code) {
@@ -231,6 +208,8 @@ export function cellMaterial(mat, t, trial = null) {
 ` + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       float cellLine = 0.0, cellBand = 0.0, cellHeat = 0.0;
       vec3 cellEmissive = palColor(vPalRows, 0.0, 4);
+      ${over ? `// (under the standing fluid: it is drawn instead)
+      if (all(greaterThan(vCellW, uOverBox.xy)) && all(lessThan(vCellW, uOverBox.zw)) && vCellUv.y + ${SINK.toFixed(4)} < uOverLevel - 0.001) discard;` : ''}
       {
         vec3 pBody = palColor(vPalRows, 0.0, 0), pDark = palColor(vPalRows, 0.0, 1), pLine = palColor(vPalRows, 0.0, 2), pFoam = palColor(vPalRows, 0.0, 3);
         vec4 pNum = palParams(vPalRows, 0.0);
@@ -332,7 +311,7 @@ export function cellMaterial(mat, t, trial = null) {
         totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (1.0 - cellBand) + diffuseColor.rgb * cellLine;
       #endif`);
   };
-  mat.customProgramCacheKey = () => key + '-cells-' + L.style + (trial ? '-trial' : '');
+  mat.customProgramCacheKey = () => key + '-cells-' + L.style + (trial ? '-trial' : '') + (over ? '-over' : '');
   return mat;
 }
 
@@ -409,9 +388,10 @@ export function fallCellMaterial(mat, t) {
   return mat;
 }
 
-// the cartoon looks a part's material gets after its cut (cellMaterial, fallCellMaterial)
-export function fluidLook(mat, part) {
-  return part.kind === 'fluid' ? cellMaterial(mat, part.fluid) : part.kind === 'fall' ? fallCellMaterial(mat, part.fluid) : mat;
+// the cartoon looks a part's material gets after its cut (cellMaterial, fallCellMaterial); over:
+// a standing fluid the cube's own fluids are hidden under (cellMaterial)
+export function fluidLook(mat, part, over = null) {
+  return part.kind === 'fluid' ? cellMaterial(mat, part.fluid, null, over) : part.kind === 'fall' ? fallCellMaterial(mat, part.fluid) : mat;
 }
 
 // part: an entry of render/parts.js PARTS
