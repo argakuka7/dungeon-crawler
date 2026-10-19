@@ -3,8 +3,9 @@
 // render/burning.js.
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { player } from '../game/state.js';
+import { FIRE_COLORS } from './flames.js';
 
-const FLAMES = ['#fff0a0', '#ffd25a', '#ff8a2a', '#ff4a17'], GREENS = ['#c8ff7a', '#8fdc3c', '#5f9f2a'];
+const FLAMES = FIRE_COLORS, GREENS = ['#c8ff7a', '#8fdc3c', '#5f9f2a'];
 
 function flames(x, y, z, r, h, dt) {
   for (let i = Math.floor(70 * dt + Math.random()); i > 0; i--) {

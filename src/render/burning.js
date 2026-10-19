@@ -4,12 +4,12 @@ import * as THREE from 'three';
 import { scene } from './scene.js';
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { trackLight, untrackLight } from './lightpool.js';
+import { FIRE_COLORS as COLORS } from './flames.js';
 import { player } from '../game/state.js';
 
 const holder = new THREE.Group(), light = new THREE.PointLight(0xff6a20, 0, 3, 2);
 light.position.y = 0.6;
 scene.add(holder);
-const COLORS = ['#fff0a0', '#ffd25a', '#ff8a2a', '#ff4a17'];
 let lit = false, smoke = 0, t = 0;
 
 export function tickBurning(dt) {

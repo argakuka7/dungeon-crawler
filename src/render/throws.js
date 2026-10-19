@@ -10,6 +10,7 @@ import { ITEMS } from '../core/items.js';
 import { scene } from './scene.js';
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { trackLight, untrackLight } from './lightpool.js';
+import { FIRE_COLORS } from './flames.js';
 
 const models = new Map();   // item id -> { scene, scale, lift } (null while loading)
 // a flask's model, loaded once: its extras say how big it is in the hand (mount_scale)
@@ -81,7 +82,7 @@ export function drawAreas(list, dt, off = { x: 0, y: 0, z: 0 }) {
       for (let i = Math.floor(70 * area * k * dt + Math.random()); i > 0; i--) {
         const [dx, dz] = ring(a.r * 0.9);
         emit(glow, x + dx, y + 0.05, z + dz, { v: [0, rand(0.8, 1.8), 0], spread: 0.25, life: rand(0.25, 0.5), size: rand(0.1, 0.2),
-          grow: -0.5, color: ['#fff0a0', '#ffd25a', '#ff8a2a', '#ff4a17'][i % 4], gravity: -2, drag: 1 });
+          grow: -0.5, color: FIRE_COLORS[i % 4], gravity: -2, drag: 1 });
       }
       if (Math.random() < 6 * k * dt) {
         const [dx, dz] = ring(a.r * 0.7);

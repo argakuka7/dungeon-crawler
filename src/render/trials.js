@@ -17,6 +17,7 @@ import { themeOf } from '../themes/depth.js';
 import { soft, rand, emit } from './particles.js';
 import { props } from './props.js';
 import { TRIAL_PROPS } from './propplace.js';
+import { flameSet } from './flames.js';
 
 const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
@@ -47,8 +48,6 @@ function piece(name, { own = false, mat = null } = {}) {
 }
 // what a piece turns round (its extras), in its part
 const pivotOf = name => props.byName.get(name)?.pivot ?? [0, 0, 0];
-// the glowing mesh of a piece (a prop's flame), or a stand-in
-const glowOf = obj => obj.children?.find(c => c.userData.glow) ?? (obj.userData.glow ? obj : new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial()));
 // cut off beyond a plane (a gate's bars where they rise into the lintel, a cage below the ground)
 function clipTo(obj, plane) {
   obj.traverse(o => { if (o.material) { o.material.clippingPlanes = [plane]; o.material.clipShadows = true; } });
@@ -132,20 +131,23 @@ function crystal(p, color, model) {
   g.add(piece(model), gem, light);
   return { obj: at(g, p), gem, light };
 }
-// A fire (a brazier, the cold's great fire, the beacon): its model, its flame (shown while lit)
-// and the light it gives (none while out; game/trials.js lights it, tickTrialView flickers it).
-// The brazier is the ruins' (its flame its glowing part); the others have a flame of their own,
-// standing at its pivot, that stretches as it flickers.
+// A fire (a brazier, the cold's great fire, the beacon): its model and the light it gives; its
+// flame is one of the room's flames (render/flames.js), where the model's own stood (the ruins'
+// brazier's, taken out of it) or where its flame piece would (trials.glb, at its pivot). Out it
+// has no flame and gives no light; game/trials.js lights it, the flame flares up and the light
+// flickers with it.
+let fires = null;
 function fire(p, { model, flame = null, scale = 1, light = 2.2, reach = 4, high = 1.1 }) {
-  const g = new THREE.Group(), body = piece(model, { own: !flame });
+  const g = new THREE.Group(), body = piece(model);
   body.scale.setScalar(scale);
-  g.add(body);
-  let tongues = glowOf(body);
-  if (flame) { tongues = piece(flame, { own: true }); tongues.position.set(...pivotOf(flame)); g.add(tongues); }
-  tongues.visible = false;
   const glowing = new THREE.PointLight(0xff9040, 0, reach, 2); glowing.position.y = high;
-  g.add(glowing);
-  return { obj: at(g, p), flame: tongues, light: glowing, gain: light, stretch: !!flame, lit: false };
+  g.add(body, glowing);
+  const f = props.byName.get(flame ?? model)?.flames?.[0], off = flame ? pivotOf(flame) : [0, 0, 0], k = flame ? 1 : scale;
+  const i = fires.specs.length, seed = (p.x * 1.7 + p.z * 2.3) % 6.28;
+  fires.specs.push(f ? { x: p.x + off[0] + f.x * k, y: p.y + off[1] + f.y * k, z: p.z + off[2] + f.z * k, w: f.w * k, h: f.h * k, power: 0, seed }
+    : { x: p.x, y: p.y, z: p.z, w: 0, h: 0, power: 0, seed });   // (not loaded yet: the cube is built again)
+  fires.lights.push({ light: glowing, gain: light, i, seed });
+  return { obj: at(g, p), flame: i, lit: false };
 }
 const brazierPart = p => fire(p, { model: TRIAL_PROPS.brazier, scale: 1.25 });
 const greatFire = p => fire(p, { model: 'trial_great_fire', flame: 'trial_great_fire_flame', light: 3, reach: 8, high: 1.2 });
@@ -250,7 +252,7 @@ function tablet(c) {
 }
 export function buildTrialView(m, group) {
   const t = m.trial;
-  shared = new Map();
+  shared = new Map(); fires = { specs: [], lights: [] };
   for (const c of m.clues || []) group.add(tablet(c));
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
@@ -289,6 +291,7 @@ export function buildTrialView(m, group) {
   }
   // the siege's mouths: dark arches the waves come out of
   for (const mo of t.mouths || []) { const g = at(piece('trial_mouth'), mo); g.rotation.y = mo.yaw; group.add(g); }
+  if (fires.specs.length) { view.fires = flameSet(fires.specs, fires.lights); group.add(view.fires.mesh); }
   if (t.kind === 'chase') { view.hunter = hunterMesh(); group.add(view.hunter); }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
@@ -427,9 +430,9 @@ export function setGridParts(world, m, s, shown) {
   for (const [id, g] of v.grid) {
     const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
     if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
-    else if (FIRES.has(p.type)) {   // (the cold's: lit for good once resolved; the beacon once lit; its light: tickTrialView)
+    else if (FIRES.has(p.type)) {   // (the cold's: lit for good once resolved; the beacon once lit; its flame and light: render/flames.js)
       const lit = p.type === 'brazier' ? !!bit : p.type === 'beacon' ? s.phase !== 'idle' : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
-      if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; }
+      if (g.lit !== lit) { g.lit = lit; v.fires?.power(g.flame, lit ? 1 : 0); }
     }
     else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
     else if (p.type === 'runestone') {   // lit: pressed in turn so far (the order's first n)
@@ -508,14 +511,6 @@ export function tickTrialView(world, time) {
   }
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
   for (const [, g] of v.grid) {
-    if (FIRES.has(g.part.type)) {   // out: no light at all; lit: it flickers
-      const k = g.part.i ?? 0;
-      g.light.intensity = g.lit ? g.gain * (1 + Math.sin(time * 7 + k) * 0.18) : 0;
-      if (g.lit) {
-        g.flame.material.emissiveIntensity = 1.3 + Math.sin(time * 11 + k) * 0.35;
-        if (g.stretch) g.flame.scale.y = 1 + Math.sin(time * 9 + k) * 0.12;
-      }
-    }
     if (g.part.type === 'emitter') g.gem.rotation.y = time;
   }
   if (v.cage) {

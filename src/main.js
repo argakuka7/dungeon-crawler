@@ -61,6 +61,7 @@ import { wolks } from './game/wolk.js';
 import { projectiles } from './game/projectiles.js';
 import { beams } from './game/beams.js';
 import { tickBurning } from './render/burning.js';
+import { tickFlames } from './render/flames.js';
 import { tickChill } from './render/chilled.js';
 import { tickShock } from './render/shocked.js';
 import { tickStatuses } from './render/statuses.js';
@@ -141,6 +142,7 @@ function frame(now = performance.now()) {
   tickPortalCloud(dt);
   tickNeighbors(dt);
   tickProps(state.time);
+  tickFlames(dt, state.time, focusPoint(player.x, player.visY, player.z));   // the fires: flames, embers, smoke (render/flames.js)
   if (state.world) animateWorld(state.world, dt, state.time);
   updateHud(player, state.map);
   updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
@@ -198,6 +200,7 @@ function menuFrame(dt, start) {
   tickBurning(dt); tickChill(dt); tickShock(dt); tickStatuses(allEnemies(), dt);
   tickFloatText(dt); tickParticles(dt);
   tickProps(state.time);
+  tickFlames(dt, state.time, menuFocus);
   if (state.world) animateWorld(state.world, dt, state.time);
   updateCamera(dt);
   applyLook(state.lookDepth, camera.position.distanceTo(menuFocus), state.cubes?.layout.themes);

@@ -10,6 +10,7 @@ import { cutMaterial } from './section.js';
 import { buildChests } from './chests.js';
 import { loadGLB } from './gltf.js';
 import { PROP_FILES } from '../core/propmetadata.js';
+import { splitFlames, flameSet } from './flames.js';
 
 import { props } from '../core/propcatalog.js';
 export { props } from '../core/propcatalog.js';
@@ -26,7 +27,8 @@ export function registerProps(gltf) {
     if (!parts.length) continue;
     const p = props.byName.get(o.name);
     if (!p) { console.warn('prop without metadata (tools/prop-metadata.mjs):', o.name); continue; }
-    p.parts = parts;
+    p.parts = parts; delete p.flames; delete p.wholeParts;
+    splitFlames(p);   // a fire's flames are drawn as flames (render/flames.js)
     // an animated prop (the treasure chest) keeps its whole node tree and clips (render/chests.js)
     if (o.userData.clips) Object.assign(p, { template: o, clips: gltf.animations });
   }
@@ -79,7 +81,7 @@ export function propMatrix(q, target = new THREE.Matrix4()) {
 // normal, color (vertex colour times the part's colour) and glow (its emissive light times
 // `glow`), so glowing windows and braziers still glow in the surroundings.
 export function propBatchGeometry(p, glow) {
-  const parts = p.parts.map(({ geometry, material }) => {
+  const parts = (p.wholeParts ?? p.parts).map(({ geometry, material }) => {
     const g = geometry.index ? geometry.toNonIndexed() : geometry.clone(), n = g.attributes.position.count;
     const base = material.color || new THREE.Color(1, 1, 1);
     const light = (material.emissive || new THREE.Color(0, 0, 0)).clone().multiplyScalar((material.emissiveIntensity ?? 1) * glow);
@@ -103,11 +105,12 @@ export function propBatchGeometry(p, glow) {
   return merged;
 }
 
+const fireSeed = q => (q.x * 1.7 + q.z * 2.3) % 6.28;   // (a fire's flame and light flicker as one)
 // placed: [{ name, x, y, z, yaw, s, tint }] -> instanced meshes (and light sources) in group
 export function buildProps(placed, group) {
   const byName = new Map();
   for (const q of placed) { if (!byName.has(q.name)) byName.set(q.name, []); byName.get(q.name).push(q); }
-  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  const m4 = new THREE.Matrix4(), col = new THREE.Color(), flames = [], fireLights = [];
   let lights = 0;
   for (const [name, list] of byName) {
     const p = props.byName.get(name);
@@ -127,13 +130,21 @@ export function buildProps(placed, group) {
       mesh.receiveShadow = true;
       group.add(mesh);
     }
-    // a few glowing props light their surroundings (the light pool picks the nearest)
+    // a fire's flames, where its model's stood
+    for (const f of p.flames ?? []) for (const q of list) {
+      const at = new THREE.Vector3(f.x, f.y, f.z).applyMatrix4(propMatrix(q, m4)), s = q.s ?? 1;
+      flames.push({ x: at.x, y: at.y, z: at.z, w: f.w * s, h: f.h * s, seed: fireSeed(q) });
+    }
+    // a few glowing props light their surroundings (the light pool picks the nearest); a fire's
+    // light flickers with its flame
     if (p.light && !p.cover) for (const q of list) {
       if (lights >= 6) break;
       if (q.unlit) continue;   // e.g. daytime lamp posts in the town clearings
       const l = new THREE.PointLight(p.light, p.intensity * 2, 4, 2);
       l.position.set(q.x, q.y + (p.attach === 'ceiling' ? -0.4 : 0.5), q.z);
+      if (p.flames) fireLights.push({ light: l, gain: p.intensity * 2, seed: fireSeed(q) });
       group.add(l); lights++;
     }
   }
+  if (flames.length) group.add(flameSet(flames, fireLights).mesh);
 }
