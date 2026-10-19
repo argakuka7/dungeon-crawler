@@ -26,8 +26,8 @@ export default function mount(el) {
   function fight(d) {
     const kind = KINDS[+$('.kind').value], mlv = depthLevel(d), m = enemyProfile(kind, mlv);
     const plv = $('.nolv').checked ? 1 : mlv + 2;
-    // a Rare Medium Sword found at this depth, or the Old Sword you started with
-    const sword = $('.old').checked ? { itemId: OLD_SWORD.id } : { itemId: 'weapon_sword_medium', gen: { ilvl: d, rarity: 'rare', affixes: [] } };
+    // an Unusual Medium Sword found at this depth, or the Old Sword you started with
+    const sword = $('.old').checked ? { itemId: OLD_SWORD.id } : { itemId: 'weapon_sword_medium', gen: { ilvl: d, rarity: 'unusual', affixes: [] } };
     const hit = Math.round(itemStats(sword).damage * levelDamage(plv)), hp = maxHealth(plv);
     return { kind, mlv, plv, m, hit, hp, slashes: Math.ceil(m.hp / hit), blows: Math.ceil(hp / m.damage) };
   }

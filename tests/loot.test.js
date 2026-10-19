@@ -45,7 +45,7 @@ test('coins pull themselves in from half as far as C, other pickups do not', () 
 });
 
 test('a pickup is only reached for when it fits the bag (coins always do)', () => {
-  const inv = createInventory(), sword = { itemId: 'weapon_sword_short', count: 1, gen: { rarity: 'common', ilvl: 1, affixes: [], name: 'Sword' } };
+  const inv = createInventory(), sword = { itemId: 'weapon_sword_short', count: 1, gen: { rarity: 'vanilla', ilvl: 1, affixes: [], name: 'Sword' } };
   const potion = { itemId: 'item_potion_health', count: 3 };
   assert.ok(fits(inv, sword) && fits(inv, potion));
   for (let i = 0; i < inv.slots.length; i++) if (!inv.slots[i]) inv.slots[i] = { instanceId: `x${i}`, itemId: 'weapon_sword_short', count: 1 };

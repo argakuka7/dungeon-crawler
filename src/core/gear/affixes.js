@@ -2,6 +2,7 @@
 // most MAX_PREFIXES / MAX_SUFFIXES of each kind. A tier is a value range; the item level
 // picks the tier (affixTier), rarer items reach above it (RARITIES tierBonus).
 // Values are kept as shown: whole numbers for flat stats and percentages, cells for reach.
+// The name is shown beside the stat line in the item's tooltip (game/inventory.js).
 // To add an affix: an entry here (stat must be one core/gear/stats.js applies), and tests
 // check every tier is valid. `tags`: the bases it may roll on (core/gear/bases.js): melee
 // (swords), ranged (bows, crossbows, staffs) or both.
@@ -18,26 +19,26 @@ const affix = (id, kind, name, stat, op, tiers, text, decimals = 0, tags = ANY) 
 
 // learn: loot.html#affixes (see learn/README.md)
 export const AFFIXES = [
-  affix('sharp', 'prefix', 'Sharp', 'damage', 'add',
+  affix('sharp', 'prefix', 'Pointy', 'damage', 'add',
     [[2, 4], [4, 7], [7, 11], [11, 16], [16, 22], [22, 29], [29, 38]], v => `+${v} damage`),
-  affix('brutal', 'prefix', 'Brutal', 'damage', 'pct',
+  affix('brutal', 'prefix', 'Rude', 'damage', 'pct',
     [[4, 8], [8, 13], [13, 18], [18, 24], [24, 30], [30, 37], [37, 45]], v => `+${v}% damage`),
-  affix('swift', 'prefix', 'Swift', 'speed', 'pct',
+  affix('swift', 'prefix', 'Twitchy', 'speed', 'pct',
     [[3, 6], [6, 9], [9, 12], [12, 15], [15, 18], [18, 21], [21, 25]], v => `${v}% faster attacks`),
-  affix('sweeping', 'prefix', 'Sweeping', 'arc', 'pct',
+  affix('sweeping', 'prefix', 'Swooshy', 'arc', 'pct',
     [[8, 15], [15, 22], [22, 30], [30, 38], [38, 46], [46, 55], [55, 65]], v => `+${v}% swing arc`, 0, ['melee']),
-  affix('vicious', 'prefix', 'Vicious', 'crit', 'add',
+  affix('vicious', 'prefix', 'Sneaky', 'crit', 'add',
     [[3, 5], [5, 7], [7, 9], [9, 12], [12, 15], [15, 18], [18, 22]], v => `+${v}% critical chance`),
-  affix('reach', 'suffix', 'of Reach', 'range', 'add',
+  affix('reach', 'suffix', 'of Long Arms', 'range', 'add',
     [[0.05, 0.08], [0.08, 0.12], [0.12, 0.16], [0.16, 0.2], [0.2, 0.25], [0.25, 0.3], [0.3, 0.36]],
     v => `+${v.toFixed(2)} reach`, 2, ['melee']),
-  affix('distance', 'suffix', 'of Distance', 'range', 'pct',
+  affix('distance', 'suffix', 'of Far Away', 'range', 'pct',
     [[5, 9], [9, 14], [14, 19], [19, 25], [25, 31], [31, 38], [38, 46]], v => `+${v}% range`, 0, ['ranged']),
-  affix('leech', 'suffix', 'of the Leech', 'leech', 'add',
+  affix('leech', 'suffix', 'of Second Helpings', 'leech', 'add',
     [[1, 2], [2, 3], [3, 5], [5, 7], [7, 10], [10, 13], [13, 17]], v => `+${v} life on hit`),
-  affix('force', 'suffix', 'of Force', 'knockback', 'pct',
+  affix('force', 'suffix', 'of the Big Shove', 'knockback', 'pct',
     [[15, 30], [30, 45], [45, 60], [60, 80], [80, 100], [100, 125], [125, 150]], v => `+${v}% knockback`),
-  affix('precision', 'suffix', 'of Precision', 'critDamage', 'add',
+  affix('precision', 'suffix', 'of Right Where It Hurts', 'critDamage', 'add',
     [[10, 20], [20, 30], [30, 40], [40, 55], [55, 70], [70, 85], [85, 100]], v => `+${v}% critical damage`),
 ];
 export const AFFIX = Object.fromEntries(AFFIXES.map(a => [a.id, a]));

@@ -52,5 +52,7 @@ export function itemStats(item) {
 export const displayName = item => item?.gen?.name ?? ITEMS[item?.itemId]?.name ?? '';
 export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? ITEMS[item.itemId].name : null;
 export const affixLines = item => (item?.gen?.affixes ?? []).map(describeAffix);
+// ... with each affix's name: [{ name: 'Pointy', text: '+5 damage' }]
+export const affixEntries = item => (item?.gen?.affixes ?? []).map(a => ({ name: AFFIX[a.id].name, text: describeAffix(a) }));
 // damage per second, counting crits: what to compare weapons by
 export const weaponDps = s => s.damage * (1 + s.crit * (s.critDamage - 1)) / s.interval;

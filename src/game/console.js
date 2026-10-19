@@ -221,7 +221,10 @@ function row(e) {
   }
   const text = document.createElement('span');
   text.textContent = describe(e);
-  if (e.kind === 'loot' && RARITY[e.data.rarity]) text.style.color = RARITY[e.data.rarity].css;
+  if (e.kind === 'loot' && RARITY[e.data.rarity]) {
+    text.style.color = RARITY[e.data.rarity].css;
+    text.classList.toggle('rainbow', !!RARITY[e.data.rarity].glow?.rainbow);
+  }
   if (e.who) text.style.setProperty('--who', colorOf(e.who));
   li.append(text);
   if (e.kind === 'death') {

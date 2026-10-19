@@ -5,12 +5,12 @@
 // drops hit harder (core/gear/stats.js).
 //   ordinary enemies: a weapon 5% of the time and a potion 3%, both × √(its XP / 30): the
 //     tougher the kind, the likelier (a spider 4% / 2.5%, a Stunder 8% / 5%, a Triangle 10% / 6%)
-//   side guardians: one weapon, at least Uncommon (Rare from level 10), and a potion
-//   descent guardians: two weapons, at least Uncommon (Rare from level 5, Epic from 14), and two
+//   side guardians: one weapon, at least Decent (Unusual from level 10), and a potion
+//   descent guardians: two weapons, at least Decent (Unusual from level 5, Remarkable from 14), and two
 //     potions
 //   a kind with its own `drops` ({ weapons: false, potion: chance, potions: [item ids] }: Gusto's
 //     Custo triangles) drops no weapons and one of `potions` at that chance
-// Guardians also roll with luck (rarer results) and are the only source of Ancient items.
+// Guardians also roll with luck (rarer results) and are the only source of OMG items.
 // Which potion is drawn by the enemy's level (core/potions.js potionTable): mostly health
 // potions, the stronger ones and the rest deeper down.
 // favor: the kind of weapon the player fights with; drops lean towards it (gear/bases.js).
@@ -28,8 +28,8 @@ export const potionChance = xp => Math.min(0.1, POTION_CHANCE * worth(xp));
 
 // learn: loot.html#drops (see learn/README.md)
 export function guardianDrops(role, level) {
-  if (role === 'descent') return { count: 2, floor: RARITY[level >= 14 ? 'epic' : level >= 5 ? 'rare' : 'uncommon'].rank, luck: 0.2, ancient: true, potions: 2 };
-  return { count: 1, floor: RARITY[level >= 10 ? 'rare' : 'uncommon'].rank, luck: 0.1, ancient: true, potions: 1 };
+  if (role === 'descent') return { count: 2, floor: RARITY[level >= 14 ? 'remarkable' : level >= 5 ? 'unusual' : 'decent'].rank, luck: 0.2, guardian: true, potions: 2 };
+  return { count: 1, floor: RARITY[level >= 10 ? 'unusual' : 'decent'].rank, luck: 0.1, guardian: true, potions: 1 };
 }
 
 export function hashString(s) {

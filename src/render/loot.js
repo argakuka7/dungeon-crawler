@@ -3,7 +3,8 @@
 // own colour; weapons lie flat, and their rarity shows in what glows around them (RARITIES
 // glow in core/gear/rarities.js): a ring on the floor, a soft pool of light, a beam, rising
 // sparks, a turning circle of runes and a real light, more of it the rarer the weapon.
-// Junk and common weapons do not glow at all. A quest's thing to find glows gold (QUEST_GLOW), so it
+// The bottom four (Crap to Unremarkable) do not glow at all; OMG runs through the rainbow and
+// hops on the floor. A quest's thing to find glows gold (QUEST_GLOW), so it
 // stands out from the clutter it may look like (core/items.js: made from the world's props).
 // Views hang in the cube's group, so they slide along with it during travel and go away with
 // it; their geometry and materials are shared between all copies (per item / per rarity), so
@@ -23,8 +24,15 @@ const views = new Map();                               // pickup id -> { o, mode
 let viewsWorld = null;
 const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72;
 // how a quest's thing glows: like a rarity, in gold
-const QUEST_GLOW = { id: 'quest', rank: 4, rgb: [1, 0.78, 0.32], glow: { ring: 0.9, halo: 0.9, beam: 1.6, sparks: 3, runes: false, light: 1.2 } };
+const QUEST_GLOW = { id: 'quest', rank: 6, rgb: [1, 0.78, 0.32], glow: { ring: 0.9, halo: 0.9, beam: 1.6, sparks: 3, runes: false, light: 1.2 } };
 const glowOf = p => p.questItem ? QUEST_GLOW : p.gen ? rarityOf(p) : null;
+// how far above Vanilla a rarity is (the first that glows is 2): what scales its pulse and burst
+const steps = r => Math.max(0, r.rank - 2);
+// a rainbow rarity's colour at hue h (0..1)
+const RAINBOW_HZ = 0.4, RUNES = 8;
+const rainbow = (out, h) => out.setHSL(((h % 1) + 1) % 1, 1, 0.6);
+const sparkColor = new THREE.Color();
+const sparkOf = (r, k) => r.glow?.rainbow ? rainbow(sparkColor, Math.random()) : k.color;
 
 function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
@@ -119,6 +127,8 @@ function kit(r) {
     core: glowMat(new THREE.Color(1, 1, 1).lerp(color, 0.7), beamTex, 0.45),
     rune: glowMat(color, null, 0.9, false),
   };
+  // a rainbow's runes each have their own hue, so the circle shows all of them at once
+  if (g.rainbow) k.runes = Array.from({ length: RUNES }, () => glowMat(color.clone(), null, 0.9, false));
   fxKit.set(r.id, k);
   return k;
 }
@@ -154,8 +164,8 @@ function makeFx(r) {
   }
   if (g.runes) {
     const runes = new THREE.Group();
-    for (let i = 0; i < 8; i++) {
-      const a = i / 8 * Math.PI * 2, m = shared(new THREE.Mesh(G.rune, k.rune));
+    for (let i = 0; i < RUNES; i++) {
+      const a = i / RUNES * Math.PI * 2, m = shared(new THREE.Mesh(G.rune, k.runes?.[i] ?? k.rune));
       m.position.set(Math.cos(a) * 0.62, 0.025, Math.sin(a) * 0.62);
       runes.add(m);
     }
@@ -170,20 +180,32 @@ function makeFx(r) {
   return fx;
 }
 
-// every rarity's shared materials pulse together; Ancient shimmers between gold and white-blue
-const SHIMMER = [new THREE.Color(), new THREE.Color().setRGB(0.75, 0.9, 1.15)];
+// every rarity's shared materials pulse together; OMG runs through every hue
+const WHITE = new THREE.Color(1, 1, 1);
 function pulse(time) {
   for (const r of [...RARITIES, QUEST_GLOW]) {
     const k = fxKit.get(r.id);
     if (!k) continue;
-    const s = 0.78 + 0.22 * Math.sin(time * (2 + r.rank * 0.25));
+    const s = 0.78 + 0.22 * Math.sin(time * (2 + steps(r) * 0.25));
     for (const m of [k.ring, k.pool, k.beam, k.core]) m.opacity = m.userData.base * s;
-    if (r.glow.shimmer) {
-      SHIMMER[0].setRGB(...r.rgb);
-      k.color.copy(SHIMMER[0]).lerp(SHIMMER[1], 0.5 + 0.5 * Math.sin(time * 1.3));
+    if (r.glow.rainbow) {
+      const h = time * RAINBOW_HZ;
+      rainbow(k.color, h);
       for (const m of [k.ring, k.pool, k.beam, k.rune]) m.color.copy(k.color);
+      k.core.color.copy(WHITE).lerp(k.color, 0.7);
+      k.runes.forEach((m, i) => rainbow(m.color, h + i / RUNES));
     }
   }
+}
+
+// a rainbow weapon's hop: up and down in the first part of each beat, then still (0..1 of the
+// way up, and how far through the air it is, 0..1; -1 on the floor)
+const HOP_HZ = 0.9, HOP_AIR = 0.35, HOP_HEIGHT = 0.06;
+function hop(p, time) {
+  const u = ((time * HOP_HZ + p.phase) % 1 + 1) % 1;
+  if (u >= HOP_AIR) return { up: 0, air: -1 };
+  const x = u / HOP_AIR;
+  return { up: 4 * x * (1 - x), air: x };
 }
 
 const ease = t => t * t * (3 - 2 * t);
@@ -192,7 +214,8 @@ const v = new THREE.Vector3(), target = new THREE.Vector3();
 // where p is when nobody pulls it: on its arc out of the body, then resting (weapons lie on
 // the floor, everything else hovers and bobs)
 function rest(p, half, time, out) {
-  const y = p.gen ? p.y + half + 0.01 : p.y + half + HOVER + Math.sin(time * 2.6 + p.phase) * 0.035;
+  const y = p.gen ? p.y + half + 0.01 + (rarityOf(p).glow?.rainbow ? hop(p, time).up * HOP_HEIGHT : 0)
+    : p.y + half + HOVER + Math.sin(time * 2.6 + p.phase) * 0.035;
   if (p.toss >= 1) return out.set(p.x, y, p.z);
   const u = Math.max(0, p.toss), e = ease(u);
   return out.set(p.from.x + (p.x - p.from.x) * u, p.from.y + (y - p.from.y) * e + TOSS_HEIGHT * 4 * u * (1 - u), p.from.z + (p.z - p.from.z) * u);
@@ -242,31 +265,37 @@ export function drawLoot(list, world, time, dt = 0) {
     }
     model.position.copy(v).sub(o.position);
     model.rotation.y = time * spin + yaw;
+    // a hopping weapon wobbles while it is in the air
+    if (p.gen && rarityOf(p).glow?.rainbow) {
+      const air = p.toss >= 1 && !p.fly ? hop(p, time).air : -1;
+      model.rotation.x = air < 0 ? 0 : Math.sin(air * Math.PI * 2) * 0.12;
+    }
     model.scale.setScalar(scale);
     if (fx) {
       fx.visible = p.toss >= 1 && !p.fly;
       if (fx.userData.runes) fx.userData.runes.rotation.y = time * 0.6;
-      const sparks = glowOf(p).glow.sparks;
+      const r = glowOf(p), sparks = r.glow.sparks;
+      if (r.glow.rainbow && fx.userData.light) fx.userData.light.color.copy(kit(r).color);
       if (fx.visible && sparks && Math.random() < sparks * dt) {
-        const k = kit(glowOf(p)), a = Math.random() * Math.PI * 2, d = Math.random() * 0.35;
+        const k = kit(r), a = Math.random() * Math.PI * 2, d = Math.random() * 0.35;
         emit(glowLayer, p.x + off.x + Math.cos(a) * d, p.y + off.y + 0.05, p.z + off.z + Math.sin(a) * d,
-          { v: [0, rand(0.7, 1.5), 0], spread: 0.3, life: rand(0.7, 1.2), size: rand(0.05, 0.09), color: k.color, drag: 0.5 });
+          { v: [0, rand(0.7, 1.5), 0], spread: 0.3, life: rand(0.7, 1.2), size: rand(0.05, 0.09), color: sparkOf(r, k), drag: 0.5 });
       }
     }
   }
   for (const [id, view] of views) if (!seen.has(id)) { forget(view); views.delete(id); }
 }
 
-// a weapon came down: rare and better ones burst in their colour, the best ones more
+// a weapon came down: Decent and better ones burst in their colour, the best ones more
 export function lootLanded(p, world) {
   const r = rarityOf(p);
   if (!r.glow || !world) return;
-  const k = kit(r), off = world.group.position, n = 4 + r.rank * 3;
+  const k = kit(r), off = world.group.position, n = 4 + steps(r) * 3;
   for (let i = 0; i < n; i++) {
-    const a = i / n * Math.PI * 2, s = rand(0.8, 1.6) * (0.6 + r.rank * 0.12);
+    const a = i / n * Math.PI * 2, s = rand(0.8, 1.6) * (0.6 + steps(r) * 0.12);
     emit(glowLayer, p.x + off.x, p.y + off.y + 0.08, p.z + off.z,
       { v: [Math.cos(a) * s, rand(0.3, 1.2) + (r.glow.beam ? 1.5 : 0), Math.sin(a) * s], life: rand(0.4, 0.8),
-        size: rand(0.06, 0.12), color: k.color, gravity: 2, drag: 2 });
+        size: rand(0.06, 0.12), color: sparkOf(r, k), gravity: 2, drag: 2 });
   }
 }
 

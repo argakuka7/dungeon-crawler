@@ -228,7 +228,7 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 .floor-empty { color: #8b95a3; font-size: 14px; }
 #inventory-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 /* the border: how the item is used (gray: in the bag, light blue: equipped or in hand, dark blue: on the quick bar);
-   the backdrop: its rarity (from uncommon up) */
+   the backdrop: its rarity (from Decent up) */
 #inventory-panel .inventory-slot { aspect-ratio: 1; position: relative; background: #181e28; padding: 1px; min-width: 0; overflow: hidden;
   border: 2px solid #5b636b; }
 #inventory-panel .inventory-slot.worn { border-color: #8fd8ff; }
@@ -256,6 +256,7 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #inventory-item-name { margin-bottom: 2px !important; }
 #inventory-item-base { color: #8f9aaa; font-size: 15px; }
 #inventory-item-affixes { margin: 4px 0; padding: 0; list-style: none; color: #8fb6ff; font-size: 15px; }
+#inventory-item-affixes .affix-name { color: #6f7f99; font-style: italic; }
 #inventory-item-compare { font-size: 15px; color: #9ea9b6; margin: 8px 0; padding-top: 6px; border-top: 1px solid #2c3442; }
 #inventory-item-compare p { margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 1px 6px; }
@@ -267,7 +268,15 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 .loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 15px/1.2 var(--font-body); padding: 2px 6px; white-space: nowrap;
   background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 3px; cursor: pointer; text-shadow: 0 1px 2px #000; }
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }
-.loot-label[data-rarity="legendary"], .loot-label[data-rarity="mythic"], .loot-label[data-rarity="ancient"] { font-weight: bold; }
+.loot-label[data-rarity="fabled"], .loot-label[data-rarity="impossible"], .loot-label[data-rarity="omg"] { font-weight: bold; }
+/* OMG (core/gear/rarities.js rainbow): its text and its slot's backdrop (--rarity) run through every hue */
+@property --rarity { syntax: '<color>'; inherits: true; initial-value: transparent; }
+@keyframes rainbow {
+  0%, 100% { color: #ff5a5a; --rarity: #ff5a5a; } 14.3% { color: #ffa53a; --rarity: #ffa53a; } 28.6% { color: #f5ee4a; --rarity: #f5ee4a; }
+  42.9% { color: #5cf07a; --rarity: #5cf07a; } 57.1% { color: #4ad8ff; --rarity: #4ad8ff; } 71.4% { color: #8a7aff; --rarity: #8a7aff; }
+  85.7% { color: #ff6ad5; --rarity: #ff6ad5; } }
+.rainbow { animation: rainbow 2.5s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .rainbow { animation: none; } }
 #inventory-panel footer { font-size: 14px; color: #9ea9b6; }
 /* the tabs: the bag or the quests (game/inventory.js, game/questpanel.js) */
 #inventory-tabs { flex: none; display: flex; gap: 4px; }

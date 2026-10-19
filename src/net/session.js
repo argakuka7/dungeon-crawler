@@ -26,7 +26,7 @@
 //
 // The chat box (game/console.js) is shared: what a player types goes to everyone (`chat`,
 // shown in their colour and over their head), and so does what happens to them that the
-// others care about (`news`: died, levelled up, found something epic; core/chronicle.js NEWS).
+// others care about (`news`: died, levelled up, found something Remarkable; core/chronicle.js NEWS).
 // Each game writes it into its own chronicle (game/log.js) as the friend's.
 //
 // A painted skin (docs/skins.md) is too big to go along with every `me`: that only says which

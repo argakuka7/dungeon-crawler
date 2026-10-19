@@ -152,8 +152,8 @@ function credit(p) {
     if (p.gen) {
       const r = rarityOf(p);
       gained.color = r.css;
-      // a rare one (or better) goes into the chronicle; an epic one (or better) the friends hear of
-      if (r.rank >= RARITY.rare.rank) log('loot', { name, rarity: r.id }, { share: r.rank >= RARITY.epic.rank });
+      // an unusual one (or better) goes into the chronicle; a remarkable one (or better) the friends hear of
+      if (r.rank >= RARITY.unusual.rank) log('loot', { name, rarity: r.id }, { share: r.rank >= RARITY.remarkable.rank });
     }
     sfx('pickup');
   }
@@ -239,7 +239,7 @@ export function updateLoot(dt, time) {
 // a weapon hit the floor: the better it is, the more it announces itself
 function landed(p) {
   const r = rarityOf(p);
-  if (r.rank >= RARITY.rare.rank) sfx('drop', { at: p, pitch: 1 + 0.12 * (r.rank - RARITY.rare.rank), volume: 0.5 + 0.12 * r.rank });
+  if (r.rank >= RARITY.unusual.rank) sfx('drop', { at: p, pitch: 1 + 0.12 * (r.rank - RARITY.unusual.rank), volume: 0.86 + 0.12 * (r.rank - RARITY.unusual.rank) });
   else sfx('clink', { at: p, volume: 0.6 });
   lootLanded(p, state.world);
 }

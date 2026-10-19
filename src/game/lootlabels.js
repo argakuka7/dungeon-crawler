@@ -36,7 +36,7 @@ const VILLAGER_PICK = 46;    // ... and to a villager's head
 const PART_PICK = 40;        // ... and to a trial's part
 const PART_COLOR = '#8fd0ff';
 // a chest's label colour: a grander site, a rarer colour
-const CHEST_COLOR = { basic: '#d8d2c4', uncommon: RARITY.uncommon.css, rare: RARITY.rare.css, exceptional: RARITY.epic.css };
+const CHEST_COLOR = { basic: '#d8d2c4', uncommon: RARITY.decent.css, rare: RARITY.unusual.css, exceptional: RARITY.remarkable.css };
 let hovered = null, overLabel = null, cursor = '';
 
 // villagers (state.map.villagers) have an outfit, chests (reward sites) a prestige; the trial's
@@ -69,7 +69,7 @@ function label(p) {
   el.textContent = textOf(p) ?? (p.prestige ? 'Treasure chest' : p.questItem ? `${p.label ? p.label[0].toUpperCase() + p.label.slice(1) : displayName(p)} · quest`
     : displayName(p) + (p.count > 1 ? ` (${p.count})` : ''));
   el.style.color = part ? PART_COLOR : isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
-  if (p.gen) el.dataset.rarity = rarityOf(p).id;
+  if (p.gen) { el.dataset.rarity = rarityOf(p).id; el.classList.toggle('rainbow', !!rarityOf(p).glow?.rainbow); }
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0 || state.inventoryOpen || state.transitioning) return;
     e.preventDefault(); e.stopPropagation();

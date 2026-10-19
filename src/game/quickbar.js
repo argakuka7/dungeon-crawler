@@ -120,6 +120,7 @@ function draw() {
     const glow = e?.slot?.gen && rarityOf(e.slot).glow;
     b.style.setProperty('--rarity', glow ? rarityOf(e.slot).css : 'transparent');
     b.classList.toggle('rare', !!glow);
+    b.classList.toggle('rainbow', !!glow?.rainbow);
     b.classList.toggle('equipped', !!e?.slot && e.slot.instanceId === inv.equipped && !inv.readied);
     b.classList.toggle('in-hand', !!e && e.itemId === inv.readied);
     b.classList.toggle('none-left', !!e && !e.slot);

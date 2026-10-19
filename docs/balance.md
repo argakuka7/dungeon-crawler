@@ -35,9 +35,9 @@ chests, combat stats) and prints where the player stands on arrival at every dep
   your health against a side guardian and about one and a half times against a descent
   guardian: dodge its telegraphed attacks, use the poise windows, or drink.
 - **Loot matters, and keeps mattering.** Weapon damage grows with item level, so a drop from
-  further down beats an older one of the same rarity; a Rare catches up with a Legendary about
+  further down beats an older one of the same rarity; an Unusual one catches up with a Fabled one about
   five depths later. Guardians and chests pay out the good stuff, ordinary enemies now and then.
-  Legendary and better stay finds (under 4% of deep weapon drops).
+  Fabled and better stay finds (under 4% of deep weapon drops).
 
 - **Trial rooms take their time.** A trial room ([trials.md](trials.md)) is a few minutes of a run
   that are not fights: the simulation counts them per depth (`trials`: how many on the way, and

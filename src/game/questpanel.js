@@ -37,7 +37,7 @@ const entry = (q, on) => {
     + `<span class="mark">${mark}</span><span><b>${esc(q.title)}</b><small>${esc(stateText(q))}</small></span></button>`;
 };
 const itemLine = i => {
-  const def = ITEMS[i.itemId], color = i.gen ? ` style="color:${rarityOf(i).css}"` : '';
+  const def = ITEMS[i.itemId], color = i.gen ? ` style="color:${rarityOf(i).css}"${rarityOf(i).glow?.rainbow ? ' class="rainbow"' : ''}` : '';
   return `<li${color}>${esc(i.gen ? `${displayName(i)} (${rarityOf(i).name} ${def.name})` : `${def.name}${i.count > 1 ? ` ×${i.count}` : ''}`)}</li>`;
 };
 

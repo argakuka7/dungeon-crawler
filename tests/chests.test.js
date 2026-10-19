@@ -32,8 +32,8 @@ test('grander sites hold more coins, potions and better weapons, a little above 
         assert.equal(weapons(loot).length, t.weapons.length);
         for (const [k, w] of weapons(loot).entries()) {
           assert.equal(w.gen.ilvl, depthLevel(depth) + t.level);
-          assert.ok(RARITY[w.gen.rarity].rank >= Math.min(RARITY[t.weapons[k].floor].rank, RARITY.rare.rank), `${p} d${depth}: ${w.gen.rarity}`);
-          assert.notEqual(w.gen.rarity, 'junk'); assert.notEqual(w.gen.rarity, 'ancient');
+          assert.ok(RARITY[w.gen.rarity].rank >= Math.min(RARITY[t.weapons[k].floor].rank, RARITY.unusual.rank), `${p} d${depth}: ${w.gen.rarity}`);
+          assert.ok(RARITY[w.gen.rarity].rank >= RARITY.vanilla.rank, w.gen.rarity); assert.notEqual(w.gen.rarity, 'omg');
           assert.ok(itemStats(w).damage > 0);
         }
         const n = potions(loot);
@@ -54,8 +54,8 @@ test('grander sites hold more coins, potions and better weapons, a little above 
 test('exceptional chests promise the best the depth allows, without breaking shallow down', () => {
   for (let i = 0; i < 100; i++) {
     const shallow = weapons(chestLoot(site('exceptional', i), 1, 2)), deep = weapons(chestLoot(site('exceptional', i), 9, 2));
-    assert.ok(shallow.every(w => w.gen.rarity === 'rare'), 'no Epic below its item level: the floor comes down to Rare');
-    assert.ok(RARITY[deep[0].gen.rarity].rank >= RARITY.epic.rank);
+    assert.ok(shallow.every(w => w.gen.rarity === 'unusual'), 'no Remarkable below its item level: the floor comes down to Unusual');
+    assert.ok(RARITY[deep[0].gen.rarity].rank >= RARITY.remarkable.rank);
   }
 });
 

@@ -13,9 +13,10 @@
   the quick bar (at the top) opens it ([touch.md](touch.md)).
 - Select a bag slot to inspect it: a weapon shows its rarity, item level, kind, damage, attacks
   per second, damage per second, reach (a sword's) or range (a shot's), crits, piercing or
-  bursts, and affixes, and how it compares with the equipped one (damage per second first).
+  bursts, and affixes (each with its name), and how it compares with the equipped one (damage
+  per second first).
   **Equip** switches to an owned weapon, **Drop** puts an item
-  down at your feet, **Use** uses a usable item (and closes the panel). Bag slots of Uncommon
+  down at your feet, **Use** uses a usable item (and closes the panel). Bag slots of Decent
   and better weapons are framed in their colour.
 - **1**–**6** use the quick bar (see below). With the panel open they put the selected bag
   item on that slot instead.
@@ -27,7 +28,7 @@
 
 ## Run state
 
-A new run starts with level 1, 0 XP, 100 HP, one owned/equipped Common Old Sword, the
+A new run starts with level 1, 0 XP, 100 HP, one owned/equipped Vanilla Old Sword, the
 Town Portal Scroll on quick bar slot 1, three health potions on slot 2 and the Room Portal
 Scroll on slot 6 (with `?dev=1`, also 5000 gold). Every hero carries both scrolls: a hero saved
 before one existed gets it when loaded (`carryTools`, `core/progression.js`).

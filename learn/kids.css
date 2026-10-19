@@ -306,3 +306,10 @@ pre.stepper .ln.on { background: color-mix(in srgb, var(--accent) 28%, transpare
   .slide { display: block !important; box-shadow: none; break-inside: avoid; background: #fff; border-color: #aaa; }
   h1, h2, b { color: #000; }
 }
+
+/* OMG, the best rarity, runs through every colour (like in the game's style.css) */
+@keyframes rainbow {
+  0%, 100% { color: #ff5a5a; } 14.3% { color: #ffa53a; } 28.6% { color: #f5ee4a; } 42.9% { color: #5cf07a; }
+  57.1% { color: #4ad8ff; } 71.4% { color: #8a7aff; } 85.7% { color: #ff6ad5; } }
+.rainbow { animation: rainbow 2.5s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .rainbow { animation: none; } }

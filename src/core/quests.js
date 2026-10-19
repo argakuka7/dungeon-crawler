@@ -511,15 +511,15 @@ export function goalDone(stage, log, facts) {
 // --- rewards --------------------------------------------------------------------------------------
 
 // XP: a share of the level's cost at the quest's depth, more for harder quests; coins like a
-// chest (basic, uncommon, rare); items: potions, a weapon half the time, a weapon from Uncommon up
+// chest (basic, uncommon, rare); items: potions, a weapon half the time, a weapon from Decent up
 export const REWARD = { xpShare: 0.07, factor: { easy: 0.6, medium: 1, hard: 1.6 }, chest: { easy: 'basic', medium: 'uncommon', hard: 'rare' } };
 export function questRewards(R, depth, difficulty) {
   const level = depthLevel(depth), xp = Math.round(REWARD.xpShare * xpToNext(level) * REWARD.factor[difficulty]);
   const [lo, hi] = CHESTS[REWARD.chest[difficulty]].copper.map(c => Math.round(grown(c, GROWTH.coins, level)));
   const copper = lo + Math.floor(R() * (hi - lo + 1));
   const items = [];
-  if (difficulty === 'hard') items.push(rollWeapon(R, level + 1, { floor: RARITY.uncommon.rank, luck: 0.3 }), ...rollPotions(R, level, 1));
-  else if (difficulty === 'medium' && R() < 0.5) items.push(rollWeapon(R, level, { floor: RARITY.uncommon.rank, luck: 0.2 }));
+  if (difficulty === 'hard') items.push(rollWeapon(R, level + 1, { floor: RARITY.decent.rank, luck: 0.3 }), ...rollPotions(R, level, 1));
+  else if (difficulty === 'medium' && R() < 0.5) items.push(rollWeapon(R, level, { floor: RARITY.decent.rank, luck: 0.2 }));
   else items.push(...rollPotions(R, level, difficulty === 'medium' ? 2 : 1));
   return { xp, copper, items };
 }

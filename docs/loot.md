@@ -51,13 +51,13 @@ A bag slot or pickup holding a weapon carries its own `gen`:
 
 ```js
 { itemId: 'weapon_sword_long', count: 1,
-  gen: { v: 1, rarity: 'rare', ilvl: 7, affixes: [{ id: 'swift', tier: 2, value: 8 }, ...], name: 'Duskfang' } }
+  gen: { v: 1, rarity: 'unusual', ilvl: 7, affixes: [{ id: 'swift', tier: 2, value: 8 }, ...], name: 'Duskfang' } }
 ```
 
 Items keep what they rolled (not a seed), so retuning the tables does not change weapons
 already found; `v` is the generator version. `core/gear/stats.js` `itemStats` turns an item
 into the stats combat reads; nothing else looks at base weapon stats. A weapon without `gen`
-(dev grants, tests) counts as Common. The run starts with one Common **Old Sword**.
+(dev grants, tests) counts as Vanilla. The run starts with one Vanilla **Old Sword**.
 
 ## Generation
 
@@ -67,18 +67,24 @@ the base lean towards that kind.
 
 | Rarity | Weight | Min. item level | Affixes | Base damage | Floor glow |
 |---|---:|---:|---:|---:|---|
-| Junk | 24 | 1 | 0 | ×0.80 | none |
-| Common | 40 | 1 | 0 | ×1.00 | none |
-| Uncommon | 22 | 1 | 1 | ×1.05 | ring |
-| Rare | 8 | 1 | 2 | ×1.10 | ring, pool of light |
-| Epic | 2.5 | 4 | 3 | ×1.16 | + short beam |
-| Legendary | 0.5 | 8 | 4 | ×1.24 | + tall beam, sparks |
-| Mythic | 0.08 | 13 | 4 (+1 tier) | ×1.32 | + turning runes, a real light |
-| Ancient | 0.015 | 17 | 5 (+2 tiers) | ×1.40 | + very tall shimmering beam (guardians only) |
+| Crap | 11 | 1 | 0 | ×0.75 | none |
+| Shitty | 14 | 1 | 0 | ×0.88 | none |
+| Vanilla | 28 | 1 | 0 | ×1.00 | none |
+| Unremarkable | 14 | 1 | 0 | ×1.03 | none |
+| Decent | 22 | 1 | 1 | ×1.06 | ring |
+| Unusual | 8 | 1 | 2 | ×1.11 | ring, pool of light |
+| Remarkable | 2.2 | 4 | 3 | ×1.17 | + short beam |
+| Fabled | 0.42 | 8 | 4 | ×1.24 | + tall beam, sparks |
+| Impossible | 0.07 | 13 | 4 (+1 tier) | ×1.32 | + turning runes, a real light |
+| OMG | 0.014 | 17 | 5 (+2 tiers) | ×1.40 | + very tall beam, everything cycling through the rainbow, the weapon hopping (guardians only) |
+
+Unremarkable rolls no affixes on purpose: it is a slightly better plain weapon and nothing more.
+OMG's rainbow (`glow.rainbow`) also shows in the UI: its label, name, chronicle line and slot
+backdrop cycle through every hue (`.rainbow` in `style.css`; a fixed colour with reduced motion).
 
 Each rarity's weight is multiplied by `exp((0.025 × (ilvl − 1) + luck) × rank)`, so better
 rarities grow more likely with item level, but slowly: at item level 20 about 8% of weapon
-drops are Epic, 3% Legendary and under 1% Mythic. A rarity floor (guardians, chests) above what
+drops are Remarkable, 3% Fabled and under 1% Impossible. A rarity floor (guardians, chests) above what
 the item level allows comes down to the best it does allow. `node tools/loot-table.mjs [n]`
 prints the odds per level and per guardian (and `n` sample weapons per rarity).
 
@@ -98,22 +104,23 @@ with about 6% less damage per second than when swords were all there was
 (`node tools/balance.mjs`).
 
 **Affixes** (`core/gear/affixes.js`), each at most once per item, at most three prefixes and
-three suffixes. Sweeping and of Reach roll only on swords (`melee`), of Distance only on bows,
+three suffixes. Swooshy and of Long Arms roll only on swords (`melee`), of Far Away only on bows,
 crossbows and staffs (`ranged`), the rest on all. The item level picks the tier (1: 1–3, 2: 4–7, 3: 8–12, 4: 13–18, 5: 19+);
-Mythic and Ancient reach one or two tiers above (up to 7).
+Impossible and OMG reach one or two tiers above (up to 7). The item's tooltip shows each
+affix's stat line with its name beside it.
 
 | Affix | Kind | Stat | Tier 1 | Tier 7 |
 |---|---|---|---|---|
-| Sharp | prefix | + damage | 2–4 | 29–38 |
-| Brutal | prefix | + % damage | 4–8 | 37–45 |
-| Swift | prefix | % faster attacks (all swing times) | 3–6 | 21–25 |
-| Sweeping | prefix | + % swing arc | 8–15 | 55–65 |
-| Vicious | prefix | + % critical chance | 3–5 | 18–22 |
-| of Reach | suffix | + reach (cells) | 0.05–0.08 | 0.30–0.36 |
-| of Distance | suffix | + % range (shots) | 5–9 | 38–46 |
-| of the Leech | suffix | + life on hit | 1–2 | 13–17 |
-| of Force | suffix | + % knockback | 15–30 | 125–150 |
-| of Precision | suffix | + % critical damage (base ×1.5) | 10–20 | 85–100 |
+| Pointy (`sharp`) | prefix | + damage | 2–4 | 29–38 |
+| Rude (`brutal`) | prefix | + % damage | 4–8 | 37–45 |
+| Twitchy (`swift`) | prefix | % faster attacks (all swing times) | 3–6 | 21–25 |
+| Swooshy (`sweeping`) | prefix | + % swing arc | 8–15 | 55–65 |
+| Sneaky (`vicious`) | prefix | + % critical chance | 3–5 | 18–22 |
+| of Long Arms (`reach`) | suffix | + reach (cells) | 0.05–0.08 | 0.30–0.36 |
+| of Far Away (`distance`) | suffix | + % range (shots) | 5–9 | 38–46 |
+| of Second Helpings (`leech`) | suffix | + life on hit | 1–2 | 13–17 |
+| of the Big Shove (`force`) | suffix | + % knockback | 15–30 | 125–150 |
+| of Right Where It Hurts (`precision`) | suffix | + % critical damage (base ×1.5) | 10–20 | 85–100 |
 
 Damage is `(base × item level growth × rarity + flat) × (1 + percent)`, rounded, then × the
 player's level bonus (+2% a level). Every weapon crits 5% of the time for ×1.5 before affixes; a
@@ -121,10 +128,13 @@ critical hit shows a bigger golden number. Life on hit never heals past the maxi
 computed when read, so retuning bases, rarities or item-level growth changes weapons already
 found.
 
-**Names** (`core/gear/names.js`) are generated for every rarity: Junk and Common get a word
-and the base ("Rusty Long Sword"), Uncommon two words ("Bright Fang"), Rare and Epic a
-compound ("Grimfang"), Legendary and Mythic a compound and an epithet, Ancient an old root,
-a compound and an epithet. The base type shows under the name where the name does not say it.
+**Names** (`core/gear/names.js`) are generated for every rarity, mostly earnest with some
+sillier words mixed in: Crap to Unremarkable get a word and the base ("Soggy Long Sword",
+"Perfectly Fine Long Sword"), Decent two words ("Sneaky Nibbler"), Unusual a compound
+("Goblinbotherer"), Remarkable a compound and a title ("Frostbite the Mildly Cursed"), Fabled
+and Impossible a compound and an epithet ("Grimfang, Eater of Lunches", "Doomsong, That Should
+Not Be"), OMG an old root, a compound and an epithet ("Ur-Stormreaver, Mother of All Pointy
+Things"). The base type shows under the name where the name does not say it.
 
 ## Drops
 
@@ -140,10 +150,10 @@ is the enemy's level.
   potions the likeliest (`potionTable`, [potions.md](potions.md)); chests likewise.
 - Ordinary enemies: a weapon 5% and a potion 3% of the time, both × √(the kind's
   level-1 XP / 30): a spider 4% / 2.5%, a Stunder 8% / 5%, a Triangle 10% / 6%.
-- Side guardians: one weapon, at least Uncommon (Rare from level 10), luck 0.1; one potion.
-- Descent guardians: two weapons, at least Uncommon (Rare from level 5, Epic from 14), luck
-  0.2; two potions.
-- Ancient drops only from guardians.
+- Side guardians: one weapon, at least Decent (Unusual from level 10), luck 0.1; one potion.
+- Descent guardians: two weapons, at least Decent (Unusual from level 5, Remarkable from 14),
+  luck 0.2; two potions.
+- OMG drops only from guardians.
 
 ## Chests
 
@@ -154,10 +164,12 @@ kind like drops do); `CHESTS` is the table:
 
 | Site | Item level | Copper at level 1 | Potions | Weapons |
 |---|---|---|---|---|
-| Basic | depth | 25–45 | 0–1 | one, at least Common |
-| Uncommon | depth + 1 | 50–90 | 1 | one, at least Uncommon |
-| Rare | depth + 1 | 100–160 | 1–2 | at least Rare and at least Uncommon |
-| Exceptional | depth + 2 | 180–280 | 2 | at least Epic and at least Rare |
+| Basic | depth | 25–45 | 0–1 | one, at least Vanilla |
+| Uncommon | depth + 1 | 50–90 | 1 | one, at least Decent |
+| Rare | depth + 1 | 100–160 | 1–2 | at least Unusual and at least Decent |
+| Exceptional | depth + 2 | 180–280 | 2 | at least Remarkable and at least Unusual |
+
+(The site prestiges, basic to exceptional, are not rarities: they rank reward sites, `world/sites.js`.)
 
 Copper grows like enemy coins. Weapons roll with luck (0.1 to 0.45 by prestige). Opening a chest
 (`game/chests.js`) adds its site to `run.chests`, opens the model and, once the lid's `Open` clip has
@@ -182,7 +194,7 @@ back.
 
 With `?dev=1` the console (`` ` ``, `docs/console.md`) rolls a weapon of any base, rarity and item
 level: `/weapon <weapon> [rarity] [level] [drop]` puts it in the bag and equips it, or with `drop`
-lays it on the floor (`/weapon grsw mythic 20 drop`). `__game.devDropWeapon(itemId, rarity, ilvl)`
+lays it on the floor (`/weapon grsw omg 20 drop`). `__game.devDropWeapon(itemId, rarity, ilvl)`
 does the same from the browser's devtools.
 
 ## Tests

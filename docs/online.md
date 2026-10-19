@@ -199,7 +199,7 @@ pays itself and sends `questReward`, each guest pays itself once (`game/quests.j
   The host passes on at most 5 lines of a guest per 5 s and only plain text up to 160
   characters.
 - What happens to a player that the others care about goes to them as `news` (died, knocked
-  out and helped up, levelled up, a guardian defeated, a new depth reached, an epic or better
+  out and helped up, levelled up, a guardian defeated, a new depth reached, a Remarkable or better
   weapon found): each game writes it into its own chronicle as the friend's
   (`core/chronicle.js NEWS`, checked by `cleanNews`). Joining and leaving are in it too.
 

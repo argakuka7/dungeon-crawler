@@ -58,13 +58,13 @@ const equippedItemOf = inv => ownedItem(inv, inv.equipped);
 // dev tools (?dev=1): roll a weapon of this base, rarity and item level into the bag and
 // equip it, or drop one at your feet
 const devRoll = (itemId, rarity, ilvl) => rollWeapon(Math.random, ilvl, { itemId, rarity });
-export async function devSwapWeapon(itemId, rarity = 'common', ilvl = 1) {
+export async function devSwapWeapon(itemId, rarity = 'vanilla', ilvl = 1) {
   if (!state.dev || !ITEMS[itemId]?.weapon || !equipmentAllowed()) return false;
   const id = addInstance(player.inventory, devRoll(itemId, rarity, ilvl));
   if (!id) { setStatus('Inventory is full'); return false; }
   return equipOwnedWeapon(id);
 }
-export function devDropWeapon(itemId, rarity = 'rare', ilvl = 8) {
+export function devDropWeapon(itemId, rarity = 'unusual', ilvl = 8) {
   if (!state.dev || !ITEMS[itemId]?.weapon) return null;
   return dropAtFeet(devRoll(itemId, rarity, ilvl));
 }

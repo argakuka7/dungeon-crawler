@@ -160,7 +160,7 @@ test("a friend's news is cleaned before it is shown", () => {
   assert.equal(cleanNews('kill', { count: 1, xp: 1 }), null);
   assert.equal(cleanNews('level', { level: 1.5 }), null);
   assert.deepEqual(cleanNews('level', { level: 4, extra: 'x' }), { level: 4 });
-  assert.deepEqual(cleanNews('loot', { name: 'x'.repeat(100), rarity: 'epic' }), { name: 'x'.repeat(60), rarity: 'epic' });
+  assert.deepEqual(cleanNews('loot', { name: 'x'.repeat(100), rarity: 'remarkable' }), { name: 'x'.repeat(60), rarity: 'remarkable' });
   assert.equal(cleanNews('loot', { name: 'Sword', rarity: 'shiny' }), null);
   assert.deepEqual(cleanNews('down', { cause: 'bitten\n', by: { label: 'Spider', level: 'x' } }), { cause: 'bitten', by: { label: 'Spider', level: null, guardian: false } });
   assert.equal(cleanNews('death', null), null);

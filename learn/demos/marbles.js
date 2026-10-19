@@ -1,11 +1,12 @@
 // Weighted random, the way the game picks almost everything: lay the weights end to end on a
 // line, throw a random point onto it and walk along the line, subtracting each weight until
-// the point is passed. The weights are the real rarity weights (src/core/gear/rarities.js).
+// the point is passed. The weights are the real rarity weights (src/core/gear/rarities.js), Vanilla to
+// Unusual.
 import { RARITIES } from '../../src/core/gear/rarities.js';
 import { canvas, loop, html, t as tr } from '../deck.js';
 
 export default function mount(el) {
-  const items = RARITIES.slice(0, 4).map(r => ({ name: r.name, w: r.weight, color: r.css, n: 0 }));
+  const items = RARITIES.slice(2, 6).map(r => ({ name: r.name, w: r.weight, color: r.css, n: 0 }));
   const total = items.reduce((s, i) => s + i.w, 0);
   const { g, w, h } = canvas(el, 640, 200);
   const row = html(el, `<div class="row"><button class="one">${tr('Pick one marble', 'Eine Murmel ziehen')}</button><button class="many">${tr('Pick 1,000', '1.000 ziehen')}</button><button class="clear">${tr('Empty the counts', 'Zähler leeren')}</button></div>`);

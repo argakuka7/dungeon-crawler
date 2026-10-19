@@ -156,7 +156,7 @@ export async function runWeaponLootChecks() {
       dropLoot({ id: 'browser:guardian', level: 20, guardian: true, guardianRole: 'descent', x: player.x, y: player.y, z: player.z }, 0);
       steps(90, i => updateLoot(1 / 60, i / 60));
       check(weapons().length === 2 && weapons().every(p => p.toss === 1), 'A level-20 descent guardian drops two weapons');
-      check(weapons().every(p => ['epic', 'legendary', 'mythic', 'ancient'].includes(p.gen.rarity)), 'Descent guardians drop Epic or better from level 20');
+      check(weapons().every(p => ['remarkable', 'fabled', 'impossible', 'omg'].includes(p.gen.rarity)), 'Descent guardians drop Remarkable or better from level 20');
       const isPotion = id => ITEMS[id].category === 'potion', bagged = () => player.inventory.slots.reduce((n, s) => n + (s && isPotion(s.itemId) ? s.count : 0), 0);
       const potions = () => lootHere().filter(p => isPotion(p.itemId)).reduce((n, p) => n + p.count, 0);
       check(potions() === 2, 'and two potions');

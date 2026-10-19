@@ -24,7 +24,7 @@ import { shopOf, priceOf, buy as buyWare } from '../core/shops.js';
 import { flaskStats, cooldownLeft } from '../core/potions.js';
 import { xpProgress, levelDamage } from '../core/progression.js';
 import { rarityOf } from '../core/gear/rarities.js';
-import { itemStats, baseLine, affixLines, weaponDps } from '../core/gear/stats.js';
+import { itemStats, baseLine, affixEntries, weaponDps } from '../core/gear/stats.js';
 import { itemName, defDescription } from './itemnames.js';
 import { together } from '../net/online.js';
 import { equipmentAllowed, equipOwnedWeapon, syncEquippedWeapon } from './equipment.js';
@@ -160,6 +160,8 @@ function swung(item) {
   const s = itemStats(item);
   return { ...s, damage: Math.round(s.damage * levelDamage(player.level || 1)), speed: 1 / s.interval };
 }
+// whether it is an OMG item, all colours at once (style.css .rainbow)
+const rainbow = item => !!(item?.gen && rarityOf(item).glow?.rainbow);
 const KIND_NAMES = { sword: 'Sword', bow: 'Bow · shoots arrows', crossbow: 'Crossbow · shoots bolts', staff: 'Staff · casts spells' };
 function weaponText(item) {
   const s = swung(item), r = rarityOf(item);
@@ -211,7 +213,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
   $('inventory-shop-col').hidden = !shop;
   $('inventory-progress').textContent = `Level ${player.level} · XP ${xp.current}/${xp.required} · HP ${Math.ceil(player.hp)}/${player.maxHp}`;
   // the loadout under the hero
-  const color = equipped?.gen ? ` style="color:${rarityOf(equipped).css}"` : '';
+  const color = equipped?.gen ? ` style="color:${rarityOf(equipped).css}"${rarityOf(equipped).glow?.rainbow ? ' class="rainbow"' : ''}` : '';
   $('inventory-equipped').innerHTML = `<small>Weapon</small><b${color}>${equipped ? esc(itemName(equipped)) : 'None (you cannot attack)'}</b>`
     + `<small>In hand</small><b>${esc(inv.readied ? ITEMS[inv.readied].name : equipped ? itemName(equipped) : 'Nothing')}</b>`
     + `<small>Level bonus</small><b>+${Math.round((levelDamage(player.level || 1) - 1) * 100)}% damage</b>`;
@@ -232,7 +234,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
   }
   if (floorMode) $('inventory-floor').innerHTML = floor.length ? floor.map(p => {
     const on = selected?.from === 'floor' && selected.id === p.id, color = p.gen && rarityOf(p).glow ? rarityOf(p).css : '';
-    return `<button class="inventory-slot side-slot${on ? ' selected' : ''}" role="option" aria-selected="${on}" data-floor="${p.id}"${color ? ` style="--rarity:${color}"` : ''} aria-label="${esc(itemName(p))}${p.count > 1 ? `, ${p.count}` : ''}" title="${esc(itemName(p))}">${picture(p.itemId, on)}${p.count > 1 ? `<span class="count">${p.count}</span>` : ''}</button>`;
+    return `<button class="inventory-slot side-slot${on ? ' selected' : ''}${rainbow(p) ? ' rainbow' : ''}" role="option" aria-selected="${on}" data-floor="${p.id}"${color ? ` style="--rarity:${color}"` : ''} aria-label="${esc(itemName(p))}${p.count > 1 ? `, ${p.count}` : ''}" title="${esc(itemName(p))}">${picture(p.itemId, on)}${p.count > 1 ? `<span class="count">${p.count}</span>` : ''}</button>`;
   }).join('') : '<div class="floor-empty">Nothing here</div>';
   $('inventory-grid').innerHTML = inv.slots.map((s, i) => {
     const def = s && ITEMS[s.itemId], on = !!s && selected?.from === 'bag' && s.instanceId === selected.id;
@@ -241,7 +243,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
     const worn = s && (s.instanceId === inv.equipped || s.itemId === inv.readied);
     // the border says how it is used (equipped or in hand: light blue; on the quick bar: dark
     // blue), the backdrop its rarity
-    return `<button class="inventory-slot${on ? ' selected' : ''}${worn ? ' worn' : key >= 0 ? ' on-bar' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(itemName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? itemName(s) : 'Empty')}">${s ? `${picture(s.itemId, on)}${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
+    return `<button class="inventory-slot${on ? ' selected' : ''}${rainbow(s) ? ' rainbow' : ''}${worn ? ' worn' : key >= 0 ? ' on-bar' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(itemName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? itemName(s) : 'Empty')}">${s ? `${picture(s.itemId, on)}${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
   }).join('');
   if (focusSlot !== undefined) $('inventory-grid').querySelector(`[data-slot="${focusSlot}"]`)?.focus();
   if (focusFloor !== undefined) ($('inventory-floor').querySelector(`[data-floor="${focusFloor}"]`)
@@ -253,6 +255,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
   if (def) view.dataset.liveItem = def.id; else delete view.dataset.liveItem;
   $('inventory-item-name').textContent = item ? itemName(item) : 'Select an item';
   $('inventory-item-name').style.color = item?.gen ? rarityOf(item).css : '';
+  $('inventory-item-name').classList.toggle('rainbow', rainbow(item));
   $('inventory-item-base').textContent = item ? baseLine(item) ?? '' : '';
   // the Quick bar row: the slot it is on lit (again: off)
   const barKey = selected?.from === 'bag' ? barIndexOf(inv, item) : -1, barShown = !!item && selected?.from === 'bag' && barAllowed(item.itemId);
@@ -267,7 +270,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
     : def?.use ? `${def.stackLimit > 1 ? `Count ${item.count}\n` : ''}${defDescription(def)}${def.bound ? '\nBound: it cannot be dropped' : ''}`
     : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\nNo use action yet` : selected ? '' : 'Select a bag slot to inspect it.');
   $('inventory-item-compare').hidden = !def?.weapon;
-  $('inventory-item-affixes').innerHTML = item ? affixLines(item).map(l => `<li>${esc(l)}</li>`).join('') : '';
+  $('inventory-item-affixes').innerHTML = item ? affixEntries(item).map(a => `<li>${esc(a.text)} <span class="affix-name">${esc(a.name)}</span></li>`).join('') : '';
   $('inventory-item-compare').innerHTML = def?.weapon ? compareText(item) : '';
   const inBag = selected?.from === 'bag', isEquipped = inBag && item?.instanceId === inv.equipped;
   const equip = $('inventory-equip'), take = $('inventory-take'), drop = $('inventory-drop'), use = $('inventory-use'), buy = $('inventory-buy');

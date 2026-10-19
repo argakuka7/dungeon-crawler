@@ -51,7 +51,7 @@ export default function mount(el) {
   const out = html(el, '<div class="out"></div>');
   const $ = s => row.querySelector(s);
   let seed = Math.floor(Math.random() * 1e9);
-  const opts = () => $('.guard').checked ? { luck: 0.2, floor: RARITY.uncommon.rank, ancient: true } : {};
+  const opts = () => $('.guard').checked ? { luck: 0.2, floor: RARITY.decent.rank, guardian: true } : {};
   function show(item) {
     const r = RARITY[item.gen.rarity], base = ITEMS[item.itemId];
     card.innerHTML = weaponCard(item);
@@ -93,7 +93,7 @@ export default function mount(el) {
 }
 
 function odds(el) {
-  const W = 640, H = 250, { g } = canvas(el, W, H);
+  const W = 640, H = 270, { g } = canvas(el, W, H);
   const row = html(el, `<div class="row"><label>${tr('item level', 'Gegenstandsstufe')} <input type="range" class="lv" min="1" max="25" value="1"> <b class="lvv">1</b></label>
     <label>${tr('luck', 'Glück')} <input type="range" class="luck" min="0" max="0.45" step="0.05" value="0"> <b class="lk">0</b></label></div>`);
   const out = html(el, '<div class="out"></div>');
@@ -108,9 +108,9 @@ function odds(el) {
       const share = p[i], x = 20 + i * bw, h = Math.max(share > 0 ? 2 : 0, Math.sqrt(share) * 180);
       g.fillStyle = r.css; g.globalAlpha = share ? 1 : 0.25; g.fillRect(x + 6, 200 - h, bw - 12, h); g.globalAlpha = 1;
       g.fillStyle = '#e6e9ef'; g.font = "15px 'Crimson Text', serif"; g.textAlign = 'center';
-      g.fillText(r.name, x + bw / 2, 218);
+      g.fillText(r.name, x + bw / 2, i % 2 ? 236 : 218);   // (every other name a row lower: ten don't fit side by side)
       g.fillStyle = share ? r.css : '#5a6678';
-      g.fillText(share ? (share >= 0.01 ? (share * 100).toFixed(1) + '%' : (share * 100).toFixed(2) + '%') : r.guardianOnly ? tr('guardians', 'Wächter') : `lv ${r.minLevel}+`, x + bw / 2, 238);
+      g.fillText(share ? (share >= 0.01 ? (share * 100).toFixed(1) + '%' : (share * 100).toFixed(2) + '%') : r.guardianOnly ? tr('guardians', 'Wächter') : `lv ${r.minLevel}+`, x + bw / 2, 258);
     });
     g.textAlign = 'left';
     const best = RARITIES.filter((r, i) => p[i] > 0).at(-1);

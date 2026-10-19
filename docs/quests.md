@@ -524,7 +524,7 @@ asked again, stories cannot.
 - **Coins** like a chest at the quest's depth: basic (easy), uncommon (medium), rare (hard)
   (`CHESTS` in `core/chests.js`).
 - **Items:** easy quests potions, medium ones a weapon half the time, hard ones a weapon from
-  Uncommon up (`rollWeapon`, `rollPotions`).
+  Decent up (`rollWeapon`, `rollPotions`).
 - `tools/balance.mjs` takes the quests into account; if the curve gets too fast, the quests'
   share goes down, not the kills'.
 

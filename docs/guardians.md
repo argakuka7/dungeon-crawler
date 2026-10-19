@@ -44,8 +44,8 @@ species decides how a guardian fights, not how strong it is:
 
 | Tier | Level | HP | Damage per second | XP | Poise | Drops |
 |---|---|---|---|---:|---:|---|
-| Side | depth + 1 | ≥ 550, ≥ 3.5× the species' | ≥ 9, ≥ 1.15× its blows | 260 | 1.4 s | a weapon (Uncommon+, Rare+ from level 10), a potion |
-| Descent | depth + 2 | ≥ 1000, ≥ 6.5× the species' | ≥ 11.5, ≥ 1.45× its blows | 650 | 2 s | two weapons (Rare+ from level 5, Epic+ from 14), two potions |
+| Side | depth + 1 | ≥ 550, ≥ 3.5× the species' | ≥ 9, ≥ 1.15× its blows | 260 | 1.4 s | a weapon (Decent+, Unusual+ from level 10), a potion |
+| Descent | depth + 2 | ≥ 1000, ≥ 6.5× the species' | ≥ 11.5, ≥ 1.45× its blows | 650 | 2 s | two weapons (Decent+, Unusual+ from level 5, Remarkable+ from 14), two potions |
 
 Damage per second (`threat`) averages a species' blows over its attack cycle, so a quick
 spider and a slow Triangle are about as dangerous. Every descent guardian outlasts every side

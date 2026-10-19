@@ -146,7 +146,7 @@ dev({
   name: 'give', help: 'put things in the bag (weapons: /weapon)', args: [{ name: 'item', type: 'item' }, { name: 'count', type: 'int', optional: true, min: 1, max: 9999 }],
   async run({ item, count = 1 }) {
     const def = ITEMS[item];
-    if (def.weapon) return await devSwapWeapon(item, 'common', 1) ? `Equipped: ${def.name} (Common)` : 'No room in the bag';
+    if (def.weapon) return await devSwapWeapon(item, 'vanilla', 1) ? `Equipped: ${def.name} (Vanilla)` : 'No room in the bag';
     return addItem(player.inventory, item, count) ? `+${count} ${def.name}` : 'No room in the bag';
   },
 });
@@ -154,7 +154,7 @@ dev({
   name: 'weapon', help: 'roll a weapon and equip it (or drop it at your feet)',
   args: [{ name: 'weapon', type: 'weapon' }, { name: 'rarity', type: 'rarity', optional: true },
     { name: 'level', type: 'int', optional: true, min: 1, max: MAX_ILVL }, { name: 'drop', type: 'drop', optional: true }],
-  async run({ weapon, rarity = 'rare', level = 8, drop }) {
+  async run({ weapon, rarity = 'unusual', level = 8, drop }) {
     const name = `${ITEMS[weapon].name} (${RARITY[rarity].name}, item level ${level})`;
     if (drop) return devDropWeapon(weapon, rarity, level) ? `Dropped: ${name}` : 'Could not drop it here';
     return await devSwapWeapon(weapon, rarity, level) ? `Equipped: ${name}` : 'Could not equip it (bag full, or busy)';

@@ -18,7 +18,7 @@ export const MAX_ILVL = 99;
 const level = ilvl => Math.max(1, Math.min(MAX_ILVL, Math.floor(ilvl) || 1));
 
 // opts: rarity (an id: forces it), itemId (forces the base), favor (a kind of weapon the base
-// leans towards: rollBase), and the rarity odds options (luck, floor, ancient: see rarityOdds)
+// leans towards: rollBase), and the rarity odds options (luck, floor, guardian: see rarityOdds)
 // learn: loot.html#generate-code (see learn/README.md)
 export function rollWeapon(rng, ilvl, opts = {}) {
   ilvl = level(ilvl);
@@ -31,5 +31,5 @@ export function rollWeapon(rng, ilvl, opts = {}) {
 }
 
 // a fixed item, not rolled (the Old Sword a run starts with)
-export const fixedWeapon = (itemId, rarity = 'common', name = ITEMS[itemId].name) =>
+export const fixedWeapon = (itemId, rarity = 'vanilla', name = ITEMS[itemId].name) =>
   ({ itemId, count: 1, gen: { v: GEN_VERSION, rarity, ilvl: 1, affixes: [], name } });

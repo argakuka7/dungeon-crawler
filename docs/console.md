@@ -35,7 +35,7 @@ a reload starts a new diary, a new world adds a separator line. At most `LOG_LIM
 | `level` | a level up (`game/enemies.js awardKills`) | `{ level }` | yes |
 | `guardian` | a guardian defeated, its gate open | `{ label, level, depth }` | yes |
 | `depth` | the first time at a depth in this world (`game/flow.js settleIn`) | `{ depth, place }` | yes |
-| `loot` | a rare (or better) weapon picked up (`game/loot.js`) | `{ name, rarity }` | epic and better |
+| `loot` | an Unusual (or better) weapon picked up (`game/loot.js`) | `{ name, rarity }` | Remarkable and better |
 | `kill` | enemies defeated; kills within `MERGE_TIME` (6 s) are one line | `{ count, xp }` | no |
 | `horde` | a horde woke up | `{}` | no |
 | `trade` | bought something (`game/inventory.js`) | `{ item, price }` | no |
@@ -94,7 +94,7 @@ Developer (`?dev=1`):
 | `/newworld [seed]` | a new world (N), not saved; a saved hero comes along as it is |
 | `/menu` | save and quit to the main menu |
 | `/give <item> [count]` | things into the bag (a weapon: a common one, equipped) |
-| `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default rare, item level 8) |
+| `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default unusual, item level 8) |
 | `/wear <thing\|off>` | headwear on or off |
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |
