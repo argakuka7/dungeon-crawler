@@ -228,6 +228,11 @@ const SOUNDS = {
     tone('sine', 110 * p, 45 * p, t, 0.15, amp(t, 0.002, 0.9, 0.15, out));
     noise(t, 0.1, filter('lowpass', 600 * p, 0.7, amp(t, 0.002, 0.6, 0.09, out)));
   },
+  step(t, out, p) {      // stepping onto a loose stone: a hollow knock and a little grit
+    tone('sine', 220 * p, 140 * p, t, 0.08, amp(t, 0.001, 0.6, 0.08, out));
+    tone('triangle', 480 * p, 400 * p, t, 0.05, amp(t, 0.001, 0.15, 0.05, out));
+    noise(t, 0.06, filter('bandpass', 1500 * p, 1.2, amp(t, 0.001, 0.3, 0.05, out)));
+  },
   getUp(t, out, p) {     // getting up: two soft rustles of cloth
     for (const at of [t, t + 0.22]) noise(at, 0.12, filter('bandpass', 1300 * p, 0.9, amp(at, 0.03, 0.4, 0.1, out)));
   },
