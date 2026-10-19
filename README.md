@@ -72,8 +72,9 @@ docs that explain how the game works, from the big ideas down to the real code:
   that run from the game's devtools console.
 - `tools/`: dev server, the prop metadata generator, the GLB compressor (`compress-assets.mjs`;
   `glb.mjs` reads the GLBs for the tools and tests), the depth population measurement, the
-  weapon drop tables (`node tools/loot-table.mjs`) and the balance simulation
-  (`node tools/balance.mjs`, see `docs/balance.md`).
+  weapon drop tables (`node tools/loot-table.mjs`), the balance simulation
+  (`node tools/balance.mjs`, see `docs/balance.md`) and the enemy palette page
+  (`/tools/palette.html`, see `docs/enemy-kinds.md`).
 - `docs/`: design notes; `docs/assets/` documents the asset libraries.
 - `learn/`: an interactive guide for children (about 12), in English and German, from the
   big ideas down to the real code (`/learn/` on the dev server), with an AI tutor on every page

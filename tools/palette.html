@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base href="../">
+<title>Enemy palette</title>
+<!-- The enemies' palette and every kind painted from it: /tools/palette.html (docs/enemy-kinds.md).
+     The swatches of src/core/palette.js; the body colours of all kinds as hue against lightness;
+     per species its rosters down the depths (core/spawns.js DEPTH_SPAWNS) and each kind's colours,
+     recoloured from the species' GLB like the game does (core/oklch.js recolorTable), how often it
+     turns up, how far it stands from its nearest sibling and from the ground of every theme it
+     spawns in (OKLab ΔE). -->
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
+<style>
+  :root { color-scheme: dark; --bg: #1b1d22; --line: #343842; --dim: #8a909c; --hi: #e9c46a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: #e6e6e6; font: 14px var(--font-body); padding: 18px 24px 60px; }
+  h1 { font: 600 22px var(--font-display); margin: 0 0 4px; }
+  h2 { font: 600 16px var(--font-display); margin: 28px 0 8px; }
+  .about { color: var(--dim); max-width: 900px; }
+  table.pal { border-collapse: collapse; margin-top: 8px; }
+  table.pal td, table.pal th { padding: 2px; font: 11px var(--font-display); color: var(--dim); text-align: center; }
+  table.pal th { padding: 2px 8px; }
+  .sw { width: 92px; height: 44px; border-radius: 5px; display: flex; align-items: end; justify-content: center; font: 10px monospace; padding-bottom: 3px; }
+  .eyes { display: flex; gap: 6px; margin-top: 8px; }
+  .species { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; }
+  .card { border-radius: 8px; padding: 8px 10px 10px; width: 250px; background: #50535a; }
+  .card .name { font: 600 13px var(--font-display); }
+  .card.special .name::after { content: ' (special)'; font-weight: 400; opacity: .7; }
+  .card .sib { font: 11px var(--font-display); opacity: .85; margin-top: 2px; }
+  .side { background: #0002; border-radius: 6px; padding: 6px; margin-top: 6px; }
+  .blob { display: flex; gap: 3px; align-items: end; flex-wrap: wrap; }
+  .blob span { display: block; border-radius: 50%; border: 1px solid #0004; }
+  .blob .anchor { width: 38px; height: 38px; }
+  .blob .other { width: 18px; height: 18px; }
+  .blob .role { width: 24px; height: 24px; }
+  .num { font: 10px monospace; margin-top: 4px; line-height: 1.35; }
+  .warn { color: #ffb0a0; }
+  .grounds { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+  .grounds span { font: 9px monospace; padding: 10px 4px 2px; border-radius: 3px; min-width: 40px; text-align: center; }
+  .strip { display: flex; gap: 2px; align-items: center; margin: 2px 0; }
+  .strip .cell { width: 34px; height: 16px; display: flex; background: #2a2d33; border-radius: 2px; overflow: hidden; }
+  .strip .cell i { display: block; height: 100%; }
+  .depths { display: flex; gap: 2px; color: var(--dim); font: 10px monospace; }
+  .depths span { width: 34px; text-align: center; }
+  canvas { background: #15171b; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { color: var(--dim); font: 12px var(--font-display); margin-bottom: 4px; }
+  label { color: var(--dim); font: 12px var(--font-display); }
+</style>
+</head>
+<body>
+<h1>Enemy palette</h1>
+<div class="about">Every kind is painted from the palette in <code>src/core/palette.js</code> (see <code>docs/enemy-kinds.md</code>).
+A kind looks the same wherever it spawns. The rosters (<code>DEPTH_SPAWNS</code> in <code>src/core/spawns.js</code>) put it
+where it fits.</div>
+
+<h2>Palette</h2>
+<div id="palette"></div>
+
+<h2>Body colours, hue against lightness</h2>
+<div id="plot"></div>
+
+<h2>Kinds</h2>
+<div class="about">Each species' strip runs across depths 1–20. A cell is split between the kinds that depth's roster draws,
+by weight, and fainter cells are less likely to appear. On each card, the big dot is the body (the anchor of its first role),
+the small dots are the role's other materials, and the mid-size dots are the other roles. "Turns up in" is the expected
+number of cubes, summed over depths 1–20, that have at least one of the kind. "Nearest" is the most similar body among the
+other kinds of the species (OKLab ΔE, red under 0.08). Under it, the ground of every theme the kind spawns in, with the body's
+ΔE from it: red under 0.04, about the ground's own colour.</div>
+<label><input type="checkbox" id="mats" checked> show every material of a role</label>
+<div id="kinds"></div>
+
+<script type="module">
+import { ENEMY_KINDS } from './src/core/enemies.js';
+import { DEPTH_SPAWNS, population } from './src/core/spawns.js';
+import { THEMES } from './src/themes/index.js';
+import { themesAt } from './src/themes/depth.js';
+import { recolorTable, parseColor, fromOklch, toOklch, linearToOklab, toHex } from './src/core/oklch.js';
+import { HUES, GUARDIAN_HUES, NEUTRALS, TONES, EYES, swatch } from './src/core/palette.js';
+
+const THEME = new Map(THEMES.map(t => [t.props, t]));
+const hex = lch => toHex(fromOklch(lch));
+const fmt = ({ l, c, h }) => `${l.toFixed(2)} ${c.toFixed(3)} ${h.toFixed(0)}`;
+// the ground of a theme: the middle of its top colour stops
+const ground = id => { const t = THEME.get(id).top; return parseColor(t[Math.floor(t.length / 2)][1]); };
+const lab = lch => linearToOklab(fromOklch(lch));
+const dE = (a, b) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
+
+// how often each kind turns up, over depths 1-20 and N cubes a depth (each depth's themes in
+// turn): kind -> the chance a cube has at least one (each pack draws its kind), summed over depths
+function rarity(N = 600) {
+  const out = {};
+  for (let d = 1; d < DEPTH_SPAWNS.length; d++) {
+    const themes = themesAt(d);
+    for (let i = 0; i < N; i++) {
+      const pop = population({ seed: (d * 7919 + i * 104729) >>> 0, depth: d, biome: themes[i % themes.length].props, populationScale: 1 });
+      for (const [, p] of pop) {
+        const w = Object.entries(p.kinds), total = w.reduce((n, [, x]) => n + x, 0), packs = Math.ceil(p.count / p.pack);
+        for (const [k, x] of w) out[k] = (out[k] ?? 0) + (1 - (1 - x / total) ** packs) / N;
+      }
+    }
+  }
+  return out;
+}
+// the themes a kind spawns in: the depths whose roster draws it, each depth's themes (those a
+// roster entry's `where` allows)
+function themesOf(type) {
+  const out = new Set();
+  DEPTH_SPAWNS.forEach((row, d) => {
+    for (const e of row.roster) if (e.kinds[type])
+      for (const t of themesAt(d)) if (!e.where || e.where.includes(t.props)) out.add(t.props);
+  });
+  return [...out];
+}
+
+// the species' materials (linear rgb), from the GLB's JSON chunk
+const glbs = {};
+async function materialsOf(species) {
+  if (!glbs[species]) {
+    const b = await (await fetch(`assets/${species}.glb`)).arrayBuffer(), v = new DataView(b);
+    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(b, 20, v.getUint32(12, true))));
+    glbs[species] = Object.fromEntries(json.materials.map(m => [m.name, {
+      color: (m.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1]).slice(0, 3), emissive: m.emissiveFactor ?? null }]));
+  }
+  return glbs[species];
+}
+// role -> [{ name, lch }] of a kind's visible materials, recoloured
+function rolesOf(mats, k) {
+  const table = recolorTable(mats, k.parts, k.colors ?? {}), hide = k.hide ?? [];
+  return Object.fromEntries(Object.entries(k.parts).map(([role, names]) => [role,
+    names.filter(n => mats[n] && !hide.includes(n)).map(n => ({ name: n, lch: toOklch((table[n] ?? mats[n]).color) }))])
+    .filter(([, list]) => list.length));
+}
+
+function paletteTable() {
+  const tones = Object.keys(TONES), fams = [...Object.keys(HUES), ...Object.keys(GUARDIAN_HUES), ...Object.keys(NEUTRALS)];
+  let h = '<table class="pal"><tr><th></th>' + tones.map(t => `<th>${t}</th>`).join('') + '</tr>';
+  for (const f of fams) {
+    const hue = HUES[f] ?? GUARDIAN_HUES[f];
+    h += `<tr><th>${f}${hue !== undefined ? ' ' + hue : ''}${GUARDIAN_HUES[f] !== undefined ? ' (guardians)' : ''}</th>`;
+    for (const t of tones) {
+      if (NEUTRALS[f] && (t === 'glow' || t === 'vivid')) { h += '<td></td>'; continue; }
+      const s = swatch(`${f}.${t}`);
+      h += `<td><div class="sw" style="background:${hex(s)};color:${s.l > 0.6 ? '#000a' : '#fffa'}">${fmt(s)}</div></td>`;
+    }
+    h += '</tr>';
+  }
+  h += '</table><div class="eyes">' + Object.entries(EYES).map(([n, s]) =>
+    `<div class="sw" style="background:${hex(s)};color:#000a">eyes.${n}</div>`).join('') + '</div>';
+  document.getElementById('palette').innerHTML = h;
+}
+
+function blob(roles, all) {
+  const [first, ...rest] = Object.values(roles);
+  let h = `<span class="anchor" style="background:${hex(first[0].lch)}"></span>`;
+  if (all) h += first.slice(1).map(m => `<span class="other" title="${m.name}" style="background:${hex(m.lch)}"></span>`).join('');
+  h += rest.map(list => (all ? list : list.slice(0, 1)).map((m, i) =>
+    `<span class="${i ? 'other' : 'role'}" title="${m.name}" style="background:${hex(m.lch)}"></span>`).join('')).join('');
+  return `<div class="blob">${h}</div>`;
+}
+function nearest(row, rows) {
+  let best = null;
+  for (const o of rows) if (o !== row) {
+    const e = dE(row.body, o.body);
+    if (!best || e < best.e) best = { e, label: o.k.label };
+  }
+  return best ? `<div class="num">nearest: ${best.label}, <span class="${best.e < 0.08 ? 'warn' : ''}">ΔE ${best.e.toFixed(2)}</span></div>` : '';
+}
+// a species down the depths: each depth's cell split between the kinds its roster draws
+function strip(rows) {
+  const types = new Map(rows.map(r => [r.k.type, r]));
+  let h = `<div class="depths">${Array.from({ length: DEPTH_SPAWNS.length - 1 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div><div class="strip">`;
+  for (let d = 1; d < DEPTH_SPAWNS.length; d++) {
+    const entry = DEPTH_SPAWNS[d].roster.find(e => Object.keys(e.kinds).some(k => types.has(k)));
+    let cell = '';
+    if (entry) {
+      const w = Object.entries(entry.kinds), total = w.reduce((n, [, x]) => n + x, 0);
+      cell = w.map(([k, x]) => `<i title="${types.get(k).k.label}" style="flex:${x / total};background:${hex(types.get(k).body)}"></i>`).join('');
+    }
+    h += `<span class="cell" style="opacity:${entry ? 0.35 + 0.65 * entry.chance : 1}" title="depth ${d}${entry ? ', ' + Math.round(entry.chance * 100) + '%' : ''}">${cell}</span>`;
+  }
+  return h + '</div>';
+}
+
+const RARE = rarity();
+let points = [];
+async function kinds() {
+  const all = document.getElementById('mats').checked, bySpecies = new Map();
+  for (const k of Object.values(ENEMY_KINDS)) if (!k.guardian && !k.boss) {
+    if (!bySpecies.has(k.species)) bySpecies.set(k.species, []);
+    bySpecies.get(k.species).push(k);
+  }
+  let html = '';
+  points = [];
+  for (const [species, list] of bySpecies) {
+    const mats = await materialsOf(species);
+    const rows = list.map(k => { const roles = rolesOf(mats, k); return { k, roles, body: Object.values(roles)[0][0].lch }; });
+    html += `<h2>${ENEMY_KINDS[species].label}</h2>` + strip(rows) + '<div class="species">';
+    for (const r of rows) {
+      const special = !!r.k.minion;
+      points.push({ lch: r.body, special });
+      const grounds = special ? '<div class="num">a boss\'s minion</div>' : '<div class="grounds">' + themesOf(r.k.type).map(id => {
+        const g = ground(id), e = dE(r.body, g);
+        return `<span title="${THEME.get(id).name}" style="background:${hex(g)};color:${g.l > 0.62 ? '#111' : '#eee'}"><span class="${e < 0.04 ? 'warn' : ''}" style="padding:0">${e.toFixed(2)}</span><br>${id}</span>`;
+      }).join('') + '</div>';
+      html += `<div class="card${special ? ' special' : ''}">
+        <div class="name">${r.k.label}</div>
+        <div class="sib">${special ? '&nbsp;' : `turns up in ${(RARE[r.k.type] ?? 0).toFixed(1)} cubes`}</div>
+        <div class="side">${blob(r.roles, all)}<div class="num">${fmt(r.body)}</div>${nearest(r, rows)}</div>${grounds}</div>`;
+    }
+    html += '</div>';
+  }
+  document.getElementById('kinds').innerHTML = html;
+  plot();
+}
+
+// body colours as hue (x) against lightness (y), dot size by chroma
+function plot() {
+  const W = 760, H = 320, pad = 30, c = document.createElement('canvas');
+  c.width = W * devicePixelRatio; c.height = H * devicePixelRatio; c.style.width = W + 'px'; c.style.height = H + 'px';
+  const x = c.getContext('2d'); x.scale(devicePixelRatio, devicePixelRatio);
+  x.strokeStyle = '#2a2d34'; x.fillStyle = '#6a707c'; x.font = '10px sans-serif';
+  for (let h = 0; h <= 360; h += 30) { const px = pad + h / 360 * (W - 2 * pad); x.beginPath(); x.moveTo(px, pad); x.lineTo(px, H - pad); x.stroke(); x.fillText(h, px - 6, H - pad + 14); }
+  for (let l = 0.2; l <= 1.001; l += 0.2) { const py = H - pad - (l - 0.2) / 0.8 * (H - 2 * pad); x.beginPath(); x.moveTo(pad, py); x.lineTo(W - pad, py); x.stroke(); x.fillText(l.toFixed(1), 4, py + 3); }
+  for (const { lch, special } of points) {
+    const px = pad + lch.h / 360 * (W - 2 * pad), py = H - pad - (lch.l - 0.2) / 0.8 * (H - 2 * pad);
+    x.beginPath(); x.arc(px, py, 3 + lch.c * 40, 0, 7); x.fillStyle = hex(lch); x.fill();
+    x.lineWidth = 1; x.strokeStyle = special ? '#888' : '#000'; x.setLineDash(special ? [2, 2] : []); x.stroke(); x.setLineDash([]);
+  }
+  const f = document.createElement('figure');
+  f.style.margin = '0';
+  f.innerHTML = `<figcaption>${points.length} kinds, ${new Set(points.map(p => fmt(p.lch))).size} distinct colours (dashed: special)</figcaption>`;
+  f.append(c);
+  document.getElementById('plot').replaceChildren(f);
+}
+
+paletteTable();
+kinds();
+document.getElementById('mats').onchange = kinds;
+</script>
+</body>
+</html>
