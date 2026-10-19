@@ -14,8 +14,6 @@ import { pendingAction, useAction } from '../../src/game/action.js';
 import { sealedIn, sealedDirs } from '../../src/game/trials.js';
 import { portalLocked } from '../../src/core/guardians.js';
 import { trialFluid } from '../../src/physics/fluid.js';
-import { groundAt } from '../../src/physics/collide.js';
-import { sluiceWay } from '../../src/cubegen/trials/solve.js';
 import { DIRS } from '../../src/core/constants.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
@@ -133,7 +131,7 @@ export async function runSunkenChecks() {
   return [...out, 'drained'];
 }
 
-// A grid puzzle (?trial=mirror, braziers or channels): its parts used as its own solver says (each
+// A grid puzzle (?trial=mirror or braziers): its parts used as its own solver says (each
 // from beside it, with the action key's choice checked), then off the field (a body blocks a beam):
 // solved, the way on open.
 export async function runGridChecks(kind) {
@@ -178,9 +176,8 @@ async function pushCrate(pz, i, d) {
   await delay(150);
 }
 
-// Crates (?trial=crates) or the two plates (?trial=plates): the reset lever puts a pushed crate back,
-// then the solver's pushes, each by walking into the crate from behind it; (the two plates: then
-// standing on the other plate) solved, the way on open
+// Crates (?trial=crates): the reset lever puts a pushed crate back, then the solver's pushes, each by
+// walking into the crate from behind it: solved, the way on open
 export async function runCratesChecks(kind = 'crates') {
   const all = [];
   for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === kind && t.role === 'route'));
@@ -190,7 +187,7 @@ export async function runCratesChecks(kind = 'crates') {
   await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
   takePortal(state.map.portals.find(p => p.dir === t.fromDir));
   await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
-  const pz = state.map.trial.puzzles[0], F = pz.field, D = pz.deck;
+  const pz = state.map.trial.puzzles[0];
   const crate = i => crateAt(pz, i), push = (i, d) => pushCrate(pz, i, d);
   // a push, then the reset lever
   const [i0, d0] = pz.check.solution[0], before = crate(i0);
@@ -202,75 +199,9 @@ export async function runCratesChecks(kind = 'crates') {
   useAction();
   check(crate(i0) === before, 'the reset lever puts the crates back');
   for (const [i, d] of pz.check.solution) await push(i, d);
-  if (kind === 'plates') {   // the other plate: someone stands on it
-    const other = F.plates.find(c => !pz.parts.some(p => p.type === 'crate' && state.trial.bits[p.id] === c));
-    Object.assign(player, { x: D.x0 + other % F.w + 0.5, y: D.level * 0.5, z: D.z0 + Math.floor(other / F.w) + 0.5, vx: 0, vz: 0 });
-  }
   await until(() => state.trial.phase === 'resolved', 'solved', 3000);
   check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
   return [kind, `${pz.check.solution.length} pushes`];
-}
-
-// The sinking stones (?trial=stones): a stone left sinks (its floor gone, the trial's fluid over the
-// pit), stepping off the field raises them, a jump into a sunk stone's hole drowns; then every stone
-// in the walk's order, ending on the goal: solved, the way on open
-export async function runStonesChecks() {
-  const all = [];
-  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'stones' && t.role === 'route'));
-  check(state.dev && all.length, 'load the game with ?dev=1&trial=stones');
-  const t = all[0];
-  await goTrial('stones', t.depth, t.key);
-  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
-  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
-  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
-  const pz = state.map.trial.puzzles[0], D = pz.deck, list = pz.stones, y = D.level * 0.5;
-  const standOn = async q => { Object.assign(player, { x: D.x0 + q.x + 0.5, y, z: D.z0 + q.z + 0.5, vx: 0, vy: 0, vz: 0 }); await delay(150); };
-  const view = () => state.world.trialView.crust;
-  await standOn(list[0]); await standOn(list[1]);
-  await delay(1300);
-  check(view().get(list[0].c).state !== 'whole', 'the first stone sank behind us');
-  check(groundAt(D.x0 + list[0].x + 0.5, D.z0 + list[0].z + 0.5, y + 0.1, 0.3).s !== state.map.floors[list[0].f], 'its floor is gone');
-  // off the field (the ground before the gap): they rise
-  const g = pz.entryGap;
-  Object.assign(player, { x: g % 16 + 0.5, y, z: Math.floor(g / 16) + 0.5, vx: 0, vz: 0 });
-  await delay(400);
-  check(groundAt(D.x0 + list[0].x + 0.5, D.z0 + list[0].z + 0.5, y + 0.1, 0.3).s === state.map.floors[list[0].f], 'off the field the stones rise');
-  for (const q of list) await standOn(q);
-  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
-  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
-  return ['stones', `${list.length} stones, ${pz.check.branchPoints} branch points`];
-}
-
-// The sluices (?trial=sluices): a pull pours, the reset lever puts the basins back; then the
-// solver's pulls, each with the action key at its lever: the float at its mark solves it
-export async function runSluicesChecks() {
-  const all = [];
-  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'sluices' && t.role === 'route'));
-  check(state.dev && all.length, 'load the game with ?dev=1&trial=sluices');
-  const t = all[0];
-  await goTrial('sluices', t.depth, t.key);
-  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
-  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
-  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
-  const pz = state.map.trial.puzzles[0], F = pz.field;
-  const levels = () => pz.parts.filter(p => p.type === 'basin').sort((a, b) => a.i - b.i).map(p => state.trial.bits[p.id] ?? 0);
-  const pull = async p => {
-    Object.assign(player, { x: p.x, y: p.y, z: p.z + (p.yaw ? -0.45 : 0.45), vx: 0, vz: 0 });
-    await delay(80);
-    check(pendingAction()?.target?.id === p.id, `lever ${p.id} in reach (got ${pendingAction()?.target?.id})`);
-    useAction();
-    await delay(50);
-  };
-  const levers = pz.parts.filter(p => p.type === 'sluice').sort((a, b) => a.i - b.i), before = levels().join();
-  const way = sluiceWay(F.cap, levels(), F.levers, F.float, F.mark);
-  await pull(levers[way[0]]);
-  check(levels().join() !== before, 'a pull pours');
-  await pull(pz.parts.find(p => p.type === 'reset'));
-  check(levels().join() === before, 'the reset lever puts the basins back');
-  for (const j of way) await pull(levers[j]);
-  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
-  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
-  return ['sluices', `${F.cap.join('/')} mark ${F.mark}: ${way.length} pulls`];
 }
 
 // The timed gate (?trial=timedgate): the exit sealed; the lever on the perch opens it, it shuts
@@ -453,25 +384,6 @@ export async function runTrialChecks(kind = 'flood') {
     }
     results.push('the gusts');
     if (player.hp <= 0 || state.cubeKey !== t.key) return results;
-  }
-  // the drift: the lit pad caught three times (standing on it as it comes round)
-  if (kind === 'drift') {
-    const m = state.map.trial, pads = m.parts.filter(p => p.type === 'waypad');
-    const { driftLit } = await import('../../src/core/trials.js');
-    Object.assign(player, { x: m.check.next ? player.x : player.x });
-    player.autoDir = DIRS[t.fromDir];
-    await until(() => state.trial.phase === 'running', 'running', 6000);
-    player.autoDir = null;
-    for (let k = 0; k < 3; k++) {
-      const d = driftLit(state.trial.t, pads.length), p = pads[d.lit];
-      Object.assign(player, { x: p.x, y: p.y, z: p.z, vx: 0, vz: 0 });
-      await until(() => (state.trial.bits.catches ?? 0) === k + 1, `catch ${k + 1}`, 2000);
-      check((state.trial.bits.catches ?? 0) === k + 1 || state.trial.phase === 'resolved', 'one catch per pad');
-      if (k < 2) await until(() => driftLit(state.trial.t, pads.length).lit !== d.lit, 'the pad moves on', 8000);
-    }
-    await until(() => state.trial.phase === 'resolved', 'three catches', 2000);
-    check(!portalLocked(state.map, state.run, { dir: t.exit }) && !sealedIn(), 'the way on is open');
-    results.push('caught three times');
   }
   // the siege: idle until the beacon is lit; waves come; holding the ring fills it
   if (kind === 'siege') {

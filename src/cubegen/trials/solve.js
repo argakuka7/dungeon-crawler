@@ -1,7 +1,7 @@
 // The puzzle solvers (docs/trials.md "Puzzles"): every puzzle is made together with its solution
 // and checked by one of these before the cube is handed out. Pure, no generator state: the tests
 // and the game's /trial solve use them too.
-import { slideStop, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, pourSluice } from '../../core/trials.js';
+import { slideStop, traceBeam, pressBrazier, allLit, pushTarget } from '../../core/trials.js';
 
 // --- slide ---------------------------------------------------------------------------------------
 
@@ -210,64 +210,6 @@ export function makeBraziers(R, size, band, tries = 200, patterns = null) {
   return null;
 }
 
-// --- channels ---------------------------------------------------------------------------------------
-
-// how many quarter turns tile shape `shape` needs from r to open towards every side in `need`
-export function turnsTo(shape, r, need) {
-  for (let k = 0; k < 4; k++) { const o = tileOpen(shape, r + k); if (need.every(d => o.includes(d))) return k; }
-  return Infinity;
-}
-
-// Rotating channels on w x h: a way of tiles from the spout to the wheel (a random walk that
-// avoids itself), its tiles shaped by where the water goes in and out (now and then a tee: a
-// branch), the rest at random; every tile turned at random. Kept when its way needs `band`
-// quarter turns (by construction) and the wheel is dry at the start.
-export function makeChannels(R, w, h, band, tries = 400) {
-  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
-  const edge = (side, t) => [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side];
-  for (let n = 0; n < tries; n++) {
-    const sSide = ri(0, 3), wSide = [0, 1, 2, 3].filter(s => s !== sSide)[ri(0, 2)];
-    const [sx, sz] = edge(sSide, ri(0, (sSide < 2 ? h : w) - 1)), [wx, wz] = edge(wSide, ri(0, (wSide < 2 ? h : w) - 1));
-    // the way: a walk from the spout's cell to the wheel's that never meets itself
-    const path = [[sx, sz]], seen = new Set([`${sx},${sz}`]);
-    const walk = () => {
-      const [x, z] = path.at(-1);
-      if (x === wx && z === wz) return true;
-      if (path.length > w * h * 0.7) return false;
-      const dirs = [0, 1, 2, 3].sort(() => R() - 0.5);
-      for (const d of dirs) {
-        const nx = x + SD[d][0], nz = z + SD[d][1];
-        if (nx < 0 || nz < 0 || nx >= w || nz >= h || seen.has(`${nx},${nz}`)) continue;
-        path.push([nx, nz]); seen.add(`${nx},${nz}`);
-        if (walk()) return true;
-        path.pop(); seen.delete(`${nx},${nz}`);
-      }
-      return false;
-    };
-    if (!walk() || path.length < 3) continue;
-    const dirOf = (a, b) => SD.findIndex(([dx, dz]) => a[0] + dx === b[0] && a[1] + dz === b[1]);
-    const tiles = [], need = [], solved = [];
-    const onWay = new Map(path.map((c, i) => [`${c}`, i]));
-    for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
-      const i = onWay.get(`${x},${z}`);
-      if (i === undefined) { const shape = ['I', 'L', 'T'][ri(0, 2)]; tiles.push({ x, z, shape }); need.push(null); solved.push(ri(0, 3)); continue; }
-      const into = i === 0 ? sSide : dirOf(path[i - 1], path[i]) ^ 1, out = i === path.length - 1 ? wSide : dirOf(path[i], path[i + 1]);
-      const shape = (into ^ 1) === out ? (R() < 0.2 ? 'T' : 'I') : R() < 0.2 ? 'T' : 'L';
-      const want = [into, out], r = turnsTo(shape, 0, want);
-      tiles.push({ x, z, shape }); need.push(want); solved.push(r);
-    }
-    const F = { w, h, tiles, spout: { x: sx, z: sz, side: sSide }, wheel: { x: wx, z: wz, side: wSide } };
-    if (!channelFlow(F, solved).wheel) continue;
-    for (let m = 0; m < 30; m++) {
-      const start = solved.map(() => ri(0, 3));
-      if (start.filter((r, i) => r !== solved[i]).length < tiles.length / 2 || channelFlow(F, start).wheel) continue;
-      const turns = need.reduce((s, want, i) => s + (want ? turnsTo(tiles[i].shape, start[i], want) : 0), 0);
-      if (turns >= band[0] && turns <= band[1]) return { field: F, start, solution: { turns, turnsOf: start.map((r, i) => need[i] ? turnsTo(tiles[i].shape, r, need[i]) : 0) } };
-    }
-  }
-  return null;
-}
-
 // --- crates (Sokoban) --------------------------------------------------------------------------------
 
 // The cells the player reaches from p without pushing (walls and crates in the way)
@@ -345,144 +287,6 @@ export function makeCrates(R, w, h, band, n, entrySide, tries = 300) {
     if (crates.some(c => F.plates.includes(c) || c === entry)) continue;
     const sol = solveSokoban(F, crates, entry);
     if (sol.pushes >= band[0] && sol.pushes <= band[1]) return { field: F, start: crates, solution: sol };
-  }
-  return null;
-}
-
-// Two plates out of sight of each other round a corner (an L of open ground, a wall in its crook),
-// at least 6 cells apart; one crate a short push (2-4) from plate B
-export function makePlates(R, w, h, tries = 300) {
-  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
-  for (let k = 0; k < tries; k++) {
-    // the L: the field less a block in one corner (the wall that hides one plate from the other)
-    const cw = ri(2, w - 3), ch = ri(2, h - 3), corner = ri(0, 3), walls = [];
-    for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
-      const inX = corner & 1 ? x >= w - cw : x < cw, inZ = corner & 2 ? z >= h - ch : z < ch;
-      if (inX && inZ) walls.push(z * w + x);
-    }
-    const open = [...Array(w * h).keys()].filter(c => !walls.includes(c));
-    const sees = (a, b) => {   // a straight line between the cells' middles over open ground only
-      const [ax, az, bx, bz] = [a % w + 0.5, Math.floor(a / w) + 0.5, b % w + 0.5, Math.floor(b / w) + 0.5], n = 24;
-      for (let i = 0; i <= n; i++) { const x = Math.floor(ax + (bx - ax) * i / n), z = Math.floor(az + (bz - az) * i / n); if (walls.includes(z * w + x)) return false; }
-      return true;
-    };
-    const A = open[ri(0, open.length - 1)], B = open[ri(0, open.length - 1)];
-    if (Math.abs(A % w - B % w) + Math.abs(Math.floor(A / w) - Math.floor(B / w)) < 6 || sees(A, B)) continue;
-    // the entry: on a side, into open ground, not on a plate
-    const side = ri(0, 3), t = ri(1, (side < 2 ? h : w) - 2), [ex, ez] = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side], entry = ez * w + ex;
-    if (walls.includes(entry) || entry === A || entry === B) continue;
-    const F = { w, h, walls, plates: [A, B], entry: { x: ex, z: ez, side } };
-    // the crate: pulled off plate B a few times
-    let crate = B, p = null;
-    for (let m = 0; m < 40 && !p; m++) {
-      const d = ri(0, 3), s = pushTarget(F, [], crate, d);
-      if (s !== null && pushTarget(F, [], s, d) !== null) p = s;
-    }
-    if (!p) continue;
-    const want = ri(2, 4);
-    for (let done = 0, m = 0; m < 60 && done < want; m++) {
-      const d = ri(0, 3), s = pushTarget(F, [crate], crate, d), b = s === null ? null : pushTarget(F, [crate], s, d);
-      if (s === null || b === null || !region(F, [crate], p).has(s)) continue;
-      crate = s; p = b; done++;
-    }
-    if (crate === B || crate === A || crate === entry) continue;
-    const sol = solveSokoban(F, [crate], entry, [B]);
-    if (sol.pushes >= 2 && sol.pushes <= 4) return { field: F, start: [crate], solution: sol };
-  }
-  return null;
-}
-
-// --- stones ---------------------------------------------------------------------------------------
-
-// A walk over w x h that never meets itself, `want` cells long, from an edge cell (towards side
-// `side`: on that edge), each step to the neighbour with the fewest ways on (Warnsdorff's rule,
-// ties at random); null when it gets stuck short
-function warnsdorff(R, w, h, want, side) {
-  const t = Math.floor(R() * (side < 2 ? h : w)), start = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side];
-  const seen = new Set([`${start}`]), path = [start];
-  const free = (x, z) => x >= 0 && z >= 0 && x < w && z < h && !seen.has(`${x},${z}`);
-  const onward = (x, z) => SD.filter(([dx, dz]) => free(x + dx, z + dz)).length;
-  while (path.length < want) {
-    const [x, z] = path.at(-1);
-    const next = SD.map(([dx, dz]) => [x + dx, z + dz]).filter(([nx, nz]) => free(nx, nz));
-    if (!next.length) return null;
-    next.sort((a, b) => onward(...a) - onward(...b) || R() - 0.5);
-    const best = next.filter(n => onward(...n) === onward(...next[0]));
-    const n = best[Math.floor(R() * best.length)];
-    seen.add(`${n}`); path.push(n);
-  }
-  return path;
-}
-
-// Sinking stones over w x h: the stones are exactly the cells of a walk of `length` cells from the
-// entry's side (its first cell the start stone, its last the goal); kept when the stones join up in
-// enough places (branch points: a stone with three or more stones beside it) for wrong turns
-export function makeStones(R, w, h, length, branches, side, tries = 400) {
-  for (let n = 0; n < tries; n++) {
-    const path = warnsdorff(R, w, h, length, side);
-    if (!path) continue;
-    const set = new Set(path.map(c => `${c}`));
-    const degree = ([x, z]) => SD.filter(([dx, dz]) => set.has(`${x + dx},${z + dz}`)).length;
-    const branchPoints = path.filter(c => degree(c) >= 3).length;
-    if (branchPoints < branches) continue;
-    return { stones: path, start: 0, goal: path.length - 1, branchPoints, side };
-  }
-  return null;
-}
-
-// --- sluices ----------------------------------------------------------------------------------------
-
-// Every state the basins reach from `start` by the levers: Map('levels' -> fewest pulls)
-export function sluiceStates(cap, start, levers) {
-  const dist = new Map([[`${start}`, 0]]), queue = [start];
-  for (let i = 0; i < queue.length; i++) for (const l of levers) {
-    const next = pourSluice(cap, queue[i], l), k = `${next}`;
-    if (!dist.has(k)) { dist.set(k, dist.get(`${queue[i]}`) + 1); queue.push(next); }
-  }
-  return dist;
-}
-// The fewest pulls to bring basin `float` to `mark` from `start` (Infinity: never)
-export function solveSluices(cap, start, levers, float, mark) {
-  let best = Infinity;
-  for (const [k, d] of sluiceStates(cap, start, levers)) if (+k.split(',')[float] === mark && d < best) best = d;
-  return best;
-}
-
-// n basins (capacities 3-12), pipes both ways between neighbours, now and then a spring or a drain;
-// the marked basin's mark a level its fewest pulls reach in `band`
-export function makeSluices(R, n, band, tries = 400) {
-  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
-  for (let k = 0; k < tries; k++) {
-    const cap = Array.from({ length: n }, () => ri(3, 12));
-    if (new Set(cap).size < n) continue;
-    const levers = [];
-    for (let i = 0; i + 1 < n; i++) levers.push({ from: i, to: i + 1 }, { from: i + 1, to: i });
-    if (R() < 0.6) levers.push({ spring: ri(0, n - 1) });
-    if (R() < 0.4) levers.push({ drain: ri(0, n - 1) });
-    const start = cap.map((c, i) => (i === 0 ? c : 0));
-    const float = ri(1, n - 1), dist = sluiceStates(cap, start, levers), best = new Map();
-    for (const [key, d] of dist) { const lv = +key.split(',')[float]; if (!best.has(lv) || d < best.get(lv)) best.set(lv, d); }
-    const marks = [...best].filter(([lv, d]) => lv !== start[float] && d >= band[0] && d <= band[1]);
-    if (!marks.length) continue;
-    const [mark, pulls] = marks[ri(0, marks.length - 1)];
-    return { cap, start, levers, float, mark, pulls };
-  }
-  return null;
-}
-// The fewest pulls as a list of lever indices from `levels` to the float at its mark (null: none)
-export function sluiceWay(cap, levels, levers, float, mark) {
-  const back = new Map([[`${levels}`, null]]), queue = [levels];
-  for (let i = 0; i < queue.length; i++) {
-    const cur = queue[i];
-    if (cur[float] === mark) {
-      const way = [];
-      for (let k = `${cur}`; back.get(k); k = back.get(k).from) way.unshift(back.get(k).lever);
-      return way;
-    }
-    levers.forEach((l, j) => {
-      const next = pourSluice(cap, cur, l), k = `${next}`;
-      if (!back.has(k)) { back.set(k, { from: `${cur}`, lever: j }); queue.push(next); }
-    });
   }
   return null;
 }

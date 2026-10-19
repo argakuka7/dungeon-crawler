@@ -22,11 +22,10 @@ import { shapeTimed, timedGoal } from './timed.js';
 import { shapeMiasma, miasmaGoal } from './miasma.js';
 import { shapeCold, coldGoal } from './cold.js';
 import { shapeStorm, stormGoal } from './storm.js';
-import { shapeDrift, driftGoal } from './drift.js';
 import { shapeSiege, siegeGoal, RING } from './siege.js';
 import { shapeChase, chaseGoal } from './chase.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
-import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, DRIFT, HUNTER, runeOrder } from '../../core/trials.js';
+import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, HUNTER, runeOrder } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
@@ -34,18 +33,13 @@ const KINDS = {
   miasma: { shape: shapeMiasma, goal: miasmaGoal, costs: null, finish: finishMiasma },
   cold: { shape: shapeCold, goal: coldGoal, costs: null, finish: finishCold },
   storm: { shape: shapeStorm, goal: stormGoal, costs: null, finish: finishStorm },
-  drift: { shape: shapeDrift, goal: driftGoal, costs: collapseRoute, finish: finishDrift },
   siege: { shape: shapeSiege, goal: siegeGoal, costs: null, finish: finishSiege },
   chase: { shape: shapeChase, goal: chaseGoal, costs: collapseRoute, finish: finishChase },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
   mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   braziers: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
-  channels: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   crates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
-  plates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
-  stones: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
-  sluices: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   runes: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   timedgate: { shape: shapeTimed, goal: timedGoal, costs: null, finish: finishTimed },
 };
@@ -250,29 +244,6 @@ function finishStorm(ctx, t, out) {
     check: { exposed: Math.round(worst * 100) / 100, path: checkPath(path, arr, () => null) } };
 }
 
-// --- drift ---------------------------------------------------------------------------------------------
-
-// The pads' cycle: an order (the first pad first) where from each pad the next cannot be reached in
-// time even running (travel > DRIFT.period) and the one after it can walking (travel x SLACK <= 2 x
-// period); every pad reached from the entry.
-function finishDrift(ctx, t, out) {
-  const pads = t.pads.map(c => ctx.layerFloor(c, 0));
-  if (pads.some(f => !f || f.fluid)) return null;
-  const reach = reachFrom(ctx, [t.entry], true);
-  if (pads.some(f => !reach.has(f.id))) return null;
-  const run = pads.map(f => arrivals(ctx, f, RUN_SPEED)), walk = pads.map(f => arrivals(ctx, f));
-  const tRun = (i, j) => run[i].time.get(pads[j].id) ?? Infinity, tWalk = (i, j) => walk[i].time.get(pads[j].id) ?? Infinity;
-  const orders = [[0, 1, 2, 3], [0, 1, 3, 2], [0, 2, 1, 3], [0, 2, 3, 1], [0, 3, 1, 2], [0, 3, 2, 1]];
-  const ok = o => o.every((p, i) => tRun(p, o[(i + 1) % 4]) > DRIFT.period && tWalk(p, o[(i + 2) % 4]) * SLACK <= 2 * DRIFT.period);
-  const order = orders.find(ok);
-  if (!order) return null;
-  const at = f => ({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 });
-  for (const f of pads) f.noSpawn = true;
-  const parts = order.map((k, i) => ({ id: `pad${i}`, type: 'waypad', ...at(pads[k]), i }));
-  return { parts, cycle: parts.map(p => p.id), check: { next: order.map((p, i) => Math.round(tRun(p, order[(i + 1) % 4]) * 100) / 100),
-    after: order.map((p, i) => Math.round(tWalk(p, order[(i + 2) % 4]) * 100) / 100) } };
-}
-
 // --- siege --------------------------------------------------------------------------------------------
 
 // The ring flat and dry; every mouth reaches it
@@ -381,7 +352,7 @@ function gateAt(deck, x, z, side, id) {
 
 // Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
 // map.trial.parts), checked against the built ground
-const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid, stones: finishStones, sluices: finishGrid, runes: finishGrid };
+const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, crates: finishGrid, runes: finishGrid };
 function finishPuzzles(ctx, t) {
   const puzzles = [], parts = [], start = {};
   for (const [i, pz] of t.puzzles.entries()) {
@@ -410,23 +381,6 @@ function finishGrid(ctx, pz, id) {
   }
   const rec = gridRecord(pz, id);
   return { id, kind: pz.kind, deck: deckOf(deck), ...rec };
-}
-
-// The stones: each a floor at the deck's level (a crust floor: it sinks, game/trials.js), the rest
-// of the field the depth's fluid (the trial's fluid stands over the field at its surface, BASIN:
-// what falls through a sunk stone is in it)
-function finishStones(ctx, pz, id) {
-  const { deck } = pz, F = pz.made.field, on = new Map(F.stones.map(([x, z], i) => [deck.cell(x, z), i]));
-  const stones = [];
-  for (let z = 0; z < deck.h; z++) for (let x = 0; x < deck.w; x++) {
-    const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
-    if (ctx.pieces[c].length || !f) return null;
-    if (!on.has(c)) { if (!f.fluid) return null; continue; }
-    if (f.fluid || f.top !== deck.level || ctx.cols[c].length > 1) return null;
-    f.crust = true; f.noSpawn = true;
-    stones[on.get(c)] = { c, f: f.id, x, z };
-  }
-  return { id, kind: 'stones', deck: deckOf(deck), ...gridRecord(pz, id), stones };
 }
 
 // The ice: flat, every field cell at the deck's level but the rocks (up at the rim's), nothing built

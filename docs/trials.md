@@ -1,11 +1,11 @@
 # Trials: events and puzzles in a cube
 
 Status: steps 1 to 10 are done: every kind (`flood`, `collapse`, `miasma`, `cold`, `storm`,
-`siege`, `chase`, `drift`, `sunken`, and the puzzles `slide`, `mirror`, `braziers`, `channels`,
-`crates`, `plates`, `stones`, `sluices`, `timedgate`, `runes`) is planned, built, checked, playable (alone and
-together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
+`siege`, `chase`, `sunken`, and the puzzles `slide`, `mirror`, `braziers`, `crates`, `timedgate`,
+`runes`) is planned, built, checked, playable (alone and together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
-"Implementation order" at the end).
+"Implementation order" at the end). `drift`, `channels`, `stones`, `sluices` and `plates` were
+built once and taken out again: they did not play well.
 
 A **trial** is a room built around one goal that is more than walking to the exit: getting to
 high ground before the water does, outrunning a collapsing floor, turning mirrors until a beam
@@ -34,18 +34,13 @@ above, and every puzzle you solve drains it one stage further.
 | `storm` | event | yes | gusts | pull the lightning rod | blown off | sky and surface themes (1–6) |
 | `siege` | event | yes | yes | hold the beacon long enough | death | 2–19, any |
 | `chase` | event | yes | yes | drop the portcullis on the hunter | being grabbed | 4–19, any |
-| `drift` | event | yes | cycle | catch the lit pad three times | (ordinary death) | 3–19, any |
 | `miasma` | event | yes | yes | open the vent valve at the bottom | the fog (damage) | walled: canyon 5–6, caves 7–19 |
 | `slide` | puzzle | no | no | slide across the ice to the goal | – | any (ice, salt, polished stone) |
 | `mirror` | puzzle | no | no | the beam hits the receiver | – | mines, forge, ruins, abyss, highlands |
-| `channels` | puzzle | no | no | water reaches the wheel | – | any with water or lava |
 | `braziers` | puzzle | no | no | every brazier lit | – | any |
 | `crates` | puzzle | no | no | a crate on every plate | – | any |
-| `stones` | puzzle | no | no | step on every stone once, ending on the goal | – | fluids: lagoon, grotto, cenote, swamp, volcanic |
-| `sluices` | puzzle | no | no | the marked basin at its mark | – | grotto, cenote, lagoon, hive, mines |
 | `timedgate` | puzzle | no | no | through the gate before it shuts | – | any |
 | `runes` | puzzle | no | no | press the runestones in the order carved elsewhere | – | ruins, highlands, ossuary, karst, abyss |
-| `plates` | puzzle | no | no | two plates held at once (a friend or a crate) | – | any |
 
 All numbers below are starting values, to be tuned in play.
 
@@ -135,7 +130,7 @@ that while it is not resolved:
 - `flood`, `miasma`: the room as built; the hazard is gone.
 - `collapse`: the crust is whole and holds (cracked, but it no longer falls).
 - `sunken`: drained to the stage reached; fully drained once done.
-- `cold`, `storm`, `siege`, `chase`, `drift`: the room as built, braziers lit, the beacon
+- `cold`, `storm`, `siege`, `chase`: the room as built, braziers lit, the beacon
   burning, the portcullis up.
 - Puzzles: solved state (mirrors set, crates on plates, gate open for good).
 
@@ -153,7 +148,7 @@ Every timed event is checked against a slow player, not a perfect one:
   (the summit, the apron, the valve's ledge).
 - **Gaps** (`cold`, `storm`): the longest stretch between two safe spots must take at most
   the allowance (below), at walking speed × `SLACK`.
-- **Races** (`chase`, `drift`): compare two travel times (below).
+- **Races** (`chase`): compare two travel times (below).
 - Enemies in a timed room are placed off the checked path and outside its 2-cell band.
 
 Each kind's tests also run the real character along the checked path with the real physics
@@ -169,7 +164,7 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 | button | `F` presses it once |
 | plate | pressed while a body or a crate stands on it |
 | gate | portcullis across a 1–3 cell opening, a box collider while shut |
-| rotor | `F` turns it a quarter (mirrors, channel tiles) |
+| rotor | `F` turns it a quarter (mirrors) |
 | brazier | `F` lights it; a lit brazier warms (`cold`) |
 | crate | pushed one cell by walking into it for 0.3 s; never pulled |
 | runestone | `F` presses it, part of a sequence |
@@ -193,7 +188,6 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 - One player failing an event goes back to the room before. The event runs on for the others
   in the room. If nobody is left in the room, it resets to `idle`.
 - Resolved is resolved for everyone (`run.trials` is shared like kills).
-- `plates` is easier with a friend on purpose.
 
 ### Data
 
@@ -274,8 +268,8 @@ exit come out of the water.
   `TRIALS[kind].deck`). A 6x6 deck finds no room in the exit's quadrant beside its pad, so while
   only such puzzles are built a sunken room has two stages and the planner wants the exit's
   quadrant beside the entry's (`world/trials.js roomFits`); with the 5x5 ones built (`smallStages`:
-  mirror, braziers, channels on a 3x3 field) it has three from depth 10, a small one last, by the exit. The stages drained are kept in
-  `run.trials` (saved, and shared when playing together).
+  mirror and braziers on a 3x3 field) it has three from depth 10, a small one last, by the exit.
+  The stages drained are kept in `run.trials` (saved, and shared when playing together).
 
 ### `collapse`: The crumbling floor
 
@@ -417,30 +411,6 @@ on it at the end.
   owner's grab fails the trial, another's is their death). The lever works only while it runs.
   `population: 0` now means no enemies at all (`core/spawns.js`).
 
-### `drift`: The drifting gate
-
-The exit is walled off. Somewhere in the room a pad is lit, and it moves on in a cycle you can
-learn. Catch it three times.
-
-- **Room:** one layer. The exit portal sits in a sealed alcove. 4 **waypads** around the room,
-  with obstacles between them (a ridge, a pit, a ladder).
-- **Cycle:** a seeded order of the pads; one is lit for `PERIOD` (6 s), and the next one
-  pulses during the last 3 s. Standing on a lit pad catches it (a rune by the alcove lights);
-  the next catch has to be a different pad.
-- **Goal:** three catches. The alcove opens and the seals with it.
-- **Fails by:** only death. Missing a pad just means waiting for the cycle.
-- **Check:** races: from each pad, the next in the cycle cannot be reached in time even at
-  `RUN_SPEED` (`travel(i, i+1) > PERIOD`), but the one after it can be reached walking
-  (`travel(i, i+2) × SLACK ≤ 2 × PERIOD`). Reading ahead is the puzzle.
-- **Population:** half, some near the pads.
-- **As built** (`cubegen/trials/drift.js`, `index.js finishDrift`; `game/trialevents.js`): a
-  ridge (rock, six levels up) across the middle, two cells thick, from one face to the other but
-  for a way round at one end, its closed end on a face with no portal by the middle; two pads on
-  each side, far from the way round. Walks, jumps and drops only. The cycle is the first order of
-  the four (pad 0 first) that passes the races; it goes to and fro across the ridge. The catches
-  are the trial's bits (`catches`, `last`), counted by its owner for anyone standing on the lit
-  pad; the HUD counts them (no runes by the exit yet).
-
 ### `miasma`: Sinking fog
 
 Poison fog fills the room from above and sinks. Get down to the vent valve at the bottom
@@ -510,22 +480,6 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   scrambled till its fewest flips are 3-4 (4-6 from depth 10). The emitter and the receiver stand
   on the ring round the field.
 
-### `channels`: Rotating channels
-
-- **Field:** 5×5 to 7×7 stone channel tiles (straight, bend, tee) on a raised bed; a spout on
-  one edge, a water wheel (or a lava-driven gear in the forge) on another.
-- **Rules:** `F` turns a tile a quarter. The flow runs live through connected tiles. The flowing
-  water is a visual stream in a gutter, not a fluid floor: it does not kill. Walk on the
-  walkway around the tiles and reach in.
-- **Generator:** a random path from spout to wheel, plus random side branches, sets each tile's
-  shape; then scramble every rotation (at least half the tiles changed). A tile turns on its
-  own, so the solution is known by construction. Accept if at least 4 turns are needed.
-- **Themes:** grotto, cenote, lagoon, swamp, mines (water), forge, volcanic (lava).
-- **As built** (`grid.js`, `solve.js makeChannels`, `core/trials.js channelFlow`): 5x5 (6x6 from
-  depth 10, 3x3 on a sunken platform). The tiles are flat and walked on (not a raised bed you reach
-  into): F turns the tile in front of you. The way is a random walk that avoids itself, now and then
-  a tee on it; its turns needed are 4-8 (6-12 from depth 10).
-
 ### `braziers`: Lights out
 
 - **Field:** 5–9 braziers in a pattern (ring, 3×3 grid, star) with carved lines on the floor
@@ -554,45 +508,6 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   rim, the rubble walls up to the rim's height, the way in a gap with the reset lever in front of it.
   Pushes needed: 4-10 (8-16 from depth 10). A crate is a box in the way; walking square into one for
   0.3 s pushes it. Playing together the crates' cells go to the others with the puzzle's bits.
-
-### `stones`: Sinking stones
-
-- **Field:** stepping stones (single cells, side by side) over the depth's fluid, in a 5×5 to
-  7×7 region, a start stone and a goal stone.
-- **Rules:** a stone sinks 1 s after you step off it. Goal: stand on the goal stone having
-  stood on every stone. If you are stuck (no neighbour left), the stones rise again after
-  3 s and you start over from where you stand. Jumping into the fluid is an ordinary death.
-- **Generator:** a random Hamiltonian path of 12–30 cells (a self-avoiding walk with
-  Warnsdorff's rule, retried) from start to goal; the stones are exactly its cells. Accept if
-  the stones' adjacency graph has enough branch points (cells of degree ≥ 3: 2 at depths
-  1–9, 4 from 10) for wrong turns to be possible.
-- **Themes:** lagoon, grotto, cenote, swamp, volcanic, abyss.
-- **As built** (`grid.js`, `solve.js makeStones`; `game/trials.js stepStones`): a 5x5 field of
-  12-16 stones (7x7, 22-30 from depth 10) in a rim, the way in a gap beside the start stone; the
-  cells between them the depth's sea (`RIVER_SURF`), the stones floors at the deck's level drawn
-  apart (the fluid shows between them). A stone is a crust floor: sunk, it is gone like the
-  collapse's, and the trial's fluid stands over the field's cells only (`physics/fluid.js` `cells`),
-  so a sunk stone drowns. The goal stone is bright, the start one tinted. Each player walks the
-  stones on their own (the first to finish solves it for all); stepping off the field onto dry
-  ground raises them all. Too wet and too big for a sunken platform.
-
-### `sluices`: Sluices
-
-- **Field:** 3–4 basins (raised tanks with railings, marks on their sides) joined by pipes
-  with sluice levers; one basin has a float with a mark that lifts the gate (or a bridge) when
-  the basin is at the mark.
-- **Rules:** a lever pours one basin into another until the first is empty or the second is
-  full (the water jug puzzle). Some basins have a spring (fills it up) or a drain (empties it)
-  on a lever. The reset lever puts every basin back.
-- **Generator:** capacities 3–12, a pipe set, a start state. BFS over the states (a few
-  hundred) gives the reachable levels of the float basin with their minimal steps; pick as the
-  mark one whose minimum is within the depth band (4–6, then 6–9).
-- **Themes:** grotto, cenote, lagoon, hive (honey), mines (water tanks).
-- **As built** (`grid.js`, `solve.js makeSluices`, `sluiceWay`; `core/trials.js pourSluice`): a
-  walk-on deck of 5x3 (7x3 with four basins from depth 10), the tanks along its back row, pipes
-  between neighbours both ways (a lever each way), a spring on 60% of them and a drain on 40%,
-  the first basin full at the start. The tanks are as tall as they hold, notched each level, the
-  marked one with a red line and a float. A lever's label names its pour and both levels.
 
 ### `timedgate`: Timed gate
 
@@ -633,20 +548,6 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   the rune room the HUD then shows the order, the pressed ones bracketed. The stones stand round
   the edge of a 5x5 walk-on deck. Not a sunken stage.
 
-### `plates`: Two plates
-
-- **Field:** two plates at least 6 cells apart, out of sight of each other (around a corner),
-  one crate within a short push of plate B.
-- **Rules:** the gate is open while both plates are pressed and stays open once you are
-  through (latched by a plate past it). Two players do it directly; alone, push the crate onto
-  plate B and stand on plate A. Reset lever as for crates.
-- **Generator:** the crate's way onto plate B is 2–4 pushes (Sokoban solver as for `crates`).
-- **As built** (`solve.js makePlates`): a 7x7 field in a rim, a block of wall in one corner making
-  it an L, the plates at least six cells apart with no straight line between them. Both held at
-  once solves it for good (no latch plate past the gate: holding both is the moment it opens).
-  It fits no sunken platform.
-- **Themes:** any.
-
 ## Assets (Blender, `assets/trials.glb`)
 
 `blender/trials.py` builds the parts in the props' style (flat-shaded, vertex colours, a
@@ -657,21 +558,20 @@ cube built again if it came late. A part is made of **pieces**, each its own mes
 game moves them: `trial_lever` and its `trial_lever_arm` and `trial_lever_knob`, the
 portcullis's `post`, `lintel` (a cell each) and `bars` (a cell each), the mirror's base,
 `frame` and `pane`. Pieces are authored where they sit in their part, but those that turn
-about a point off the ground carry it (`pivot` in their extras: the lever's arm, the wheel,
-the flames).
+about a point off the ground carry it (`pivot` in their extras: the lever's arm, the flames).
+The library still holds the parts of the kinds taken out (the channel tiles, spout and wheel,
+the sluice tank and float, the waypad); nothing uses them.
 
 | Part | Pieces |
 |---|---|
 | button, lightning rod, vent valve | `trial_button`, `trial_rod`, `trial_valve`; their knob `trial_knob` (glows in the trial's colour, sinks and goes green once done) |
-| plate, waypad | `trial_plate` + `trial_plate_rune`, `trial_waypad` + `trial_waypad_rune` (the runes drawn with the game's glow) |
+| plate | `trial_plate` + `trial_plate_rune` (the rune drawn with the game's glow) |
 | gate, portcullis | `trial_portcullis_post` (two, the right one turned), `_lintel`, `_bars`: the grate rises into the lintel's slot, clipped there |
 | vault cage | `trial_cage`, sinking into the ground (clipped at it) |
-| lever (reset, sluice) | `trial_lever`, `_arm`, `_knob` (the reset's red) |
+| lever (reset) | `trial_lever`, `_arm`, `_knob` (the reset's red) |
 | mirror, emitter, receiver | `trial_mirror`, `_frame`, `_pane`; `trial_emitter`, `trial_receiver` with `trial_gem` |
 | brazier, the cold's warming braziers | the ruins' `ruins_brazier_a` (borrowed: `TRIAL_PROPS`), its glowing part the flame |
 | great fire, beacon | `trial_great_fire`, `trial_beacon` and their `_flame` |
-| channel tiles, spout, wheel | `trial_tile_I/L/T` with their `_water`, `trial_spout` + `_stream`, `trial_wheel_frame` + `trial_wheel` |
-| sluice tank | `trial_tank` (its walls stretched to what it holds), `_floor`, `_rim`, `trial_float` |
 | crate | the mines' `mines_crate_a` (borrowed), a cell big |
 | runestone, tablet | `trial_runestone`, `trial_tablet` (the glyphs drawn on them in code) |
 | siege mouth | `trial_mouth` |
@@ -689,7 +589,7 @@ the beam, the tide lines and the fog are effects, drawn in code.
 | `cubegen/trials/index.js` | builds `map.trial` from `spec.trial`, retries within the cube's attempts |
 | `cubegen/trials/<kind>.js` | the room's shape and parts for one kind |
 | `cubegen/trials/timing.js` | the timing check (deadlines, gaps, races) |
-| `cubegen/trials/solve.js` | the puzzle solvers (slide BFS, mirror BFS, GF(2), Sokoban, Hamiltonian, jugs) |
+| `cubegen/trials/solve.js` | the puzzle solvers (slide BFS, mirror BFS, GF(2), Sokoban) |
 | `core/trials.js` | pure rules: states, timelines, puzzle moves, part rules |
 | `game/trials.js` | running it: arming, seals, HUD, `F` on parts, fails, death to `from` |
 | `render/trials.js` | parts, the rising fluid, crumbling crust, fog, gusts, beam |
@@ -719,11 +619,11 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 3. [x] **Parts + `slide`:** lever, button, plate, gate, reset; the action key's `part`; the
    first solver.
 4. [x] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
-5. [x] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
-6. [x] **`crates`, `plates`** (crates, Sokoban solver).
-7. [x] **`stones`, `sluices`, `timedgate`.**
+5. [x] **`mirror`, `braziers`** (rotors, braziers, beam; `channels` taken out again).
+6. [x] **`crates`** (crates, Sokoban solver; `plates` taken out again).
+7. [x] **`timedgate`** (`stones`, `sluices` taken out again).
 8. [x] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
-9. [x] **`siege`, `chase`, `drift`.**
+9. [x] **`siege`, `chase`** (`drift` taken out again).
 10. [x] **`runes`** (the clue room across cubes).
 11. [x] The balance simulation (`docs/balance.md`, `tools/balance.mjs`) counts trial time (every
     kind has its `TRIAL_TIME`) and rewards (a siege's waves as kills, a vault's site with the

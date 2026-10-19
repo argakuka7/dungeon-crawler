@@ -114,7 +114,7 @@ function cage(a) {
   return { obj: at(g, a), bars, clip, open: 0, want: 0 };
 }
 
-// --- the grid puzzles' parts (mirror, braziers, channels) ---------------------------------------
+// --- the grid puzzles' parts (mirror, braziers, crates, runes) -----------------------------------
 const BEAM_Y = 0.75;   // how high over the field the beam runs
 // a mirror on a turntable: a pane at 45 degrees, turned the other way by its bit
 function mirrorPart(p) {
@@ -152,54 +152,6 @@ const greatFire = p => fire(p, { model: 'trial_great_fire', flame: 'trial_great_
 const beaconPart = p => fire(p, { model: 'trial_beacon', flame: 'trial_beacon_flame', light: 3.2, reach: 7, high: 2.1 });
 const FIRES = new Set(['brazier', 'warm', 'fire', 'beacon']);
 
-// a channel tile: a stone slab with its channel (unturned: I along x, L to +x and +z, T to +x, -x
-// and +z), the water in it when wet; turned a quarter clockwise per bit
-let waterMat = null;
-function tilePart(p) {
-  const g = new THREE.Group(), turn = new THREE.Group(), water = piece(`trial_tile_${p.shape}_water`, { mat: waterMat });
-  water.visible = false;
-  turn.add(piece(`trial_tile_${p.shape}`), water);
-  g.add(turn);
-  return { obj: at(g, p), turn, wet: [water], angle: 0 };
-}
-// the spout (a pipe pouring onto the field) and the wheel (it turns while the water drives it)
-function spoutPart(p, lava) {
-  const g = new THREE.Group(), stream = cutMaterial(new THREE.MeshStandardMaterial({ color: lava ? 0xff6a00 : 0x3f8fe0, emissive: lava ? 0xff3a00 : 0x0a2a4a, transparent: !lava, opacity: 0.9 }));
-  g.add(piece('trial_spout'), piece('trial_spout_stream', { mat: stream }));
-  g.rotation.y = [Math.PI, 0, Math.PI / 2, -Math.PI / 2][p.side];
-  return { obj: at(g, p) };
-}
-function wheelPart(p) {
-  const g = new THREE.Group(), wheel = piece('trial_wheel');
-  wheel.position.set(...pivotOf('trial_wheel'));
-  g.add(piece('trial_wheel_frame'), wheel);
-  g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
-  return { obj: at(g, p), wheel, spin: 0 };
-}
-// a sluice basin: a stone tank as tall as it holds (UNIT a level: its walls stretched to that,
-// the coping on top), notches up its front, the water in it; the marked one a red line at its
-// mark and a float on the water
-const UNIT = 0.11, TANK_BASE = 0.25;
-function basinPart(p) {
-  const g = new THREE.Group(), H = TANK_BASE + p.cap * UNIT + 0.05, walls = piece('trial_tank'), rim = piece('trial_tank_rim');
-  walls.scale.y = H; rim.position.y = H;
-  g.add(piece('trial_tank_floor'), walls, rim);
-  const notch = new THREE.MeshBasicMaterial({ color: 0x202020 });
-  for (let k = 1; k <= p.cap; k++) {
-    const n = new THREE.Mesh(new THREE.BoxGeometry(k % 5 ? 0.12 : 0.24, 0.012, 0.01), notch);
-    n.position.set(-0.24, TANK_BASE + k * UNIT, 0.462); g.add(n);
-  }
-  const water = new THREE.Mesh(new THREE.BoxGeometry(0.78, 1, 0.78), fluidMaterial(1, 'full'));
-  water.position.y = TANK_BASE; g.add(water);
-  let float = null;
-  if (p.mark != null) {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(0.93, 0.03, 0.93), new THREE.MeshBasicMaterial({ color: 0xe03020 }));
-    line.position.y = TANK_BASE + p.mark * UNIT; g.add(line);
-    float = piece('trial_float');
-    g.add(float);
-  }
-  return { obj: at(g, p), water, float, level: -1 };
-}
 // a heavy crate: the mines' crate, a cell big
 function cratePart(p) {
   const g = new THREE.Group(), box = piece(TRIAL_PROPS.crate);
@@ -248,9 +200,9 @@ function barrier(p) {
 
 // a crust cell of the crumbling floor (cubegen/trials/collapse.js): its column of rock, drawn
 // on its own (render/floors.js leaves it out) round its centre, so it can shake and fall
-function crustCell(m, f, theme, stone = false) {
+function crustCell(m, f, theme) {
   const b = new GeoBuilder(), cs = f.cs, y0 = f.bottom * LH, cx = f.x + 0.5, cz = f.z + 0.5;
-  const avg = (cs[0] + cs[1] + cs[2] + cs[3]) / 4, top = gradient(stone ? theme.side : theme.top, avg / LH).multiplyScalar(stone ? 1.15 : 0.92);
+  const avg = (cs[0] + cs[1] + cs[2] + cs[3]) / 4, top = gradient(theme.top, avg / LH).multiplyScalar(0.92);
   const P = [[-0.5, cs[0], -0.5], [0.5, cs[1], -0.5], [-0.5, cs[2], 0.5], [0.5, cs[3], 0.5]];
   b.tri(P[0], P[1], P[3], top, [0, 1, 0]); b.tri(P[0], P[3], P[2], top, [0, 1, 0]);
   for (let d = 0; d < 4; d++) {
@@ -296,32 +248,19 @@ function tablet(c) {
   });
   return at(g, c);
 }
-// the drift's waypad: a round slab, its rune lit while the pad is (setWaypads), a light over it
-function waypad(p) {
-  const g = new THREE.Group(), rune = piece('trial_waypad_rune', { mat: glow(0x504060, 0.35) });
-  const light = new THREE.PointLight(0xd080ff, 0, 4, 2); light.position.y = 0.8;
-  g.add(piece('trial_waypad'), rune, light);
-  return { obj: at(g, p), rune, light };
-}
-
 export function buildTrialView(m, group) {
   const t = m.trial;
   shared = new Map();
-  waterMat = cutMaterial(new THREE.MeshStandardMaterial({ color: 0x2e86de, emissive: 0x0a2a4a, transparent: true, opacity: 0.85 }));
   for (const c of m.clues || []) group.add(tablet(c));
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
-    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), driven: new Set() };
-  // the crumbling crust, or the sinking stones (the last one, the goal, bright)
-  const sinking = t.crust ?? t.puzzles?.[0]?.stones;
-  if (sinking) {
-    const theme = themeOf(m), goal = !t.crust && sinking.at(-1);
-    view.crust = new Map(sinking.map(q => {
-      const f = m.floors[q.f], mesh = crustCell(m, f, theme, !t.crust);
-      if (!t.crust) mesh.scale.set(0.84, 1, 0.84);   // (a stone each: the fluid shows between them)
-      if (q === goal) mesh.material.color.lerp(new THREE.Color(0xffe070), 0.6);
-      else if (!t.crust && q === sinking[0]) mesh.material.color.lerp(color, 0.35);
+    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map() };
+  // the crumbling crust
+  if (t.crust) {
+    const theme = themeOf(m);
+    view.crust = new Map(t.crust.map(q => {
+      const f = m.floors[q.f], mesh = crustCell(m, f, theme);
       group.add(mesh);
       return [q.c, { mesh, f, state: 'whole', t: 0, base: mesh.material.color.clone() }];
     }));
@@ -335,15 +274,13 @@ export function buildTrialView(m, group) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(t.ring.r - 0.06, t.ring.r + 0.06, 48), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, depthWrite: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.ring.x, t.ring.y + 0.04, t.ring.z); group.add(ring);
     }
-    if (p.type === 'waypad') { const b = waypad(p); group.add(b.obj); (view.waypads ??= new Map()).set(p.id, b); }
     if (p.type === 'portcullis') { const b = portcullis({ ...p, side: p.side }); b.puzzle = -1; b.chase = true; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; b.cell = p.cell; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
-    if (p.type === 'lever' || p.type === 'reset' || p.type === 'sluice') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
+    if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060, 'trial_emitter') : p.type === 'receiver' ? crystal(p, 0x6080a0, 'trial_receiver')
       : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'beacon' ? beaconPart(p)
-        : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
-          : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : p.type === 'runestone' ? runestone(p) : null;
+        : p.type === 'crate' ? cratePart(p) : p.type === 'runestone' ? runestone(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
@@ -404,21 +341,6 @@ function hunterMesh() {
   g.add(body, light); g.scale.setScalar(1.6); g.visible = false;
   return g;
 }
-// the drift's pads: the lit one bright, the next pulsing in its last seconds; all lit once resolved
-export function setWaypads(world, pads, d, resolved) {
-  const v = world?.trialView;
-  if (!v) return;
-  const t = performance.now() / 1000;
-  pads.forEach((p, i) => {
-    const pad = v.waypads?.get(p.id);
-    if (!pad) return;
-    const on = resolved || i === d.lit, pulse = !resolved && d.pulse && i === d.next;
-    pad.rune.material.color.set(on ? 0xffe8ff : pulse ? 0xd080ff : 0x504060);
-    pad.rune.material.opacity = on ? 0.95 : pulse ? 0.4 + Math.abs(Math.sin(t * 8)) * 0.5 : 0.35;
-    pad.light.intensity = on ? 2.5 : pulse ? 1 : 0;
-  });
-}
-
 // the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; wind: the way it blows): streaks
 // across the room, a few in the warning, many in the gust
 export function setStorm(world, phase, wind, dt) {
@@ -496,8 +418,8 @@ function dust(mesh, n) {
     { v: [0, 0.4, 0], spread: 0.6, life: 1.1, size: 0.22, grow: 1.5, color: '#b8a888', alpha: 0.55, gravity: -0.2, drag: 1 });
 }
 
-// The grid puzzles as their bits say (game/trials.js): mirrors turned, braziers lit, tiles turned and
-// wet, the beam along its way (shown: puzzle index -> { beam: { cells, lit } } | { wet, wheel })
+// The grid puzzles as their bits say (game/trials.js): mirrors turned, braziers lit, crates pushed,
+// the beam along its way (shown: puzzle index -> { beam: { cells, lit } } | { held })
 const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0.85, depthWrite: false });
 export function setGridParts(world, m, s, shown) {
   const v = world?.trialView;
@@ -509,20 +431,10 @@ export function setGridParts(world, m, s, shown) {
       const lit = p.type === 'brazier' ? !!bit : p.type === 'beacon' ? s.phase !== 'idle' : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
       if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; }
     }
-    else if (p.type === 'tile') {
-      g.angle += (-bit * Math.PI / 2 - g.angle) * 0.3; g.turn.rotation.y = g.angle;
-      const wet = !!info?.wet?.has(p.i);
-      for (const w of g.wet) w.visible = wet;
-    } else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
-    else if (p.type === 'wheel') g.driven = !!info?.wheel;
+    else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
     else if (p.type === 'runestone') {   // lit: pressed in turn so far (the order's first n)
       const pz = m.puzzles[p.puzzle ?? 0], n = s.bits?.[`${pz.id}:n`] ?? 0, lit = s.phase === 'resolved' || pz.field.order.slice(0, n).includes(p.i);
       if (g.lit !== lit) { g.lit = lit; for (const f of g.face) f.material.emissive.set(lit ? 0xc0a0ff : 0x000000); }
-    } else if (p.type === 'basin') {   // its water at its level, filling or emptying smoothly
-      g.level = g.level < 0 ? bit : g.level + (bit - g.level) * 0.08;
-      const h = Math.max(0.001, g.level * UNIT);
-      g.water.scale.y = h; g.water.position.y = TANK_BASE + h / 2; g.water.visible = g.level > 0.02;
-      if (g.float) g.float.position.y = TANK_BASE + h;
     } else if (p.type === 'crate') {   // where its bit says (a field cell), slid there
       const pz = m.puzzles[p.puzzle ?? 0], F = pz.field, D = pz.deck;
       const x = D.x0 + bit % F.w + 0.5, z = D.z0 + Math.floor(bit / F.w) + 0.5, o = g.obj.position;
@@ -596,7 +508,6 @@ export function tickTrialView(world, time) {
   }
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
   for (const [, g] of v.grid) {
-    if (g.part.type === 'wheel' && g.driven) g.wheel.rotation.z -= 0.04;
     if (FIRES.has(g.part.type)) {   // out: no light at all; lit: it flickers
       const k = g.part.i ?? 0;
       g.light.intensity = g.lit ? g.gain * (1 + Math.sin(time * 7 + k) * 0.18) : 0;

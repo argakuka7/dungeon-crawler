@@ -8,8 +8,8 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, DRIFT, driftLit, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
-import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban, solveSluices, sluiceWay } from '../src/cubegen/trials/solve.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, pushTarget, platesHeld, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, holdTime, HUNTER, hunterAt, runeOrder } from '../src/core/trials.js';
+import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, solveSokoban } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -628,7 +628,7 @@ test('the sunken water: a stage at a time, sinking over SINK s, gone once resolv
   assert.equal(trialFluidLevel(m, s), null);
 });
 
-// --- mirror, braziers, channels ---------------------------------------------------------------------
+// --- mirror, braziers ------------------------------------------------------------------------------
 
 test('the beam: straight on, turned by each mirror the way its bit says, stopped by a rock or a body', () => {
   // emitter on the west of row 1 heading +x; a mirror at (2, 1); the receiver north of (2, 0)
@@ -656,18 +656,6 @@ test('lights out: pressing toggles a brazier and its links; the solver finds the
   }
 });
 
-test('channels: tiles open where their shape and turn say; the water runs through what joins up', () => {
-  assert.deepEqual(tileOpen('I', 0).sort(), [0, 1]); assert.deepEqual(tileOpen('I', 1).sort(), [2, 3]);
-  assert.deepEqual(tileOpen('L', 1).sort(), [1, 2]); assert.deepEqual(tileOpen('T', 2).sort(), [0, 1, 3]);
-  assert.equal(turnsTo('L', 0, [1, 3]), 2);
-  // spout west of (0,0) -> (0,0) I -> (1,0) L down -> (1,1) I down... wheel south of (1,1)
-  const F = { w: 2, h: 2, tiles: [{ x: 0, z: 0, shape: 'I' }, { x: 1, z: 0, shape: 'L' }, { x: 0, z: 1, shape: 'T' }, { x: 1, z: 1, shape: 'I' }],
-    spout: { x: 0, z: 0, side: 1 }, wheel: { x: 1, z: 1, side: 2 } };
-  // (1,0): L open -x and +z: turn 1 (0,2 -> 2,1)
-  assert.ok(channelFlow(F, [0, 1, 0, 1]).wheel);
-  assert.ok(!channelFlow(F, [1, 1, 0, 1]).wheel);
-});
-
 function* puzzlesOf(kind, seeds) {
   for (const seed of seeds) {
     const w = new World(seed, { trial: kind });
@@ -675,9 +663,9 @@ function* puzzlesOf(kind, seeds) {
   }
 }
 
-test('every mirror, braziers and channels room generates, unsolved, with its fewest moves in its band', () => {
+test('every mirror and braziers room generates, unsolved, with its fewest moves in its band', () => {
   const n = {};
-  for (const kind of ['mirror', 'braziers', 'channels']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1, 2])) {
+  for (const kind of ['mirror', 'braziers']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1, 2])) {
     n[kind] = (n[kind] ?? 0) + 1;
     const pz = m.trial.puzzles[0], bits = type => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
     const deep = d >= 10;
@@ -685,21 +673,16 @@ test('every mirror, braziers and channels room generates, unsolved, with its few
       assert.ok(!traceBeam(pz.field, bits('mirror')).lit, `${seed}/${d}: lit at the start`);
       const s = solveMirror(pz.field, bits('mirror'));
       assert.ok(s.flips >= (deep ? 4 : 3) && pz.field.mirrors.length <= 10, `${seed}/${d}: ${s.flips} flips`);
-    } else if (kind === 'braziers') {
+    } else {
       assert.ok(!allLit(bits('brazier')));
       assert.ok(solveBraziers(pz.field.links, bits('brazier')).presses >= 3, `${seed}/${d}`);
-    } else {
-      const start = bits('tile');
-      assert.ok(!channelFlow(pz.field, start).wheel, `${seed}/${d}: the wheel turns at the start`);
-      assert.ok(channelFlow(pz.field, start.map((r, i) => r + pz.check.solution[i])).wheel, `${seed}/${d}: the solution does not drive it`);
-      assert.ok(pz.check.turns >= 4);
     }
     assert.ok(pz.parts.every(p => p.puzzle === 0));
   }
-  assert.ok(n.mirror > 30 && n.braziers > 30 && n.channels > 30, JSON.stringify(n));
+  assert.ok(n.mirror > 30 && n.braziers > 30, JSON.stringify(n));
 });
 
-// --- crates, plates ------------------------------------------------------------------------------
+// --- crates -------------------------------------------------------------------------------------
 
 test('Sokoban: a crate pushed (never pulled) onto its plate in the fewest pushes; a crate in a corner is lost', () => {
   // 4 x 3, no walls: the crate at (1,1), the plate at (3,1), the player at (0,1): two pushes east
@@ -715,73 +698,33 @@ test('Sokoban: a crate pushed (never pulled) onto its plate in the fewest pushes
   assert.ok(platesHeld(F, [7]) && !platesHeld(F, [6]) && platesHeld(F, [6], [7]));
 });
 
-test('every crates and two-plates room generates: solvable in its band from the way in, no crate on a plate at the start', () => {
-  const n = {};
-  for (const kind of ['crates', 'plates']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1, 2])) {
-    n[kind] = (n[kind] ?? 0) + 1;
+test('every crates room generates: solvable in its band from the way in, no crate on a plate at the start', () => {
+  let n = 0;
+  for (const { seed, d, m } of puzzlesOf('crates', [0, 1, 2])) {
+    n++;
     const pz = m.trial.puzzles[0], F = pz.field, crates = pz.parts.filter(p => p.type === 'crate').sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
     const entry = F.entry.z * F.w + F.entry.x;
     assert.ok(!crates.some(c => F.plates.includes(c)), `${seed}/${d}: a crate on a plate`);
     assert.ok(pz.parts.some(p => p.type === 'reset'), `${seed}/${d}: no reset lever`);
-    if (kind === 'crates') {
-      const s = solveSokoban(F, crates, entry);
-      assert.ok(s.pushes === pz.check.pushes && s.pushes >= (d >= 10 ? 8 : 4), `${seed}/${d}: ${s.pushes} pushes`);
-      assert.equal(crates.length, F.plates.length);
-    } else {
-      const [A, B] = F.plates, dist = Math.abs(A % F.w - B % F.w) + Math.abs(Math.floor(A / F.w) - Math.floor(B / F.w));
-      assert.ok(dist >= 6, `${seed}/${d}: the plates ${dist} apart`);
-      const s = solveSokoban(F, crates, entry, [B]);
-      assert.ok(s.pushes >= 2 && s.pushes <= 4, `${seed}/${d}: ${s.pushes} pushes onto plate B`);
-    }
+    const s = solveSokoban(F, crates, entry);
+    assert.ok(s.pushes === pz.check.pushes && s.pushes >= (d >= 10 ? 8 : 4), `${seed}/${d}: ${s.pushes} pushes`);
+    assert.equal(crates.length, F.plates.length);
   }
-  assert.ok(n.crates > 30 && n.plates > 30, JSON.stringify(n));
+  assert.ok(n > 30, `${n}`);
 });
 
-// --- stones, sluices, the timed gate ------------------------------------------------------------
+// --- the timed gate ----------------------------------------------------------------------------
 
-test('sluices: a pour stops when one basin is empty or the other full; the BFS finds the fewest pulls', () => {
-  const cap = [5, 3];
-  assert.deepEqual(pourSluice(cap, [5, 0], { from: 0, to: 1 }), [2, 3]);
-  assert.deepEqual(pourSluice(cap, [2, 3], { from: 1, to: 0 }), [5, 0]);
-  assert.deepEqual(pourSluice(cap, [1, 1], { spring: 1 }), [1, 3]);
-  assert.deepEqual(pourSluice(cap, [1, 1], { drain: 0 }), [0, 1]);
-  // 2 in the 3 from a full 5: pour 5>3, drain the 3, pour 5>3: 3 pulls; 4 in the 5 never (water
-  // only leaves)
-  const levers = [{ from: 0, to: 1 }, { from: 1, to: 0 }, { drain: 1 }];
-  assert.equal(solveSluices(cap, [5, 0], levers, 1, 2), 3);
-  assert.deepEqual(sluiceWay(cap, [5, 0], levers, 1, 2), [0, 2, 0]);
-  assert.equal(solveSluices(cap, [5, 0], levers, 0, 4), Infinity);
-});
-
-test('every stones, sluices and timed gate room generates as proved', () => {
-  const n = {};
-  for (const kind of ['stones', 'sluices', 'timedgate']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1])) {
-    n[kind] = (n[kind] ?? 0) + 1;
+test('every timed gate room generates as proved', () => {
+  let n = 0;
+  for (const { seed, d, m } of puzzlesOf('timedgate', [0, 1])) {
+    n++;
     const pz = m.trial.puzzles[0];
-    if (kind === 'stones') {
-      // a walk over all of them, each beside the one before; they sink (crust floors) over the fluid
-      const L = pz.stones;
-      assert.ok(L.length >= (d >= 10 ? 22 : 12), `${seed}/${d}: ${L.length} stones`);
-      L.forEach((q, i) => {
-        assert.ok(m.floors[q.f].crust && m.floors[q.f].top === pz.deck.level);
-        if (i) assert.equal(Math.abs(q.x - L[i - 1].x) + Math.abs(q.z - L[i - 1].z), 1);
-      });
-      assert.equal(m.trial.fluid, m.fluid ?? m.trial.fluid);
-    }
-    if (kind === 'sluices') {
-      const F = pz.field, start = pz.parts.filter(p => p.type === 'basin').sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
-      const pulls = solveSluices(F.cap, start, F.levers, F.float, F.mark);
-      assert.ok(pulls === pz.check.pulls && pulls >= (d >= 10 ? 6 : 4) && pulls <= (d >= 10 ? 9 : 6), `${seed}/${d}: ${pulls} pulls`);
-      assert.equal(pz.parts.filter(p => p.type === 'sluice').length, F.levers.length);
-      assert.ok(pz.parts.some(p => p.type === 'reset'));
-    }
-    if (kind === 'timedgate') {
-      assert.equal(m.trial.role, 'route');
-      assert.ok(pz.check.run >= 4 && pz.T > pz.check.run * (d >= 10 ? 1.2 : 1.35), `${seed}/${d}: ${pz.check.run} s, open ${pz.T}`);
-      assert.ok(m.trial.check.path.length > 2);
-    }
+    assert.equal(m.trial.role, 'route');
+    assert.ok(pz.check.run >= 4 && pz.T > pz.check.run * (d >= 10 ? 1.2 : 1.35), `${seed}/${d}: ${pz.check.run} s, open ${pz.T}`);
+    assert.ok(m.trial.check.path.length > 2);
   }
-  assert.ok(n.stones > 20 && n.sluices > 20 && n.timedgate > 20, JSON.stringify(n));
+  assert.ok(n > 20, `${n}`);
 });
 
 // --- miasma -------------------------------------------------------------------------------------
@@ -888,27 +831,7 @@ test('every storm room: straight across, the gorge leeward, its way out in the w
   assert.ok(n > 10, `${n}`);
 });
 
-// --- drift, siege, chase -----------------------------------------------------------------------------
-
-test('the drift\'s cycle: a pad lit for its period, the next pulsing in its last seconds, round and round', () => {
-  assert.equal(driftLit(1).lit, -1);
-  const a = driftLit(ARM_TIME + 0.5), b = driftLit(ARM_TIME + DRIFT.period - 1), c = driftLit(ARM_TIME + DRIFT.period * 5 + 0.1);
-  assert.deepEqual([a.lit, a.next, a.pulse], [0, 1, false]);
-  assert.deepEqual([b.lit, b.pulse], [0, true]);
-  assert.equal(c.lit, 1);
-});
-
-test('every drift room: the next pad out of reach even running, the one after it in reach walking', () => {
-  let n = 0;
-  for (const { seed, d, m } of events('drift', [0, 1, 2])) {
-    const { next, after } = m.trial.check;
-    assert.equal(m.trial.parts.filter(p => p.type === 'waypad').length, 4);
-    assert.ok(next.every(t => t > DRIFT.period), `${seed}/${d}: next ${next}`);
-    assert.ok(after.every(t => t * SLACK <= 2 * DRIFT.period), `${seed}/${d}: after ${after}`);
-    n++;
-  }
-  assert.ok(n > 20, `${n}`);
-});
+// --- siege, chase -----------------------------------------------------------------------------------
 
 test('every siege room: the ring flat round the beacon, 2-3 mouths far from it, each reaching it; the hold grows with depth', () => {
   let n = 0;

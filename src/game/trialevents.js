@@ -1,9 +1,8 @@
-// The events with actors of their own (docs/trials.md): `siege` (waves for the beacon's ring),
-// `chase` (the hunter on the way behind you) and `drift` (the lit pad moving on). Stepped from
-// game/trials.js updateTrial; the game that owns the trial (net/trials.js) spawns the waves, counts
-// the hold and the catches (the trial's bits, told to the others); each game checks its own player
-// against the hunter.
-import { ARM_TIME, TRIALS, SIEGE, holdTime, HUNTER, hunterAt, DRIFT, driftLit } from '../core/trials.js';
+// The events with actors of their own (docs/trials.md): `siege` (waves for the beacon's ring) and
+// `chase` (the hunter on the way behind you). Stepped from game/trials.js updateTrial; the game that
+// owns the trial (net/trials.js) spawns the waves and counts the hold (the trial's bits, told to
+// the others); each game checks its own player against the hunter.
+import { ARM_TIME, TRIALS, SIEGE, holdTime, HUNTER, hunterAt } from '../core/trials.js';
 import { ENEMY_KINDS, isRanged, makeEnemy, coinRange, depthLevel } from '../core/enemies.js';
 import { swarmKind } from '../core/hordes.js';
 import { DEPTH_SPAWNS } from '../core/spawns.js';
@@ -16,7 +15,7 @@ import { addEnemies, removeEnemies, mirroring, allEnemies } from './enemies.js';
 import { online } from '../net/online.js';
 import { hurt } from './flow.js';
 import { sfx } from '../audio/sfx.js';
-import { setHunter, setWaypads } from '../render/trials.js';
+import { setHunter } from '../render/trials.js';
 
 const bodies = () => [player, ...online.buddies.filter(b => b.here && b.hp > 0)].filter(b => b.hp > 0);
 
@@ -110,24 +109,6 @@ export function hunterGap(m, s) {
   return Math.max(0, best - h.at);
 }
 
-// --- drift -------------------------------------------------------------------------------------------
-
-// the lit pad: someone standing on it catches it (not the pad caught last); three catches win
-export function stepDrift(m, s, dt, resolve) {
-  if (m.kind !== 'drift') return;
-  const pads = m.parts.filter(p => p.type === 'waypad'), live = s.phase === 'running';
-  const d = live ? driftLit(s.t, pads.length) : { lit: -1, next: -1, pulse: false };
-  setWaypads(state.world, pads, d, s.phase === 'resolved');
-  if (!live || mirroring() || d.lit < 0) return;
-  const pad = pads[d.lit];
-  if ((s.bits.last ?? 0) === d.lit + 1) return;
-  if (!bodies().some(b => Math.hypot(b.x - pad.x, b.z - pad.z) < 0.75 && Math.abs(b.y - pad.y) < 0.8)) return;
-  s.bits.catches = (s.bits.catches ?? 0) + 1; s.bits.last = d.lit + 1;
-  sfx('levelUp', { volume: 0.5, pitch: 1.3 });
-  setStatus(`Caught! ${s.bits.catches} of ${DRIFT.catches}`);
-  if (s.bits.catches >= DRIFT.catches) resolve();
-}
-
 // the HUD's line for these kinds: { line, fill } (null: not one of them)
 export function eventHud(m, s) {
   if (s.kind === 'siege') {
@@ -141,22 +122,15 @@ export function eventHud(m, s) {
     const h = hunterAt(m.hunterPath, s.t);
     return { line: `Run! It is ${hunterGap(m, s)} cells behind you: pull the lever past the portcullis`, fill: Math.min(1, h.at / m.hunterPath.length) };
   }
-  if (s.kind === 'drift') {
-    const d = driftLit(s.t, m.parts.filter(p => p.type === 'waypad').length);
-    if (s.phase === 'armed') return { line: 'The pads stir…', fill: 0 };
-    return { line: `Catch the lit pad: ${s.bits.catches ?? 0} of ${DRIFT.catches} (it moves on in ${Math.ceil(d.left)} s)`, fill: (s.bits.catches ?? 0) / DRIFT.catches };
-  }
   return null;
 }
 export const EVENT_HOW = {
   siege: 'Hold the beacon\'s ring against the waves!',
   chase: 'Something that cannot be hurt is coming. Run, and drop the portcullis on it!',
-  drift: 'The lit pad moves on in a cycle. Learn it, and catch it three times.',
 };
 export const EVENT_DONE = {
   siege: 'The beacon flares: they flee into the dark.',
   chase: 'The portcullis crashes down on the hunter.',
-  drift: 'The gate settles: the way on is open.',
 };
-export const isActorEvent = kind => kind === 'siege' || kind === 'chase' || kind === 'drift';
+export const isActorEvent = kind => kind === 'siege' || kind === 'chase';
 export { TRIALS };

@@ -25,36 +25,25 @@ export const TRIALS = {
     population: 0.3, armByPart: true },
   chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
     population: 0 },
-  drift: { name: 'The drifting gate', family: 'event', sealed: true, timed: true, depths: [3, 19], themes: null, weight: 1, color: '#d080ff', built: true,
-    population: 0.5 },
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
     population: 0.5 },
   slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
     population: 0.5 },
   mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
     population: 0.5 },
-  channels: { name: 'Rotating channels', family: 'puzzle', sealed: false, timed: false, depths: [1, 19],
-    themes: ['grotto', 'cenote', 'lagoon', 'swamp', 'mines', 'forge', 'volcanic', 'meadow', 'karst', 'clouds', 'peaks', 'highlands', 'canyon', 'roots', 'frozen', 'hive', 'abyss'], weight: 1, color: '#50b0ff', built: true,
-    population: 0.5 },
   braziers: { name: 'Lights out', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040', built: true,
     lean: { ossuary: 2.5, ruins: 2.5 }, population: 0.5 },
   crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060', built: true,
     population: 0.5 },
-  stones: { name: 'Sinking stones', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['lagoon', 'grotto', 'cenote', 'swamp', 'volcanic', 'abyss'], weight: 1.5, color: '#60e0b0',
-    built: true, population: 0.5 },
-  sluices: { name: 'Sluices', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['grotto', 'cenote', 'lagoon', 'hive', 'mines'], weight: 1.5, color: '#40c8e0',
-    built: true, population: 0.5 },
   timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0', built: true,
     population: 0.5 },
   runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff',
     built: true, population: 0.5 },
-  plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0', built: true,
-    population: 0.5 },
 };
 for (const [id, t] of Object.entries(TRIALS)) {
   t.id = id;
   // a puzzle's deck in a sunken room (field and rim): 6 x 6 for the slide and the crates, else 5 x 5
-  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : id === 'plates' || id === 'stones' || id === 'sluices' ? 9 : 5;   // (no platform: too big, or wet)
+  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : 5;
 }
 // may a sunken room have small stage puzzles (a 5 x 5 deck): any built? (then it has three stages
 // from depth 10, and its last may share the exit's quadrant: cubegen/trials/sunken.js)
@@ -185,16 +174,6 @@ export function stormPhase(t) {
     : { phase: 'lull', left: STORM.period - c };
 }
 
-// --- drift ---------------------------------------------------------------------------------------------
-// One pad of the cycle lit at a time for DRIFT.period s (from the clock running), the next pulsing
-// in its last DRIFT.warn s; DRIFT.catches catches (each on another pad than the one before) win.
-export const DRIFT = { period: 6, warn: 3, catches: 3 };
-export function driftLit(t, n = 4) {
-  if (t < ARM_TIME) return { lit: -1, next: 0, left: ARM_TIME - t };
-  const c = t - ARM_TIME, k = Math.floor(c / DRIFT.period), left = DRIFT.period - (c - k * DRIFT.period);
-  return { lit: k % n, next: (k + 1) % n, left, pulse: left <= DRIFT.warn };
-}
-
 // --- siege ---------------------------------------------------------------------------------------------
 // HOLD s in the ring (it fills only while a player is in it; it pauses, never drops) from depth 2's 45
 // to depth 19's 90; four waves come at even shares of it.
@@ -293,8 +272,6 @@ export function trialFluidLevel(m, s) {
   if (m.kind === 'sunken') return sunkenLevel(m, s);
   // the collapse: what falls through the crust is in the basin's fluid (its surface over every hole)
   if (m.kind === 'collapse') return s.phase === 'armed' || s.phase === 'running' ? BASIN : null;
-  // the sinking stones: what falls through a sunk one is in the pit's fluid
-  if (m.kind === 'stones') return s.phase === 'resolved' ? null : BASIN;
   if (m.kind !== 'flood') return null;
   const tl = m.timeline;
   if (s.phase === 'idle') return null;
@@ -306,8 +283,8 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60, stones: 50, sluices: 90, timedgate: 40,
-  miasma: 55, cold: 40, storm: 50, siege: 75, chase: 30, drift: 45, runes: 45 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, crates: 120, timedgate: 40,
+  miasma: 55, cold: 40, storm: 50, siege: 75, chase: 30, runes: 45 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -331,9 +308,9 @@ export function crustState(m, s, q) {
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
-  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice', valve: 'Open the vent valve',
+  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', crate: null, valve: 'Open the vent valve',
   warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod', beacon: 'Light the beacon',
-  portcullis: null, waypad: null, runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
+  portcullis: null, runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------
@@ -407,35 +384,7 @@ export function traceBeam(F, bits, blocked = () => false) {
 export const pressBrazier = (bits, links, i) => { for (const j of [i, ...links[i]]) bits[j] = bits[j] ? 0 : 1; return bits; };
 export const allLit = bits => bits.every(Boolean);
 
-// --- channels (docs/trials.md, `channels`) --------------------------------------------------------
-// A grid of channel tiles: shape 'I' (straight), 'L' (bend), 'T' (tee), each turned r quarters. A
-// tile's openings (DIRS) unturned: I +x,-x; L +x,+z; T +x,-x,+z. Water comes in at the spout (beside
-// cell `spout` on side spout.side) and runs through every tile it can (both ends open); it drives the
-// wheel when it reaches the cell beside it, open towards it.
-//   field: { w, h, tiles: [{ x, z, shape }], spout: { x, z, side }, wheel: { x, z, side } }, turns: [r, ...]
-const OPEN = { I: [0, 1], L: [0, 2], T: [0, 1, 2] };
-const CW = [2, 3, 1, 0];   // a quarter turn clockwise (seen from above): +x -> +z -> -x -> -z
-export const tileOpen = (shape, r) => OPEN[shape].map(d => { for (let i = 0; i < (r & 3); i++) d = CW[d]; return d; });
-export function channelFlow(F, turns) {
-  const at = new Map(F.tiles.map((t, i) => [`${t.x},${t.z}`, i])), wet = new Set(), queue = [];
-  const enter = (x, z, from) => {   // water arrives at (x, z) through its side `from`
-    const i = at.get(`${x},${z}`);
-    if (i === undefined || wet.has(i) || !tileOpen(F.tiles[i].shape, turns[i]).includes(from)) return;
-    wet.add(i); queue.push(i);
-  };
-  enter(F.spout.x, F.spout.z, F.spout.side);
-  let wheel = false;
-  for (let q = 0; q < queue.length; q++) {
-    const t = F.tiles[queue[q]];
-    for (const d of tileOpen(t.shape, turns[queue[q]])) {
-      if (t.x === F.wheel.x && t.z === F.wheel.z && d === F.wheel.side) wheel = true;
-      enter(t.x + SD[d][0], t.z + SD[d][1], d ^ 1);
-    }
-  }
-  return { wet, wheel };
-}
-
-// --- crates and plates (docs/trials.md, `crates`, `plates`) ---------------------------------------
+// --- crates (docs/trials.md, `crates`) ---------------------------------------
 // A field of w x h cells (cell index x + z w): walls (rubble) on some, plates on some, crates
 // (their cells: the puzzle's bits). A crate is pushed one cell by walking into it; never pulled. A
 // push of the crate at c the way d: the cell beyond free (on the field, no wall, no crate).
@@ -448,15 +397,3 @@ export function pushTarget(F, crates, c, d) {
 }
 // is every plate held? by a crate, or by a body standing on it (cells: the bodies' field cells)
 export const platesHeld = (F, crates, cells = []) => F.plates.every(p => crates.includes(p) || cells.includes(p));
-
-// --- sluices: the water jugs (docs/trials.md, `sluices`) ------------------------------------------
-// Basins of capacities cap[i] holding levels[i]; a lever pours a into b until a is empty or b full,
-// a spring fills its basin up, a drain empties it.
-//   lever: { from, to } | { spring: i } | { drain: i }
-export function pourSluice(cap, levels, lever) {
-  const out = levels.slice();
-  if (lever.spring != null) out[lever.spring] = cap[lever.spring];
-  else if (lever.drain != null) out[lever.drain] = 0;
-  else { const n = Math.min(out[lever.from], cap[lever.to] - out[lever.to]); out[lever.from] -= n; out[lever.to] += n; }
-  return out;
-}
