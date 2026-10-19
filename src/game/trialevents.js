@@ -22,7 +22,6 @@ const bodies = () => [player, ...online.buddies.filter(b => b.here && b.hp > 0)]
 
 // --- siege ---------------------------------------------------------------------------------------
 
-const RAID_ENGAGE = 2.6;   // a player this close draws an attacker off the ring (game/defense.js RAID.engage)
 let raiders = new Set(), attempt = 0;
 // the room put back (a fail, a death, coming in): the attackers gone
 export function resetEvents() {
@@ -53,7 +52,8 @@ function spawnWave(m, s, k) {
     const [clo, chi] = coinRange(kind, level), id = `trial:${m.key}:siege${attempt}:${k}:${i}`;
     const e = makeEnemy({ id, level, coinDrop: Math.round((clo + chi) / 4), kind, f, x: f.x + 0.5, y: groundY(f, f.x + 0.5, f.z + 0.5), z: f.z + 0.5,
       yaw: Math.atan2(m.ring.x - f.x - 0.5, m.ring.z - f.z - 0.5) }, kind, i);
-    e.defence = { post: ring[Math.floor(R() * ring.length)], engage: false };
+    e.siege = m.key;   // (kept out of a guardian room's posting, game/defence.js)
+    e.defence = { post: ring[Math.floor(R() * ring.length)], engage: true };
     raiders.add(id); list.push(e);
   }
   addEnemies(list);
@@ -65,7 +65,9 @@ function spawnWave(m, s, k) {
 const inRing = (m, b) => Math.hypot(b.x - m.ring.x, b.z - m.ring.z) <= m.ring.r + 0.3 && Math.abs(b.y - m.ring.y) < 1.5;
 export function stepSiege(m, s, dt, resolve) {
   if (m.kind !== 'siege' || s.phase !== 'running') return;
-  for (const e of allEnemies()) if (raiders.has(e.id) && e.defence) e.defence.engage = Math.hypot(player.x - e.x, player.z - e.z) < RAID_ENGAGE && player.hp > 0;
+  // they go straight for the players (whoever is about, to their floor or where they can strike
+  // them from); with no way to anyone, they make for their posts in the ring
+  for (const e of allEnemies()) if (raiders.has(e.id) && e.defence) e.defence.engage = true;
   if (mirroring()) return;
   const hold = holdTime(state.map.depth);
   if (bodies().some(b => inRing(m, b))) s.bits.hold = Math.min(hold, (s.bits.hold ?? 0) + dt);

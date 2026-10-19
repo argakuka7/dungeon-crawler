@@ -489,6 +489,13 @@ export async function runTrialChecks(kind = 'flood') {
     const { allEnemies } = await import('../../src/game/enemies.js');
     check(allEnemies().some(e => e.id.startsWith(`trial:${t.key}:siege`)), 'the first wave');
     check((state.trial.bits.hold ?? 0) > 0.5, 'the hold fills in the ring');
+    // they come for whoever holds the ring, not stand about their mouths
+    const hp = [player.hp, player.maxHp];
+    player.hp = player.maxHp = 1e6; state.devPassive = false;
+    const raiders = () => allEnemies().filter(e => e.id.startsWith(`trial:${t.key}:siege`) && e.mode !== 'dead');
+    check(raiders().every(e => e.defence), 'still posted at the beacon');
+    await until(() => raiders().some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2.5), 'an attacker at the ring', 12000);
+    [player.hp, player.maxHp] = hp;
     state.devPassive = true;
     const { holdTime } = await import('../../src/core/trials.js');
     state.trial.bits.hold = holdTime(state.map.depth) - 0.5;

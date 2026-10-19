@@ -384,9 +384,11 @@ Light the beacon and hold its ring against waves from the room's edges.
   its ring so the smoothing leaves the ring flat. The mouths (dark arches) stand two cells in from
   the edge, at least 6.5 cells from the beacon (8 fits only a 16-cell room's corners), 5 apart.
   The waves come at each quarter of the hold, the horde's kinds (swarm stats, half rewards), the
-  heaviest close fighter of the roster once in the last; they hold posts in the ring and fight a
-  player who comes near (`e.defence`, like a raid). The trial's owner spawns them and counts the
-  hold (`bits.hold`, `bits.wave`).
+  heaviest close fighter of the roster once in the last; they go straight for the players (to
+  their floor, else where they can strike them from), and with no way to anyone make for posts in
+  the ring (`e.defence` always engaged; `e.siege` keeps a guardian room's posting,
+  `game/defence.js`, from taking them over). The trial's owner spawns them and counts the hold
+  (`bits.hold`, `bits.wave`).
 
 ### `chase`: The hunter
 
