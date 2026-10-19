@@ -6,7 +6,7 @@ import { cliffWall, wallRegion } from './walls.js';
 import { palRow } from '../themes/fluids.js';
 import { buildInteriorFloors } from './interior.js';
 import { restY } from './surface.js';
-import { groundAt, slopeAt, triangleSlope, WET_LIFT } from './shore.js';
+import { groundAt, slopeAt, triangleSlope, waterSolids, WET_LIFT } from './shore.js';
 
 const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
@@ -91,13 +91,15 @@ export function wetSlope(b, f) {
 const SUB = 4, DIAG = [[1, 1], [-1, 1], [1, -1], [-1, -1]], BAND = 0.4;
 function fluidVolume(m, f, b) {
   const x = f.x, z = f.z, sy = restY(f.surf * LH), by = f.top * LH;
-  // a solid in the neighbouring column that covers the corners of it next to us up to the surface
-  const bank = (nx, nz, corners) => inb(nx, nz) && m.cols[idx(nx, nz)].find(g => !g.crust && !g.fluid
-    && g.bottom * LH <= by + 0.01 && Math.min(...corners.map(k => g.cs[k])) >= sy);
+  // a bank: a solid in the neighbouring column (a floor, or a stair or landing standing in it:
+  // render/shore.js waterSolids) reaching down under the surface and up over it at the corners of
+  // it next to us; down to our bed it hides our side there
+  const bank = (nx, nz, corners, low = sy) => inb(nx, nz) && waterSolids(m, idx(nx, nz)).find(g => !g.fluid
+    && g.bottom * LH < low && Math.min(...corners.map(k => g.cs[k])) >= sy);
   const hidden = d => {
     const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
     if (!inb(nx, nz)) return false;
-    return !!bank(nx, nz, EDGE_CORNERS[OPP[d]]) || m.cols[idx(nx, nz)].some(g => !g.crust && g.fluid && g.surf >= f.surf && g.top * LH <= sy);
+    return !!bank(nx, nz, EDGE_CORNERS[OPP[d]], by + 0.02) || m.cols[idx(nx, nz)].some(g => !g.crust && g.fluid && g.surf >= f.surf && g.top * LH <= sy);
   };
   let shores = 0;
   for (let d = 0; d < 4; d++) if (bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]])) shores |= 1 << d;
@@ -105,10 +107,18 @@ function fluidVolume(m, f, b) {
   const white = C('#ffffff');
   b.palNow = f.pal ?? m.fluidRows?.[f.fluid] ?? palRow(m.depth ?? 0, f.fluid, 0);   // its colours (cubegen/fluidbodies.js)
   b.uvNow = [(z * N + x) * 256 + shores, sy];
-  // the bed under every corner (render/shore.js); its quads split along the bed's own diagonal, so
-  // that the bed's height between them is what it is
-  const memo = new Map();
-  b.shoreAt = v => memo.get(v[0] + ',' + v[2]) ?? memo.set(v[0] + ',' + v[2], [groundAt(f, v[0], v[2]), slopeAt(m, f, v[0], v[2]), 0, 0]).get(v[0] + ',' + v[2]);
+  // the ground under every corner (render/shore.js): the bed, or a stair or landing standing in
+  // the water over it; its quads split along the bed's own diagonal, so that the bed's height
+  // between them is what it is
+  const memo = new Map(), grounds = waterSolids(m, f.c).filter(g => g === f || !g.fluid && g.bottom * LH < sy && g.top * LH > by);
+  b.shoreAt = v => {
+    const k = v[0] + ',' + v[2];
+    if (!memo.has(k)) {
+      const g = grounds.reduce((a, g) => groundAt(g, v[0], v[2]) > groundAt(a, v[0], v[2]) ? g : a, f);
+      memo.set(k, [groundAt(g, v[0], v[2]), slopeAt(m, g, v[0], v[2]), 0, 0]);
+    }
+    return memo.get(k);
+  };
   for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
     const x0 = x + i / SUB, x1 = x + (i + 1) / SUB, z0 = z + j / SUB, z1 = z + (j + 1) / SUB;
     if (f.split) b.quad([x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [x0, sy, z0], [0, 1, 0], white);
@@ -123,9 +133,10 @@ function fluidVolume(m, f, b) {
     const at = k => [ax + (bx - ax) * k / SUB, az + (bz - az) * k / SUB];
     const g = bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]]);
     if (g) {
-      // the wet band on the bank's wall facing us, round the surface
+      // the wet band on the bank's wall facing us, round the surface (a structure is wet by its
+      // own material: render/wet.js)
       b.uvNow = [-1, sy];
-      wetWall(b, wallPieces(m, g, OPP[d]), sy - BAND, sy + BAND);
+      if (!g.piece) wetWall(b, wallPieces(m, g, OPP[d]), sy - BAND, sy + BAND);
     } else if (!hidden(d)) {
       b.uvNow = [-2, sy];
       for (let k = 0; k < SUB; k++) {

@@ -12,6 +12,7 @@ import { floorY } from '../core/surfaces.js';
 import { indexBlockers } from '../core/blockers.js';
 import { createContext } from './context.js';
 import { ladderInfo } from './climbs.js';
+import { shapeStructures } from './shape.js';
 import { testRoomOf } from '../world/testrooms.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 
@@ -55,7 +56,8 @@ function start(spec) {
 }
 
 // the floors indexed and linked (where the edges meet), the map
-function finish(ctx, spec, { K = 1, B = [0], arrival, note, lineup = [] }) {
+// (shape: its runs, if any, shaped as the generator does: heights, bases, supports, cubegen/shape.js)
+function finish(ctx, spec, { K = 1, B = [0], arrival, note, lineup = [], shape = false }) {
   const floors = ctx.floors = [];
   for (const col of ctx.cols) {
     col.sort((a, b) => a.top - b.top);
@@ -71,14 +73,15 @@ function finish(ctx, spec, { K = 1, B = [0], arrival, note, lineup = [] }) {
         && Math.abs(g.cs[na] - f.cs[a]) < 0.01 && Math.abs(g.cs[nb] - f.cs[b]) < 0.01) ?? null;
     });
   }
+  if (shape) shapeStructures(ctx);
   const name = testRoomOf(spec.key), blockers = indexBlockers([]);
   // where /testroom puts you: on the top floor there
   const top = ctx.cols[idx(Math.floor(arrival.x), Math.floor(arrival.z))].at(-1);
   arrival = { ...arrival, y: floorY(top, arrival.x % 1, arrival.z % 1) };
   Object.assign(ctx.stats, { layers: K, mode: `test room (${name})` });
   return {
-    seed: spec.seed, attempts: 1, K, B, cols: ctx.cols, floors, pieces: Array.from({ length: N * N }, () => []),
-    runs: [], falls: ctx.falls, fences: new Map(), fenceList: [], stats: ctx.stats, moves: [], portals: [], exit: null,
+    seed: spec.seed, attempts: 1, K, B, cols: ctx.cols, floors, pieces: ctx.pieces ?? Array.from({ length: N * N }, () => []),
+    runs: ctx.runs ?? [], falls: ctx.falls, fences: new Map(), fenceList: [], stats: ctx.stats, moves: [], portals: [], exit: null,
     ladders: ctx.ladders.map(l => ladderInfo(l, l.style)),
     gateKeys: [null, null, null, null], trialFaces: [null, null, null, null], trial: null, clues: [],
     safe: new Uint8Array(floors.length).fill(1),
@@ -197,7 +200,37 @@ function lineupRoom(spec, name) {
     note: `${lineup.length} kinds standing idle until hit (/passive keeps them so)` });
 }
 
-const BUILD = { water_hill: waterHill, fluids, climb, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians') };
+// Ground (level 4) round a lake (its bed at 1, its surface at 3), and what stands in it: a stair
+// from the west bank down into it to its bed, a plank bridge on legs across it from north to
+// south, and a wooden ladder from its bed up a tower in its east (render/shore.js: the foam
+// goes round them all, render/wet.js: they stay wet where the water has just been).
+const SHORES = { G: 4, S: 3, bed: 1, x0: 4, x1: 10, z0: 5, z1: 11 };
+function shores(spec) {
+  const ctx = start(spec), { G, S, bed, x0, x1, z0, z1 } = SHORES;
+  ctx.spec = { ...spec, forceBridge: 'plank' };
+  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
+    if (x === x1 + 1 && z === 9) ctx.put(x, z, { top: 12 });   // the ladder's tower
+    else if (x >= x0 && x <= x1 && z >= z0 && z <= z1) ctx.put(x, z, { top: bed, fluid: WATER, surf: S });
+    else ctx.put(x, z, { top: G });
+  }
+  ctx.stats.fluids.push('water lake');
+  // runs as the generator places them (cubegen/place.js), shaped by it (cubegen/shape.js)
+  ctx.pieces = Array.from({ length: N * N }, () => []); ctx.runs = []; ctx.pathFloors = [];
+  const run = (kind, from, to, cells, dx, dz) => {
+    const r = { kind, from, to, d: DIRS.findIndex(([a, b]) => a === dx && b === dz), dx, dz, cells, k: cells.length, sag: 0, span: false, layerLo: 0, layerHi: 0, layer: 0 };
+    r.pieces = cells.map((c, j) => { const p = { kind, c, j, dx, dz, run: r, y0: 0, y1: 0, base: 0 }; ctx.pieces[c].push(p); return p; });
+    ctx.runs.push(r);
+    ctx.stats[kind === 'stair' ? 'stairs' : 'bridges']++;
+  };
+  const at = (x, z) => ctx.cols[idx(x, z)][0];
+  run('stair', at(x0 - 1, 6), at(x0 + 3, 6), [0, 1, 2].map(i => idx(x0 + i, 6)), 1, 0);
+  run('bridge', at(8, z0 - 1), at(8, z1 + 1), Array.from({ length: z1 - z0 + 1 }, (_, i) => idx(8, z0 + i)), 0, 1);
+  ctx.ladder(at(x1, 9), at(x1 + 1, 9), 'wood');
+  return finish(ctx, spec, { arrival: { x: 2.5, z: 13.5, yaw: Math.PI * 0.75 }, shape: true,
+    note: 'a stair into a lake, a bridge on legs over it, a ladder up out of it' });
+}
+
+const BUILD = { water_hill: waterHill, fluids, climb, shores, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians') };
 // spec: { key, depth, seed, biome (the depth's theme) }
 export function generateTestRoom(spec) {
   const name = testRoomOf(spec.key);

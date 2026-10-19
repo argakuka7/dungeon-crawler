@@ -13,6 +13,7 @@ export const TEST_ROOMS = Object.freeze({
   climb: 'every ladder style: up towers, and hanging from a floating platform',
   enemies: 'every species and kind (and the bosses\' minions) lined up, idle',
   guardians: 'every side and descent guardian and the bosses lined up, idle',
+  shores: 'a lake with a stair down into it, a bridge on legs over it and a ladder up out of it',
 });
 export const TEST_ROOM_NAMES = Object.keys(TEST_ROOMS);
 

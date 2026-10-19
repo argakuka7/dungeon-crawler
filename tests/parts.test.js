@@ -4,6 +4,7 @@ import { World } from '../src/world/world.js';
 import { FLUIDS, LAVA, ACID } from '../src/core/constants.js';
 import { buildCubeGeometry, buildCubeParts } from '../src/render/cubegeo.js';
 import { PARTS, packParts, partBuffers } from '../src/render/parts.js';
+import { waterSolids } from '../src/render/shore.js';
 
 // a few cubes with every fluid and some falls among them: the surface, the acid rivers of the
 // fungal swamp and the lava rivers of the volcanic depths
@@ -87,8 +88,9 @@ test('fluid tops carry the bed under them, the sides and bands nothing', () => {
         // (a wet band on sloping ground: 3)
         if (p.uv[v * 2] < 0) { assert.deepEqual([ground, slope], [0, 0]); assert.ok(none === 1 || none === 3 && p.uv[v * 2] === -1); continue; }
         assert.equal(none, 0);
-        // (the cube's own fluids lie in beds, under their surface)
-        assert.ok(ground <= p.uv[v * 2 + 1] + 1e-6 && slope >= 0, `${m.key}: bed ${ground} under ${p.uv[v * 2 + 1]}`);
+        // (the cube's own fluids lie in beds, under their surface, but for a structure standing in them)
+        const c = Math.floor(p.uv[v * 2] / 256);
+        assert.ok(slope >= 0 && (ground <= p.uv[v * 2 + 1] + 1e-6 || waterSolids(m, c).some(g => g.piece)), `${m.key}: bed ${ground} under ${p.uv[v * 2 + 1]}`);
       }
     }
   }

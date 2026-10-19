@@ -21,6 +21,7 @@ import { U, inject, turnShape, CUT_KINDS } from './cutshader.js';
 import { WALL_CUT, CUT_HEIGHT } from './interior.js';
 import { showGhosts } from './ghosts.js';
 import { restY, ownTakes } from './surface.js';
+import { waterSolids } from './shore.js';
 
 const RADIUS = 2.8;   // world units around the character
 
@@ -122,7 +123,8 @@ const capColor = row => C(paletteOf(row).hex.cap);
 // A standing fluid (render/trials.js: a trial's, a boss's tide) is drawn over the ground it stands
 // on (render/shore.js), not inside the solids. It is not drawn where the cube's own fluid takes
 // its level (WATER_OWN: 1 in r; render/surface.js ownTakes). Its walls (materials.js cellMaterial):
-// per cell the corners of the floor it meets there, the highest under its surface (WATER_SHORE;
+// per cell the corners of the floor (or structure: render/shore.js waterSolids) it meets there,
+// the highest under its surface (WATER_SHORE;
 // none: far under). The cutaway drops it above the cut, and its cap covers only the cells open
 // at the cut height. level: its level (world units; null: none)
 let trialWater = null, solidKey = '', solidMap = null;
@@ -139,7 +141,7 @@ function standingCells(map) {
   own.fill(0); shore.fill(-1e3);
   if (k) for (let i = 0; i < N * N; i++) {
     own[i * 4] = ownTakes(map.cols[i], level) ? 1 : 0;
-    const meets = map.cols[i].filter(f => !f.crust && f.bottom * LH < restY(level)).sort((p, q) => q.top - p.top)[0];
+    const meets = waterSolids(map, i).filter(f => f.bottom * LH < restY(level)).sort((p, q) => q.top - p.top)[0];
     if (meets) for (let c = 0; c < 4; c++) shore[i * 4 + c] = meets.cs[c];
   }
   WATER_OWN.value.needsUpdate = true; WATER_SHORE.value.needsUpdate = true;

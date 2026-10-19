@@ -7,7 +7,7 @@ import { N, WATER, LAVA, ACID } from '../core/constants.js';
 import { CELLS, useCells } from './watercells.js';
 import { PAL_TEX, PAL_GLSL } from './fluidpal.js';
 import { FALL_WIDTH } from './parts.js';
-import { WET_LIFT } from './shore.js';
+import { WET_LIFT, BOXES } from './shore.js';
 import { FLUID_MOTION, SINK, swellGLSL, tideY, stepWet } from './surface.js';
 
 // How each fluid moves and is drawn; its colours are its palette's (themes/fluids.js, one per
@@ -103,6 +103,9 @@ const TAU = Math.PI * 2;
 // of the cubes' own fluids are still wet (render/surface.js stepWet). Set by tickTides once a
 // frame, shared by every cube and proxy.
 export const WET_LINE = Object.fromEntries(Object.entries(FLUID_LOOK).filter(([, L]) => L.cells).map(([t]) => [t, { value: 0, wet: null }]));
+// and where their tide stands now and their wet line, per fluid (x water, y lava, z acid), for the
+// structures standing in them (render/wet.js wetMaterial)
+export const FIXED_TIDE = { value: new THREE.Vector3() }, FIXED_WET = { value: new THREE.Vector3() };
 let tidesAt = null;
 export function tickTides() {
   const dt = tidesAt == null ? 0 : Math.max(0, WIND.value - tidesAt);
@@ -110,8 +113,31 @@ export function tickTides() {
   for (const [t, u] of Object.entries(WET_LINE)) {
     const S = FLUID_LOOK[t].cells;
     u.value = u.wet = stepWet(S, u.wet, tideY(S, WIND.value), dt);
+    FIXED_TIDE.value.setComponent(t - 1, tideY(S, WIND.value)); FIXED_WET.value.setComponent(t - 1, u.value);
   }
 }
+// GLSL: how far p is from the boxes round its cell that stand out of the water (at `water`)
+const BOXES_GLSL = `
+  uniform highp sampler2D uWaterBoxes;
+  float boxDist(vec2 p, float water) {
+    ivec2 at = ivec2(floor(p));
+    float d = 9.0;
+    for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+      ivec2 q = at + ivec2(i, j);
+      if (any(lessThan(q, ivec2(0))) || any(greaterThan(q, ivec2(${N - 1})))) continue;
+      for (int k = 0; k < ${BOXES}; k++) {
+        ivec2 t = ivec2(q.x * ${BOXES * 2} + k * 2, q.y);
+        vec4 span = texelFetch(uWaterBoxes, t + ivec2(1, 0), 0);
+        if (span.y <= span.x) break;
+        if (water < span.x || water > span.y) continue;
+        vec4 r = texelFetch(uWaterBoxes, t, 0);
+        d = min(d, length(max(r.xy - p, 0.0) + max(p - r.zw, 0.0)));
+      }
+    }
+    return d;
+  }
+`;
+
 // The walls a fluid's surface meets (cellMaterial wallDist): the banks round its cell that stand
 // over it, from the bits in its uvs (render/floors.js fluidVolume), or a standing fluid's from the
 // ground of the cells round about (section.js WATER_SHORE: the corners of the floor it meets
@@ -175,17 +201,19 @@ const TRIAL_SHORES = `
 // is wet), shore (section.js WATER_SHORE, the ground it meets in each cell): its walls are the
 // cells round about whose ground stands over it, and its wet bands (a mesh of their own with this
 // material, uvs (-1, 0)) go by its level.
-// over: the cube's own fluids under a standing one ({ level, box } uniforms: its level, world
-// units, -1e9 for none; [x0, z0, x1, z1] in the cube's coordinates) are not drawn in its box: it
-// is (render/surface.js ownUnder; the active cube's fluids only, render/partmeshes.js).
+// cube: the active cube's water (render/wet.js waterUniforms; not the proxies'): the foam also
+// goes round the small things standing in the water (its boxes), and the cube's own fluids under
+// a standing one (its level and box) are not drawn there: it is (render/surface.js ownUnder).
 const STYLE_ID = { water: 0, sludge: 1, crust: 2 };
-export function cellMaterial(mat, t, trial = null, over = null) {
+export function cellMaterial(mat, t, trial = null, cube = null) {
+  const over = !trial && cube;
   const L = FLUID_LOOK[t], S = L.cells;
   if (!S) return mat;
   const C = CELLS[L.style];
   useCells(mat, L.style);
   const uniforms = { uCellTime: WIND, uCellTex: C.tex, uPalTex: PAL_TEX, uWetLine: trial ? trial.wet : WET_LINE[t],
-    ...trial && { uTrialLevel: trial.level, uShoreGround: trial.shore }, ...over && { uOverLevel: over.level, uOverBox: over.box } };
+    ...trial && { uTrialLevel: trial.level, uShoreGround: trial.shore }, ...over && { uOverLevel: cube.level, uOverBox: cube.box },
+    ...cube && { uWaterBoxes: cube.boxes } };
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
@@ -216,7 +244,7 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         vCellN = normal; vPalRows = pal.xy; vShore = shore;
       }`);
     sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nvarying vec4 vShore;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
-      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreGround;\n' : '') + (over ? 'uniform float uOverLevel;\nuniform vec4 uOverBox;\n' : '') + swellGLSL(S) + `
+      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreGround;\n' : '') + (over ? 'uniform float uOverLevel;\nuniform vec4 uOverBox;\n' : '') + (cube ? BOXES_GLSL : '') + swellGLSL(S) + `
       float shoreMin(float a, float b) { float h = max(0.14 - abs(a - b), 0.0) / 0.14; return min(a, b) - h * h * 0.035; }
       // how far p is from the walls round its cell, 9 if none near
       float wallDist(vec2 p, float code) {
@@ -228,6 +256,7 @@ export function cellMaterial(mat, t, trial = null, over = null) {
       // water: the surface's height there now.
       float shoreDist(vec2 p, float code, float water) {
         float d = wallDist(p, code);
+        ${cube ? 'd = shoreMin(d, boxDist(p, water));' : ''}
         return vShore.w < 0.5 && vShore.y > 0.02 ? shoreMin(d, (water - vShore.x) / vShore.y) : d;
       }
 ` + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
@@ -343,7 +372,7 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (1.0 - cellBand) + diffuseColor.rgb * cellLine;
       #endif`);
   };
-  mat.customProgramCacheKey = () => key + '-cells-' + L.style + (trial ? '-trial' : '') + (over ? '-over' : '');
+  mat.customProgramCacheKey = () => key + '-cells-' + L.style + (trial ? '-trial' : '') + (cube ? '-cube' : '');
   return mat;
 }
 
@@ -420,10 +449,10 @@ export function fallCellMaterial(mat, t) {
   return mat;
 }
 
-// the cartoon looks a part's material gets after its cut (cellMaterial, fallCellMaterial); over:
-// a standing fluid the cube's own fluids are hidden under (cellMaterial)
-export function fluidLook(mat, part, over = null) {
-  return part.kind === 'fluid' ? cellMaterial(mat, part.fluid, null, over) : part.kind === 'fall' ? fallCellMaterial(mat, part.fluid) : mat;
+// the cartoon looks a part's material gets after its cut (cellMaterial, fallCellMaterial); cube:
+// the active cube's water (cellMaterial)
+export function fluidLook(mat, part, cube = null) {
+  return part.kind === 'fluid' ? cellMaterial(mat, part.fluid, null, cube) : part.kind === 'fall' ? fallCellMaterial(mat, part.fluid) : mat;
 }
 
 // part: an entry of render/parts.js PARTS

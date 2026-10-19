@@ -14,7 +14,7 @@ import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
 import { cutMaterial, setTrialWaterCap, WATER_OWN, WATER_SHORE } from './section.js';
-import { groundAt, slopeAt } from './shore.js';
+import { groundAt, slopeAt, waterSolids } from './shore.js';
 import { wallPieces, wetWall, wetSlope } from './floors.js';
 import { inb } from '../core/util.js';
 import { inject } from './cutshader.js';
@@ -377,7 +377,7 @@ function standingWater(m, fluid, view, group, box, over) {
     #include <clipping_planes_fragment>`), 'cut-trial-fluid');
   const compile = surface.onBeforeCompile;
   surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterOwn = WATER_OWN; };
-  if (over) { over.box.value.set(...box); view.over = over; }
+  if (over) { over.box.value.set(...box); over.standKind.value.set(fluid, m.fluidRows?.[fluid] ?? palRow(m.depth ?? 0, fluid, 0)); view.over = over; }
   // Its shores are the ground's (materials.js cellMaterial: the walls round each cell, section.js
   // WATER_SHORE, and the ground under it, its `shore`), and the room's walls stay wet where it has
   // just been (wetBands, with the same material: its level and wet line in `waterTide`,
@@ -387,7 +387,7 @@ function standingWater(m, fluid, view, group, box, over) {
   const geo = standingSurface(m, box);
   geo.setAttribute('pal', palAttribute(geo, pal));
   const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, shore: WATER_SHORE } : null;
-  const water = new THREE.Mesh(geo, cellMaterial(surface, fluid, tide));
+  const water = new THREE.Mesh(geo, cellMaterial(surface, fluid, tide, over));
   water.frustumCulled = false;   // (its heights are the shader's)
   water.material.side = THREE.DoubleSide;   // (it writes depth, like every fluid: materials.js fluidMaterial)
   water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
@@ -456,7 +456,7 @@ function wetBands(m, pal) {
 
 // The surface of a standing fluid over the cells of box [x0, z0, x1, z1], built like the cube's
 // own fluids' (render/floors.js fluidVolume) but at every height it may stand at: over each floor
-// of a column (and over nothing where there is none), SUB x SUB quads a cell, split along the
+// or structure of a column (and over nothing where there is none), SUB x SUB quads a cell, split along the
 // floor's own diagonal, each corner with the ground under it, its slope and the floor's ceiling
 // (the bottom of the next floor up; render/shore.js) in its `shore`. The shader puts the surface
 // at the fluid's level (materials.js cellMaterial, trial) and draws only where it stands over
@@ -467,9 +467,10 @@ function standingSurface(m, [x0, z0, x1, z1]) {
   const b = new GeoBuilder({ uvs: true }), white = new THREE.Color(1, 1, 1);
   b.shoreAt = v => v[3];
   for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) {
-    const col = m.cols[z * N + x].filter(f => !f.crust).sort((p, q) => p.bottom - q.bottom);
-    // the grounds the fluid may stand over here: every floor up to the next one's underside, and
-    // the depths under the lowest (when it does not stand on the cube's base)
+    const col = waterSolids(m, z * N + x);
+    // the grounds the fluid may stand over here: every floor (or stair, landing, bridge deck:
+    // render/shore.js waterSolids) up to the next one's underside, and the depths under the
+    // lowest (when it does not stand on the cube's base)
     const grounds = col.map((f, i) => ({ f, ceiling: col[i + 1] ? col[i + 1].bottom * LH : 0 }));
     if (!col.length || col[0].bottom > 0) grounds.unshift({ f: null, ceiling: col.length ? col[0].bottom * LH : 0 });
     for (const { f, ceiling } of grounds) {
@@ -514,7 +515,7 @@ export function setTrialWater(world, y, phase) {
   if (!v.water) return;
   v.water.visible = y != null && restY(y) > -BASE + 0.01;
   if (v.wetBands) v.wetBands.visible = v.water.visible;
-  if (v.over) v.over.level.value = v.water.visible ? y : -1e9;
+  if (v.over) { v.over.level.value = v.water.visible ? y : -1e9; v.over.stand.value.w = v.water.visible ? 1 : 0; }
   // the fires under it go out (the props' and the trial's own; render/flames.js)
   douseFlames(world.group, v.water.visible ? y : null, v.water.userData.fluid);
   if (!v.water.visible) { v.wetAt = null; return; }
@@ -717,6 +718,7 @@ export function tickTrialView(world, time) {
       v.wetAt = stepWet(S, v.wetAt, rest + tideY(S, time), dt);
       v.wetTime = time;
       v.waterTide.wet.value = v.wetAt - rest;
+      if (v.over) v.over.stand.value.set(rest, tideY(S, time), v.wetAt - rest, 1);   // (its structures: render/wet.js)
     }
     if (motion.pulse) v.water.material.emissiveIntensity = FLUID_LOOK[t].emissiveIntensity * (1 + Math.sin(time * 2) * 0.1);
   }

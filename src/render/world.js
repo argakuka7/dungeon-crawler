@@ -1,7 +1,7 @@
 // Builds (and animates) all meshes for one generated map.
 import * as THREE from 'three';
 import { scene } from './scene.js';
-import { N } from '../core/constants.js';
+import { waterUniforms } from './wet.js';
 import { FLUID_LOOK, fluidGlow, tickTides, WIND } from './materials.js';
 import { partMeshes } from './partmeshes.js';
 import { bakeCells } from './watercells.js';
@@ -34,9 +34,9 @@ export function disposeWorld(world) {
 // of the reward sites whose chests are open (run.chests)
 export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = [], locked = !!m.guardian, townPad = null, opened = null) {
   const group = new THREE.Group();
-  // a standing fluid's (render/trials.js): the cube's own fluids under it are not drawn
-  const over = { level: { value: -1e9 }, box: { value: new THREE.Vector4(0, 0, N, N) } };
-  const fluidMeshes = partMeshes(geo, group, m.interior ? ['stone'] : [], over);
+  // what its fluids meet (render/wet.js)
+  const water = waterUniforms(m);
+  const fluidMeshes = partMeshes(geo, group, m.interior ? ['stone'] : [], water);
   const { splashes, lights } = buildFalls(m, group);
   lavaLights(m, group, lights);
   const markers = buildMarkers(m, group, showPath, seen, open, locked);
@@ -49,7 +49,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
   const villagers = buildVillagers([...(m.villagers || []), ...(m.npcs || [])], group);
   addGhosts(group);
-  const trialView = buildTrialView(m, group, over);   // a trial room's parts and rising fluid (render/trials.js)
+  const trialView = buildTrialView(m, group, water);   // a trial room's parts and rising fluid (render/trials.js)
   const glass = makeGlass(1, open);
   glass.visible = !m.interior;   // inside a house: walls, no glass box
   group.add(glass);

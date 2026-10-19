@@ -51,7 +51,7 @@ export function shapeStructures(ctx) {
       const y = r.y0, sup = floorBelow(r.c, y - 0.5), p = r.pieces[0];
       const supported = sup && y - sup.top * LH < SHEAD * LH;
       p.base = supported ? groundY(sup) : y - 0.35;
-      if (!supported && !pathCols.has(r.c)) pillar(r, r.c, 0.5, 0.5, 0.17, 0.17, groundY(sup), y - 0.35);
+      if (!supported && !pathCols.has(r.c)) pillar(r, r.c, 0.5, 0.5, 0.17, 0.17, bedY(sup), y - 0.35);   // (in a fluid: down to its bed)
       continue;
     }
     const k = r.k;
@@ -88,7 +88,7 @@ export function shapeStructures(ctx) {
       if (ctx.spec.span.sky) continue;
       for (const j of [Math.round(k / 3), Math.round(2 * k / 3)]) {
         const p = r.pieces[j];
-        for (const w of [-0.36, 0.36]) pillar(r, p.c, 0.5 + (r.dz ? w : 0), 0.5 + (r.dx ? w : 0), 0.09, 0.09, p.ground, runY(p, 0.5, 0.5) - 0.2);
+        for (const w of [-0.36, 0.36]) pillar(r, p.c, 0.5 + (r.dz ? w : 0), 0.5 + (r.dx ? w : 0), 0.09, 0.09, p.bed, runY(p, 0.5, 0.5) - 0.2);
       }
     } else if (supports === 'legs' && k >= 3) {
       r.pieces.forEach((p, j) => {
@@ -96,7 +96,7 @@ export function shapeStructures(ctx) {
         // not where another structure passes underneath (the legs would stand in its way)
         const under = pieces[p.c].some(q => q.run !== r && q.kind !== 'pillar' && Math.min(q.y0, q.y1) < top);
         if (j % 2 === 1 && top - p.ground < 3.5 && !pathCols.has(p.c) && !under)
-          for (const w of [-0.38, 0.38]) pillar(r, p.c, 0.5 + (r.dz ? w : 0), 0.5 + (r.dx ? w : 0), 0.06, 0.06, p.ground, top);
+          for (const w of [-0.38, 0.38]) pillar(r, p.c, 0.5 + (r.dz ? w : 0), 0.5 + (r.dx ? w : 0), 0.06, 0.06, p.bed, top);   // (in a fluid: down to its bed)
       });
     }
   }
