@@ -30,6 +30,7 @@ import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
 import { isInterior } from '../world/town.js';
+import { isTestRoom } from '../world/testrooms.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
 import { questEvent, questMark, restoreQuests } from './quests.js';
@@ -184,6 +185,7 @@ export function backBeforeTrial(message) {
 // two sections elsewhere (the room between them was the last one missing), so all
 // discovered cubes are checked again.
 export function discover(c) {
+  if (isTestRoom(c.key)) { c.visits++; return false; }   // a dev test room: nobody else's business
   if (!c.visits++) relay.visited?.(c.key);   // playing together: the friend's map shows it too
   if (!isInterior(c.key)) questEvent({ kind: 'visit', depth: depthOf(c.key) });   // how deep anyone got (game/quests.js)
   return openDiscoveredFaces();

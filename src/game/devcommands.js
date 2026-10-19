@@ -12,7 +12,9 @@ import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
-import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, goTrial, FEATURES } from './dev.js';
+import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, goTrial, goBoss, goTestRoom, leaveTestRoom, FEATURES } from './dev.js';
+import { BOSSES } from '../core/bosses.js';
+import { TEST_ROOMS, isTestRoom } from '../world/testrooms.js';
 import { TRIALS, TRIAL_KINDS } from '../core/trials.js';
 import { devTrial } from './trials.js';
 import { SPOT_KINDS } from '../world/spots.js';
@@ -133,6 +135,23 @@ dev({
   name: 'arena', help: 'a guardian arena of this kind (nearest depth first)',
   args: [{ name: 'kind', type: 'arena', optional: true }, { name: 'depth', type: 'depth', optional: true }],
   async run({ kind, depth }) { await goArena(kind, depth === undefined ? undefined : Number(depth)); },
+});
+addType(commands, { name: 'boss', values: () => Object.entries(BOSSES).map(([d, k]) => ({ value: k, label: ENEMY_KINDS[k].label, hint: `depth ${d}` })) });
+dev({
+  name: 'boss', help: 'into a boss\'s arena (beaten: he is up again)', args: [{ name: 'boss', type: 'boss' }],
+  async run({ boss }) { await goBoss(boss); },
+});
+addType(commands, { name: 'testroom', values: () => [...Object.entries(TEST_ROOMS).map(([k, hint]) => ({ value: k, label: k, hint })),
+  { value: 'leave', label: 'leave', hint: 'back to where you were' }] });
+dev({
+  name: 'testroom', help: 'into a test room, dressed as this depth (or that one); leave: back out; none: the list',
+  args: [{ name: 'room', type: 'testroom', optional: true }, { name: 'depth', type: 'depth', optional: true }],
+  async run({ room, depth }) {
+    if (room === 'leave') { await leaveTestRoom(); return; }
+    if (room) { await goTestRoom(room, depth === undefined ? undefined : Math.max(1, Number(depth))); return; }
+    return [...Object.entries(TEST_ROOMS).map(([k, what]) => `${k}: ${what}`),
+      isTestRoom(state.cubeKey) ? '/testroom leave: back out' : '/testroom <room> [depth]'].join('\n');
+  },
 });
 dev({
   name: 'newworld', help: 'start a new world (N), with this seed', args: [{ name: 'seed', type: 'int', optional: true, min: 0, max: 2 ** 32 - 1 }],

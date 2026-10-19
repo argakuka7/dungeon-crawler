@@ -39,7 +39,7 @@ export function logDeath() {
 let reached = new Set(), reachedIn = null;
 export function noteDepth(map, seed) {
   if (seed !== reachedIn) { reached = new Set(); reachedIn = seed; }
-  if (!map || map.depth <= 0 || map.interior || reached.has(map.depth)) return;
+  if (!map || map.depth <= 0 || map.interior || map.testRoom || reached.has(map.depth)) return;
   reached.add(map.depth);
   log('depth', { depth: map.depth, place: placeOf(map) }, { share: true });
 }

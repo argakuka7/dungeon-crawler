@@ -8,6 +8,7 @@
 import { openStore, memoryStorage, createHero, createWorld, heroStats, cleanName, MAX_HEROES, MAX_WORLDS } from '../core/save.js';
 import { parse } from '../world/coords.js';
 import { isInterior } from '../world/town.js';
+import { isTestRoom } from '../world/testrooms.js';
 import { depthOf } from '../themes/depth.js';
 import { player, state, setStatus } from './state.js';
 import { newWorld, visitedKeys } from './flow.js';
@@ -150,13 +151,14 @@ function heroNow() {
 function spotNow() {
   if (state.transitioning || !state.map) return null;
   if (sealedIn()) return beforeTrialSpot();   // in a sealed trial room: the room before (game/trials.js)
+  if (isTestRoom(state.cubeKey)) return null;   // in a dev test room (world/testrooms.js): where it was before
   const f = state.fallFrom, cube = f ? f.key : state.cubeKey, a = f ? f.arrival : state.arrival;
   return a && cube ? { cube, arrival: { x: a.x, y: a.y, z: a.z } } : null;
 }
 
 function worldNow() {
   const w = current.world, r = state.run, tp = r.townPortal, spot = spotNow();
-  for (const k of visitedKeys()) current.visited.add(k);
+  for (const k of visitedKeys()) if (!isTestRoom(k)) current.visited.add(k);
   const visited = [...current.visited];
   const deepest = Math.max(w.deepest, ...visited.filter(k => !isInterior(k)).map(depthOf));
   return { ...w, updated: Date.now(), deepest,

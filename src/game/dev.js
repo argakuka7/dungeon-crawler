@@ -5,7 +5,10 @@
 //   Alt + WASD / arrows: go to the adjacent cube on that side of the screen
 // None of them wait for guardians: locked portals are taken anyway (the gate stays locked).
 // The console's developer commands (game/devcommands.js: /find, /goto, /horde, /arena, /go) do the same.
-import { BOSS_ARENAS } from '../core/bosses.js';
+import { BOSS_ARENAS, BOSSES } from '../core/bosses.js';
+import { guardianId } from '../core/guardians.js';
+import { ENEMY_KINDS } from '../core/enemies.js';
+import { testRoomKey, isTestRoom } from '../world/testrooms.js';
 import * as THREE from 'three';
 import { camera, renderer } from '../render/scene.js';
 import { step } from '../world/coords.js';
@@ -239,6 +242,57 @@ export async function goArena(type, depth = state.map?.depth ?? 0) {
     if (state.cubes !== cubes) return;
     enterCube(c, c.map.portals[0].dir);
     setStatus(`Guardian arena · ${c.map.arena.type} · depth ${c.map.depth}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Into the arena of a real boss (core/bosses.js BOSSES: kind -> its depth), through its
+// entrance, the boss up again if he was beaten (his gate stays as it is).
+export async function goBoss(kind) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes, depth = Number(Object.keys(BOSSES).find(d => BOSSES[d] === kind));
+  const key = [...cubes.layout(depth).guardians].find(([, g]) => g.boss === kind)?.[0];
+  if (!key) { setStatus(`No ${ENEMY_KINDS[kind].label} in this world`); return; }
+  state.run.defeated.delete(guardianId(key));
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(key));
+    if (state.cubes !== cubes) return;
+    enterCube(c, c.map.portals[0].dir);
+    setStatus(`${ENEMY_KINDS[kind].label} · depth ${depth} · ${c.map.arena.type} arena`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+
+// Into a dev test room (world/testrooms.js, cubegen/testrooms.js) dressed as a depth (default:
+// this one's, the first below the town), at its arrival. Where we came from is kept for
+// leaveTestRoom (going from one test room into another keeps it).
+let testReturn = null;
+export async function goTestRoom(name, depth = Math.max(1, state.map?.depth ?? 1)) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const cubes = state.cubes;
+  if (!isTestRoom(state.cubeKey)) testReturn = { cubes, key: state.cubeKey, x: player.x, y: player.y, z: player.z, yaw: player.yaw };
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(testRoomKey(name, depth)));
+    if (state.cubes !== cubes) return;
+    const { arrival: a, note } = c.map.testRoom;
+    enterCube(c, null, null, a);
+    player.yaw = a.yaw;
+    setStatus(`Test room ${name} · ${c.map.biome} (depth ${depth}) · ${note}`);
+  } finally { if (state.cubes === cubes) state.transitioning = false; }
+}
+// back to where /testroom was used (in another world: its town)
+export async function leaveTestRoom() {
+  if (state.transitioning || state.inventoryOpen) return;
+  if (!isTestRoom(state.cubeKey)) { setStatus('Not in a test room'); return; }
+  const cubes = state.cubes, r = testReturn?.cubes === cubes ? testReturn : null;
+  clearMouseInput(); state.transitioning = true;
+  try {
+    const c = await whenReady(cubes.get(r?.key ?? cubes.start));
+    if (state.cubes !== cubes) return;
+    enterCube(c, null, null, r);   // (no r: on the town's spawn pad)
+    if (r) player.yaw = r.yaw;
+    testReturn = null;
+    setStatus('Out of the test room');
   } finally { if (state.cubes === cubes) state.transitioning = false; }
 }
 
