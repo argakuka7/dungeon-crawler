@@ -1,14 +1,15 @@
 // Animation state machine and blend trees: which clips play with what weight and at what
 // time. On land: idle -> walk -> run by speed; in water: treading water -> paddling by speed;
-// ladders use a reversible, distance-driven climb cycle; jump / fall / land / sit are one-shots.
+// ladders use a reversible, distance-driven climb cycle; jump / fall / land / sit are one-shots;
+// sliding on a slide puzzle's ice (player.skidding, game/trials.js) skids.
 import { WALK_SPEED, RUN_SPEED, WALK_ANIM, RUN_ANIM, SWIM_SPEED, SIT_IMPACT } from '../core/constants.js';
 import { clamp } from '../core/util.js';
 import { player } from '../game/state.js';
 import { character } from './character.js';
 
-export const W = { idle: 1, walk: 0, run: 0, swimIdle: 0, swim: 0, climb: 0, jump: 0, fall: 0, land: 0, sit: 0 };
+export const W = { idle: 1, walk: 0, run: 0, swimIdle: 0, swim: 0, skid: 0, climb: 0, jump: 0, fall: 0, land: 0, sit: 0 };
 // learn: animation.html#modes (see learn/README.md)
-const RATE = { loco: 10, swim: 6, climb: 14, jump: 18, fall: 7, land: 20, sit: 14 };   // cross-fade speeds
+const RATE = { loco: 10, swim: 6, skid: 16, climb: 14, jump: 18, fall: 7, land: 20, sit: 14 };   // cross-fade speeds
 const seen = { jump: 0, land: 0 };
 let mode = 'loco', modeT = 0, phase = 0, swimPhase = 0, climbPhase = 0, slow = 0;
 // stretch: stride stretch for the walk / run cycle; phase: where in that cycle, run: how much
@@ -31,6 +32,8 @@ function nextMode(dt, speed) {
     return;
   }
   if (mode === 'climb') { mode = p.grounded ? 'loco' : 'fall'; modeT = 0; }
+  if (p.skidding) { if (mode !== 'skid') modeT = 0; mode = 'skid'; seen.jump = p.jumpCount; seen.land = p.landCount; return; }
+  if (mode === 'skid') { mode = 'loco'; modeT = 0; }
   if (p.jumpCount !== seen.jump) { seen.jump = p.jumpCount; mode = 'jump'; modeT = 0; }
   if (p.landCount !== seen.land) {
     seen.land = p.landCount;
@@ -81,6 +84,7 @@ export function updateBlend(dt, speed, time) {
   A.run.time = phase * dur('run');
   A.swim.time = swimPhase * dur('swim');
   A.swimIdle.time = time % dur('swimIdle');
+  A.skid.time = time % dur('skid');
   A.climb.time = climbPhase * dur('climb');
   if (mode === 'jump') A.jump.time = Math.min(modeT * 1.4, dur('jump'));
   A.fall.time = dur('fall') * (0.5 + 0.5 * Math.sin(time * 3));

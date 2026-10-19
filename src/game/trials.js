@@ -25,6 +25,7 @@ import { followTrial } from '../net/trials.js';
 import { solveMirror, solveBraziers } from '../cubegen/trials/solve.js';
 import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld, hurt } from './flow.js';
 import { CHAR_H } from '../core/constants.js';
+import { emit, soft, rand } from '../render/particles.js';
 import { stepSiege, stepChase, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
@@ -57,7 +58,7 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
   if (state.trial && map.trial.kind === 'sunken') state.trial.stage = state.run.trials.get(map.trial.key) ?? 0;   // (drained for the run)
-  gone.clear(); crust.clear(); ice = null; cold = 0; shelterOf = null; resetEvents();
+  gone.clear(); crust.clear(); ice = null; player.skidding = false; cold = 0; shelterOf = null; resetEvents();
   partBlockers(map?.trial);
   showTrial(true);
 }
@@ -691,8 +692,24 @@ export function puzzleMoves(pz, s) {
 // slideStop); no steering meanwhile. Stopping on the goal plate solves it; sliding back out through
 // the entry gap (or, solved, through the goal's open gate) takes you off the ice.
 export const SLIDE_SPEED = 5;   // cells a second on the ice
+export const SLIDE_RAMP = 0.12;   // s to get up to speed, and to come to a stop
 let wasOnIce = false;
-let ice = null;   // a slide under way: { pz, from: [x, z], to: [x, z], end ('stop' | 'out' | 'goal'), stop: [fx, fz], d, t, T }
+// a slide under way: { pz, from: [x, z], to: [x, z], end ('stop' | 'out' | 'goal'), stop: [fx, fz], d, t, T,
+// next (a way pressed meanwhile: the next slide, if nothing is held at the stop) }
+let ice = null;
+// how far along a slide of T s is at t (0..1): up to speed in SLIDE_RAMP s, on, slowing down as long
+export function slideAlong(t, T) {
+  const r = Math.min(0.45, SLIDE_RAMP / T), u = Math.max(0, Math.min(1, t / T)), v = 1 / (1 - r);   // (top speed, as a share)
+  if (u < r) return 0.5 * v * u * u / r;
+  if (u > 1 - r) return 1 - 0.5 * v * (1 - u) * (1 - u) / r;
+  return 0.5 * v * r + v * (u - r);
+}
+// ice shavings off the feet (the way it slides: d), more as it stops
+function shavings(d, n, y) {
+  for (let k = 0; k < n; k++) emit(soft, player.x + rand(-0.15, 0.15), y + 0.05, player.z + rand(-0.15, 0.15),
+    { v: [SD[d][0] * rand(0.5, 2) + rand(-0.6, 0.6), rand(0.6, 1.6), SD[d][1] * rand(0.5, 2) + rand(-0.6, 0.6)], spread: 0.1,
+      life: rand(0.35, 0.6), size: rand(0.05, 0.1), grow: 0.5, color: '#eaf8ff', alpha: 0.85, gravity: 3, drag: 1.5 });
+}
 // the slide puzzle whose ice the player stands on, and where on it: { pz, at: [fx, fz] } or null
 export function onIce(m = mapTrial()) {
   if (!m?.puzzles || !player.grounded) return null;
@@ -707,27 +724,34 @@ export function onIce(m = mapTrial()) {
 export function iceStep(dt, dx, dz) {
   steer = [dx, dz];   // (the crates read it: game/trials.js stepCrates)
   const m = mapTrial(), s = state.trial;
-  if (!m?.puzzles || !s) { ice = null; return false; }
+  if (!m?.puzzles || !s) { ice = null; player.skidding = false; return false; }
+  const way = (x, z) => Math.hypot(x, z) < 0.3 ? -1 : Math.abs(x) > Math.abs(z) ? (x > 0 ? 0 : 1) : (z > 0 ? 2 : 3);
   if (ice) {
     const D = ice.pz.deck, y = D.level * LH;
     ice.t += dt;
-    const k = Math.min(1, ice.t / ice.T);
+    const k = slideAlong(ice.t, ice.T), w = way(dx, dz);
+    if (w >= 0 && w !== ice.d) ice.next = w;   // (pressed meanwhile: the next slide)
     player.x = ice.from[0] + (ice.to[0] - ice.from[0]) * k; player.z = ice.from[1] + (ice.to[1] - ice.from[1]) * k;
     player.y = y; player.vy = 0; player.grounded = true;
     player.vx = k < 1 ? SD[ice.d][0] * SLIDE_SPEED : 0; player.vz = k < 1 ? SD[ice.d][1] * SLIDE_SPEED : 0;
     player.yaw = Math.atan2(SD[ice.d][0], SD[ice.d][1]);
     player.support = groundAt(player.x, player.z, y + 0.05, 0).s;
-    if (k >= 1) {
-      const end = ice, F = end.pz.field; ice = null;
-      if (end.end === 'stop') { sfx('thud', { volume: 0.4 }); if (end.stop[0] === F.goal.x && end.stop[1] === F.goal.z) solvePuzzle(end.pz.index); }
+    if (Math.random() < dt * 25) shavings(ice.d, 1, y);
+    if (ice.t >= ice.T) {
+      const end = ice, F = end.pz.field; ice = null; player.skidding = false;
+      if (end.end === 'stop') {
+        sfx('thud', { volume: 0.4 }); shavings(end.d, 8, y);
+        if (end.stop[0] === F.goal.x && end.stop[1] === F.goal.z) solvePuzzle(end.pz.index);
+        else if (end.next != null && way(dx, dz) < 0) return slideFrom(end.pz, end.stop, end.next);
+      }
     }
     return true;
   }
+  player.skidding = false;
   const on = onIce(m), was = wasOnIce;
   wasOnIce = !!on;
   if (!on) return false;
-  const { pz, at } = on, F = pz.field, D = pz.deck, y = D.level * LH, centre = ([fx, fz]) => [D.x0 + fx + 0.5, D.z0 + fz + 0.5];
-  const [cx, cz] = centre(at);
+  const { pz, at } = on, F = pz.field, D = pz.deck, y = D.level * LH, [cx, cz] = [D.x0 + at[0] + 0.5, D.z0 + at[1] + 0.5];
   // stepping onto the ice through the entry gap: straight on, inwards, whatever the keys say
   if (!was && at[0] === F.entry.x && at[1] === F.entry.z) { dx = -SD[F.entry.side][0]; dz = -SD[F.entry.side][1]; }
   // on the ice and still: drift onto the cell's middle
@@ -737,14 +761,20 @@ export function iceStep(dt, dx, dz) {
     player.x += (cx - player.x) * k; player.z += (cz - player.z) * k; player.vx = player.vz = 0; player.y = y;
     if (push < 0.3) return true;
   }
-  const d = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 0 : 1) : (dz > 0 ? 2 : 3);
+  return slideFrom(pz, at, way(dx, dz));
+}
+// set off from field cell `at` the way d: to where it stops (a rock, the rim), or out through a gap
+function slideFrom(pz, at, d) {
+  const F = pz.field, D = pz.deck, s = state.trial, centre = ([fx, fz]) => [D.x0 + fx + 0.5, D.z0 + fz + 0.5];
   const stop = slideStop(F, at[0], at[1], d, puzzleSolved(s, pz.index));
   if (Array.isArray(stop) && stop[0] === at[0] && stop[1] === at[1]) return true;   // a rock or the rim right there
   // out through a gap: onto the ground beyond it
   const beyond = (cell, side) => [cell[0] + SD[side][0] * 2, cell[1] + SD[side][1] * 2];
   const target = stop === 'out' ? beyond(at, F.entry.side) : stop === 'goal' ? beyond(at, F.goal.side) : stop;
   const to = centre(target), from = [player.x, player.z];
-  ice = { pz, from, to, end: Array.isArray(stop) ? 'stop' : stop, stop, d, t: 0, T: Math.max(0.05, Math.hypot(to[0] - from[0], to[1] - from[1]) / SLIDE_SPEED) };
+  ice = { pz, from, to, end: Array.isArray(stop) ? 'stop' : stop, stop, d, t: 0, next: null,
+    T: Math.max(0.05, Math.hypot(to[0] - from[0], to[1] - from[1]) / SLIDE_SPEED + SLIDE_RAMP) };
+  player.skidding = true;
   sfx('swing', { volume: 0.25, pitch: 0.6 });
   return true;
 }

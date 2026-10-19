@@ -75,13 +75,13 @@ export function sunkenStages(d, theme, R, force = null) {
   if (force?.stages?.length) return force.stages.slice(0, 3);
   const pool = TRIAL_KINDS.filter(k => isPuzzle(k) && TRIALS[k].built && k !== 'runes' && k !== 'timedgate' && TRIALS[k].deck <= 6);
   let list = pool.filter(k => trialFits(k, d, theme)).map(k => [k, trialWeight(k, theme)]);
-  if (list.length < n) list = pool.map(k => [k, trialWeight(k, theme)]);
+  if (list.length < n) list = pool.filter(k => !TRIALS[k].strict || trialFits(k, d, theme)).map(k => [k, trialWeight(k, theme)]);
   const out = [];
   while (out.length < n && list.length) {
     const k = weighted(list, R());
     out.push(k); list = list.filter(([x]) => x !== k);
   }
-  while (out.length < n) out.push(out[out.length % Math.max(1, out.length)] ?? 'slide');
+  while (out.length < n) out.push(out[out.length % Math.max(1, out.length)] ?? 'crates');
   // the last stage shares the exit's quadrant where the room's shape wants it (cubegen/trials/sunken.js):
   // a small one there, when any is built
   const small = k => TRIALS[k].deck === 5;

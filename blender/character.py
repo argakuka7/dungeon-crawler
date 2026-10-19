@@ -7,6 +7,7 @@ end in the neutral standing pose so they can be cross-faded from anything):
     Run          -- loop, 20 frames @ 30 fps, ground speed RUN_SPEED (extras: speed)
     Swim         -- loop, doggy paddle at SWIM_SPEED (extras: speed, water_level)
     SwimIdle     -- loop, treading water (extras: water_level)
+    Skid         -- loop, sliding on ice: side-on, knees bent, arms out, wobbling
     Climb        -- loop, alternating ladder grips / steps (extras: distance, speed)
     Jump         -- crouch, push-off, ballistic flight, landing, recovery; the
                     game slices it by frame number (see JUMP_V0), keep timing
@@ -861,6 +862,31 @@ def swim_idle_params(n):
 
 
 # ----------------------------------------------------------------------------
+# skidding on ice.  The game slides the body along the way it faces (the ice
+# slide, src/game/trials.js iceStep) and plays this loop meanwhile.
+# ----------------------------------------------------------------------------
+SKID_FRAMES = 40
+
+
+def skid_params(n):
+    """Side-on to the way it slides (-Y), knees bent, leaning back against it, the feet
+    apart along the way (the leading one braced), the arms out for balance, wobbling."""
+    def params(f):
+        w = 2 * math.pi * ((f / n) % 1)
+        wob = math.sin(w)
+        return pose_params(
+            hips_pos=Vector((0.0, 0.05, STAND_Z - 0.19 + 0.012 * math.sin(2 * w))),
+            hips_rot=(D(3), D(15) + D(3) * wob, D(70)),
+            spine_lean=D(4), spine_twist=-D(22) + D(4) * wob,
+            head_pitch=-D(6), head_twist=-D(28),
+            feet={"R": Vector((-0.05, -0.40, 0)), "L": Vector((0.05, 0.36, 0))},
+            arms={"L": (D(15) + D(8) * wob, D(80) + D(8) * wob, D(30)),
+                  "R": (D(25) - D(8) * wob, D(72) - D(8) * wob, D(40))},
+        )
+    return params
+
+
+# ----------------------------------------------------------------------------
 # one-shot actions.  All start and end in the neutral standing pose so the
 # game can cross-fade into and out of them from anything.
 # ----------------------------------------------------------------------------
@@ -1513,6 +1539,11 @@ def make_animations(rig, ob):
         bake_action(rig, name, frames[n * (cycles - 1):], True,
                     {"speed": speed, "water_level": WATER_Z})
 
+    n = SKID_FRAMES
+    frames = solve_motion(skel, skid_params(n), n * cycles + 1, arm_k=160.0, arm_zeta=0.35,
+                          fore_k=220.0, fore_zeta=0.4)
+    bake_action(rig, "Skid", frames[n * (cycles - 1):], True)
+
     def one(name, built, arm_k, arm_zeta, fore_k, fore_zeta, props=None, contact="lift"):
         """Bake a one-shot.  Ground contact is enforced on the actual mesh:
         "lift" raises the body wherever it would sink into the floor,
@@ -1603,7 +1634,7 @@ def main(scene=None, export_path=None, active_action="Walk"):
     unwrap_character(ob)
 
     make_animations(rig, ob)
-    register_actions(rig, ("Walk", "Run", "Swim", "SwimIdle", "Climb", "Jump", "JumpLandSit",
+    register_actions(rig, ("Walk", "Run", "Swim", "SwimIdle", "Skid", "Climb", "Jump", "JumpLandSit",
                            "GetUpBack", "GetUpFront", "Kick", "Punch", "Slash", "Shoot", "CrossbowShot",
                            "Cast", "Throw", "HoldBow", "HoldCrossbow", "HoldStaff", "HoldThrow",
                            *("Hold" + k.capitalize() for k in CARRIES), "Roll", "Flex"))

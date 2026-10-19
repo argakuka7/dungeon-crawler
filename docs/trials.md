@@ -35,7 +35,7 @@ above, and every puzzle you solve drains it one stage further.
 | `siege` | event | yes | yes | hold the beacon long enough | death | 2–19, any |
 | `chase` | event | yes | yes | drop the portcullis on the hunter | being grabbed | 4–19, any |
 | `miasma` | event | yes | yes | open the vent valve at the bottom | the fog (damage) | walled: canyon 5–6, caves 7–19 |
-| `slide` | puzzle | no | no | slide across the ice to the goal | – | any (ice, salt, polished stone) |
+| `slide` | puzzle | no | no | slide across the ice to the goal | – | ice only: peaks, frozen caves (3, 9–10) |
 | `mirror` | puzzle | no | no | the beam hits the receiver | – | mines, forge, ruins, abyss, highlands |
 | `braziers` | puzzle | no | no | every brazier lit | – | any |
 | `crates` | puzzle | no | no | a crate on every plate | – | any |
@@ -452,8 +452,8 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 - **Generator:** rocks at random (12–20%). BFS over the stops; keep the field if the shortest
   way to the goal has 4–6 slides (depths 1–9) or 6–9 (10–19), at least three stops lead
   nowhere useful, and from every reachable stop the entry can be reached again (no traps).
-- **Themes:** frozen, peaks (ice), salt flats (salt crust), mines (polished stone), any as
-  dressing.
+- **Themes:** ice worlds only: peaks and frozen caves (`strict`: not even as a sunken room's
+  stage elsewhere), drawn twice as often there.
 - **As built** (`cubegen/trials/slide.js`, `deck.js`, `solve.js`; `game/trials.js iceStep`): the
   field is 6x6 (7x7 from depth 10) on a deck: a rim three levels up round it, a walkway two
   cells wide round that. Walking in through the entry gap you push inwards, so you slide straight
@@ -461,6 +461,11 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   you in. Sliding back out through the entry gap takes you off the ice; the goal's gate (a
   portcullis in the rim beside the goal plate) opens once solved. A vault's reward site is an
   uncommon one (a rare one's footprint finds no room beside the deck), caged until solved.
+  A slide gets up to speed (`SLIDE_SPEED`, 5 cells/s) in `SLIDE_RAMP` s and slows down as long
+  into its stop (`slideAlong`), shaving ice off the feet and spraying it at the stop. A way
+  pressed while sliding is kept: let go before the stop and the next slide sets off that way.
+  Meanwhile the hero skids (`player.skidding`: the blend tree's `skid` mode, the character's
+  `Skid` loop, side-on with the arms out).
 
 ### `mirror`: Mirror beam
 

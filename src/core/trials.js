@@ -7,6 +7,7 @@
 //   kind: { id, name (what the warning on the portal says), family: 'event' | 'puzzle',
 //           sealed, timed, depths: [first, last], themes (theme ids it fits, null: any),
 //           weight (when drawn among the kinds that fit), color, built (planned at all),
+//           strict (its themes hold even for a sunken room's stages: the ice slide is ice only),
 //           population (how many enemies live in the room, times the usual) }
 
 export const TRIALS = {
@@ -27,7 +28,7 @@ export const TRIALS = {
     population: 0 },
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
     population: 0.5 },
-  slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
+  slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['peaks', 'frozen'], strict: true, weight: 2, color: '#bfe8ff', built: true,
     population: 0.5 },
   mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
     population: 0.5 },
