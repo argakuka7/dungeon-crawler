@@ -11,7 +11,7 @@ import { player } from '../src/game/state.js';
 import { movePlayer } from '../src/physics/move.js';
 import { climb } from '../src/physics/climb.js';
 import { groundAt } from '../src/physics/collide.js';
-import { inFluid, wading, tooDeep } from '../src/physics/fluid.js';
+import { inFluid, wading, tooDeep, wadeable, WADE_MARGIN } from '../src/physics/fluid.js';
 import { supportedPoint } from '../src/physics/respawn.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 
@@ -25,6 +25,20 @@ function place(m, x, z, y = null) {
 }
 // how deep the water at the player's feet is, and whether it takes them
 const water = () => { const gr = groundAt(player.x, player.z, player.y + 0.1, 0); return { wade: wading(gr, player.y), lost: inFluid(gr, player.y) }; };
+// walk (or run) from (x, z) along (dx, dz) until held back: never drowning, never off the ground
+function wadeOut(m, x, z, dx, dz, run = false, frames = 900) {
+  place(m, x, z);
+  let deepest = 0, last = 0, wet = 0;
+  for (let i = 0; i < frames; i++) {
+    movePlayer(DT, dx, dz, run, false);
+    const { wade, lost } = water();
+    assert.equal(lost, 0, `${x}, ${z} -> ${dx}, ${dz}: never drowns walking`);
+    assert.equal(player.grounded, true, `${x}, ${z} -> ${dx}, ${dz}: walks, never falls in`);
+    if (wade > 0) wet++;
+    deepest = Math.max(deepest, wade); last = wade;
+  }
+  return { deepest, last, wet };
+}
 
 test('test room keys are off the grid, keep their depth and are told apart from every other key', () => {
   const w = new World(3);
@@ -56,23 +70,20 @@ test('every test room builds at every depth, dressed in its theme, with nothing 
 
 test('water hill: walking down the shelf wades ever deeper, stops before the head would go under; deeper water drowns', () => {
   const m = new World(1).cube(testRoomKey('water_hill', 1)).map, a = m.testRoom.arrival;
-  // no water you can walk into is deeper than the head stands
-  for (const f of m.floors) if (f.fluid && !tooDeep(f)) assert.ok(f.surf * LH - Math.min(...f.cs) < HEAD_Y, `cell ${f.x}, ${f.z}`);
-  // the shelf: a stretch of wadeable water, several cells long and wide
-  const shelf = m.floors.filter(f => f.fluid === WATER && !tooDeep(f) && f.x >= 10 && f.z >= 6 && f.z <= 9);
-  assert.ok(shelf.length >= 12, `${shelf.length} wading cells`);
-  for (const lz of [6.5, 8.5]) {
-    place(m, a.x, lz);
-    let deepest = 0, last = 0, wet = 0;
-    for (let i = 0; i < 600; i++) {
-      movePlayer(DT, 1, 0, false, false);
-      const { wade, lost } = water();
-      assert.equal(lost, 0, 'never drowns walking');
-      assert.equal(player.grounded, true, 'walks, never falls in');
-      if (wade > 0) wet++;
-      deepest = Math.max(deepest, wade); last = wade;
-    }
-    assert.ok(wet > 60, 'waded a while');
+  // wading goes by the water's depth where the foot goes: never over the head, the shelf a
+  // stretch of it several cells long and wide
+  state.map = m;
+  let shelf = 0;
+  for (let z = 0.05; z < N; z += 0.1) for (let x = 0.05; x < N; x += 0.1) {
+    const gr = groundAt(x, z, 99, 0);
+    if (gr.s?.fluid !== WATER || !wadeable(gr)) continue;
+    assert.ok(gr.s.surf * LH - gr.h <= HEAD_Y - WADE_MARGIN, `${x}, ${z}`);
+    if (x >= 10 && z >= 6 && z <= 10) shelf += 0.01;
+  }
+  assert.ok(shelf >= 12, `${shelf} wading cells`);
+  for (const lz of [6.5, 8.5]) for (const run of [false, true]) {
+    const { deepest, last, wet } = wadeOut(m, a.x, lz, 1, 0, run, 600);
+    assert.ok(wet > 40, 'waded a while');
     assert.ok(deepest > HEAD_Y * 0.75 && deepest < HEAD_Y, `deepest ${deepest}`);
     assert.ok(last > HEAD_Y * 0.75, 'stopped at the deep water, up to the neck');
     assert.ok(player.x > 13 && player.x < 14, `stopped at ${player.x}`);
@@ -80,10 +91,17 @@ test('water hill: walking down the shelf wades ever deeper, stops before the hea
     const gr = groundAt(14.6, lz, 10, 0);
     assert.equal(inFluid(gr, gr.h), WATER);
   }
-  // round the hill the water is deep right at its foot: walking down there stops at the edge, dry
-  place(m, 6.5, 5.5);
-  for (let i = 0; i < 300; i++) movePlayer(DT, 0, -1, false, false);
-  assert.equal(water().lost, 0); assert.ok(player.z > 3, `stopped at ${player.z}`);
+  // off the shelf's sides, where the bed falls away across a cell, wading goes on to the chest
+  for (const [x, dz] of [[11.5, 1], [11.5, -1], [12.5, 1]]) {
+    const { last } = wadeOut(m, x, 8.5, 0, dz);
+    assert.ok(last > HEAD_Y * 0.65, `off the shelf at ${x} -> ${dz}: ${last}`);
+  }
+  // round the hill the water deepens fast at its foot: walking down there stops soon, waist deep
+  for (const [x, z, dx, dz] of [[6.5, 5.5, 0, -1], [6.5, 10.5, 0, 1], [5.5, 8.5, -1, 0]]) {
+    const { last } = wadeOut(m, x, z, dx, dz, false, 300);
+    assert.ok(last > HEAD_Y * 0.4, `hill foot ${x}, ${z}: ${last}`);
+  }
+  assert.ok(player.x > 1.5, `stopped at ${player.x}`);
 });
 
 test('fluids: a waterfall into a lake, lava and acid pools', () => {
@@ -98,6 +116,17 @@ test('fluids: a waterfall into a lake, lava and acid pools', () => {
   const lake = m.floors.filter(f => f.fluid === WATER && f.surf === fall.bot);
   assert.ok(lake.some(f => !tooDeep(f)) && lake.some(f => tooDeep(f)));
   for (const f of m.floors) if (f.fluid === LAVA || f.fluid === ACID) assert.ok(tooDeep(f));
+  // the lake is waded into from every shore as far as the water stays under the head
+  for (const [x, z, dx, dz] of [[8.5, 10.5, 0, -1], [6.5, 9.5, 0, -1], [3.5, 4.5, 1, 0], [12.5, 4.5, -1, 0]]) {
+    const { last } = wadeOut(m, x, z, dx, dz);
+    assert.ok(last > HEAD_Y * 0.7 && last < HEAD_Y, `lake from ${x}, ${z}: ${last}`);
+  }
+  // and the pools are not stepped into at all
+  for (const [x, dx] of [[5.8, -1], [10.2, 1]]) {
+    const { wet } = wadeOut(m, x, 12.5, dx, 0, false, 300);
+    assert.equal(wet, 0);
+    assert.ok(!m.cols[groundAt(player.x, player.z, player.y + 0.1, 0).i].some(f => f.fluid), 'stopped on the bank');
+  }
   // the ladder up the cliff
   assert.equal(m.ladders.length, 1); assert.equal(m.ladders[0].y1 - m.ladders[0].y0, 5);
 });

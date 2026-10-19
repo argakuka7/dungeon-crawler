@@ -6,7 +6,7 @@ import { player } from '../src/game/state.js';
 import { canMove } from '../src/physics/canmove.js';
 import { movePlayer } from '../src/physics/move.js';
 import { groundAt } from '../src/physics/collide.js';
-import { inFluid, wading } from '../src/physics/fluid.js';
+import { inFluid, wading, wadeable, tooDeep, WADE_MARGIN } from '../src/physics/fluid.js';
 
 function bank(dx = 1, dz = 0, fluid = WATER) {
   const m = flatMap(), f = m.floors[5 * N + 5], water = m.floors[(5 + dz) * N + 5 + dx];
@@ -122,4 +122,29 @@ test('water shallower than the head is waded through, slowly; deeper water and t
   const gr = groundAt(player.x, player.z, player.y + 0.1, 0);
   assert.equal(inFluid(gr, player.y), 0, 'not drowned');
   assert.ok(wading(gr, player.y) > 0.2 && wading(gr, player.y) < HEAD_Y);
+});
+
+test('a sloping bed is waded down as far as the water stays under the head, not judged by its deepest corner', () => {
+  // the next cell's bed falls from 0.3 under the surface at its near edge to 1.7 at its far one
+  const slope = () => {
+    const water = bank();
+    Object.assign(water, { surf: 0, top: -4, cs: [-0.3, -1.7, -0.3, -1.7] });
+    state.map.floors[5 * N + 5].cs = [0, -0.3, 0, -0.3];
+    return water;
+  };
+  assert.ok(tooDeep(slope()), 'too deep at its floor top');
+  for (const run of [false, true]) {
+    slope();
+    for (let i = 0; i < 240; i++) {
+      movePlayer(1 / 60, 1, 0, run, false);
+      assert.equal(inFluid(groundAt(player.x, player.z, player.y + 0.1, 0), player.y), 0, 'never drowns');
+      assert.equal(player.grounded, true);
+    }
+    const gr = groundAt(player.x, player.z, player.y + 0.1, 0), depth = wading(gr, player.y);
+    assert.ok(player.x > 6.05 && player.x < 6.5, `walked partway in: ${player.x}`);
+    assert.ok(depth > HEAD_Y - WADE_MARGIN - 0.22 * 1.4 - 0.02 && depth < HEAD_Y - WADE_MARGIN, `up to the neck: ${depth}`);
+    // the probe a radius ahead is where it stopped: the bed there is as deep as wading goes
+    const ahead = groundAt(player.x + player.r + 0.01, player.z, player.y + 0.1, 0);
+    assert.equal(wadeable(ahead), false);
+  }
 });

@@ -56,8 +56,21 @@ export function underTrialFluid(h, i = -1) {
   const s = standing(i);
   return !!s && deep(s.fluid, s.y - h - 0.02, HEAD_Y);
 }
-// is a static fluid floor too deep to wade into? (lava and acid always)
+// is a static fluid floor deeper than the head stands at its floor top? (lava and acid always)
 export const tooDeep = f => deep(f.fluid, f.surf * LH - f.top * LH, HEAD_Y);
+
+// how much of the head's height walking keeps out of the water: the probes that hold a walking
+// body back reach a radius past its centre (physics/canmove.js), which is where it drowns
+export const WADE_MARGIN = 0.05;
+// may a walking body set foot on the ground gr? Water as deep as the head stands but for
+// WADE_MARGIN, measured where the foot goes (a sloping bed is waded down as far as that, not
+// judged by its cell's deepest corner); no lava or acid floor at all; no ground under a standing
+// fluid over the head
+export function wadeable(gr) {
+  const f = gr.s;
+  if (f && !f.kind && f.fluid && (f.fluid === WATER ? deep(WATER, f.surf * LH - gr.h, HEAD_Y - WADE_MARGIN) : tooDeep(f))) return false;
+  return !underTrialFluid(gr.h, gr.i);
+}
 
 // how high an enemy's head stands over its feet: its body
 export const headOf = profile => profile.bodyHeight;
