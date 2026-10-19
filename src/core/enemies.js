@@ -565,7 +565,7 @@ export const REDBACK = enemyKind(SPIDER, {
 });
 export const FROST_STUNDER = enemyKind(STUNDER, {
   type: 'froststunder', label: 'Frost stunder', reason: 'Rammed by a Frost stunder!',
-  colors: paints({ skin: 'frost.light@-8', eyes: 'eyes.ice' }), ichor: ['#c4ecff', '#4f8fbf'],
+  colors: paints({ skin: 'frost.pale@-8', eyes: 'eyes.ice' }), ichor: ['#c4ecff', '#4f8fbf'],
   mods: { hp: 1.25, speed: 0.9 },
 });
 export const STONE_STUNDER = enemyKind(STUNDER, {

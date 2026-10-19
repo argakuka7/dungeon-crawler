@@ -64,7 +64,7 @@ shows how often each kind turns up and how it stands out from its siblings and t
   (`vivid`: all of it), so every family's `mid` looks about as strong: sRGB holds far more red
   or violet than teal or ochre.
 - A swatch may turn its hue a little, `@±deg` (at most 12°): the frost kinds of different
-  species are all frost, but not the very same blue (`frost.pale`, `frost.light@-8`,
+  species are all frost, but not the very same blue (`frost.pale`, `frost.pale@-8`,
   `frost.pale@+10`).
 - **Eyes** come in four colours: `eyes.sun`, `eyes.ember`, `eyes.ice` and `eyes.bone`.
 
@@ -133,7 +133,7 @@ again. The lineup is planned with the room (`cubegen/testrooms.js` `lineUp`), so
 | Bog spider | Spider | `moss.deep` | ×1.15 | ×1.25 | ×1.05 | 1 | ×1.2 | 7–8, 11–14 |
 | Redback | Spider | `crimson.deep` | ×1.3 | ×1.4 | ×1.2 | ×1.1 | ×1.35 | 4–6, 8, 13–18, 20 |
 | Stunder | (base) | `moss.mid` | | | | | | 1–2, 4–8, 11 |
-| Frost stunder | Stunder | `frost.light@-8` | ×1.25 | 1 | ×0.9 | 1 | ×1.11 | 3, 9–10 |
+| Frost stunder | Stunder | `frost.pale@-8` | ×1.25 | 1 | ×0.9 | 1 | ×1.11 | 3, 9–10 |
 | Stone stunder | Stunder | `stone.mid` | ×1.6 | ×1.15 | ×0.85 | ×1.12 | ×1.36 | 4–6, 8, 14–16 |
 | Magma stunder | Stunder | `crimson.dark` | ×1.35 | ×1.4 | ×1.15 | 1 | ×1.38 | 18–20 |
 | Grass snake | (base) | `moss.light` | | | | | | 0–2, 7 |
