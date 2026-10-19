@@ -1,8 +1,8 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 7 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
-`sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`, `sluices` and `timedgate`
-are planned, built, checked, playable (alone and
+Status: steps 1 to 8 are done: the framework, `flood`, `collapse`, `miasma`, `cold`, `storm`, the
+puzzle parts, `slide`, `sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`,
+`sluices` and `timedgate` are planned, built, checked, playable (alone and
 together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
 "Implementation order" at the end).
@@ -324,6 +324,14 @@ The cold sets in. Keep warm by lighting braziers along the way to the great fire
   takes at most `FREEZE_TIME × 0.6`, at walking speed × `SLACK`, with the lighting time
   included.
 - **Population:** the depth's frost kinds, half the usual, never inside a warm circle.
+- **As built** (`cubegen/trials/cold.js`, `index.js finishCold`; `core/trials.js COLD`,
+  `game/trials.js stepCold`): the great fire in a flat 3x3 hollow four cells in from the exit's
+  face. The braziers stand on the slow player's fastest way: the first on its first floor, then
+  one about every five cells of it, evenly by time (3-7, more where a gap would be too long), and
+  one or two 3-6 cells off it. The numbers are tuned to a cube's size: a way across takes 6-11 s,
+  so `FREEZE_TIME` is 20 s (the gap allowed 12 s), and the planner keeps the room's portals at
+  least 9 cells apart. Each player has their own meter; freezing is a death (back in the room
+  before). Lit braziers stay lit for everyone (the trial's bits).
 
 ### `storm`: The storm
 
@@ -343,6 +351,16 @@ lulls, and pull the lightning rod at the end.
 - **Check:** gaps: every exposed stretch between two shelters takes at most
   `(lull + warning) / SLACK` (3 s, about 5.5 cells at walking speed).
 - **Population:** few; light kinds get blown too.
+- **As built** (`cubegen/trials/storm.js`, `index.js finishStorm`; `core/trials.js STORM`,
+  `game/trials.js stepStorm`): the room is entered and left on opposite faces (the planner asks
+  it), the wind blows across from one of the other two, and the "drop" is a gorge: two rows of
+  the depth's sea along the leeward face (blown in, you drown: back in the room before). The
+  windbreaks are lines every third row from the upwind face: outcrops two cells wide, four levels
+  up, two-cell gaps, staggered, kept off the pads and the rod; the two cells downwind of each are
+  shelter. A gust (`player.pull`, as Gusto's breath) carries a body out of shelter at 2.6 cells/s
+  and takes half its steering against it: about three cells a gust running back. The checked way
+  is the fastest that keeps to the shelter (exposed time counts five times, `arrivals`' `weigh`);
+  its real exposed stretches must each be at most 3 s. Enemies are not blown yet.
 
 ### `siege`: Hold the beacon
 
@@ -411,6 +429,14 @@ before it reaches you.
 - **Check:** deadlines: a floor's deadline is when the fog's underside reaches `top + CHAR_H`.
   The valve's ledge has none (the fog stops over it).
 - **Population:** half, low down (they wait at the bottom).
+- **As built** (`cubegen/trials/miasma.js`, `index.js finishMiasma`; `core/trials.js FOG`,
+  `fogY`, `game/trials.js stepFog`): a terrace (five wide, three deep) at the high entry, the pit
+  (3x3, two levels under the ground round it) at least six cells from the entry and four from the
+  exit; the route search builds the way down. The fog is a flood upside down (`fitFlood` in the
+  levels it has sunk, its steps grown so it sinks in at most eight pulses); it stops half a level
+  over a head on the valve's ledge. The damage is told in bites of 3% of the max HP (a death: back
+  in the room before). Drawn as a haze from its underside up with a denser sheet at the
+  underside.
 
 ## Puzzles
 
@@ -634,7 +660,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 5. [x] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
 6. [x] **`crates`, `plates`** (crates, Sokoban solver).
 7. [x] **`stones`, `sluices`, `timedgate`.**
-8. [ ] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
+8. [x] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
 9. [ ] **`siege`, `chase`, `drift`.**
 10. [ ] **`runes`** (the clue room across cubes).
 11. [ ] Weights and numbers tuned in play; the balance simulation (`docs/balance.md`) counts

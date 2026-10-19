@@ -16,13 +16,16 @@ export const TRIALS = {
     population: 0.3 },
   collapse: { name: 'Crumbling floor', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050', built: true,
     population: 0.3 },
-  cold: { name: 'Cold snap', family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff' },
+  cold: { name: 'Cold snap', family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff', built: true,
+    population: 0.5 },
   storm: { name: 'The storm', family: 'event', sealed: true, timed: true, depths: [1, 6],
-    themes: ['meadow', 'clouds', 'lagoon', 'karst', 'peaks', 'highlands', 'badlands', 'saltflats', 'canyon'], weight: 1, color: '#b0b8ff' },
+    themes: ['meadow', 'clouds', 'lagoon', 'karst', 'peaks', 'highlands', 'badlands', 'saltflats', 'canyon'], weight: 1, color: '#b0b8ff', built: true,
+    population: 0.3 },
   siege: { name: 'Hold the beacon', family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a' },
   chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060' },
   drift: { name: 'The drifting gate', family: 'event', sealed: true, timed: true, depths: [3, 19], themes: null, weight: 1, color: '#d080ff' },
-  miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50' },
+  miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
+    population: 0.5 },
   slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
     population: 0.5 },
   mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
@@ -126,8 +129,8 @@ export const drainLevel = (tl, at, s) => at - (at - tl.from) * Math.min(1, s / D
 // player has left every floor it floods by then). Pulses come one per rise + hold at the most,
 // later where a need says so, stretched to last FLOOD.min s at least. null: it cannot be done
 // within FLOOD.max s (the way up is too long).
-export function fitFlood(from, to, needs = []) {
-  const { step, rise, hold, min, max } = FLOOD, n = Math.max(1, Math.ceil((to - from) / step));
+export function fitFlood(from, to, needs = [], step = FLOOD.step) {
+  const { rise, hold, min, max } = FLOOD, n = Math.max(1, Math.ceil((to - from) / step));
   const place = gap => {
     const out = [];
     for (let j = 0; j < n; j++) out.push(Math.max(needs[j] ?? 0, ARM_TIME, j ? out[j - 1] + gap : 0));
@@ -139,6 +142,43 @@ export function fitFlood(from, to, needs = []) {
   if (end() < min) pulses = pulses.map(p => p + min - end());
   if (end() > max) return null;
   return { kind: 'flood', from, to, step, rise, pulses: pulses.map(p => Math.round(p * 100) / 100) };
+}
+
+// --- miasma -----------------------------------------------------------------------------------------
+// The fog (a flood upside down): timeline { kind: 'miasma', top (levels: where its underside
+// starts), from: 0, to (the levels it sinks), step, rise, pulses }. Its underside's height (world
+// units) at time t; resolved, it lifts back up over DRAIN_TIME. A head in it hurts: FOG.hurt of the
+// max HP a second, FOG.more more for every further second in it.
+export const FOG = { over: 4, hurt: 0.06, more: 0.03, pulses: 8 };   // (pulses: at most, the steps grow to fit)
+export const fogLevel = (tl, t) => tl.top - floodLevel(tl, t);   // (levels)
+export function fogY(m, s) {
+  if (!m?.timeline || m.kind !== 'miasma' || !s || s.phase === 'idle') return null;
+  const tl = m.timeline;
+  if (s.phase === 'resolved') return s.at == null || s.done >= DRAIN_TIME ? null : (s.at + (tl.top + 6 - s.at) * Math.min(1, s.done / DRAIN_TIME)) * 0.5;
+  return fogLevel(tl, s.t) * 0.5;
+}
+export const fogHurt = (maxHp, inFor) => maxHp * (FOG.hurt + FOG.more * inFor);
+
+// --- cold --------------------------------------------------------------------------------------------
+// Each player's cold meter (0-100): away from warmth it rises to 100 in COLD.freeze s; within
+// COLD.radius cells of a lit brazier (or the great fire) it drops COLD.thaw times as fast. At 100
+// you freeze. The generator keeps every gap between warm circles within COLD.gap s for a slow player.
+export const COLD = { freeze: 20, radius: 2.5, thaw: 4, gap: 12, along: [3, 7], every: 5 };
+export function coldStep(meter, dt, warm) {
+  const rate = 100 / COLD.freeze;
+  return Math.max(0, Math.min(100, meter + (warm ? -rate * COLD.thaw : rate) * dt));
+}
+
+// --- storm -------------------------------------------------------------------------------------------
+// The gusts, from one side in a cycle of STORM.period s from the clock running: a warning, the
+// gust, a lull. Out of shelter a gust pulls a body leeward at STORM.speed cells/s and takes STORM.hold
+// of its steering against it (physics/move.js pulled): running back, about three cells a gust.
+export const STORM = { warning: 1.5, gust: 2.5, lull: 3, period: 7, speed: 2.6, hold: 0.5, shun: 5 };   // (shun: the way checked keeps to the shelter, exposed time counting so much more)
+export function stormPhase(t) {
+  if (t < ARM_TIME) return { phase: 'calm', left: ARM_TIME - t };
+  const c = (t - ARM_TIME) % STORM.period;
+  return c < STORM.warning ? { phase: 'warning', left: STORM.warning - c } : c < STORM.warning + STORM.gust ? { phase: 'gust', left: STORM.warning + STORM.gust - c }
+    : { phase: 'lull', left: STORM.period - c };
 }
 
 // --- states (docs/trials.md "States") ------------------------------------------------------------
@@ -237,7 +277,8 @@ export function crustState(m, s, q) {
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
-  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice' };
+  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice', valve: 'Open the vent valve',
+  warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------

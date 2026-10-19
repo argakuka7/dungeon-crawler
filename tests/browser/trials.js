@@ -356,8 +356,53 @@ export async function runTrialChecks(kind = 'flood') {
   await until(() => !state.transitioning && state.cubeKey === t.key, 'into the trial room again');
   check(state.trial.phase === 'idle', 'idle again');
   // resolved by the button on the summit (flood)
-  if (kind === 'flood') {
-    const b = state.map.trial.button;
+  // the cold: armed, the meter rises away from the braziers, and drops by a lit one
+  if (kind === 'cold') {
+    const path = state.map.trial.check.path, first = state.map.trial.parts.find(p => p.type === 'warm');
+    Object.assign(player, { x: path[0].x, y: path[0].y, z: path[0].z, vx: 0, vz: 0 });
+    player.autoDir = DIRS[t.fromDir];
+    await until(() => state.trial.phase === 'running', 'running', 6000);
+    player.autoDir = null;
+    const far = state.map.trial.check.path.at(-3);
+    Object.assign(player, { x: far.x, y: far.y, z: far.z, vx: 0, vz: 0 });
+    await delay(1500);
+    const before = Number(document.getElementById('trial-line').textContent.match(/\d+/)[0]);
+    check(before > 0, `the cold rises (${before}%)`);
+    Object.assign(player, { x: first.x + 0.7, y: first.y, z: first.z, vx: 0, vz: 0 });
+    await delay(150);
+    check(pendingAction()?.target?.id === first.id, 'the first brazier in reach');
+    useAction();
+    await until(() => state.trial.bits[first.id] === 1, 'the brazier lit', 3000);
+    await delay(1200);
+    check(Number(document.getElementById('trial-line').textContent.match(/\d+/)[0]) < before, 'warm by it the cold drops');
+    results.push('the cold');
+  }
+  // the storm: armed, a gust pulls whoever stands out in the open leeward, not one in shelter
+  if (kind === 'storm') {
+    const m = state.map.trial, path = m.check.path, shelter = new Set(m.shelter);
+    Object.assign(player, { x: path[0].x, y: path[0].y, z: path[0].z, vx: 0, vz: 0 });
+    player.autoDir = DIRS[t.fromDir];
+    await until(() => state.trial.phase === 'running', 'running', 6000);
+    player.autoDir = null;
+    const { stormPhase } = await import('../../src/core/trials.js');
+    const open = path.find(p => !shelter.has(Math.floor(p.z) * 16 + Math.floor(p.x)) && Math.hypot(p.x - path[0].x, p.z - path[0].z) > 2);
+    const cover = m.shelter.map(c => ({ x: c % 16 + 0.5, z: Math.floor(c / 16) + 0.5 })).find(q => state.map.cols[Math.floor(q.z) * 16 + Math.floor(q.x)].some(f => !f.fluid));
+    await until(() => stormPhase(state.trial.t).phase === 'warning', 'a warning', 9000);
+    const floorAt = q => state.map.cols[Math.floor(q.z) * 16 + Math.floor(q.x)].find(f => !f.fluid);
+    for (const [q, moved] of [[open, true], [cover, false]]) {
+      await until(() => stormPhase(state.trial.t).phase === 'warning', 'a warning', 9000);
+      const y = floorAt(q).top * 0.5;
+      Object.assign(player, { x: q.x, y, z: q.z, vx: 0, vz: 0 });
+      await until(() => stormPhase(state.trial.t).phase === 'gust', 'the gust', 3000);
+      await delay(800);
+      const d = Math.hypot(player.x - q.x, player.z - q.z);
+      if (player.hp > 0) check(moved ? d > 0.8 : d < 0.2, `${moved ? 'out in the open' : 'in shelter'}: carried ${d.toFixed(2)}`);
+    }
+    results.push('the gusts');
+    if (player.hp <= 0 || state.cubeKey !== t.key) return results;
+  }
+  if (kind === 'flood' || kind === 'miasma' || kind === 'cold' || kind === 'storm') {
+    const b = state.map.trial.button ?? state.map.trial.valve ?? state.map.trial.fire ?? state.map.trial.rod;
     Object.assign(player, { x: b.x + 0.6, y: b.y, z: b.z, vx: 0, vz: 0 });
     await delay(150);
     check(pendingAction()?.kind === 'part', 'the button is in reach');

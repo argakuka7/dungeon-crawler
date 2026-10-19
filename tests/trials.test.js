@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase } from '../src/core/trials.js';
 import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban, solveSluices, sluiceWay } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -782,4 +782,108 @@ test('every stones, sluices and timed gate room generates as proved', () => {
     }
   }
   assert.ok(n.stones > 20 && n.sluices > 20 && n.timedgate > 20, JSON.stringify(n));
+});
+
+// --- miasma -------------------------------------------------------------------------------------
+
+function* fogs(seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: 'miasma' });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === 'miasma') yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('the fog sinks in pulses from over the highest floor, never rises while it runs, and lifts once resolved', () => {
+  const { m } = fogs([1]).next().value, tl = m.trial.timeline;
+  const top = Math.max(...m.floors.filter(f => !f.fluid).map(f => f.landing ? f.top : Math.max(...f.cs) / LH));
+  assert.ok(tl.top >= top + FOG.over - 0.01);
+  let last = Infinity;
+  for (let t = 0; t < floodEnd(tl) + 5; t += 0.5) { const y = fogLevel(tl, t); assert.ok(y <= last + 1e-9); last = y; }
+  const s = { phase: 'running', t: 20 }, y = fogY(m.trial, s);
+  assert.ok(Math.abs(y - fogLevel(tl, 20) * LH) < 1e-9);
+  resolveTrial(s, fogLevel(tl, 20));
+  s.done = 2; assert.ok(fogY(m.trial, s) > y);
+  s.done = 6; assert.equal(fogY(m.trial, s), null);
+  assert.ok(fogHurt(100, 0) === 6 && fogHurt(100, 2) === 12);
+});
+
+// The slow player walking the checked way down, the fog sinking from the moment it arms: the head
+// never in it, the valve reached
+test('walking the checked way down of every miasma room with the real fog: the valve reached, never in it', () => {
+  let n = 0, worst = Infinity;
+  for (const { seed, d, m } of fogs(SEEDS.slice(0, 3))) {
+    const { check, timeline: tl } = m.trial, pts = check.path, valve = m.floors[m.trial.goalFloor];
+    place(m, pts[0].x, pts[0].y, pts[0].z);
+    let t = ARM_TIME, choked = null;
+    for (let j = 1; j < pts.length && !choked; j++) {
+      const q = pts[j];
+      let steps = 0, best = Infinity, since = 0;
+      while (Math.hypot(q.x - player.x, q.z - player.z) > 0.15 && steps++ < 300) {
+        const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
+        if (dist < best - 0.01) { best = dist; since = 0; } else if ((since += DT) > 0.5) break;
+        movePlayer(DT, dx / dist, dz / dist, false, false);
+        t += DT;
+        if (player.y + CHAR_H > fogLevel(tl, t) * LH) { choked = `at ${t.toFixed(1)} s on the way to point ${j}`; break; }
+      }
+      if (!choked && Math.hypot(q.x - player.x, q.z - player.z) > 0.15) { t = Math.max(t - 0.5, q.t + ARM_TIME); place(m, q.x, q.y + 0.05, q.z); }
+    }
+    assert.ok(!choked, `${seed}/${d}: in the fog ${choked}`);
+    // on the valve's ledge the fog stays over a head
+    assert.ok(fogLevel(tl, 1e9) * LH > valve.top * LH + CHAR_H, `${seed}/${d}: the fog comes down onto the valve`);
+    worst = Math.min(worst, (fogLevel(tl, t) * LH) - (player.y + CHAR_H));
+    n++;
+  }
+  assert.ok(n > 15, `${n} walks`);
+});
+
+// --- cold, storm -----------------------------------------------------------------------------------
+
+function* events(kind, seeds) {
+  for (const seed of seeds) {
+    const w = new World(seed, { trial: kind });
+    for (const d of DEPTHS) for (const t of w.layout(d).trials) if (t.kind === kind) yield { w, t, seed, d, m: w.cube(t.key).map };
+  }
+}
+
+test('the cold meter: up to 100 in COLD.freeze s away from warmth, down four times as fast by it', () => {
+  let m = 0;
+  for (let t = 0; t < COLD.freeze / 2; t += 0.1) m = coldStep(m, 0.1, false);
+  assert.ok(Math.abs(m - 50) < 0.6, `${m}`);
+  for (let t = 0; t < COLD.freeze / 8; t += 0.1) m = coldStep(m, 0.1, true);
+  assert.ok(m < 1);
+  assert.equal(coldStep(99.9, 1, false), 100);
+});
+
+test('every cold room: the braziers along the way, the first by the entry, no gap too long, the great fire by the exit', () => {
+  let n = 0;
+  for (const { seed, d, m } of events('cold', [0, 1, 2])) {
+    const tr = m.trial, along = tr.parts.filter(p => p.type === 'warm' && !p.off), path = tr.check.path;
+    assert.ok(along.length >= COLD.along[0] && along.length <= COLD.along[1], `${seed}/${d}: ${along.length} braziers`);
+    assert.ok(Math.hypot(along[0].x - path[0].x, along[0].z - path[0].z) < 0.01, `${seed}/${d}: the first not by the entry`);
+    assert.ok(tr.check.gaps.every(g => g <= COLD.gap), `${seed}/${d}: gaps ${tr.check.gaps}`);
+    assert.ok(tr.parts.some(p => p.type === 'fire'));
+    n++;
+  }
+  assert.ok(n > 15, `${n}`);
+});
+
+test('the storm\'s cycle: a warning, the gust, a lull, from the clock running', () => {
+  assert.equal(stormPhase(1).phase, 'calm');
+  assert.equal(stormPhase(ARM_TIME + 0.5).phase, 'warning');
+  assert.equal(stormPhase(ARM_TIME + STORM.warning + 0.1).phase, 'gust');
+  assert.equal(stormPhase(ARM_TIME + STORM.warning + STORM.gust + 0.1).phase, 'lull');
+  assert.equal(stormPhase(ARM_TIME + STORM.period + 0.5).phase, 'warning');
+});
+
+test('every storm room: straight across, the gorge leeward, its way out in the wind at most (lull + warning) / SLACK at a time', () => {
+  let n = 0;
+  for (const { seed, d, m, t } of events('storm', [0, 1, 2])) {
+    const tr = m.trial;
+    assert.equal(t.exit, t.fromDir);   // (in on one side, out on the opposite one)
+    assert.ok(tr.check.exposed <= (STORM.lull + STORM.warning) / SLACK + 1e-9, `${seed}/${d}: ${tr.check.exposed} s in the wind`);
+    assert.ok(tr.gorge.every(c => m.cols[c].some(f => f.fluid)), `${seed}/${d}: the gorge is not wet`);
+    assert.ok(tr.shelter.length > 10 && tr.parts.some(p => p.type === 'rod'));
+    n++;
+  }
+  assert.ok(n > 10, `${n}`);
 });

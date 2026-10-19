@@ -194,6 +194,13 @@ function basinPart(p) {
   g.position.set(p.x, p.y, p.z);
   return { obj: g, water, float, level: -1 };
 }
+// the great fire: a brazier twice the size on a ring of stones
+function greatFire(p) {
+  const b = brazierPart(p);
+  b.obj.scale.setScalar(1.8);
+  b.light.distance = 8;
+  return b;
+}
 // a heavy crate: planks round a box, iron at its corners
 function cratePart(p) {
   const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.85, flatShading: true });
@@ -283,11 +290,23 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
+    if (p.type === 'rod') {   // the lightning rod: an iron mast with a copper spike and a lever at its foot
+      const b = button(p, color), mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 3, 6), IRON());
+      mast.position.y = 1.5;
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.35, 6), new THREE.MeshStandardMaterial({ color: 0xc87533, metalness: 0.7, roughness: 0.35 }));
+      tip.position.y = 3.15;
+      b.obj.add(mast, tip); group.add(b.obj); view.parts.set(p.id, b);
+    }
+    if (p.type === 'valve') {   // the vent valve: the button's pulsing post with an iron wheel over it
+      const b = button(p, color), wheel = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 6, 16), IRON());
+      wheel.rotation.x = Math.PI / 2; wheel.position.y = 0.9;
+      b.obj.add(wheel); group.add(b.obj); view.parts.set(p.id, b);
+    }
     if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; b.cell = p.cell; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'lever' || p.type === 'reset' || p.type === 'sluice') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
-      : p.type === 'brazier' ? brazierPart(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
+      : p.type === 'brazier' || p.type === 'warm' ? brazierPart(p) : p.type === 'fire' ? greatFire(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
         : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
@@ -298,6 +317,17 @@ export function buildTrialView(m, group) {
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
   if (site) { view.cage = cage(site.anchor); group.add(view.cage.obj); }
+  if (t.kind === 'miasma') {
+    const fog = new THREE.Group(), haze = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04),
+      new THREE.MeshBasicMaterial({ color: 0x9adf50, transparent: true, opacity: 0.22, depthWrite: false }));
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(N - 0.04, N - 0.04), new THREE.MeshBasicMaterial({ color: 0xb8f070, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }));
+    sheet.rotation.x = -Math.PI / 2;
+    haze.renderOrder = 6; sheet.renderOrder = 6;
+    fog.add(haze, sheet); fog.position.set(N / 2, 0, N / 2); fog.visible = false;
+    haze.position.x = sheet.position.x = 0;
+    group.add(fog);
+    view.fog = fog; view.fogTop = (t.timeline.top + 8) * LH;
+  }
   if (t.kind === 'flood' || t.kind === 'sunken') {
     const fluid = t.fluid, water = new THREE.Mesh(new THREE.BoxGeometry(N - 0.04, 1, N - 0.04), fluidMaterial(fluid, 'full'));
     water.material.side = THREE.DoubleSide;
@@ -308,6 +338,32 @@ export function buildTrialView(m, group) {
     if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }
   }
   return view;
+}
+
+// the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; wind: the way it blows): streaks
+// across the room, a few in the warning, many in the gust
+export function setStorm(world, phase, wind, dt) {
+  const v = world?.trialView;
+  if (!v || (phase !== 'warning' && phase !== 'gust')) return;
+  const n = (phase === 'gust' ? 60 : 12) * dt;
+  for (let k = n; k > 0; k--) {
+    if (k < 1 && Math.random() > k) break;
+    const along = Math.random() * N, x = wind[0] ? (wind[0] > 0 ? 0.5 : N - 0.5) : along, z = wind[1] ? (wind[1] > 0 ? 0.5 : N - 0.5) : along;
+    emit(soft, x, 2 + Math.random() * 5, z, { v: [wind[0] * 9, 0, wind[1] * 9], spread: 0.3, life: 1.6, size: 0.12, grow: 4,
+      color: '#e8ecff', alpha: phase === 'gust' ? 0.5 : 0.3, gravity: 0, drag: 0 });
+  }
+}
+
+// the sinking fog's underside at y (world units; null: none): a sickly haze from there up, its
+// underside a denser sheet
+export function setTrialFog(world, y) {
+  const v = world?.trialView;
+  if (!v?.fog) return;
+  v.fog.visible = y != null;
+  if (y == null) return;
+  const top = v.fogTop, h = Math.max(0.05, top - y);
+  v.fog.children[0].scale.y = h; v.fog.children[0].position.y = y + h / 2;
+  v.fog.children[1].position.y = y;
 }
 
 // the fluid's surface at y (world units; null: none), the trial's phase (the tide lines show while idle)
@@ -370,7 +426,10 @@ export function setGridParts(world, m, s, shown) {
   for (const [id, g] of v.grid) {
     const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
     if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
-    else if (p.type === 'brazier' && g.lit !== !!bit) { g.lit = !!bit; g.flame.visible = g.lit; g.light.visible = g.lit; }
+    else if (p.type === 'brazier' || p.type === 'warm' || p.type === 'fire') {   // (the cold's: lit for good once resolved)
+      const lit = p.type === 'brazier' ? !!bit : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
+      if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; g.light.visible = lit; }
+    }
     else if (p.type === 'tile') {
       g.angle += (-bit * Math.PI / 2 - g.angle) * 0.3; g.turn.rotation.y = g.angle;
       const wet = !!info?.wet?.has(p.i);
@@ -447,7 +506,7 @@ export function tickTrialView(world, time) {
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
   for (const [, g] of v.grid) {
     if (g.part.type === 'wheel' && g.driven) g.wheel.rotation.z -= 0.04;
-    if (g.part.type === 'brazier' && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + g.part.i) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + g.part.i) * 0.4; }
+    if ((g.part.type === 'brazier' || g.part.type === 'warm' || g.part.type === 'fire') && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + (g.part.i ?? 0)) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + (g.part.i ?? 0)) * 0.4; }
     if (g.part.type === 'emitter') g.gem.rotation.y = time;
   }
   if (v.cage) { v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98; }

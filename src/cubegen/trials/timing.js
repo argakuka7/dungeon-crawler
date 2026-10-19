@@ -32,8 +32,10 @@ function duration(a, b, move, speed) {
   return d / speed + JUMP_TIME;   // a jump up, or a drop
 }
 
-// earliest arrival (s) at every node from `start`, at `speed`: { time: Map(id -> s), prev, node }
-export function arrivals(ctx, start, speed = WALK_SPEED) {
+// earliest arrival (s) at every node from `start`, at `speed`: { time: Map(id -> s), prev, node }.
+// weigh(node): a move onto it counts that many times its length (a way that keeps out of the wind:
+// time is then what is minimised, `real` the seconds it really takes)
+export function arrivals(ctx, start, speed = WALK_SPEED, weigh = null) {
   const adj = graph(ctx, true), moves = new Map();
   for (const m of ctx.moves) {
     moves.set(m.from.id + '>' + m.to.id, m);
@@ -42,7 +44,7 @@ export function arrivals(ctx, start, speed = WALK_SPEED) {
   // (the reach graph knows floors only: a stair or bridge crossing a column over its floor leaves
   // no room to walk there; on a route move the structure is the way)
   const room = new Map(), fits = f => f.landing || (room.get(f.id) ?? room.set(f.id, floorWalkable(ctx, f, CHAR_H, true)).get(f.id));
-  const time = new Map([[start.id, 0]]), prev = new Map(), node = new Map([[start.id, start]]), done = new Set(), open = new Heap();
+  const time = new Map([[start.id, 0]]), real = new Map([[start.id, 0]]), prev = new Map(), node = new Map([[start.id, start]]), done = new Set(), open = new Heap();
   open.push(0, start);
   while (open.size) {
     const a = open.pop();
@@ -51,11 +53,11 @@ export function arrivals(ctx, start, speed = WALK_SPEED) {
     for (const b of adj.get(a.id) || []) {
       const move = moves.get(a.id + '>' + b.id);
       if (!move && !fits(b)) continue;
-      const t = time.get(a.id) + duration(a, b, move, speed);
-      if (t < (time.get(b.id) ?? Infinity)) { time.set(b.id, t); prev.set(b.id, a); node.set(b.id, b); open.push(t, b); }
+      const dur = duration(a, b, move, speed), t = time.get(a.id) + dur * (weigh ? weigh(b) : 1);
+      if (t < (time.get(b.id) ?? Infinity)) { time.set(b.id, t); real.set(b.id, real.get(a.id) + dur); prev.set(b.id, a); node.set(b.id, b); open.push(t, b); }
     }
   }
-  return { time, prev, node };
+  return { time, real, prev, node };
 }
 
 // the fastest path from the start to `goal` (nodes, the start first), or null

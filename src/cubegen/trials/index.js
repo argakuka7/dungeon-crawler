@@ -7,7 +7,7 @@
 //   finishTrial   at the end, with the final slopes and fences: the goal must be reachable from
 //                 the entry and lead on to the exit, and the kind's own check must pass (the
 //                 timing of an event, cubegen/trials/timing.js); else the attempt is retried
-import { N, LH, RUN_SPEED } from '../../core/constants.js';
+import { N, LH, RUN_SPEED, CHAR_H } from '../../core/constants.js';
 import { floorY } from '../../core/surfaces.js';
 import { search, take } from '../route.js';
 import { reachFrom, reachTo, graph } from '../reach.js';
@@ -18,12 +18,18 @@ import { shapeSunken, sunkenGoal } from './sunken.js';
 import { shapeGrid, gridRecord } from './grid.js';
 import { RIM } from './deck.js';
 import { shapeTimed, timedGoal } from './timed.js';
-import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
-import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '../../core/trials.js';
+import { shapeMiasma, miasmaGoal } from './miasma.js';
+import { shapeCold, coldGoal } from './cold.js';
+import { shapeStorm, stormGoal } from './storm.js';
+import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
+import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
+  miasma: { shape: shapeMiasma, goal: miasmaGoal, costs: null, finish: finishMiasma },
+  cold: { shape: shapeCold, goal: coldGoal, costs: null, finish: finishCold },
+  storm: { shape: shapeStorm, goal: stormGoal, costs: null, finish: finishStorm },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
   mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
@@ -134,6 +140,106 @@ function fitFloodRoom(ctx, entry, goal, summit) {
   const check = checkDeadlines(path, arr, deadline);
   if (!check.ok) return null;
   return { timeline, check: { slack: Math.round(check.slack * 100) / 100, path: checkPath(path, arr, deadline) } };
+}
+
+// --- miasma -----------------------------------------------------------------------------------------
+
+// The fog's timeline is a flood's turned upside down: its underside starts FOG.over levels over the
+// highest floor and sinks in pulses to just over a body's head on the valve's ledge; in `u`, the
+// levels it has sunk, it is a flood (core/trials.js fogY). A floor's deadline: the fog's underside
+// at its top + CHAR_H (a head there in it).
+function finishMiasma(ctx, t, out) {
+  const valve = t.goal, top = Math.max(...ctx.floors.filter(f => !f.fluid).map(f => f.landing ? f.top : Math.max(...f.cs) / LH));
+  const head = CHAR_H / LH, from = Math.ceil(top) + FOG.over, to = valve.top + head + 0.5;
+  const u = n => from - (floorLevel(n) + head);   // (the fog's sinking to reach a head on floor n)
+  const arr = arrivals(ctx, t.entry), path = pathOf(arr, valve);
+  if (!path) return null;
+  const end = from - to, needs = [], step = Math.max(FLOOD.step, Math.ceil(end / FOG.pulses));
+  path.forEach((n, i) => {
+    if (i + 1 >= path.length || u(n) >= end) return;
+    const j = Math.max(0, Math.floor(u(n) / step)), need = arr.time.get(path[i + 1].id) * SLACK + ARM_TIME;
+    needs[j] = Math.max(needs[j] ?? 0, need);
+  });
+  const tl = fitFlood(0, end, needs, step);
+  if (!tl) return null;
+  const timeline = { ...tl, kind: 'miasma', top: from };
+  const deadline = n => n === valve || u(n) >= end ? null : floodTime(tl, Math.max(0, u(n)));
+  const check = checkDeadlines(path, arr, deadline);
+  if (!check.ok) return null;
+  const at = { x: valve.x + 0.5, y: floorY(valve, 0.5, 0.5), z: valve.z + 0.5 };
+  return { timeline, valve: at, pit: t.pit, parts: [{ id: 'valve', type: 'valve', ...at }],
+    check: { slack: Math.round(check.slack * 100) / 100, path: checkPath(path, arr, deadline) } };
+}
+
+// --- cold ----------------------------------------------------------------------------------------------
+
+// The braziers along the way (a slow player's fastest way from the entry to the great fire): the
+// first on the entry's apron, then one about every COLD.every cells, evenly by time (3-7, more
+// where a gap would be too long), so that no gap
+// (from leaving one warm circle to coming into the next, lighting included) takes a slow player
+// over COLD.gap s; one or two more off the way. Each is lit once (F) and stays lit.
+function finishCold(ctx, t, out) {
+  const fire = t.goal, arr = arrivals(ctx, t.entry), path = pathOf(arr, fire);
+  if (!path || path.length < 4) return null;
+  const at = n => ({ x: n.x + 0.5, y: n.landing ? n.top * LH : floorY(n, 0.5, 0.5), z: n.z + 0.5 });
+  const time = n => arr.time.get(n.id), total = time(fire);
+  const gaps = list => {   // the slow time out in the cold between each warm circle and the next
+    const out = [];
+    for (let k = 0; k + 1 < list.length; k++) {
+      const a = list[k], b = list[k + 1], seg = path.filter(n => time(n) >= time(a) && time(n) <= time(b));
+      const cold = seg.filter(n => Math.hypot(n.x - a.x, n.z - a.z) > COLD.radius && Math.hypot(n.x - b.x, n.z - b.z) > COLD.radius);
+      const span = cold.length ? time(cold.at(-1)) - time(cold[0]) + 1 / 1.9 : 0;
+      out.push(span * SLACK + USE_TIME);
+    }
+    return out;
+  };
+  let picked = null;
+  for (let n = Math.max(COLD.along[0], Math.min(COLD.along[1], Math.round(path.length / COLD.every) + 1)); n <= COLD.along[1] && !picked; n++) {
+    const list = [path[0]];
+    for (let k = 1; k < n; k++) {
+      const want = total * k / n, node = path.find(p => time(p) >= want) ?? fire;
+      if (!list.includes(node) && node !== fire) list.push(node);
+    }
+    if (gaps([...list, fire]).every(g => g <= COLD.gap)) picked = list;
+  }
+  if (!picked || picked.length < COLD.along[0]) return null;
+  // one or two more off the way: dry ground 3-6 cells from it, reached from it
+  const on = new Set(path.map(n => n.id)), reach = reachFrom(ctx, [t.entry], true);
+  const off = ctx.floors.filter(f => !f.fluid && f.layer === 0 && reach.has(f.id) && !on.has(f.id) && !ctx.trialKeep?.has(f.c)
+    && Math.min(...path.map(n => Math.hypot(n.x - f.x, n.z - f.z))) >= 3 && Math.min(...path.map(n => Math.hypot(n.x - f.x, n.z - f.z))) <= 6);
+  const extra = [];
+  for (let k = 0; k < 1 + (ctx.R() < 0.5 ? 1 : 0) && off.length; k++) {
+    const f = off.splice(Math.floor(ctx.R() * off.length), 1)[0];
+    if (!extra.some(e => Math.hypot(e.x - f.x, e.z - f.z) < 4)) extra.push(f);
+  }
+  const parts = [...picked, ...extra].map((n, i) => ({ id: `warm${i}`, type: 'warm', ...at(n), i, off: i >= picked.length }));
+  parts.push({ id: 'fire', type: 'fire', ...at(fire) });
+  // nobody waits in a warm circle
+  for (const f of ctx.floors) if (parts.some(p => Math.hypot(f.x + 0.5 - p.x, f.z + 0.5 - p.z) <= COLD.radius + 0.5)) f.noSpawn = true;
+  const g = gaps([...picked, fire]);
+  return { parts, fire: at(fire), check: { gaps: g.map(v => Math.round(v * 100) / 100), worst: Math.round(Math.max(...g) * 100) / 100,
+    path: checkPath(path, arr, () => null) } };
+}
+
+// --- storm --------------------------------------------------------------------------------------------
+
+// The way across (a slow player's fastest from the entry to the lightning rod) is out in the wind
+// for stretches between shelters: each must take at most (lull + warning) / SLACK s.
+function finishStorm(ctx, t, out) {
+  const rod = t.goal, shelter = new Set(t.shelter), safe0 = n => n.landing || shelter.has(n.c);
+  const weighed = arrivals(ctx, t.entry, undefined, n => safe0(n) ? 1 : STORM.shun), path = pathOf(weighed, rod);
+  if (!path) return null;
+  const arr = { ...weighed, time: weighed.real }, safe = n => safe0(n) || n === path[0] || n === rod;
+  let worst = 0, from = null;
+  for (const n of path) {
+    if (safe(n)) { if (from != null) worst = Math.max(worst, arr.time.get(n.id) - from); from = null; continue; }
+    if (from == null) { const k = path.indexOf(n); from = arr.time.get(path[k - 1].id); }
+  }
+  if (worst > (STORM.lull + STORM.warning) / SLACK) return null;
+  const at = { x: rod.x + 0.5, y: floorY(rod, 0.5, 0.5), z: rod.z + 0.5 };
+  for (const c of t.gorge) for (const f of ctx.cols[c]) f.noSpawn = true;
+  return { wind: t.wind, shelter: t.shelter, gorge: t.gorge, rod: at, parts: [{ id: 'rod', type: 'rod', ...at }],
+    check: { exposed: Math.round(worst * 100) / 100, path: checkPath(path, arr, () => null) } };
 }
 
 // --- collapse ----------------------------------------------------------------------------------------
