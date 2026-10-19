@@ -151,6 +151,22 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         noise(t + 0.9, 0.5, filter('lowpass', 900 * p, 0.8, amp(t + 0.9, 0.02, 0.4, 0.45, out)));
       },
     },
+    squarlo: {   // the little tide boss: a squeaky gurgle, a bubbly war cry, a long sinking blub
+      alert: (t, out, p) => {
+        for (let i = 0; i < 3; i++) bend(t + i * 0.09, 0.08, 620 * p, 900 * p, 700 * p, 2400 * p, 0.3, out);   // "bip-bip-bip"
+        gloops(t + 0.25, 6, 500 * p, 2 * 500 * p, 0.05, 0.25, out);
+      },
+      windup: (t, out, p) => { bend(t, 0.25, 500 * p, 800 * p, 650 * p, 2000 * p, 0.3, out); gloops(t, 3, 600 * p, 2 * 600 * p, 0.05, 0.2, out); },
+      death: (t, out, p) => {
+        bend(t, 1.1, 700 * p, 500 * p, 120 * p, 1600 * p, 0.4, out);
+        gloops(t + 0.4, 10, 300 * p, 2 * 300 * p, 0.05, 0.3, out);
+      },
+    },
+    squirtle: {   // a Squirtle: a wet chirp, a hiss, a gurgle
+      alert: (t, out, p) => { bend(t, 0.14, 1200 * p, 1700 * p, 1300 * p, 3500 * p, 0.25, out); gloops(t + 0.1, 3, 800 * p, 2 * 800 * p, 0.05, 0.15, out); },
+      windup: (t, out, p) => noise(t, 0.18, filter('highpass', 3000 * p, 0.8, amp(t, 0.03, 0.18, 0.15, out))),
+      death: (t, out, p) => { bend(t, 0.5, 1000 * p, 700 * p, 250 * p, 2500 * p, 0.3, out); gloops(t + 0.2, 5, 400 * p, 2 * 400 * p, 0.05, 0.2, out); },
+    },
     snapskull: {   // a skull come to life: chattering teeth, a hollow clack, a crack
       alert: (t, out, p) => clicks(t, 7, 0.04, 2600 * p, 0.45, out),
       windup: (t, out, p) => { clicks(t, 3, 0.05, 2000 * p, 0.35, out); tone('sine', 520 * p, 300 * p, t, 0.08, amp(t, 0.002, 0.2, 0.08, out)); },

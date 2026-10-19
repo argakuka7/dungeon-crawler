@@ -5,6 +5,7 @@
 //   Alt + WASD / arrows: go to the adjacent cube on that side of the screen
 // None of them wait for guardians: locked portals are taken anyway (the gate stays locked).
 // The console's developer commands (game/devcommands.js: /find, /goto, /horde, /arena, /go) do the same.
+import { BOSS_ARENAS } from '../core/bosses.js';
 import * as THREE from 'three';
 import { camera, renderer } from '../render/scene.js';
 import { step } from '../world/coords.js';
@@ -228,7 +229,7 @@ export async function goArena(type, depth = state.map?.depth ?? 0) {
     .sort((a, b) => Math.abs(a - depth) - Math.abs(b - depth) || a - b);
   let key = null;
   for (const d of type ? order : [Math.min(depth, 19)]) {
-    for (const [k, g] of cubes.layout(d).guardians) if (!type || g.arena === type) { key = k; break; }
+    for (const [k, g] of cubes.layout(d).guardians) if (!type || g.arena === type || BOSS_ARENAS[g.boss]?.type === type) { key = k; break; }
     if (key) break;
   }
   if (!key) { setStatus(`No ${type} arena in this world`); return; }

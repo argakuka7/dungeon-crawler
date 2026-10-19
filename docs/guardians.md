@@ -36,8 +36,9 @@ silver cloud. The HP bar and the label keep the tier's colour.
 `map.guardian.role` and `.bossPlaceholder`, spawn/enemy fields, kind profiles, and
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
-instead, the second (depth 1) by **Totnar**, each alone and with a fight of his own
-([bosses.md](bosses.md)); `map.guardian.boss` names him and `bossPlaceholder` is false there.
+instead, the second (depth 1) by **Totnar**, the third (depth 2) by **Squarlo**, each alone and
+with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names him and
+`bossPlaceholder` is false there.
 
 Each tier sets level-1 floors (`GUARDIAN_TIERS` in `core/enemies.js`), so the promoted
 species decides how a guardian fights, not how strong it is:
@@ -114,6 +115,11 @@ guardian, gate):
 | crater | a bowl two levels deep under a crisp rim, crossed by a trench ridge | toppled columns, boulders, weapon graves, scattered remains |
 | grove | gentle ground, some knolls | clumps of trees, logs, dense undergrowth |
 | courtyard | a ruined wall ring with breaches and stubs | columns at the wall ends, urns, statues, braziers |
+
+A boss may have an arena type of its own instead (`BOSS_ARENAS` in `core/bosses.js`,
+`BOSS_SHAPES` in `cubegen/arenashapes.js`), never planned for other guardians: Squarlo's
+**tidal** hills, a basin of low flats with at least four steep little hills in it (each with a
+ramp up) where his tide comes and goes, and a bank round the cube's edge holding the water in (`map.tide`; [bosses.md](bosses.md#squarlo)).
 
 The fight zone (`encounter` floors) links only by slopes of one level and by flat
 edges. Terraces and lips are crisp steps that ramps join. Scenery next to the zone

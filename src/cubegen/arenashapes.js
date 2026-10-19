@@ -6,7 +6,7 @@
 //   ramp:  overrides crisp, so terraces stay connected by slopes
 //   marks: where the type wants its focal clutter (cubegen/arenaprops.js)
 // Scenery is never walkable from the zone: guardian.js raises it into walls or rails it off.
-import { N } from '../core/constants.js';
+import { N, LH, HEAD_Y } from '../core/constants.js';
 import { idx, clamp } from '../core/util.js';
 
 const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -278,3 +278,141 @@ function courtyard(fr) {
 
 export const SHAPES = { hills, gorge, colosseum, dais, henge, crater, grove, courtyard };
 export const ARENA_TYPES = Object.keys(SHAPES);
+
+// A boss's own arena (core/bosses.js BOSS_ARENAS `type`), never planned for any other guardian.
+// 9. Tidal hills (Squarlo's): a basin of low flats `low` levels under the doorways, where his
+// tide comes and goes (game/tide.js), with little hills standing out of it; a bank of scenery
+// all round the cube keeps the water in (the tide's box: the cells inside it). A hill is steep:
+// a top of two by two or three by three cells `top` levels over the doorways, crisp on every
+// side but one, where a ramp comes down to the flats a level a cell (so they take little room:
+// the flats stay wide). At rest the water stands `rest` levels over the flats; the high tide
+// `high` under the doorways (they and the hilltops stay dry). Ground `safe` levels under them or
+// higher is never deeper in it than a body can wade, the flats drown. There are `hills` hills,
+// at least `peaks`; from every floor of the flats wadeable ground is at most `reach` steps away
+// (another hill grows where it is not, or a low knoll where no hill fits), so a player who runs when he calls the tide gets out.
+export const TIDAL = { low: -3, top: 1, safe: -1, reach: 4, rest: 0.8, high: -0.45, hills: 5, peaks: 4 };
+const DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+function tidal(fr) {
+  const { R, noise } = fr, hills = [];
+  const bank = (x, z) => x === 1 || z === 1 || x === N - 2 || z === N - 2;
+  const near = (x, z, cells, r) => cells.some(c => Math.max(Math.abs(c % N - x), Math.abs(((c / N) | 0) - z)) <= r);
+  const flats = [];
+  each((x, z, c) => { if (fr.flat[c]) flats.push(c); });
+  // A hill at (x, z) of size n with its ramp going off along d: its top cells, its ramp cells (from
+  // the top down) and the landing at the ramp's foot; null if it does not fit (on the doorways'
+  // or his post's ground, on the bank, by another hill)
+  const plan = (x, z, n, d) => {
+    const top = [];
+    for (let b = 0; b < n; b++) for (let a = 0; a < n; a++) top.push(idx(x + a, z + b));
+    const [dx, dz] = DIRS4[d], k = TIDAL.top - TIDAL.low - 1;
+    // the ramp leaves from the middle of the side facing d
+    const mid = Math.floor((n - 1) / 2);
+    let rx = dx > 0 ? x + n : dx < 0 ? x - 1 : x + mid, rz = dz > 0 ? z + n : dz < 0 ? z - 1 : z + mid;
+    const ramp = [];
+    for (let i = 0; i <= k; i++, rx += dx, rz += dz) ramp.push([rx, rz]);
+    const cells = [...top.map(c => [c % N, (c / N) | 0]), ...ramp];
+    for (const [cx, cz] of cells) {
+      if (cx < 2 || cz < 2 || cx > N - 3 || cz > N - 3 || fr.flat[idx(cx, cz)]) return null;
+      if (hills.some(h => near(cx, cz, [...h.top, ...h.ramp, h.landing], 1))) return null;
+    }
+    return { top, ramp: ramp.slice(0, k).map(([a, b]) => idx(a, b)), landing: idx(...ramp[k]) };
+  };
+  const knolls = [];   // (a low knoll where no hill fits: ground to wade on)
+  // a hill: of the spots that fit, the one furthest from the other hills (and the doorways' and
+  // his post's ground), or the nearest to `at`
+  const centre = h => [h.top.reduce((t, c) => t + c % N, 0) / h.top.length, h.top.reduce((t, c) => t + ((c / N) | 0), 0) / h.top.length];
+  let big = true;
+  const addHill = (at = null) => {
+    let best = null, score = -Infinity;
+    for (let i = 0; i < 160; i++) {
+      const n = big && R() < 0.3 ? 3 : 2;
+      const x = at ? at[0] - Math.floor(R() * (n + 2)) + 1 : 2 + Math.floor(R() * (N - 3 - n)), z = at ? at[1] - Math.floor(R() * (n + 2)) + 1 : 2 + Math.floor(R() * (N - 3 - n));
+      const h = plan(x, z, n, Math.floor(R() * 4));
+      if (!h) continue;
+      const [cx, cz] = centre(h);
+      const sc = at ? -Math.hypot(cx - at[0], cz - at[1])
+        : Math.min(9, ...hills.map(o => Math.hypot(cx - centre(o)[0], cz - centre(o)[1])), ...flats.map(c => Math.hypot(cx - c % N, cz - ((c / N) | 0)) + 1));
+      if (sc > score) { best = h; score = sc; }
+    }
+    if (best) hills.push(best);
+    return !!best;
+  };
+  let s;
+  const shape = () => {
+    s = blank();
+    const fixed = new Uint8Array(N * N), active = new Uint8Array(N * N);
+    each((x, z, c) => {
+      if (bank(x, z) && !fr.flat[c]) { s.rel[c] = 2; s.crisp[c] = 1; return; }
+      s.zone[c] = 1; active[c] = 1;
+      s.rel[c] = Math.round(TIDAL.low + (noise(x * .37, z * .37) - .5) * 0.6);
+    });
+    for (const c of knolls) { s.rel[c] = TIDAL.safe + 1; fixed[c] = 1; }
+    for (const h of hills) {
+      for (const c of h.top) { s.rel[c] = TIDAL.top; s.crisp[c] = 1; active[c] = 0; }
+      h.ramp.forEach((c, i) => { s.rel[c] = TIDAL.top - 1 - i; s.crisp[c] = 1; s.ramp[c] = 1; active[c] = 0; });
+    }
+    finish(s, fr, TIDAL.low, 3);
+    for (const c of flats) fixed[c] = 1;
+    relax(s.rel, active, fixed);
+  };
+  // (again, where fewer than `peaks` fit: smaller ones, closer together)
+  for (let tries = 0; tries < 8; tries++) {
+    hills.length = 0; big = tries < 4;
+    for (let i = 0; i < TIDAL.hills; i++) addHill();
+    if (hills.length >= TIDAL.peaks) break;
+  }
+  shape();
+  // the flats too far from ground a body can wade: a hill grows near the farthest (or a knoll
+  // there, where none fits), until none is
+  for (let pass = 0; pass < 16; pass++) {
+    const far = stepsUp(s);
+    if (!far) break;
+    if (!addHill(far)) knolls.push(idx(...far));
+    shape();
+  }
+  s.marks.peaks = hills.map(h => h.top[0]);
+  s.marks.hills = hills;
+  s.min = 0;   // (the flats may sink lower than other arenas' floors)
+  return s;
+}
+// are neighbouring zone cells a and b joined (the way cubegen/guardian.js links floors)?
+function joined(s, a, b) {
+  const dh = Math.abs(s.rel[a] - s.rel[b]);
+  return dh === 0 || dh === 1 && ((!s.crisp[a] && !s.crisp[b]) || !!s.ramp[a] || !!s.ramp[b]);
+}
+// about how high the middle of zone cell (x, z) stands (levels): each corner is the mean of the
+// cells round it joined to this one (cubegen/guardian.js blends joined floors into slopes)
+function middleOf(s, x, z) {
+  const c = idx(x, z);
+  let sum = 0;
+  for (const [ox, oz] of DIAG) {
+    const a = idx(x + ox, z), b = idx(x, z + oz), d = idx(x + ox, z + oz), group = [c];
+    const ja = inner(x + ox, z) && s.zone[a] && joined(s, c, a), jb = inner(x, z + oz) && s.zone[b] && joined(s, c, b);
+    if (ja) group.push(a);
+    if (jb) group.push(b);
+    if (inner(x + ox, z + oz) && s.zone[d] && (ja && joined(s, a, d) || jb && joined(s, b, d))) group.push(d);
+    sum += group.reduce((t, g) => t + s.rel[g], 0) / group.length;
+  }
+  return sum / 4;
+}
+// can a body wade where zone cell c (at x, z) is at high tide? (TIDAL.safe or higher, and its
+// middle under no more water than the head stands, with a little to spare)
+const wadeable = (s, x, z, c) => s.rel[c] >= TIDAL.safe && (TIDAL.high - middleOf(s, x, z)) * LH < HEAD_Y - 0.15;
+// the zone cell farthest (in steps over the zone) from ground a body can wade at high tide, if
+// it is further than TIDAL.reach: [x, z], else null
+export function stepsUp(s) {
+  const dist = new Int16Array(N * N).fill(-1), queue = [];
+  each((x, z, c) => { if (s.zone[c] && wadeable(s, x, z, c)) { dist[c] = 0; queue.push(c); } });
+  for (let i = 0; i < queue.length; i++) {
+    const a = queue[i], ax = a % N, az = (a / N) | 0;
+    for (const [dx, dz] of DIRS4) {
+      const b = idx(ax + dx, az + dz);
+      if (!inner(ax + dx, az + dz) || !s.zone[b] || dist[b] >= 0 || !joined(s, a, b)) continue;
+      dist[b] = dist[a] + 1; queue.push(b);
+    }
+  }
+  let best = null, most = TIDAL.reach;
+  each((x, z, c) => { if (s.zone[c] && (dist[c] < 0 || dist[c] > most)) { most = dist[c] < 0 ? 99 : dist[c]; best = [x, z]; } });
+  return best;
+}
+export const BOSS_SHAPES = { tidal };

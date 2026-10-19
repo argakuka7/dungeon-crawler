@@ -15,6 +15,10 @@ import { wollas, resetWollas, updateWollas, detachWollas } from './wolla.js';
 import { wolks, resetWolks, updateWolks, detachWolks } from './wolk.js';
 import { gustos, resetGustos, updateGustos, detachGustos } from './gusto.js';
 import { totnars, resetTotnars, updateTotnars, detachTotnars } from './totnar.js';
+import { squarlos, resetSquarlos, updateSquarlos, detachSquarlos } from './squarlo.js';
+import { squirtles, resetSquirtles, updateSquirtles, detachSquirtles } from './squirtles.js';
+import { updateTide, resetTide, drownEnemies, floatSwimmers } from './tide.js';
+import { STAGE_PROFILES } from '../core/enemies.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
 import { removeEnemyViews } from '../render/enemies.js';
@@ -79,14 +83,14 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...gustos, ...totnars, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...gustos, ...totnars, ...squarlos, ...spawned];
 export function resetEnemies() {
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
-  state.dark = 0;
+  state.dark = 0; state.mist = 0; resetTide();
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetGustos(); resetTotnars();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetGustos(); resetTotnars(); resetSquarlos();
   for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());
@@ -189,15 +193,20 @@ export function updateEnemies(dt) {
   if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateGustos(dt); updateTotnars(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateSquirtles(dt); updateGustos(dt); updateTotnars(dt); updateSquarlos(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
+  // a boss's tide (game/tide.js): it drowns, but those that swim float
+  updateTide(allEnemies(), dt);
+  if (state.tide != null) { drownEnemies(allEnemies()); floatSwimmers(allEnemies()); }
   updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(allEnemies(), dt);
-  state.dark = darkness(allEnemies());
+  state.dark = darkness(allEnemies()); state.mist = misty(allEnemies());
 }
 // a boss keeping the cube dark (Totnar, game/totnar.js; shown one, its `dark` comes with it)
 const darkness = list => list.some(e => e.dark && e.mode !== 'dead') ? 1 : 0;
+// a boss growing into another stage in a fog (Squarlo, game/squarlo.js)
+const misty = list => list.some(e => e.mode === 'split' && STAGE_PROFILES[e.boss]) ? 1 : 0;
 // shown another player's enemies: the runner moves them; we fight them (our hits go to the
 // runner, game/sword.js) and get our XP and loot from those that die
 function followEnemies(dt) {
@@ -207,7 +216,8 @@ function followEnemies(dt) {
   awardKills(list);
   updateProjectiles(dt); updateGusts(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
   contactEnemies(list, dt, false);
-  state.dark = darkness(list);
+  updateTide(list, dt);
+  state.dark = darkness(list); state.mist = misty(list);
 }
 export function drawEnemies(dt, off) { animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawAllShots(dt, off); drawThrows(dt, off); }
 function detachSpawned() { const list = spawned; spawned = []; return list; }
@@ -216,5 +226,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachGustos(), ...detachTotnars(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachSpawned()];
 }

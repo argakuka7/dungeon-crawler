@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { N, LH, WATER, LAVA, ACID } from '../src/core/constants.js';
+import { N, LH, WATER, LAVA, ACID, HEAD_Y } from '../src/core/constants.js';
 import { flatMap, state } from './fixtures.js';
 import { player } from '../src/game/state.js';
 import { canMove } from '../src/physics/canmove.js';
 import { movePlayer } from '../src/physics/move.js';
 import { groundAt } from '../src/physics/collide.js';
-import { inFluid } from '../src/physics/fluid.js';
+import { inFluid, wading } from '../src/physics/fluid.js';
 
 function bank(dx = 1, dz = 0, fluid = WATER) {
   const m = flatMap(), f = m.floors[5 * N + 5], water = m.floors[(5 + dz) * N + 5 + dx];
@@ -93,14 +93,33 @@ test('bridges and stacked dry floors above fluids stay walkable', () => {
   }
 });
 
-test('fluid contact begins below the surface, not while jumping above it', () => {
+test('fluid contact begins below the surface, not while jumping above it; water only over the head', () => {
   for (const fluid of [WATER, LAVA, ACID]) {
     const water = bank(1, 0, fluid), gr = groundAt(6.5, 5.5, 10, 0), surface = water.surf * LH;
     assert.equal(inFluid(gr, surface + 1), 0);
     assert.equal(inFluid(gr, surface), 0);
-    assert.equal(inFluid(gr, surface - 0.01), fluid);
+    assert.equal(inFluid(gr, surface - 0.01), fluid === WATER ? 0 : fluid, 'water only drowns over the head');
+    assert.equal(inFluid(gr, surface - HEAD_Y - 0.01), fluid);
     water.fluid = 0;
-    assert.equal(inFluid(gr, surface - 0.01), 0);
+    assert.equal(inFluid(gr, surface - HEAD_Y - 0.01), 0);
   }
   assert.equal(inFluid({ s: null }, -10), 0);
+});
+
+test('water shallower than the head is waded through, slowly; deeper water and the rest stop walking', () => {
+  // a step down into water half a cell deep: walked into, the player wades on, slowed
+  for (const [fluid, wades] of [[WATER, true], [LAVA, false], [ACID, false]]) {
+    const water = bank(1, 0, fluid);
+    Object.assign(water, { surf: -0.4, top: -1, cs: [-0.5, -0.5, -0.5, -0.5] });
+    assert.equal(canMove(5.85, 5.5, 'x', 1), wades, `${fluid}`);
+  }
+  const water = bank();
+  Object.assign(water, { surf: -0.4, top: -1, cs: [-0.5, -0.5, -0.5, -0.5] });
+  state.map.floors[5 * N + 5].cs = [-0.5, -0.5, -0.5, -0.5]; state.map.floors[5 * N + 5].top = -1;
+  player.y = -0.5;
+  for (let i = 0; i < 30; i++) movePlayer(1 / 60, 1, 0, true, false);
+  assert.ok(player.x > 6, 'walked in');
+  const gr = groundAt(player.x, player.z, player.y + 0.1, 0);
+  assert.equal(inFluid(gr, player.y), 0, 'not drowned');
+  assert.ok(wading(gr, player.y) > 0.2 && wading(gr, player.y) < HEAD_Y);
 });

@@ -119,8 +119,11 @@ test('each depth draws its species from its own roster, within the counts and th
   for (const [depth, row] of DEPTH_SPAWNS.entries()) {
     const seen = new Set();
     for (const e of row.roster) assert.ok(index.has(e.type) && e.lo >= 1 && e.hi >= e.lo && e.pack >= 1 && e.chance > 0, `${depth} ${e.type}`);
+    // (a species that keeps to some themes, `where`: cubes of those and of others)
+    const biomes = [undefined, ...new Set(row.roster.flatMap(e => e.where ?? []))];
     for (let seed = 0; seed < 200; seed++) {
-      const map = at(seed, depth), pop = population(map);
+      const map = Object.assign(at(seed, depth), { biome: biomes[seed % biomes.length] }), pop = population(map);
+      for (const e of row.roster) if (e.where && !e.where.includes(map.biome)) assert.ok(!pop.has(e.type), `${e.type} out of its waters`);
       assert.deepEqual([...pop], [...population(map)]);
       assert.ok(pop.size >= 1 && pop.size <= row.mix, `depth ${depth}`);
       assert.equal([...pop.values()].filter(p => p.lead).length, 1);

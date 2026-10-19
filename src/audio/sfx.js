@@ -388,6 +388,48 @@ const SOUNDS = {
     tone('sine', 180 * p, 60 * p, t, 0.25, amp(t, 0.002, 0.7, 0.25, out));
     for (let i = 0; i < 14; i++) { const at = t + 0.03 + Math.random() * 0.5; noise(at, 0.012, filter('bandpass', (1500 + Math.random() * 2000) * p, 4, amp(at, 0.001, 0.3, 0.012, out))); }
   },
+  spray(t, out, p) {     // Squarlo's jet bursting out of his hands: a hissing gush of water
+    sweep(t, 0.55, 1200 * p, 3200 * p, 1800 * p, 0.7, 0.7, out, 0.02);
+    noise(t, 0.5, filter('highpass', 3500 * p, 0.6, amp(t, 0.02, 0.25, 0.45, out)));
+    tone('sine', 220 * p, 120 * p, t, 0.12, amp(t, 0.002, 0.3, 0.12, out));
+  },
+  spit(t, out, p) {      // a Squirtle spitting water: a wet puh with a gulp before it
+    tone('sine', 300 * p, 520 * p, t, 0.06, amp(t, 0.003, 0.3, 0.06, out));
+    noise(t + 0.05, 0.12, filter('bandpass', 1800 * p, 1.2, amp(t + 0.05, 0.004, 0.55, 0.11, out)));
+  },
+  drip(t, out, p) {      // water splattering: a bloop and a patter of drops
+    tone('sine', 900 * p, 300 * p, t, 0.08, amp(t, 0.002, 0.35, 0.08, out));
+    for (let i = 0; i < 5; i++) {
+      const at = t + 0.04 + Math.random() * 0.25, hz = (700 + Math.random() * 900) * p;
+      tone('sine', hz, hz * 1.8, at, 0.03, amp(at, 0.002, 0.12, 0.03, out));
+    }
+  },
+  tidecall(t, out, p) {  // Squarlo calling the tide: a deep swell rising, waves rolling in
+    tone('sine', 55 * p, 110 * p, t, 1.8, amp(t, 0.6, 0.45, 1.2, out));
+    tone('triangle', 82 * p, 165 * p, t + 0.2, 1.6, filter('lowpass', 500 * p, 1, amp(t + 0.2, 0.5, 0.2, 1.1, out)));
+    sweep(t, 2, 300 * p, 900 * p, 400 * p, 0.6, 0.35, out, 0.7, 'lowpass');
+    for (let i = 0; i < 3; i++) sweep(t + 0.5 + i * 0.5, 0.6, 500 * p, 1500 * p, 600 * p, 0.6, 0.18, out, 0.15);
+  },
+  stomp(t, out, p) {     // a giant's foot coming down: a boom you feel, and the ground rattling
+    tone('sine', 70 * p, 28 * p, t, 0.7, amp(t, 0.004, 1.1, 0.7, out));
+    tone('triangle', 120 * p, 45 * p, t, 0.35, filter('lowpass', 400, 1, amp(t, 0.003, 0.6, 0.35, out)));
+    noise(t, 0.6, filter('lowpass', 700 * p, 0.8, amp(t, 0.005, 0.8, 0.55, out)));
+    for (let i = 0; i < 8; i++) { const at = t + 0.1 + Math.random() * 0.5; noise(at, 0.02, filter('bandpass', (900 + Math.random() * 900) * p, 3, amp(at, 0.002, 0.2, 0.02, out))); }
+  },
+  morph(t, out, p) {     // Squarlo growing in the fog: a long, rising, wobbling groan of stretching
+    const g = amp(t, 0.4, 0.5, 2.6, out);
+    tone('sawtooth', 60 * p, 160 * p, t, 3, filter('lowpass', 400 * p, 2, g));
+    tone('sine', 90 * p, 30 * p, t + 2.4, 0.8, amp(t + 2.4, 0.01, 0.9, 0.8, out));
+    sweep(t, 3, 200 * p, 600 * p, 150 * p, 0.8, 0.3, out, 0.8, 'lowpass');
+  },
+  dig(t, out, p) {       // a Squirtle diving into the floor: a scrape and a soft plop
+    sweep(t, 0.25, 900 * p, 400 * p, 200 * p, 0.8, 0.4, out, 0.01, 'lowpass');
+    tone('sine', 260 * p, 110 * p, t + 0.12, 0.1, amp(t + 0.12, 0.003, 0.3, 0.1, out));
+  },
+  pop(t, out, p) {       // ... and popping out of it: a cork-like pop and a sprinkle of dirt
+    tone('sine', 180 * p, 620 * p, t, 0.07, amp(t, 0.002, 0.45, 0.07, out));
+    noise(t + 0.03, 0.15, filter('bandpass', 2400 * p, 1, amp(t + 0.03, 0.003, 0.2, 0.14, out)));
+  },
   poof(t, out, p) {      // a proxy (or a summoned triangle) going up in a cloud: a soft puff and a sparkle
     noise(t, 0.3, filter('lowpass', 1300 * p, 0.8, amp(t, 0.01, 0.7, 0.28, out)));
     tone('sine', 880 * p, 1760 * p, t + 0.02, 0.18, amp(t + 0.02, 0.005, 0.12, 0.18, out));

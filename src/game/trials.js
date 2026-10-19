@@ -12,6 +12,7 @@ import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, fogY, fogLevel, fogHurt, CO
   traceBeam, beamDone, allLit, pressBrazier, pushTarget, clueMark } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
+import { drownEnemies } from './tide.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts, setTrialFog, setStorm } from '../render/trials.js';
 import { setGoneFloors, setPartBlockers } from '../physics/collide.js';
 import { openedSides } from '../core/boundaries.js';
@@ -272,14 +273,11 @@ export function shareTrialResolved(m) {
   }
 }
 
-// enemies under the trial's fluid drown (no reward: the water took them)
+// enemies the trial's fluid goes over drown (no reward: the water took them; physics/fluid.js:
+// water over its head, lava and acid at once)
 function drown(m, s) {
-  const level = trialFluidLevel(m, s);
-  if (level == null) return;
-  for (const e of allEnemies()) {
-    if (e.mode === 'dead' || e.hp <= 0 || e.y > level * LH - 0.15) continue;
-    e.noReward = true; e.hp = 0; e.mode = 'dead'; e.deadT = 0; e.path = null; e.speed = 0;
-  }
+  if (trialFluidLevel(m, s) == null) return;
+  drownEnemies(allEnemies());
 }
 
 // --- parts (game/action.js 'part') ---------------------------------------------------------------

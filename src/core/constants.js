@@ -40,6 +40,9 @@ export const CHAR_SCALE = 0.55; // the rig is ~2 m tall -> ~1.1 units
 export const CHAR_R = 0.22;     // collision radius
 // learn: physics.html#adding (see learn/README.md)
 export const CHAR_H = 0.85;     // collision height
+// where the head starts over the feet: the rig's head bone (1.44 rig units up, blender/character.py)
+// at CHAR_SCALE. Water up to here is waded through (slowed by up to WADE_SLOW), deeper drowns.
+export const HEAD_Y = 0.79, WADE_SLOW = 0.45;
 // learn: animation.html#mixing, code.html#names, physics.html#adding (see learn/README.md)
 export const WALK_SPEED = 1.9, RUN_SPEED = 2.8, SWIM_SPEED = 0.9;
 export const CLIMB_SPEED = 1.7;   // up and down ladders (physics/climb.js)

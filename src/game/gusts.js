@@ -10,7 +10,9 @@
 // Gusto breathing in (an attack with a `pull`, core/enemies.js GUSTO_INHALE) is read off the
 // clock the same way, and every game pulls its own player (player.pull, physics/move.js): it
 // harms nobody, so nothing needs sending. And when he lies helpless after a grab that caught
-// nothing (an attack with `exposed`), every game shows him crashing down and says so.
+// nothing (an attack with `exposed`), every game shows him crashing down and says so (Squarlo
+// out of breath, or stuck with his foot down, says so too). Squarlo calling the tide (a `cast` of
+// 'tide') is announced by every game as he starts. Squarlo's jet is a gust (kind 'jet').
 import { player, setStatus } from './state.js';
 import { party, alive } from './party.js';
 import { attackOf, blowOf } from '../core/enemies.js';
@@ -18,13 +20,14 @@ import { muzzleAt } from '../core/beams.js';
 import { inGust, gustDir } from '../core/gusts.js';
 import { hitBody, attacker } from './enemycombat.js';
 import { clearLine } from '../physics/enemynav.js';
-import { stormFx, felledFx } from './juice.js';
+import { stormFx, felledFx, tideCallFx } from './juice.js';
 
 export function updateGusts(list, dt, hurt = true) {
   player.pull = null;
   for (const e of list) {
     const a = e.mode === 'attack' ? attackOf(e) : null, g = a?.gust ?? a?.pull;
-    if (a?.exposed && e.felled !== e.attacks) { e.felled = e.attacks; felled(e); }
+    if (a?.exposed && e.t >= (a.exposed.from ?? 0) && e.felled !== e.attacks) { e.felled = e.attacks; felled(e, a.exposed); }
+    if (a?.cast === 'tide' && e.called !== e.attacks) { e.called = e.attacks; calls(e); }
     if (!g) { e.storm = null; continue; }
     if (e.storm?.attacks !== e.attacks) e.storm = { attacks: e.attacks, t: e.t - dt, hit: new Set() };
     const s = e.storm, t0 = s.t, t = s.t = e.t;
@@ -61,8 +64,13 @@ function breathe(e, a, g, t0, t, dt) {
   p.pull = { ux: dx / d, uz: dz / d, speed: g.speed, hold: g.hold, room: d - g.stop };
 }
 
-// a grab that caught nothing: down he goes
-function felled(e) {
-  felledFx(e);
-  if (Math.hypot(e.x - player.x, e.z - player.z) < 14) setStatus(`${e.profile.label} missed! Hit him while he is down`);
+// a grab that caught nothing: down he goes (`thud`); and what every game says about it
+function felled(e, x) {
+  if (x.thud) felledFx(e);
+  if (x.say && Math.hypot(e.x - player.x, e.z - player.z) < 14) setStatus(`${e.profile.label} ${x.say}`);
+}
+// Squarlo starts calling the tide
+function calls(e) {
+  tideCallFx(e);
+  if (Math.hypot(e.x - player.x, e.z - player.z) < 24) setStatus(`${e.profile.label} calls the tide! Get up a hill!`);
 }

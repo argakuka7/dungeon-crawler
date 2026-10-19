@@ -155,6 +155,16 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   back and come to life (snapping skulls), loses a skull at two thirds and at a third of his
   health, then pours out twig spiders and rolls at you, and at the last calls lightning out of
   the sky and summons bramble Stunders. See [bosses.md](bosses.md).
+- Squarlo (`blender/squarlo.py`), the third real boss, in place of the descent guardian of depth
+  2, in tidal hills of his own: tiny (smaller than the player), teal and boxy, with a floppy cap,
+  three dots for a face and cupped hands, and super fast. He blows jets of water that knock you
+  back, summons Squirtles out of the floor and, warded while he casts, calls the tide: the flats
+  drown and only the hills stay safe; now and then he has to rest. At half his health he grows
+  into a giant six cells tall in a fog and stomps (his foot's shadow shows where). See
+  [bosses.md](bosses.md).
+- Squirtle (`blender/squirtle.py`): a little blue water serpent with a beak that runs about under
+  the floor (nothing touches it there) and pokes out of it to spit balls of water with a tiny
+  push; it lives in the lagoons, the sunken grotto and the cenote, and Squarlo summons them.
 - Wolk (`blender/wolk.py`): a sad little light blue cloud with a tear on its cheek, walking on
   two long stick legs, two thin arms with three-fingered hands hanging from its belly. It
   fights from afar (`style: 'ranged'`, 2.6–4.2 cells, from 4.5 cells). To strike it closes its
@@ -285,10 +295,16 @@ The other kinds: [sword](../blender/previews/loadout-sword-front.png),
 
 ## Fluids and falls
 
-- Walking/running stops at edges facing water, lava or acid; jumps, knockbacks and
-  airborne falls can still enter them. Bridges and dry floors above fluids remain walkable.
-- Entering any fluid is fatal (`physics/fluid.js`, `dieInFluid` in `game/ragdoll.js`):
-  you drown in water, burn up in lava, dissolve in acid. The player ragdolls, slowed
+- Walking/running stops at edges facing lava, acid or water too deep to wade; jumps,
+  knockbacks and airborne falls can still enter them. Bridges and dry floors above fluids
+  remain walkable.
+- Lava and acid are fatal on contact, water once it is over the head (`physics/fluid.js`,
+  `dieInFluid` in `game/ragdoll.js`): you drown in water, burn up in lava, dissolve in acid.
+  Shallower water (under `HEAD_Y`, 0.79 cells: the rig's head bone) is waded through, slowed by
+  up to 45% the deeper it is (`WADE_SLOW`, `physics/move.js`); the cubes' own rivers and pools
+  are a cell deep, a flood trial's rising water and Squarlo's tide get there only as they rise
+  ([bosses.md](bosses.md#water-wading-and-drowning)). Enemies drown once a standing fluid is over
+  their `bodyHeight`, unless they `swim` (Squarlo, the Squirtles). The player ragdolls, slowed
   down and sinking, for at least 2.2 s, then respawns at the cube entry with full
   health. Existing ragdolls die the same way when they tumble in.
 - There are no dedicated death animations; `render/fluiddeath.js` layers an effect

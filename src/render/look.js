@@ -28,7 +28,9 @@ const night = { sky: NIGHT.sky.map(c => new THREE.Color(c)), hemi: NIGHT.hemi.sl
 
 // camDist: distance from the camera to what it looks at (fog is placed around that); themes: the
 // world's theme picks (themes/depth.js worldThemes); dark: how far into a boss's darkness (0..1)
-export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0) {
+// mist: 0..1, a boss's fog rolling in (Squarlo growing): the far side fades into pale grey
+const MIST = new THREE.Color('#d6dfe4');
+export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0, mist = 0) {
   const { a, b, t } = lightAt(depth, themes), k = dark * dark * (3 - 2 * dark);
   hemi.color.copy(mix(a.hemi[0], b.hemi[0], t)).lerp(night.hemi[0], k);
   hemi.groundColor.copy(mix(a.hemi[1], b.hemi[1], t)).lerp(night.hemi[1], k);
@@ -38,8 +40,8 @@ export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0) {
   for (let i = 0; i < 4; i++) sky[i].copy(mix(skyStop(a.sky, i), skyStop(b.sky, i), t)).lerp(night.sky[i], k);
   setSkyLook(sky[0], sky[1], sky[2], sky[3], lerp(lerp(a.stars ?? 0, b.stars ?? 0, t), NIGHT.stars, k));
   // fog: nothing at 0, at 1 the far half of the cube disappears into the dark
-  const f = lerp(lerp(a.fog, b.fog, t), NIGHT.fog, k);
-  scene.fog.color.copy(sky[1]);
+  const m = mist * mist * (3 - 2 * mist), f = Math.max(lerp(lerp(a.fog, b.fog, t), NIGHT.fog, k), 0.85 * m);
+  scene.fog.color.copy(sky[1]).lerp(MIST, m);
   scene.fog.near = f > 0.01 ? camDist - 6 : 1e4;
   scene.fog.far = f > 0.01 ? camDist + 6 + 70 * (1 - f) : 2e4;
   if (character.ready) {

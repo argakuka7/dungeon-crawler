@@ -7,6 +7,7 @@ import { N, LH } from '../core/constants.js';
 import { camera } from '../render/scene.js';
 import { setCut } from '../render/section.js';
 import { insideSolid } from '../physics/collide.js';
+import { standingAt } from '../physics/fluid.js';
 import { player, state } from './state.js';
 import { updateCamera, closeView } from './camera.js';
 import { mapInfo, inSlab, outOfSlabs } from './cutinfo.js';
@@ -39,8 +40,10 @@ function blockedAt(x, y, z, top) {
 // learn: drawing.html#cut-how (see learn/README.md)
 function target(m) {
   const info = mapInfo(m), p = player, y = p.visY;
-  // never below our feet, and never below the surface of the water we swim in
-  const floor = p.swimming ? y + 0.6 : y + 0.3;
+  // never below our feet, and never below the surface of the water we swim or wade in (a
+  // rising trial's, a boss's tide: the cutaway drops the water above the cut, which would leave
+  // the legs standing dry in it)
+  const wet = standingAt(p.x, p.z), floor = Math.max(p.swimming ? y + 0.6 : y + 0.3, wet && wet.y > y ? wet.y + 0.05 : -Infinity);
   if (p.ragdoll && cut !== Infinity) return cut;
   // the character itself (chest and head) ...
   let need = Math.min(blockedAt(p.x, y + 0.6, p.z, info.top), blockedAt(p.x, y + 0.95, p.z, info.top));
@@ -71,7 +74,7 @@ function target(m) {
 let lastKey = null, lastTarget = 0;
 function cachedTarget(m) {
   const p = player, c = camera.position;
-  const key = [m, m.blockers, p.x, p.visY, p.z, p.vx, p.vz, p.swimming, c.x, c.y, c.z];
+  const key = [m, m.blockers, p.x, p.visY, p.z, p.vx, p.vz, p.swimming, c.x, c.y, c.z, standingAt(p.x, p.z)?.y];
   if (!p.ragdoll && lastKey && key.every((v, i) => v === lastKey[i])) return lastTarget;
   lastKey = p.ragdoll ? null : key;
   return lastTarget = target(m);

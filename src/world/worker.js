@@ -8,6 +8,7 @@
 import { World } from './world.js';
 import { faceKey } from './coords.js';
 import { isInterior } from './town.js';
+import { isTestRoom } from './testrooms.js';
 import { buildCubeParts } from '../render/cubegeo.js';
 import { partBuffers } from '../render/parts.js';
 
@@ -17,6 +18,7 @@ let scheduled = false;
 
 function info(k) {
   if (isInterior(k)) return { kind: 'interior', sock: null, K: world.cube(k).map.K, faces: [null, null, null, null, null, null] };
+  if (isTestRoom(k)) return { kind: 'meadow', sock: null, K: world.cube(k).map.K, faces: [null, null, null, null, null, null] };
   const t = world.wfc.tiles.get(k);
   const faces = [0, 1, 2, 3, 4, 5].map(d => {
     const f = world.faces.get(faceKey(k, d));

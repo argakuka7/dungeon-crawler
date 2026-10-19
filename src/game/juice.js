@@ -107,6 +107,7 @@ export function burnHurtFx(dmg) {
 export function projectileFx(pr, what) {
   const fire = pr.kind === 'fireball', ice = pr.kind === 'iceball', { x, y, z } = pr;
   if (pr.kind === 'skull') { skullFx(pr, what); return; }
+  if (pr.kind === 'water') { waterFx(pr, what); return; }
   if (what === 'launch') { sfx(fire ? 'fireball' : ice ? 'frost' : 'zap', { at: pr }); return; }
   const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
   const n = what === 'spent' ? 6 : 18, s = what === 'spent' ? 1 : 2.6;
@@ -135,10 +136,23 @@ function skullFx(pr, what) {
   if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.08, 0.02);
 }
 
+// a Squirtle's water ball: spat with a gulp, and where it ends a splash of droplets
+const DROPS = ['#ffffff', '#c8f0ff', '#7fcaf0'];
+function waterFx(pr, what) {
+  if (what === 'launch') { sfx('spit', { at: pr }); return; }
+  const { x, y, z } = pr, n = what === 'spent' ? 8 : 16;
+  for (let i = 0; i < n; i++)
+    emit(soft, x, y, z, { v: [rand(-1.6, 1.6) - pr.vx * 0.08, rand(0.4, 2.4), rand(-1.6, 1.6) - pr.vz * 0.08], life: rand(0.35, 0.6),
+      size: rand(0.05, 0.1), color: DROPS[i % 3], alpha: 0.9, gravity: 9, drag: 1 });
+  emit(soft, x, y, z, { life: 0.25, size: 0.4, grow: 1.4, color: '#e8fbff', alpha: 0.5 });
+  sfx('drip', { at: pr, volume: what === 'spent' ? 0.5 : 0.9 });
+}
+
 // the Spicy's laser (game/beams.js) switched on ('start'), went off ('burst') or was put out
 // because its enemy was staggered or killed ('fizzle')
 export function beamFx(b, what) {
   if (b.spec.kind === 'bolt') { boltFx(b, what); return; }
+  if (b.spec.kind === 'stomp') { stompFx(b, what); return; }
   const color = b.profile?.beamColor ?? b.spec.color ?? '#7dff3a', colors = ['#ffffff', color, '#d8ff7a'];
   if (what === 'start') { sfx('laser', { at: b }); return; }
   if (what === 'fizzle') {
@@ -207,6 +221,7 @@ const WIND = ['#ffffff', '#e2f1ff', '#c4e2ff'];
 const BOLTS = [[0.25, 1.0, 0.04], [-0.23, 1.0, 0.04]];   // where they end (blender/wolla.py)
 export function stormFx(e, g, what, arg = 0) {
   if (g.kind === 'vortex') { vortexFx(e, g, what, arg); return; }
+  if (g.kind === 'jet') { jetFx(e, g, what, arg); return; }
   if (g.kind === 'inhale') { inhaleFx(e, g, what, arg); return; }
   const size = e.profile.size ?? 1, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), dt = arg;
   if (what === 'thunder') {
@@ -248,6 +263,34 @@ export function stormFx(e, g, what, arg = 0) {
     const [w, s] = fan(), v = speed * rand(0.45, 0.7);
     emit(soft, o.x + sx * w, o.y + rand(-0.1, 0.3), o.z + sz * w, { v: [(fx + sx * s) * v, rand(-0.1, 0.2), (fz + sz * s) * v],
       life: rand(0.5, 0.75), size: rand(0.22, 0.36), grow: 1.6, color: n % 2 ? '#7d8698' : '#9aa3b4', alpha: 0.42, drag: 0.7 });
+  }
+}
+
+// A giant's stomp (a beam of kind 'stomp', game/beams.js; its shadow: render/beams.js): when it
+// comes down ('burst'), a boom, the ground shaking, a ring of dust and spray running out from
+// the foot. (Started or put out: nothing to show.)
+function stompFx(b, what) {
+  if (what !== 'burst') return;
+  const { ex: x, ey: y, ez: z } = b, d = Math.hypot(x - player.x, z - player.z);
+  sfx('stomp', { at: { x, y, z } });
+  for (let i = 0; i < 48; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(3, 6), r = b.spec.radius * 0.8;
+    emit(soft, x + Math.cos(a) * r, y + 0.1, z + Math.sin(a) * r, { v: [Math.cos(a) * s, rand(0.2, 1.2), Math.sin(a) * s], life: rand(0.5, 0.9),
+      size: rand(0.3, 0.55), grow: 1.4, color: i % 3 ? '#c9c0ae' : '#e8f6ff', alpha: 0.5, drag: 2.5 });
+  }
+  for (let i = 0; i < 24; i++)
+    emit(soft, x + rand(-0.6, 0.6), y + 0.15, z + rand(-0.6, 0.6), { v: [rand(-2.5, 2.5), rand(2, 5), rand(-2.5, 2.5)], life: rand(0.5, 0.9),
+      size: rand(0.06, 0.12), color: DROPS[i % 3], alpha: 0.9, gravity: 10, drag: 0.6 });
+  if (d < 10) { cameraKick(0, 0, 0, 0.16 * (1 - d / 10)); hitstop(0.04); }
+}
+// Squarlo starts calling the tide (game/gusts.js): a deep swell of sound and water welling up
+// in a ring round him
+export function tideCallFx(e) {
+  sfx('tidecall', { at: e });
+  for (let i = 0; i < 30; i++) {
+    const a = rand(0, Math.PI * 2), r = rand(0.4, 1.4) * (e.profile.size ?? 1) ** 0.5;
+    emit(soft, e.x + Math.cos(a) * r, e.y + 0.05, e.z + Math.sin(a) * r, { v: [-Math.cos(a) * 0.4, rand(1.2, 2.6), -Math.sin(a) * 0.4],
+      life: rand(0.5, 0.9), size: rand(0.06, 0.12), color: DROPS[i % 3], alpha: 0.9, gravity: 4, drag: 0.5 });
   }
 }
 
@@ -328,18 +371,55 @@ function vortexFx(e, g, what, dt) {
   }
 }
 
+// Squarlo's jet (a gust of kind 'jet', game/gusts.js), out of his cupped hands: water gathering
+// in them ('inhale', for a frame of dt), the jet bursting out ('blow') and while it blows ('gust',
+// dt) a rope of water and spray along its cone, droplets falling out of it.
+function jetFx(e, g, what, dt) {
+  const o = muzzleAt(e, g.muzzle), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), sx = fz, sz = -fx;
+  if (what === 'inhale') {
+    for (let n = Math.floor(30 * dt + Math.random()); n > 0; n--) {
+      const a = rand(0, Math.PI * 2), r = rand(0.15, 0.35), life = rand(0.2, 0.35);
+      const x = o.x + Math.cos(a) * r, y = o.y + rand(-0.15, 0.2), z = o.z + Math.sin(a) * r;
+      emit(soft, x, y, z, { v: [(o.x - x) / life, (o.y - y) / life, (o.z - z) / life], life, size: rand(0.03, 0.05), color: DROPS[n % 3], alpha: 0.85 });
+    }
+    return;
+  }
+  if (what === 'blow') {
+    sfx('spray', { at: o });
+    emit(soft, o.x, o.y, o.z, { life: 0.2, size: 0.5, grow: 1.4, color: '#ffffff', alpha: 0.7 });
+    if (Math.hypot(o.x - player.x, o.z - player.z) < 6) cameraKick(fx, fz, 0.05);
+    return;
+  }
+  if (what !== 'gust') return;
+  const speed = g.range / 0.35;
+  for (let n = Math.floor(260 * dt + Math.random()); n > 0; n--) {
+    const u = rand(-1, 1) * rand(0, 1), v = speed * rand(0.8, 1.15), life = rand(0.22, 0.36);
+    emit(soft, o.x + sx * u * g.width * 0.4, o.y + rand(-0.04, 0.04), o.z + sz * u * g.width * 0.4,
+      { v: [(fx + sx * u * g.spread) * v, rand(-0.2, 0.4), (fz + sz * u * g.spread) * v], life, size: rand(0.05, 0.11) * (1 + life),
+        color: DROPS[n % 3], alpha: 0.95, gravity: 3 });
+  }
+  for (let n = Math.floor(40 * dt + Math.random()); n > 0; n--) {   // spray hanging in the air after it
+    const s = rand(0.3, g.range), w = (g.width + g.spread * s) * rand(-0.8, 0.8);
+    emit(soft, o.x + fx * s + sx * w, o.y - s * 0.05, o.z + fz * s + sz * w, { v: [fx * rand(0.5, 1.5), rand(-0.2, 0.3), fz * rand(0.5, 1.5)],
+      life: rand(0.4, 0.7), size: rand(0.18, 0.3), grow: 1.4, color: '#e6f8ff', alpha: 0.35, drag: 1 });
+  }
+}
+
 // Gusto spits his Custo triangles (game/gusto.js): a burst at his mouth and a light blue streak
 // to each of them (they appear there in a puff, render/enemies.js). Totnar tears himself open
 // (look 'leaves', game/totnar.js): a rustle and a spray of leaves and twigs towards each of his.
+// Squarlo slaps the floor (look 'splash', game/squarlo.js): water runs from his hands to each
+// Squirtle popping out of it.
 const SUMMONS = { triangles: { sound: 'summon', flash: '#9fdcff', colors: ['#e0f6ff', '#7fd0ff'], streak: 10 },
-  leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 } };
+  leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 },
+  splash: { sound: 'splash', flash: '#c8f4ff', colors: DROPS, streak: 8 } };
 export function summonFx(mouth, list, look = 'triangles') {
   const s = SUMMONS[look];
   sfx(s.sound, { at: mouth });
   emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: s.flash, alpha: 0.9 });
   for (const m of list) for (let i = 0; i < s.streak; i++) {
     const k = i / s.streak, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
-    emit(look === 'leaves' ? soft : glow, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
+    emit(look === 'triangles' ? glow : soft, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
       size: rand(0.08, 0.13), color: s.colors[i % s.colors.length], drag: 2 });
   }
 }

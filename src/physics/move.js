@@ -1,5 +1,5 @@
 // Character controller: walk / run / swim, jumping, gravity, ceilings and slopes.
-import { STEP, SWIM_STEP, GRAV, SNAP, ACID, WALK_SPEED, RUN_SPEED, SWIM_SPEED, JUMP_V, RUN_RAMP, BRAKE } from '../core/constants.js';
+import { STEP, SWIM_STEP, GRAV, SNAP, ACID, WALK_SPEED, RUN_SPEED, SWIM_SPEED, JUMP_V, RUN_RAMP, BRAKE, HEAD_Y, WADE_SLOW } from '../core/constants.js';
 import { player } from '../game/state.js';
 import { groundAt, ceilingAt, slopeAt } from './collide.js';
 import { canMove } from './canmove.js';
@@ -11,9 +11,9 @@ import { pushStep, pushControl } from '../core/gusts.js';
 function horizontal(dt, dx, dz, run) {
   const p = player;
   // an ice ball's chill slows every way of moving (core/projectiles.js), a swiftness potion
-  // quickens it (core/potions.js)
+  // quickens it (core/potions.js), wading the more the deeper the water (physics/hazards.js)
   const speed = (p.swimming ? (p.fluid === ACID ? 0.6 : SWIM_SPEED) : run ? RUN_SPEED : WALK_SPEED) * chillFactor(p.chilled)
-    * (1 + effectMod(p, 'moveSpeed'));
+    * (1 + effectMod(p, 'moveSpeed')) * (1 - WADE_SLOW * Math.min(1, (p.wade || 0) / HEAD_Y));
   let tx = dx * speed, tz = dz * speed;
   if (p.grounded && !p.swimming && p.support) {
     const [gx, gz] = slopeAt(p.support, p.x, p.z), g = Math.hypot(gx, gz);

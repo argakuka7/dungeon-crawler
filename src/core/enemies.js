@@ -256,7 +256,28 @@ export const WOLK = {
   style: 'ranged', keep: [2.6, 4.2],
   seedSalt: 0x6c1d2f5, spacing: 4,
 };
-export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK];
+// A little blue water serpent with a beak (blender/squirtle.py) that runs about under the floor
+// and pokes out of it to throw water (a projectile with a tiny `push`). `burrow`: in the fight it
+// stays up for `up` s (least, most), dives and moves under the floor at `speed` for `under` s, then
+// comes up again, sooner where it has a shot (game/enemyai.js); `sink`: s its diving and coming up
+// take. Under the floor (`under` on the enemy) nothing sees, hits or touches it (`absent`). It
+// `swims`: no water drowns it.
+export const SQUIRTLE = {
+  type: 'squirtle', species: 'squirtle', label: 'Squirtle', hp: 42, damage: 13, knock: 1.5,
+  xp: 30, coins: [6, 12],
+  radius: 0.24, height: 0.8, bodyHeight: 0.65, mass: 0.8, swims: true,
+  aggro: 5.5, giveUp: 9, chase: 1.6, wander: 0.5, homeSpeed: 1,
+  reach: 5, hitReach: 0, hitAt: 15 / 30, trackUntil: 0.4, attackTime: 33 / 30, cooldown: 1.4,
+  arc: 0.5, knockDown: false, hop: 2.5, reason: 'Splashed by a Squirtle!', ichor: ['#a8e4ff', '#3a7fd0'], pitch: 1.4,
+  projectile: { kind: 'water', speed: 7.5, radius: 0.15, range: 7.5, push: 2.4, pushTime: 0.15,
+    muzzle: [0, 0.392, 0.477] },
+  burrow: { speed: 3.4, up: [2.4, 3.6], under: [1.4, 2.4], sink: 0.35 },
+  poise: 0, hitStun: 0.2, deathTime: 1.4, corpseTime: 3,
+  parts: { body: ['SquirtleBody'], belly: ['SquirtleBelly'], eyes: ['SquirtleEyes'] },
+  style: 'ranged', keep: [2.4, 4.4],
+  seedSalt: 0x5917e1, spacing: 3,
+};
+export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK, SQUIRTLE];
 
 // Gusto, the first real boss (blender/gusto.py), in place of the first descent guardian
 // (core/bosses.js). A round white-grey head with red eyes and jagged teeth, two long arms with
@@ -305,7 +326,8 @@ const GUSTO_INHALE = {
 // (no reach).
 const GUSTO_STUCK = {
   name: 'stuck', clip: 'stuck', weight: 0, reach: 0, hitAt: 60 / 30, trackUntil: 0, attackTime: 60 / 30, hitReach: 0,
-  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto', exposed: { until: 48 / 30, damage: 1.5 },
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto',
+  exposed: { until: 48 / 30, damage: 1.5, thud: true, say: 'missed! Hit him while he is down' },
 };
 export const GUSTO = {
   type: 'gusto', species: 'gusto', label: 'Gusto', hp: 1000, damage: 24, knock: 4,
@@ -382,7 +404,62 @@ export const TOTNAR = {
   style: 'brute', guardian: true, guardianRole: 'descent', boss: 'totnar',
   seedSalt: 0x7a7a12, spacing: 6,
 };
-export const BOSS_PROFILES = [GUSTO, TOTNAR];
+
+// Squarlo, the third real boss (blender/squarlo.py), in place of the descent guardian of depth 2
+// (core/bosses.js): tiny (smaller than the player), teal and boxy, with a floppy cap, three dots
+// for a face and cupped hands; super fast. He fights in his tidal hills (cubegen/arenashapes.js),
+// game/squarlo.js runs his fight, core/squarlo.js holds its rules. He `swims` (nothing drowns
+// him, physics/fluid.js; in deep water he floats, game/tide.js).
+// Phase 1: he blows a jet of water out of his hands (a gust of kind 'jet', like Gusto's vortex: it
+// hurts and knocks back) and summons Squirtles; the tide (a `cast`: while he casts nothing hurts
+// him, `ward`) floods the flats, and only the hills stay dry. Every few attacks, and after
+// every tide, he has to sit and catch his breath (`rest`, `exposed`: blows hurt more).
+// Phase 2 (at half his health, SQUARLO_GIANT): he grows into a giant six cells tall and stomps
+// (a beam of kind 'stomp' out of the sky: his foot's shadow follows the player and stops, then the
+// foot comes down there; it stays planted a moment, `exposed`). The tide and the Squirtles stay.
+// An `exposed` attack's `from` (s) is when the exposure starts (default: at once); `say` is what
+// every game says then (game/gusts.js), `thud` crashes him down with a thump and dust.
+const SQUARLO_BLOW = {
+  name: 'blow', clip: 'blow', weight: 3, reach: 4.2, hitAt: 24 / 30, trackUntil: 0.65, attackTime: 48 / 30, hitReach: 0,
+  arc: 0.5, power: 0.85, knock: 3, knockDown: false, hop: 3, reason: 'Soaked by Squarlo!',
+  gust: { kind: 'jet', time: 15 / 30, range: 4.6, width: 0.28, spread: 0.26, push: 9, pushTime: 0.55,
+    muzzle: [0.005, 0.379, 0.257], thunder: [], inhale: 8 / 30 },
+};
+const SQUARLO_TIDE = {
+  name: 'tide', clip: 'cast', weight: 1, reach: 40, hitAt: 60 / 30, trackUntil: 0.4, attackTime: 72 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Squarlo', cast: 'tide', ward: true,
+};
+const SQUARLO_SUMMON = {
+  name: 'summon', clip: 'summon', weight: 2, reach: 9, hitAt: 24 / 30, trackUntil: 0.5, attackTime: 42 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Squarlo',
+  summon: { kind: 'tidesquirtle', muzzle: [0, 0.172, 0.175] },
+};
+const SQUARLO_REST = {
+  name: 'rest', clip: 'rest', weight: 0, reach: 40, hitAt: 6 / 30, trackUntil: 0, attackTime: 66 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Squarlo', cast: 'rest', recover: 0.3,
+  exposed: { from: 0.2, until: 58 / 30, damage: 1.3, say: 'is out of breath! Hit him now' },
+};
+const SQUARLO_STOMP = {
+  name: 'stomp', clip: 'stomp', weight: 3, reach: 5, hitAt: 57 / 30, trackUntil: 1.2, attackTime: 96 / 30, hitReach: 0,
+  arc: -1, power: 1.5, knock: 6, knockDown: true, hop: 4, reason: 'Stomped flat by Squarlo!',
+  beam: { kind: 'stomp', aim: 'feet', time: 1.5, track: 2.6, lock: 0.45, radius: 1, range: 14, sky: 7, clear: false,
+    muzzle: [-0.064, 0, 0.112] },
+  exposed: { from: 57 / 30, until: 87 / 30, damage: 1.4, say: 'is stuck! Hit his foot' },
+};
+export const SQUARLO = {
+  type: 'squarlo', species: 'squarlo', label: 'Squarlo', hp: 1000, damage: 24, knock: 3,
+  xp: 650, coins: [150, 260],
+  radius: 0.24, height: 0.7, bodyHeight: 0.6, mass: 3, swims: true,
+  aggro: 7, giveUp: 14, chase: 4.2, wander: 1, homeSpeed: 2,
+  ...SQUARLO_BLOW, cooldown: 0.9, ichor: ['#a8f0ff', '#2a8fb0'], pitch: 1.5,
+  attacks: [SQUARLO_BLOW, SQUARLO_TIDE, SQUARLO_SUMMON, SQUARLO_REST], phase: 1,
+  poise: 2, hitStun: 0.2, deathTime: 2.4, corpseTime: 5,
+  parts: { body: ['SquarloBody', 'SquarloCap'], eyes: ['SquarloEyes_glow'] },
+  light: '#7fe8ff', sparks: ['#e0fbff', '#7fe8ff'],
+  style: 'skirmish', circle: 2.6, strafe: true, guardian: true, guardianRole: 'descent', boss: 'squarlo',
+  seedSalt: 0x5a1a20, spacing: 6,
+};
+export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -532,6 +609,23 @@ export const EMBER_WOLLA = enemyKind(WOLLA, {
   colors: { waves: 'oklch(0.72 0.17 52)', eyes: 'oklch(0.86 0.12 205)' }, ichor: ['#ffc07a', '#a0480f'], trail: '#7a4a24',
   mods: { hp: 1.45, damage: 1.4, speed: 1.1, size: 1.12 },
 });
+// The Squirtles of the sunken grotto and the cenote: coral red, tougher and quicker.
+export const CORAL_SQUIRTLE = enemyKind(SQUIRTLE, {
+  type: 'coralsquirtle', label: 'Coral squirtle', reason: 'Splashed by a Coral squirtle!',
+  colors: { body: 'oklch(0.68 0.15 32)', belly: 'oklch(0.9 0.06 70)' }, ichor: ['#ffc0a8', '#b0402a'],
+  mods: { hp: 1.5, damage: 1.4, speed: 1.1 },
+});
+// from half his health on: a giant, six cells tall (the model at `size`), who stomps; he walks
+// over the hills on the floors like any enemy, but keeps clear of the bank (game/squarlo.js)
+export const SQUARLO_GIANT = enemyKind(SQUARLO, {
+  type: 'squarlogiant', label: 'Squarlo', mods: { size: 6 / 0.68 },
+  attacks: [SQUARLO_STOMP, SQUARLO_TIDE, SQUARLO_SUMMON, SQUARLO_REST],
+  radius: 0.9, height: 6, bodyHeight: 5.55, mass: 45, chase: 1.5, wander: 0.8, homeSpeed: 1.2, cooldown: 1.2,
+  style: 'brute', giant: true, phase: 2, gait: 'stride',
+});
+// a boss's profile for each of its stages (game/squarlo.js; a friend's game swaps it by the stage
+// the runner sends, net/foes.js)
+export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT] };
 // One full attack and recovery, averaged over a species' attacks (s), and what it deals per
 // second at level 1 (a projectile's burn included): how dangerous it is to stand next to.
 export function attackCycle(profile) {
@@ -617,6 +711,14 @@ export const SNAP_SKULL = {
 };
 // the species that are only ever a boss's minions (each its own model)
 export const MINION_PROFILES = [SNAP_SKULL];
+// Squarlo's Squirtles: teal, weaker, and they go for the player at once
+const SPLASH_PUFF = { colors: ['#e8fbff', '#9fe0f0', '#6ac2d8'], size: 0.5 };
+export const TIDE_SQUIRTLE = enemyKind(SQUIRTLE, {
+  type: 'tidesquirtle', label: 'Tide squirtle', reason: 'Splashed by a tide squirtle!', minion: true,
+  colors: { body: 'oklch(0.68 0.11 188)', belly: 'oklch(0.9 0.05 190)' }, ichor: ['#b8f4ff', '#2a9fa8'],
+  aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: SPLASH_PUFF,
+  mods: { hp: 0.7, damage: 0.6, xp: 0.15 },
+});
 // small spiders of twigs, poured out of his ball by the dozen
 export const TOT_SPIDER = enemyKind(SPIDER, {
   type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
@@ -633,18 +735,22 @@ export const TOT_STUNDER = enemyKind(STUNDER, {
 });
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
-  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER].map(k => [k.type, k]));
-// gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js): it
-// cannot be seen, hit or touched, like the dead
-export const absent = e => e.mode === 'dead' || e.mode === 'gone';
+  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
+  TIDE_SQUIRTLE].map(k => [k.type, k]));
+// gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
+// under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,
+// like the dead
+export const absent = e => e.mode === 'dead' || e.mode === 'gone' || !!e.under;
 
 // the attack e is performing (or about to perform): one of profile.attacks, else the profile
 export const attackOf = e => e.profile.attacks?.[e.attack] ?? e.profile;
 // how much more blows hurt e now: lying helpless after a missed grab (an attack's `exposed`), else 1
 export function exposedBy(e) {
   const x = e.mode === 'attack' ? attackOf(e).exposed : null;
-  return x && e.t < x.until ? x.damage : 1;
+  return x && e.t >= (x.from ?? 0) && e.t < x.until ? x.damage : 1;
 }
+// is e warded now (Squarlo casting the tide: an attack's `ward`): nothing hurts it
+export const wardedNow = e => e.mode === 'attack' && !!attackOf(e).ward;
 // is e in the `steady` part of an attack now (Totnar rolling): blows hurt it but do not stagger it
 export function steadyNow(e) {
   const s = e.mode === 'attack' ? attackOf(e).steady : null;

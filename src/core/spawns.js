@@ -7,23 +7,25 @@
 //     kinds: which of the species' kinds (ENEMY_KINDS in core/enemies.js) and how often, as
 //       { kind: weight }; each pack draws one (game/enemyspawn.js). Default: the species itself.
 //       Stronger kinds take over deeper down, and each theme leans on the kinds that suit it.
+//     where: the themes (map.biome, the theme's prop set) the species lives in, if not all of the
+//       depth's (the Squirtles keep to the waters: the lagoons, the sunken grotto, the cenote)
 //   mix: the most species one cube holds. If more roll present, the extra ones are dropped:
 //     always-present species are kept first, the others in a random order weighted by chance.
 //   The lead: one present species (picked by chance) dominates the cube. It draws its count
 //     from the top half of its range, every other species from the bottom half.
-// Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla, Wolk) stay at a few per cube; the melee ones, the spiders
+// Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla, Wolk, Squirtle) stay at a few per cube; the melee ones, the spiders
 // above all, come in larger and larger packs further down.
 import { mulberry32, hash32 } from './util.js';
 import { ENEMY_KINDS } from './enemies.js';
 
-export const D = (mix, ...roster) => ({ mix, roster: roster.map(([type, chance, lo, hi, pack = 1, kinds = { [type]: 1 }]) =>
-  ({ type, chance, lo, hi, pack, kinds })) });
+export const D = (mix, ...roster) => ({ mix, roster: roster.map(([type, chance, lo, hi, pack = 1, kinds = { [type]: 1 }, where = null]) =>
+  ({ type, chance, lo, hi, pack, kinds, where })) });
 
 export const DEPTH_SPAWNS = [
   /*  0 road out of town */ D(1, ['snake', 1, 1, 2]),
   /*  1 meadow islands */ D(2, ['snake', 1, 2, 4], ['stunder', .2, 1, 1], ['wolk', .25, 1, 1]),
   /*  2 meadow islands */ D(3, ['snake', 1, 2, 5, 1, { snake: 4, sandviper: 1 }], ['spider', .6, 2, 4, 2], ['stunder', .25, 1, 1],
-    ['wolk', .35, 1, 2]),
+    ['wolk', .35, 1, 2], ['squirtle', .6, 1, 3, 1, { squirtle: 1 }, ['lagoon']]),
   /*  3 snowy peaks */ D(3, ['spider', 1, 8, 14, 3, { frostspider: 3, spider: 1 }], ['stunder', .5, 1, 2, 1, { froststunder: 1 }], ['shraps', .2, 1, 1],
     ['wolk', .4, 1, 2], ['triangle', .12, 1, 1]),
   /*  4 badlands */ D(3, ['snake', 1, 3, 6, 2, { sandviper: 3, snake: 1, bloodviper: .5 }], ['spider', .8, 4, 8, 3, { spider: 2, redback: .5 }],
@@ -38,9 +40,11 @@ export const DEPTH_SPAWNS = [
   /*  8 root caves */ D(3, ['spider', 1, 8, 13, 3, { spider: 3, bogspider: 1, redback: 1 }], ['snake', .8, 4, 8, 2, { snake: 1, sandviper: 2, bloodviper: 1 }],
     ['stunder', .6, 1, 3, 1, { stunder: 2, stonestunder: 1 }], ['wolla', .45, 1, 2], ['octonaut', .25, 1, 2]),
   /*  9 frozen caves, sunken grotto */ D(3, ['octonaut', 1, 3, 4], ['shraps', .8, 1, 3], ['spider', .8, 6, 10, 3, { frostspider: 3, spider: 1 }],
-    ['stunder', .5, 1, 2, 1, { froststunder: 1 }], ['snake', .3, 3, 5, 2, { frostadder: 3, snake: 1 }]),
+    ['stunder', .5, 1, 2, 1, { froststunder: 1 }], ['snake', .3, 3, 5, 2, { frostadder: 3, snake: 1 }],
+    ['squirtle', .8, 2, 4, 2, { squirtle: 2, coralsquirtle: 1 }, ['grotto']]),
   /* 10 frozen caves, sunken grotto */ D(3, ['octonaut', 1, 3, 5, 2, { octonaut: 3, coraloctonaut: 1 }], ['shraps', .9, 2, 3], ['spider', .8, 7, 12, 4, { frostspider: 3, spider: 1 }],
-    ['stunder', .6, 1, 2, 1, { froststunder: 2, stonestunder: 1 }], ['triangle', .15, 1, 1]),
+    ['stunder', .6, 1, 2, 1, { froststunder: 2, stonestunder: 1 }], ['triangle', .15, 1, 1],
+    ['squirtle', .8, 2, 4, 2, { coralsquirtle: 2, squirtle: 1 }, ['grotto']]),
   /* 11 fungal swamp, honey hive */ D(3, ['snake', 1, 6, 10, 3, { venomadder: 2, snake: 2, bloodviper: 1 }], ['octonaut', .8, 2, 4, 2, { bogoctonaut: 3, octonaut: 1 }],
     ['spicy', .6, 1, 2], ['wolla', .35, 1, 2, 1, { bogwolla: 3, wolla: 1 }],
     ['spider', .6, 6, 10, 4, { bogspider: 3, spider: 1 }], ['stunder', .25, 1, 2]),
@@ -49,7 +53,7 @@ export const DEPTH_SPAWNS = [
     ['spider', .6, 8, 12, 4, { bogspider: 3, spider: 1 }], ['fireface', .1, 1, 1]),
   /* 13 jungle cenote */ D(3, ['snake', 1, 8, 12, 3, { venomadder: 1, bloodviper: 2, shadowmamba: .5 }], ['octonaut', .8, 3, 5, 2, { coraloctonaut: 2, bogoctonaut: 1 }],
     ['spicy', .6, 1, 2], ['triangle', .4, 1, 2, 1, { emeraldtriangle: 2, triangle: 1 }], ['wolla', .3, 1, 2, 1, { stormwolla: 1, bogwolla: 1 }],
-    ['spider', .3, 10, 14, 4, { bogspider: 1, redback: 1 }]),
+    ['spider', .3, 10, 14, 4, { bogspider: 1, redback: 1 }], ['squirtle', .6, 2, 3, 2, { coralsquirtle: 1 }, ['cenote']]),
   /* 14 spider nests, ossuary */ D(3, ['spider', 1, 18, 26, 6, { spider: 3, bogspider: 1, redback: 1.5 }], ['stunder', .5, 1, 2, 1, { stunder: 1, stonestunder: 1 }],
     ['octonaut', .3, 1, 2, 1, { octonaut: 1, bogoctonaut: 1, coraloctonaut: .5 }], ['snake', .3, 4, 6, 3, { venomadder: 1, bloodviper: 1 }],
     ['spicy', .25, 1, 2]),
@@ -94,7 +98,7 @@ export function population(map) {
   if (map.populationScale === 0) return new Map();   // (nobody: the hunter's room, docs/trials.md `chase`)
   const R = mulberry32(hash32(map.seed ^ SALT)), row = map.spawns ?? spawnsAt(map.depth || 0);
   const rolled = [];
-  for (const e of row.roster) if (R() < e.chance) rolled.push({ e, key: e.chance >= 1 ? 1 + R() : R() ** (1 / e.chance) });
+  for (const e of row.roster) if (R() < e.chance && (!e.where || e.where.includes(map.biome))) rolled.push({ e, key: e.chance >= 1 ? 1 + R() : R() ** (1 / e.chance) });
   let present = rolled.sort((a, b) => b.key - a.key).slice(0, row.mix).map(r => r.e);
   if (!present.length) present = [row.roster[0]];
   let w = R() * present.reduce((n, e) => n + e.chance, 0), lead = present[present.length - 1];

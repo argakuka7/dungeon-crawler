@@ -4,7 +4,7 @@ import { clamp, edgeKey } from '../core/util.js';
 import { topOf } from '../core/surfaces.js';
 import { player, state } from '../game/state.js';
 import { cellAt, groundAt, blockedAt } from './collide.js';
-import { underTrialFluid } from './fluid.js';
+import { underTrialFluid, tooDeep } from './fluid.js';
 
 // The invisible rails along stairs, bridges and landings (cubegen/fences.js) keep a walking or
 // swimming body on them; a jump goes on or off over them. Visible fences hold up to their height.
@@ -62,13 +62,14 @@ export function canMove(nx, nz, axis, sign) {
     const si = cellAt(sx, sz);
     if (si < 0) return false;
     const [rx, rz] = k ? [nx, nz] : [player.x, player.z];
-    // Stop at a ledge over a fluid (water, lava, acid) or a hole through the cube (nothing
-    // to land on below) while walking, but never act as an invisible wall for jumps/falls.
+    // Stop at a ledge over a fluid (lava, acid, water too deep to wade) or a hole through the
+    // cube (nothing to land on below) while walking, but never act as an invisible wall for
+    // jumps/falls.
     // Query the landing surface so bridges and stacked dry floors above fluids or voids
     // remain walkable. Rim probes keep the body off the edge.
     if (player.grounded && !player.swimming) {
       const gr = groundAt(sx, sz, y, step);
-      if (!gr.s || !gr.s.kind && gr.s.fluid || underTrialFluid(gr.h)) return false;
+      if (!gr.s || !gr.s.kind && gr.s.fluid && tooDeep(gr.s) || underTrialFluid(gr.h, gr.i)) return false;
     }
     if (hopBlocked(rx, rz, sx, sz, y, step)) return false;
     if (fenceBlocks(ci, si, y)) return false;

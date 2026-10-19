@@ -242,15 +242,18 @@ export function rosterOf(list, cube, seed) {
 }
 
 // one row per enemy: [index, x, y, z, yaw, mode, t, attacks, attack, speed, hp, statuses, beam,
-// by, stage, dark, bolts] (t: how far into its attack, or how long dead; beam: [t, ex, ey, ez]
-// while its laser shines; by: the number of the player who hit it last, `runner` when nobody
-// else did; stage and dark: a boss's (Totnar: how many skulls he lost, whether he keeps it dark,
-// game/totnar.js), else 0; bolts: the other bolts of a storm, like the beam, else 0)
+// by, stage, dark, bolts, tide, under] (t: how far into its attack, or how long dead, or growing;
+// beam: [t, ex, ey, ez] while its laser shines; by: the number of the player who hit it last,
+// `runner` when nobody else did; stage and dark: a boss's (Totnar: how many skulls he lost,
+// whether he keeps it dark, game/totnar.js; Squarlo: 2 once he is a giant), else 0; bolts: the
+// other bolts of a storm, like the beam, else 0; tide: how high Squarlo has the water, 0 to 1
+// (game/squarlo.js); under: 1 while a Squirtle is under the floor, game/enemyai.js)
 const beamRow = b => [r2(b.t), r2(b.ex), r2(b.ey), r2(b.ez)];
 export function rowOf(e, i, runner = 0) {
   const b = e.beam;
   return [i, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), Math.max(0, MODES.indexOf(e.mode)), r2(e.mode === 'dead' ? e.deadT : e.t),
     e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0),
-    b ? beamRow(b) : 0, e.lastHit ?? runner, e.stage ?? 0, e.dark ? 1 : 0, e.bolts?.length ? e.bolts.map(beamRow) : 0];
+    b ? beamRow(b) : 0, e.lastHit ?? runner, e.stage ?? 0, e.dark ? 1 : 0, e.bolts?.length ? e.bolts.map(beamRow) : 0,
+    e.tide ? r2(e.tide) : 0, e.under ? 1 : 0];
 }
 

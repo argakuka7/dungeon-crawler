@@ -289,7 +289,7 @@ export function buildTrialView(m, group) {
   const t = m.trial;
   shared = new Map(); fires = { specs: [], lights: [] };
   for (const c of m.clues || []) group.add(tablet(c));
-  if (!t) return null;
+  if (!t) return m.tide ? tideView(m, group) : null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
     plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), links: new Map() };
@@ -345,41 +345,58 @@ export function buildTrialView(m, group) {
     view.fog = fog; view.fogTop = (t.timeline.top + 8) * LH;
   }
   if (t.kind === 'flood' || t.kind === 'sunken') {
-    // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID);
-    // dropped above the cut inside the cutaway (its cap there: section.js setTrialWaterCap), not
-    // where cave walls come down (it stays to the cube's edge)
-    const fluid = t.fluid, surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid;\n' + fs.replace('#include <clipping_planes_fragment>', `{
-        vec4 solid = texelFetch(uWaterSolid, clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1})), 0);
-        if (vCutW.y > solid.x && vCutW.y < solid.y || vCutW.y > solid.z && vCutW.y < solid.w) discard;
-      }
-      if (cutRegion(true) > 0.5) discard;
-      #include <clipping_planes_fragment>`), 'cut-trial-fluid');
-    const compile = surface.onBeforeCompile;
-    surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; };
-    // (its geometry in the cube's coordinates, four vertices a cell: the cells' pattern and waves go
-    // by them, materials.js cellMaterial; its uvs zero: all of it rises and falls). Its shores are
-    // the cells solid at its level, and the room's walls stay wet where it has just been (wetBands,
-    // with the same material: its level and wet line in `waterTide`, tickTrialView).
-    // (its colours: the cube's of its fluid, its depth's running one: cubegen/fluidbodies.js)
-    const pal = m.fluidRows?.[fluid] ?? palRow(m.depth ?? 0, fluid, 0);
-    const box = new THREE.BoxGeometry(N - 0.04, 1, N - 0.04, N * 4, 1, N * 4).translate(N / 2, 0, N / 2);
-    box.getAttribute('uv').array.fill(0);
-    box.setAttribute('pal', palAttribute(box, pal));
-    const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, solid: WATER_SOLID } : null;
-    const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
-    water.material.side = THREE.DoubleSide;
-    water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
-    group.add(water);
-    view.water = water;
-    if (tide) {
-      view.waterTide = tide;
-      view.wetBands = new THREE.Mesh(wetBands(m, pal), water.material);
-      view.wetBands.visible = false; view.wetBands.renderOrder = 5;
-      group.add(view.wetBands);
-    }
+    standingWater(m, t.fluid, view, group, [0, 0, N, N]);
     if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }
   }
   return view;
+}
+// a boss's tide (game/tide.js, map.tide): only the water, in its box
+function tideView(m, group) {
+  const view = { kind: 'tide', parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
+    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), links: new Map() };
+  standingWater(m, m.tide.fluid, view, group, m.tide.box);
+  return view;
+}
+// A fluid standing over the cells of `box` ([x0, z0, x1, z1]: a trial's whole cube, a tide's
+// basin) at one level, rising and falling (setTrialWater): its surface and the wet bands it
+// leaves on the walls.
+function standingWater(m, fluid, view, group, [x0, z0, x1, z1]) {
+  // nothing inside the solids (they show it where they are cut open: section.js WATER_SOLID);
+  // dropped above the cut inside the cutaway (its cap there: section.js setTrialWaterCap), not
+  // where cave walls come down (it stays to the cube's edge)
+  const surface = inject(fluidMaterial(fluid, 'full'), fs => 'uniform sampler2D uWaterSolid;\n' + fs.replace('#include <clipping_planes_fragment>', `{
+      vec4 solid = texelFetch(uWaterSolid, clamp(ivec2(floor(vCutW.xz)), ivec2(0), ivec2(${N - 1})), 0);
+      if (vCutW.y > solid.x && vCutW.y < solid.y || vCutW.y > solid.z && vCutW.y < solid.w) discard;
+    }
+    if (cutRegion(true) > 0.5) discard;
+    #include <clipping_planes_fragment>`), 'cut-trial-fluid');
+  const compile = surface.onBeforeCompile;
+  surface.onBeforeCompile = (sh, r) => { compile.call(surface, sh, r); sh.uniforms.uWaterSolid = WATER_SOLID; };
+  // (its geometry in the cube's coordinates, four vertices a cell: the cells' pattern and waves go
+  // by them, materials.js cellMaterial; its uvs zero: all of it rises and falls). Its shores are
+  // the cells solid at its level, and the room's walls stay wet where it has just been (wetBands,
+  // with the same material: its level and wet line in `waterTide`, tickTrialView).
+  // (its colours: the cube's of its fluid, its depth's running one: cubegen/fluidbodies.js)
+  const pal = m.fluidRows?.[fluid] ?? palRow(m.depth ?? 0, fluid, 0);
+  const w = x1 - x0, d = z1 - z0;
+  const box = new THREE.BoxGeometry(w - 0.04, 1, d - 0.04, w * 4, 1, d * 4).translate(x0 + w / 2, 0, z0 + d / 2);
+  box.getAttribute('uv').array.fill(0);
+  box.setAttribute('pal', palAttribute(box, pal));
+  const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, solid: WATER_SOLID } : null;
+  const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
+  water.material.side = THREE.DoubleSide;
+  // it writes depth: the hero (and anything else see-through) is drawn after it, and what of a
+  // body wading in it is under its surface must stay hidden there
+  water.material.depthWrite = true;
+  water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
+  group.add(water);
+  view.water = water;
+  if (tide) {
+    view.waterTide = tide;
+    view.wetBands = new THREE.Mesh(wetBands(m, pal), water.material);
+    view.wetBands.visible = false; view.wetBands.renderOrder = 5;
+    group.add(view.wetBands);
+  }
 }
 
 // the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; eye: the hill's middle, cells):

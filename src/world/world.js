@@ -17,6 +17,8 @@ import { heightSpec, heightsOf, shaftAbove } from './heights.js';
 import { areaSpec } from './areas.js';
 import { bridgesOf } from '../themes/builds.js';
 import { trialFaces } from './trials.js';
+import { isTestRoom } from './testrooms.js';
+import { generateTestRoom } from '../cubegen/testrooms.js';
 
 // how much each WFC kind leans towards an archetype (times the theme's weights)
 const LEAN = { highland: { mesa: 2, spire: 2, archipelago: 0.3 }, lake: { archipelago: 3, crater: 2 }, gorge: { chasm: 3 },
@@ -113,9 +115,15 @@ export class World {
     };
   }
 
-  // the generated cube (built on first use); house interiors are not part of the grid
+  // the generated cube (built on first use); house interiors and the dev test rooms
+  // (world/testrooms.js) are not part of the grid
   cube(k) {
     let c = this.cubes.get(k);
+    if (!c && isTestRoom(k)) {
+      const d = -parse(k)[1];
+      c = { key: k, map: stampFluidBodies(generateTestRoom({ key: k, depth: d, seed: hash32(this.seed ^ hashKey(k)), biome: this.layout(d).theme.props })), visits: 0 };
+      this.cubes.set(k, c);
+    }
     if (!c && isInterior(k)) {
       // turned the way the house stands in town (the town turns with its exit)
       const door = this.cube(this.start).map.doors.find(d => d.to === k);

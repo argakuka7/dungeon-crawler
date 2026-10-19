@@ -8,7 +8,8 @@
 // sparks gathering under the cloud, and in its last moments faint leaders flickering down
 // towards the spot. The strike itself (strikeBolt, from game/juice.js) is a jagged flash from
 // the cloud to the spot, with a branch or two, that flickers twice and lights up the floor. A
-// bolt out of the sky (Totnar's) gathers a dark storm cloud high above its spot.
+// bolt out of the sky (Totnar's) gathers a dark storm cloud high above its spot. A giant's stomp
+// (kind 'stomp', Squarlo's) shows his foot's shadow where it will come down.
 import * as THREE from 'three';
 import { scene } from './scene.js';
 import { glow, soft, emit, rand } from './particles.js';
@@ -21,6 +22,7 @@ const up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), start = new TH
 
 function makeView(b) {
   if (b.spec.kind === 'bolt') return makeBoltView(b);
+  if (b.spec.kind === 'stomp') return makeStompView(b);
   const color = new THREE.Color(b.profile?.beamColor ?? b.spec.color ?? '#7dff3a');
   const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
   const core = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff').lerp(color, 0.3), ...additive });
@@ -46,6 +48,7 @@ export function drawBeams(list, dt, off = { x: 0, y: 0, z: 0 }) {
   for (const b of list) {
     const v = b.view || (b.view = makeView(b));
     if (b.spec.kind === 'bolt') { drawBolt(b, v, dt, off); continue; }
+    if (b.spec.kind === 'stomp') { drawStomp(b, v, dt, off); continue; }
     const k = Math.min(1, b.t / b.spec.time), t = b.t;
     const flick = 0.75 + 0.25 * Math.sin(t * 61) * Math.sin(t * 23) + 0.3 * k * Math.sin(t * 97);
     end.set(b.ex + off.x, b.ey + off.y, b.ez + off.z);
@@ -173,6 +176,37 @@ function drawBolt(b, v, dt, off) {
     }
     hideFrom(v.leaders, used);
   } else if (!held) hideFrom(v.leaders, 0);
+}
+
+// --- a giant's stomp (Squarlo's) -----------------------------------------------------------------
+// His foot's shadow on the floor where it will come down: a dark disc that grows and deepens as
+// the foot comes, ringed with a pulsing white edge that holds still (and flashes) once the foot
+// is on its way, and pebbles twitching on the ground under it.
+function makeStompView(b) {
+  const plain = { transparent: true, depthWrite: false };
+  const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', opacity: 0.7, ...plain });
+  const fillMat = new THREE.MeshBasicMaterial({ color: '#0e1a22', opacity: 0.2, ...plain });
+  const group = new THREE.Group(), ring = new THREE.Mesh(flat, ringMat), fill = new THREE.Mesh(disc, fillMat);
+  ring.renderOrder = fill.renderOrder = 2;
+  group.add(ring, fill);
+  const light = new THREE.PointLight('#bff4ff', 0, 2, 2); light.position.y = 0.3;
+  scene.add(group); trackLight(light, ring);
+  return { group, ring, fill, light, owned: [ringMat, fillMat] };
+}
+function drawStomp(b, v, dt, off) {
+  const k = Math.min(1, b.t / b.spec.time), t = b.t, held = b.spec.lock && b.t >= b.spec.time - b.spec.lock;
+  const r = b.spec.radius, x = b.ex + off.x, y = b.ey + off.y, z = b.ez + off.z;
+  v.ring.position.set(x, y + 0.03, z); v.fill.position.set(x, y + 0.025, z);
+  v.ring.scale.setScalar(r * (held ? 1 + 0.05 * Math.sin(t * 40) : 1.3 - 0.3 * k));
+  v.fill.scale.setScalar(r * (0.5 + 0.5 * k));
+  v.owned[0].opacity = held ? 0.6 + 0.4 * Math.max(0, Math.sin(t * 40)) : 0.35 + 0.35 * k;
+  v.owned[1].opacity = 0.15 + 0.45 * k * k;
+  v.light.intensity = held ? 0.8 : 0;
+  if (held && Math.random() < dt * 30) {
+    const a = Math.random() * Math.PI * 2, d = Math.random() * r;
+    emit(soft, x + Math.cos(a) * d, y + 0.04, z + Math.sin(a) * d, { v: [0, rand(0.8, 1.6), 0], life: 0.3, size: rand(0.03, 0.06),
+      color: '#9a8a70', alpha: 0.9, gravity: 9 });
+  }
 }
 
 // strikes in flight: { from, to (world), t, view }

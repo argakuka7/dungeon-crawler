@@ -7,7 +7,8 @@ import { readdirSync } from 'node:fs';
 import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } from '../src/core/combat.js';
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL, fireAt } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL,
+  SQUARLO, SQUARLO_GIANT, SQUIRTLE, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -33,6 +34,7 @@ const BUDGETS = {
   octonaut: { Octonaut: 6000 }, fireface: { FireFace: 6000, FireFaceBall: 1500 }, triangle: { Triangle: 6000, TrianglePunch: 1500 },
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
   gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
+  squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -394,6 +396,45 @@ test('Totnar: his clips match his attacks, the throw, summon and storm points co
   assert.ok(heart[0] > 0.8 && heart[1] < 0.2, 'a red heart');
   const sticks = j.materials.find(m => m.name === 'TotnarSticks').pbrMetallicRoughness.baseColorFactor;
   assert.ok(sticks[0] > sticks[2] * 1.5, 'brown sticks');
+});
+test('Squarlo: his clips match his attacks in both his sizes, the jet, the summon and the stomping foot come from them', () => {
+  const { json: j, duration } = glb('squarlo'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['SquarloBlow', 'SquarloCast', 'SquarloDeath', 'SquarloRest', 'SquarloRun', 'SquarloStomp',
+    'SquarloStride', 'SquarloSummon', 'SquarloSwim']);
+  for (const loop of ['SquarloRun', 'SquarloSwim', 'SquarloStride']) assert.equal(a[loop].extras.loop, true, loop);
+  assert.ok(Math.abs(duration(a.SquarloDeath) - SQUARLO.deathTime) < 1e-5); assert.equal(a.SquarloDeath.extras.hold_last_frame, true);
+  const clip = { blow: 'SquarloBlow', cast: 'SquarloCast', summon: 'SquarloSummon', rest: 'SquarloRest', stomp: 'SquarloStomp' };
+  for (const at of [...SQUARLO.attacks, ...SQUARLO_GIANT.attacks]) {
+    const c = a[clip[at.clip]];
+    if (c.extras.hit_frame !== undefined) assert.equal(c.extras.hit_frame / 30, at.hitAt, at.name);
+    assert.ok(Math.abs(duration(c) - at.attackTime) < 1e-5, at.name);
+  }
+  const jet = SQUARLO.attacks.find(t => t.gust).gust, b = a.SquarloBlow.extras;
+  assert.deepEqual(b.muzzle, jet.muzzle);
+  assert.ok(Math.abs((b.gust_end - b.hit_frame) / 30 - jet.time) < 1e-9);
+  assert.deepEqual(a.SquarloSummon.extras.muzzle, SQUARLO.attacks.find(t => t.summon).summon.muzzle);
+  // the stomp's shadow is where the foot comes down (the beam's muzzle, grown with him)
+  const stomp = SQUARLO_GIANT.attacks.find(t => t.beam), foot = a.SquarloStomp.extras.foot, k = SQUARLO_GIANT.size;
+  assert.ok(Math.abs(stomp.beam.muzzle[0] - foot[0] * k) < 1e-6 && Math.abs(stomp.beam.muzzle[2] - foot[2] * k) < 1e-6);
+  assert.equal(a.SquarloStomp.extras.planted_until / 30, stomp.exposed.until);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(SQUARLO.parts).flat()) assert.ok(names.has(m), m);
+  const body = j.materials.find(m => m.name === 'SquarloBody').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(body[1] > body[0] * 2 && body[2] > body[0] * 2, 'teal');
+  // smaller than the player, a giant of six cells
+  assert.ok(SQUARLO.height < 0.85 && Math.abs(SQUARLO_GIANT.height - 6) < 1e-9);
+});
+test('the Squirtle sways, spits from its beak at its hit frame and wilts', () => {
+  const { json: j, duration } = glb('squirtle'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['SquirtleDeath', 'SquirtleSpit', 'SquirtleSway']);
+  assert.equal(a.SquirtleSway.extras.loop, true);
+  assert.equal(a.SquirtleSpit.extras.hit_frame / 30, SQUIRTLE.hitAt);
+  assert.ok(Math.abs(duration(a.SquirtleSpit) - SQUIRTLE.attackTime) < 1e-5);
+  assert.ok(Math.abs(duration(a.SquirtleDeath) - SQUIRTLE.deathTime) < 1e-5);
+  assert.deepEqual(a.SquirtleSpit.extras.muzzle, SQUIRTLE.projectile.muzzle);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(SQUIRTLE.parts).flat()) assert.ok(names.has(m), m);
+  assert.ok(j.nodes.some(n => n.name === 'SquirtleDrop'));
 });
 test('the snapping skull hops, bites at its hit frame and crumbles', () => {
   const { json: j, duration } = glb('snapskull'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));

@@ -159,7 +159,9 @@ function frame(now = performance.now()) {
   if (state.cubeKey) state.lookDepth += (depthOf(state.cubeKey) - state.lookDepth) * Math.min(1, dt * 2.5);
   // and a boss's darkness comes and goes over a second or so (game/totnar.js)
   state.lookDark += (state.dark - state.lookDark) * Math.min(1, dt * (state.dark ? 1.6 : 2.2));
-  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark);
+  // and so does a boss's fog (Squarlo growing, game/squarlo.js)
+  state.lookMist += (state.mist - state.lookMist) * Math.min(1, dt * (state.mist ? 1.2 : 0.8));
+  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist);
   followHero();   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)

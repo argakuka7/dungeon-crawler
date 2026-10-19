@@ -19,6 +19,7 @@ const MAX_PARTS = 12;
 // model.ready once it is loaded, model.error if it cannot be.
 // names.attack is one clip name, or { [attack.clip]: clip name } for several attacks.
 // names.props: standalone nodes (projectiles) taken out of the model into model.props.
+// names.gaits: other looping gaits (swimming, a giant's stride) by name, played like the walk.
 export function loadEnemyModel(url, scale, names) {
   const model = { ready: false, scale, loading: null };
   model.load = () => model.loading ??= loadGLB(url).then(gltf => setup(model, url, names, gltf),
@@ -29,7 +30,7 @@ export function loadEnemyModel(url, scale, names) {
 function setup(model, url, names, gltf) {
   const scale = model.scale, attackNames = typeof names.attack === 'string' ? { attack: names.attack } : names.attack;
   const clips = Object.fromEntries(gltf.animations.map(c => [c.name, c]));
-  if ([names.walk, names.fast, names.death, ...Object.values(attackNames)].some(n => n && !clips[n])) {
+  if ([names.walk, names.fast, names.death, ...Object.values(attackNames), ...Object.values(names.gaits ?? {})].some(n => n && !clips[n])) {
     model.error = 'Missing enemy animation in ' + url; console.error(model.error); return;
   }
   const extras = n => gltf.parser.json.animations.find(a => a.name === n)?.extras || {};
@@ -45,6 +46,9 @@ function setup(model, url, names, gltf) {
     walk: clips[names.walk], fast: names.fast ? clips[names.fast] : null,
     attacks: Object.fromEntries(Object.entries(attackNames).map(([k, n]) => [k, clips[n]])), death: clips[names.death],
     walkSpeed: (extras(names.walk).speed || 1) * scale,
+    // other gaits (names.gaits: { swim, stride, ... } -> clip names), played like the walk, at their own pace
+    gaits: Object.fromEntries(Object.entries(names.gaits ?? {}).map(([k, n]) => [k, clips[n]])),
+    gaitSpeeds: Object.fromEntries(Object.entries(names.gaits ?? {}).map(([k, n]) => [k, (extras(n).speed || 1) * scale])),
     fastSpeed: names.fast ? extras(names.fast).speed * scale : 0,
   });
 }

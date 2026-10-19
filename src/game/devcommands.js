@@ -20,6 +20,7 @@ import { QUEST_KINDS } from '../core/quests.js';
 import { devQuest } from './quests.js';
 import { BRIDGE_STYLES, LADDER_STYLES } from '../themes/builds.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
+import { BOSS_SHAPES } from '../cubegen/arenashapes.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
 import { forceMood } from './music.js';
 import { nextCube, newWorld } from './flow.js';
@@ -127,7 +128,7 @@ dev({
     return devTrial(kind);
   },
 });
-addType(commands, { name: 'arena', values: () => Object.keys(ARENA_WEIGHTS.descent).map(t => ({ value: t, label: t })) });
+addType(commands, { name: 'arena', values: () => [...Object.keys(ARENA_WEIGHTS.descent), ...Object.keys(BOSS_SHAPES)].map(t => ({ value: t, label: t })) });
 dev({
   name: 'arena', help: 'a guardian arena of this kind (nearest depth first)',
   args: [{ name: 'kind', type: 'arena', optional: true }, { name: 'depth', type: 'depth', optional: true }],

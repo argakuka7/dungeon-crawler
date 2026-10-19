@@ -24,6 +24,8 @@
 // circles, then darts in again; a ranged one keeps its distance and sidesteps; a brute holds
 // its ground (and a `charge`r runs at the player from a few cells away). Throws are aimed a
 // little ahead of a running player.
+// A burrowing one (a `burrow`: the Squirtle) keeps diving under the floor in the fight, moving
+// about fast down there where nothing sees, hits or touches it, and coming up again to throw.
 import { player, state } from './state.js';
 import { party, chooseTarget, alive as canHurt } from './party.js';
 import { playerFloor, strikePlayer, hitBody, attacker } from './enemycombat.js';
@@ -67,6 +69,7 @@ const foe = e => e.target && (e.target === player || e.target.here) ? e.target :
 const toPlayer = e => { const p = foe(e); return Math.atan2(p.x - e.x, p.z - e.z); };
 const side = () => Math.random() < 0.5 ? -1 : 1;
 function steer(e, x, z, speed, dt) {
+  if (e.under) speed *= e.profile.burrow.speed / e.profile.chase;   // (it moves fast under the floor)
   const dx = x - e.x, dz = z - e.z, d = Math.hypot(dx, dz);
   if (d < 0.05) { e.speed = 0; return true; }
   turn(e, Math.atan2(dx, dz), dt);
@@ -239,13 +242,14 @@ function decide(e) {
   if (heard) notice(e, REACT * (1.5 + Math.random()), false);
 }
 // a thrown attack (or a beam) needs a free line from its muzzle height to the player's chest
-const clearShot = (e, a, p = foe(e)) => clearLine(e.x, e.y + shotOf(a).muzzle[1], e.z, p.x, p.y + p.h * 0.55, p.z);
+// (not one that comes down from above, `clear: false`: a giant's stomp)
+const clearShot = (e, a, p = foe(e)) => shotOf(a).clear === false || clearLine(e.x, e.y + shotOf(a).muzzle[1], e.z, p.x, p.y + p.h * 0.55, p.z);
 // the attacks e could start now (indices into profile.attacks; [0] for a single attack); `barred`
 // (attack names) are not to be started now: a boss's summon while its minions are about
 // (game/gusto.js)
 function ready(e, d) {
   const p = foe(e), list = e.profile.attacks ?? [e.profile];
-  if (p.ragdoll || p.held) return [];
+  if (p.ragdoll || p.held || e.under) return [];
   return attacksInReach(e.profile, d, Math.abs(p.y - e.y))
     .filter(i => !e.barred?.has(list[i].name) && (!shotOf(list[i]) || clearShot(e, list[i])));
 }
@@ -370,7 +374,7 @@ function act(e, dt) {
     const a = attackOf(e), t0 = e.t;
     e.t += dt; e.speed = 0;
     if (e.t < a.trackUntil) turn(e, aim(e, a), dt, 6);
-    else if (e.beam) turn(e, Math.atan2(e.beam.ax - e.x, e.beam.az - e.z), dt, 10);   // follows its laser's aim
+    else if (e.beam && !a.beam?.sky) turn(e, Math.atan2(e.beam.ax - e.x, e.beam.az - e.z), dt, 10);   // follows its laser's aim
     if (a.lunge) leap(e, a.lunge, t0, dx, dz);
     if (a.retreat) backOff(e, a.retreat, t0);
     if (a.roll) rollOn(e, a, t0, dt);
@@ -436,6 +440,22 @@ function whiff(e, a) {
   if (i < 0) return;
   e.attack = i; e.t = 0; e.attacks++; e.bit = true;
 }
+// Burrowing (game/enemyai.js header): in the fight (chasing, attacking, taking cover) it stays up
+// for burrow.up s, then, once it is not in the middle of a throw, dives (`under`) for
+// burrow.under s and comes up where it has a shot (or after a while longer anyway); it throws a
+// moment after coming up (one that `pop`s comes up when its time is up, wherever it is: a boss's
+// summoned ones). Out of the fight it comes up and stays up. `dig`: s left of either.
+const between = ([a, b]) => a + (b - a) * Math.random();
+function burrow(e, dt) {
+  const b = e.profile.burrow;
+  if (e.mode !== 'chase' && e.mode !== 'attack' && e.mode !== 'hide') { e.under = 0; e.dig = undefined; return; }
+  e.dig = (e.dig ?? between(b.up)) - dt;
+  if (e.under) {
+    const p = foe(e), d = Math.hypot(p.x - e.x, p.z - e.z);
+    const shot = d > e.profile.keep[0] && d < e.profile.reach * 0.9 && Math.abs(p.y - e.y) < 1.5;
+    if (e.dig <= 0 && (shot || e.pop || e.dig <= -1.5)) { e.under = 0; e.pop = false; e.dig = between(b.up); e.cool = Math.max(e.cool, b.sink + 0.3); }
+  } else if (e.dig <= 0 && e.mode !== 'attack') { e.under = 1; e.dig = between(b.under); }
+}
 // a blow's push, sliding along the floor graph and dying away quickly
 function knockback(e, dt) {
   if (!e.kbx && !e.kbz) return;
@@ -456,6 +476,7 @@ export function stepEnemies(list, dt) {
     if (e.stun > 0) { e.stun -= dt; e.speed = 0; continue; }
     if (state.devPassive) { e.speed = 0; e.path = null; if (e.mode !== 'idle') { e.mode = 'idle'; e.t = 1; } continue; }
     if ((e.think -= dt) <= 0) { e.think = THINK * (0.8 + Math.random() * 0.4); decide(e); }
+    if (e.profile.burrow) burrow(e, dt);
     act(e, dt);
   }
 }

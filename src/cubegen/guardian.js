@@ -3,7 +3,7 @@
 // generated clutter (cubegen/arenaprops.js), and a sealed onward exit. The doorways and the
 // guardian's spot stay flat. Every free zone floor connects without jumps, and the zone
 // holds the doubled population; an arena that cannot falls back to a plainer one.
-import { N, LH, DIRS, MAX_L } from '../core/constants.js';
+import { N, LH, DIRS, MAX_L, WATER } from '../core/constants.js';
 import { idx, edgeKey, clamp, mulberry32, hash32, makeNoise } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
 import { indexBlockers } from '../core/blockers.js';
@@ -12,7 +12,7 @@ import { themeOf } from '../themes/depth.js';
 import { createContext } from './context.js';
 import { groundHeights } from './ground.js';
 import { placePortals } from './portals.js';
-import { SHAPES } from './arenashapes.js';
+import { SHAPES, BOSS_SHAPES, TIDAL } from './arenashapes.js';
 import { dressArena } from './arenaprops.js';
 import { BOSS_ARENAS } from '../core/bosses.js';
 
@@ -25,7 +25,7 @@ function buildFloors(ctx, base, shape, level) {
   const { prot0 } = ctx, floors = [];
   for (let c = 0; c < N * N; c++) {
     const x = c % N, z = (c / N) | 0, cell = inner(x, z);
-    const top = !cell ? base[c] : prot0[c] ? level : clamp(level + shape.rel[c], 2, MAX_L);
+    const top = !cell ? base[c] : prot0[c] ? level : clamp(level + shape.rel[c], shape.min ?? 2, MAX_L);
     const f = ctx.mk(c, top, 0, 0);
     f.id = c; f.prot = prot0[c]; f.arenaCell = cell; f.encounter = cell && !!shape.zone[c];
     floors.push(f);
@@ -111,18 +111,20 @@ export function generateGuardian(spec) {
   for (const p of ctx.portals) for (const c of p.cells) flatten(...xz(c), 1);
   flatten(U[0], U[1], 1);
   let need = 0;
-  for (const [, p] of population({ seed: spec.seed, depth: spec.depth, guardian: true })) need += p.count;
+  for (const [, p] of population({ seed: spec.seed, depth: spec.depth, guardian: true, biome: spec.biome })) need += p.count;
   const R = mulberry32(hash32(spec.seed ^ 0xa7e4a));
   const frame = { level, need, flat, R, noise: makeNoise(R), noise2: makeNoise(R),
     E: inward([ex, ez], entry.dir), U, G: exit < 4 ? inward([px, pz], exit) : [px, pz] };
 
-  const requested = spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills';
+  // a boss may have an arena of its own (core/bosses.js BOSS_ARENAS: Squarlo's tidal hills)
+  const own = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss] : null;
+  const requested = own?.type ?? (spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills');
   const theme = themeOf(spec), tint = theme.side[1][1];
   // a boss who makes it dark has braziers lit round its arena (core/bosses.js)
-  const braziers = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss]?.braziers ?? 0 : 0;
+  const braziers = own?.braziers ?? 0;
   let arena = null;
   for (const type of [...new Set([requested, 'hills', 'crater'])]) {
-    const shape = SHAPES[type](frame), floors = buildFloors(ctx, base, shape, level);
+    const shape = (SHAPES[type] ?? BOSS_SHAPES[type])(frame), floors = buildFloors(ctx, base, shape, level);
     const start = floors[idx(ex, ez)], guard = floors[idx(...U)], gate = floors[idx(px, pz)];
     if (!terrainOK(floors, start, [guard, gate])) continue;
     for (const clutter of [1, .5, 0]) {
@@ -175,6 +177,9 @@ export function generateGuardian(spec) {
     pieces: Array.from({ length: N * N }, () => []), runs: [], falls: [], ladders: [],
     fences, fenceList, stats: ctx.stats, moves, portals, exit, guardian,
     arena: { type: arena.type, requested },
+    // the tidal hills' water (game/tide.js): its levels at rest and at high tide, and the box of
+    // cells it stands in (inside the bank)
+    tide: arena.type === 'tidal' ? { rest: level + TIDAL.low + TIDAL.rest, high: level + TIDAL.high, fluid: WATER, box: [1, 1, N - 1, N - 1] } : null,
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys, trialFaces: spec.trialFaces || [null, null, null, null],
     safe: Uint8Array.from(floors, f => prev.has(f) ? 1 : 0),
     kind: spec.kind, archetype: 'arena', roomRole: `${role}-guardian`, biome: spec.biome,

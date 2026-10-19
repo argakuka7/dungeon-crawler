@@ -50,6 +50,12 @@ import { wolkModel } from './wolkmodel.js';
 import { gustoModel } from './gustomodel.js';
 import { totnarModel } from './totnarmodel.js';
 import { snapSkullModel } from './snapskullmodel.js';
+import { squarloModel } from './squarlomodel.js';
+import { squirtleModel } from './squirtlemodel.js';
+import { STAGE_PROFILES } from '../core/enemies.js';
+import { SQUARLO_FIGHT } from '../core/squarlo.js';
+import { standingAt } from '../physics/fluid.js';
+import { WATER } from '../core/constants.js';
 import { sfx } from '../audio/sfx.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { glow, soft, emit, rand } from './particles.js';
@@ -64,7 +70,7 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
-  totnar: totnarModel, snapskull: snapSkullModel };
+  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -78,6 +84,7 @@ const GLOW = {
   gusto: { light: [0xff3020, 1.8, 3.5, 1.75], flare: 1.6 },
   totnar: { light: [0xff4018, 2.6, 5, 0.95], flare: 1.2, grow: [1, 1.45, 2] },
   snapskull: { light: [0xff5a1e, 0.8, 1.8, 0.4] },
+  squarlo: { light: [0x7fe8ff, 1.2, 2.6, 0.5], flare: 0.8 },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -229,6 +236,86 @@ function clouds(v, e) {
   else if (!gone && Math.hypot(e.x - w.x, e.z - w.z) > 1.5) { poof(e, PUFF, w.x, w.z); poof(e); }
   w.mode = e.mode; w.x = e.x; w.z = e.z;
 }
+// Burrowing (a species with `burrow`: the Squirtle, game/enemyai.js): while it is `under` the
+// floor it sinks into it (over burrow.sink s, with a scrape), its bar, label and silhouette gone,
+// and leaves a trail of dirt (of spray in water) as it moves down there; it pops out again.
+const DIRT = ['#8a7458', '#6b5a44', '#a89070'], SPRAY = ['#ffffff', '#c8f0ff', '#8fd4f0'];
+function burrowLook(v, e, dt) {
+  const b = e.profile.burrow;
+  if (!b) return;
+  const want = e.under ? 1 : 0, near = Math.hypot(e.x - player.x, e.z - player.z) < 16;
+  const wet = standingAt(e.x, e.z)?.y > e.y + 0.05, colors = wet ? SPRAY : DIRT;
+  if (want !== v.underWas) {
+    v.underWas = want;
+    if (near) {
+      sfx(want ? 'dig' : 'pop', { at: e });
+      for (let i = 0; i < 16; i++) {
+        const a = rand(0, Math.PI * 2), s = rand(0.6, 1.8);
+        emit(soft, e.x, e.y + 0.05, e.z, { v: [Math.cos(a) * s, rand(1, 2.6), Math.sin(a) * s], life: rand(0.4, 0.7),
+          size: rand(0.05, 0.1), color: colors[i % 3], alpha: 0.95, gravity: 9, drag: 1 });
+      }
+    }
+  }
+  v.sink += Math.sign(want - v.sink) * Math.min(Math.abs(want - v.sink), dt / b.sink);
+  v.model.position.y = -v.sink * e.profile.height * 1.05;
+  v.ghost.opacity = v.sink > 0.02 ? 0 : GHOST_OPACITY;
+  if (v.sink > 0.5) { v.bar.visible = false; v.label.visible = false; v.mark.visible = false; }
+  if (v.sink > 0.9 && e.speed > 0.3 && near && Math.random() < dt * 22)
+    emit(soft, e.x + rand(-0.12, 0.12), e.y + 0.04, e.z + rand(-0.12, 0.12), { v: [rand(-0.5, 0.5), rand(0.6, 1.4), rand(-0.5, 0.5)],
+      life: rand(0.35, 0.6), size: rand(0.05, 0.11), color: colors[Math.floor(Math.random() * 3)], alpha: 0.9, gravity: 7, drag: 1 });
+}
+// A boss whose stages are profiles of their own (Squarlo, core/enemies.js STAGE_PROFILES): while
+// it changes (mode 'split', `t` s into it) it grows from the one's size to the next's in a fog
+// that rolls in round it (the cube's fog thickens too: state.mist, render/look.js), with a long
+// groan; its bar and label go up with it (to its chest at most: a giant's head is far up).
+const FOG = ['#e6eef2', '#d4e0e6', '#f2f6f8'];
+function sizeOf(e) {
+  const stages = STAGE_PROFILES[e.boss];
+  if (e.mode !== 'split' || !stages) return e.profile.size ?? 1;
+  const a = stages[0].size ?? 1, b = stages[1].size ?? 1;
+  return a + (b - a) * ease((e.t - 0.6) / (SQUARLO_FIGHT.morphTime - 0.8));
+}
+function growLook(v, e, dt) {
+  const want = sizeOf(e), splitting = e.mode === 'split' && STAGE_PROFILES[e.boss];
+  if (Math.abs(want - v.size) > 1e-4) {
+    v.size = want;
+    v.model.scale.setScalar(v.prefab.scale * want);
+    if (v.light) { v.light.distance = v.fx.light[2] * Math.sqrt(want); v.light.position.y = v.fx.light[3] * want; }
+  }
+  const top = Math.min(v.height * v.size, 4.4);
+  v.bar.position.y = top + 0.12; v.label.position.y = top + 0.33; v.mark.position.y = top + 0.62;
+  if (!splitting) { v.morphing = false; return; }
+  if (!v.morphing) { v.morphing = true; sfx('morph', { at: e }); }
+  if (Math.hypot(e.x - player.x, e.z - player.z) > 22) return;
+  const r = 0.6 + 3.2 * ease(e.t / SQUARLO_FIGHT.morphTime), h = Math.max(1, v.size * 0.6);
+  for (let i = Math.floor(70 * dt + Math.random()); i > 0; i--) {
+    const a = rand(0, Math.PI * 2), d = rand(0.3, 1) * r;
+    emit(soft, e.x + Math.cos(a) * d, e.y + rand(0, h), e.z + Math.sin(a) * d, { v: [Math.cos(a) * rand(0.2, 0.8), rand(0, 0.4), Math.sin(a) * rand(0.2, 0.8)],
+      life: rand(1.2, 2.2), size: rand(0.6, 1.2), grow: 1.2, color: FOG[i % 3], alpha: 0.3, drag: 0.4 });
+  }
+}
+// in deep water a swimmer floats (game/tide.js): ripples spread round it as it swims
+const swimming = e => { const s = standingAt(e.x, e.z); return !!e.profile.swims && s?.fluid === WATER && s.y - e.y > e.profile.bodyHeight * 0.3; };
+function ripples(v, e, dt) {
+  if (!v.swim || Math.hypot(e.x - player.x, e.z - player.z) > 14 || e.under) return;
+  const y = standingAt(e.x, e.z).y + 0.02, n = (e.speed > 0.3 ? 14 : 3) * dt;
+  if (Math.random() < n)
+    emit(soft, e.x + rand(-0.1, 0.1), y, e.z + rand(-0.1, 0.1), { v: [rand(-0.3, 0.3), 0.05, rand(-0.3, 0.3)], life: rand(0.6, 1),
+      size: rand(0.12, 0.2) * Math.sqrt(v.size), grow: 2.2, color: '#f2fcff', alpha: 0.5, drag: 1 });
+}
+// Warded (Squarlo calling the tide: nothing hurts him, core/enemies.js wardedNow): water spirals
+// up round him and a glow pulses in it
+function wardLook(v, e, dt) {
+  const a = e.mode === 'attack' ? attackOf(e) : null;
+  if (!a?.ward || Math.hypot(e.x - player.x, e.z - player.z) > 20) return;
+  const s = Math.sqrt(v.size), r = 0.42 * s, h = 1.1 * s, spin = clock * 7;
+  for (let i = Math.floor(110 * dt + Math.random()); i > 0; i--) {
+    const k = Math.random(), ang = spin + k * 9 + (i % 3) * 2.09;
+    emit(soft, e.x + Math.cos(ang) * r, e.y + k * h, e.z + Math.sin(ang) * r, { v: [-Math.sin(ang) * 2 * s, 0.8, Math.cos(ang) * 2 * s],
+      life: rand(0.2, 0.35), size: rand(0.05, 0.09) * s, color: SPRAY[i % 3], alpha: 0.9 });
+  }
+  if (Math.random() < dt * 8) emit(glow, e.x, e.y + h * 0.5, e.z, { life: 0.3, size: 0.9 * s, grow: 0.6, color: '#9feaff', alpha: 0.35 });
+}
 // splitting: shaking, steaming
 function shudder(v, e, dt) {
   const k = 0.06 * v.size;
@@ -362,10 +449,11 @@ function makeView(e, prefab) {
   mesh.add(silhouette);   // same world transform as the body
   // actions: walk, fast?, death and one per attack clip (keyed like attack.clip, else 'attack')
   const mixer = new THREE.AnimationMixer(model), actions = {}, weights = {};
-  const clips = { walk: prefab.walk, fast: prefab.fast, death: prefab.death, ...prefab.attacks };
+  // (and the other gaits a model has, `gaits`: swimming, a giant's stride, played like the walk)
+  const clips = { walk: prefab.walk, fast: prefab.fast, death: prefab.death, ...prefab.attacks, ...prefab.gaits };
   for (const [name, clip] of Object.entries(clips)) if (clip) {
     const a = mixer.clipAction(clip);
-    if (name !== 'walk' && name !== 'fast') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+    if (name !== 'walk' && name !== 'fast' && !prefab.gaits?.[name]) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
     a.play(); a.timeScale = 0; a.setEffectiveWeight(name === 'walk' ? 1 : 0); actions[name] = a;
     weights[name] = name === 'walk' ? 1 : 0;
   }
@@ -390,7 +478,8 @@ function makeView(e, prefab) {
   return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0,
-    shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0 };
+    shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0,
+    sink: e.under ? 1 : 0, underWas: e.under ? 1 : 0, height: e.profile.height / size, morphing: false, swim: false };
 }
 // the hover clip's beat (matches blender/triangle.py): sharp, twice per loop
 const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
@@ -458,24 +547,29 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     clouds(v, e);
     v.group.visible = e.mode !== 'gone';
     if (e.mode === 'gone') { if (v.light) v.light.intensity = 0; continue; }
-    if (e.mode === 'split') shudder(v, e, dt);
+    if (e.mode === 'split' && !STAGE_PROFILES[e.boss]) shudder(v, e, dt);
+    growLook(v, e, dt);
     const attack = e.mode === 'attack', strike = A[attackOf(e).clip ?? 'attack'];
     if (attack && v.attacks !== e.attacks) {
       v.attacks = e.attacks; strike.reset().play(); strike.timeScale = 0;
     }
+    // the gait: walking, or swimming in deep water, or a giant's stride (each with its own pace)
+    v.swim = swimming(e);
+    const gait = v.swim && A.swim ? 'swim' : e.profile.gait && A[e.profile.gait] ? e.profile.gait : 'walk', W = A[gait];
     // a bigger body takes longer strides
-    const walkSpeed = prefab.walkSpeed * v.size, fastSpeed = prefab.fastSpeed * v.size;
-    const fast = A.fast ? THREE.MathUtils.clamp((e.speed - walkSpeed) / (fastSpeed - walkSpeed), 0, 1) : 0;
-    const stride = walkSpeed * A.walk.getClip().duration * (1 - fast)
+    const walkSpeed = (gait === 'walk' ? prefab.walkSpeed : prefab.gaitSpeeds[gait]) * v.size, fastSpeed = prefab.fastSpeed * v.size;
+    const fast = A.fast && gait === 'walk' ? THREE.MathUtils.clamp((e.speed - walkSpeed) / (fastSpeed - walkSpeed), 0, 1) : 0;
+    const stride = walkSpeed * W.getClip().duration * (1 - fast)
       + (A.fast ? fastSpeed * A.fast.getClip().duration * fast : 0);
-    if (e.profile.hover) v.phase = (v.phase + dt / A.walk.getClip().duration) % 1;   // keeps hovering
+    if (e.profile.hover || gait === 'swim') v.phase = (v.phase + dt / W.getClip().duration * (gait === 'swim' ? 0.6 + 0.4 * Math.min(1, e.speed / walkSpeed) : 1)) % 1;   // keeps hovering (paddling)
     else if (!attack && e.speed > 0.01) v.phase = (v.phase + dt * e.speed / stride) % 1;
     else if (!attack) v.phase = 0; // idle on both planted feet, not frozen mid-step
-    A.walk.time = v.phase * A.walk.getClip().duration;
+    W.time = v.phase * W.getClip().duration;
     if (A.fast) A.fast.time = v.phase * A.fast.getClip().duration;
     if (attack) strike.time = Math.min(e.t, strike.getClip().duration);
     for (const name in A) {
-      const target = name === 'walk' ? (attack ? 0 : 1 - fast) : name === 'fast' ? (attack ? 0 : fast) : +(attack && A[name] === strike);
+      const target = name === gait ? (attack ? 0 : 1 - fast) : name === 'fast' ? (attack ? 0 : fast)
+        : name === 'walk' || prefab.gaits?.[name] ? 0 : +(attack && A[name] === strike);
       v.weights[name] += (target - v.weights[name]) * Math.min(1, dt * 18);
       A[name].setEffectiveWeight(v.weights[name]);
     }
@@ -494,6 +588,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mixer.update(0);
     spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
     shedParts(v, e); tumble(v, e, dt); lightTurns(v, e, dt);
+    burrowLook(v, e, dt); ripples(v, e, dt); wardLook(v, e, dt);
     glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }

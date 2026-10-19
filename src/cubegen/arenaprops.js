@@ -339,6 +339,18 @@ export function dressArena(arena) {
       faces(.2, .3);
       break;
     }
+    case 'tidal': {
+      // nothing that blocks (a giant walks it, the tide comes and goes): the biome's cover and
+      // small things on the hills, shells and weed on the flats the water leaves; cairns on
+      // a few peaks to make out the high ground by
+      const dry = f => f.top >= fr.level - 1, flats = zone.filter(f => !dry(f));
+      cover(zone.filter(dry), .8, [...pal.cover, ...pal.cover]);
+      cover(flats, .5, [...L('lagoon', 'shell_scatter sand_ripples'), ...L('grotto', 'sea_glass')]);
+      scatter(open.filter(dry), loose(8), pal.small.filter(n => !propMetadata.get(n)?.blocking && variantsOf(n).every(v => !propMetadata.get(v).blocking)));
+      for (const c of (shape.marks.peaks || []).slice(0, 3)) put(floors[c], ['any_cairn'], { center: true });
+      faces(.2, .3);
+      break;
+    }
     case 'courtyard': {
       cover(zone, .75, [...TILES, ...TILES, ...pal.cover]);
       const ends = rim.filter(f => [0, 1, 2, 3].filter(d => { const g = nb(f, d); return g && g.arenaCell && !g.encounter; }).length <= 1);

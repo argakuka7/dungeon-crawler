@@ -17,6 +17,7 @@ import { mirrorBeam } from '../game/beams.js';
 import { clearProjectiles } from '../game/projectiles.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { guardianId } from '../core/guardians.js';
+import { STAGE_PROFILES, enemyProfile } from '../core/enemies.js';
 import { Timeline, lerpAngle, PREDICT } from './sync.js';
 import { MODES, BURNING, TOXIC, rosterOf, rowOf } from './protocol.js';
 
@@ -145,6 +146,12 @@ export class Viewer {
       e.toxic = b[11] & TOXIC ? e.toxic || { shown: true } : null;
       if (Number.isInteger(b[14]) && b[14] > 0) e.stage = b[14];   // a boss's stage and light (game/totnar.js)
       e.dark = b[15] === 1 ? 1 : 0;
+      // a boss whose stages are profiles of their own (Squarlo a giant, game/squarlo.js), his tide
+      // and a Squirtle under the floor (game/enemyai.js)
+      const stages = STAGE_PROFILES[e.boss], want = stages?.[(e.stage ?? 1) - 1];
+      if (want && e.profile.type !== want.type) e.profile = enemyProfile(want, e.level);
+      e.tide = Number.isFinite(b[17]) ? Math.max(0, Math.min(1, b[17])) : 0;
+      e.under = b[18] === 1 ? 1 : 0;
       if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.dark = 0; (e.beam || e.bolts) && mirrorBeam(e, null); return; }
       mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null, Array.isArray(b[16]) ? b[16] : null);
     });

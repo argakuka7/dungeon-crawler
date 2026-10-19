@@ -20,7 +20,7 @@ import { movePlayer } from '../src/physics/move.js';
 import { groundAt } from '../src/physics/collide.js';
 import { inFluid, setTrialFluid, underTrialFluid } from '../src/physics/fluid.js';
 import { checkDeadlines } from '../src/cubegen/trials/timing.js';
-import { N, LH, CHAR_R, CHAR_H } from '../src/core/constants.js';
+import { N, LH, CHAR_R, CHAR_H, WATER, HEAD_Y } from '../src/core/constants.js';
 
 const DEPTHS = Array.from({ length: MAX_DEPTH - 1 }, (_, i) => i + 1);
 const forced = (seed, trial) => makeLayouts(seed, worldThemes(seed), { trial });
@@ -266,14 +266,17 @@ test('under the trial\'s fluid everything drowns, and walking stops at its edge'
   setTrialFluid(null);
   assert.equal(inFluid(gr, player.y), 0);
   setTrialFluid({ y: player.y + 0.4, fluid: tr.fluid });
-  assert.equal(inFluid(gr, player.y), tr.fluid, 'standing in it drowns');
-  assert.equal(inFluid(gr, player.y + 0.5), 0, 'over it is dry');
+  assert.equal(inFluid(gr, player.y), tr.fluid === WATER ? 0 : tr.fluid, 'water to the chest is waded through, the rest drowns');
+  setTrialFluid({ y: player.y + HEAD_Y + 0.1, fluid: tr.fluid });
+  assert.equal(inFluid(gr, player.y), tr.fluid, 'over the head it drowns');
+  assert.equal(inFluid(gr, player.y + 0.5), tr.fluid === WATER ? 0 : tr.fluid);
+  assert.equal(inFluid(gr, player.y + HEAD_Y + 0.2), 0, 'over it is dry');
   // on the summit, the water round its foot: walking off the top towards it stops at the edge
   const b = tr.button;
   place(m, b.x, b.y, b.z);
   setTrialFluid({ y: b.y - 0.3, fluid: tr.fluid });
   assert.equal(underTrialFluid(b.y), false);
-  assert.ok(underTrialFluid(b.y - 1));
+  assert.ok(underTrialFluid(b.y - 1.5));
   setTrialFluid(null);
   void entry;
 });

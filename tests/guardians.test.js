@@ -21,7 +21,7 @@ import { walkable, findPath } from '../src/physics/enemynav.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 
 const signature = spots => spots.map(s => [s.id, s.kind.type, s.level, s.f.id, s.x, s.y, s.z, s.yaw]);
-const arena = (seed = 123, depth = 2) => {
+const arena = (seed = 123, depth = 3) => {   // (the first descent without a real boss, core/bosses.js)
   const world = new World(seed), key = world.layout(depth).down;
   return { world, map: state.map = world.cube(key).map };
 };

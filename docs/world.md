@@ -529,7 +529,7 @@ a quarter of the props and nothing in the way, `render/propplace.js`). Enemies c
 - **Great lake:** in a room of the route or a branch (not the entrance, arenas or the horde room),
   one layer (its sockets as the WFC made them). Water of the depth's river fluid from three cells
   in (four in places), at the rivers' level, so a river coming in runs into it and ends there. The
-  route keeps to the shore (every fluid is deadly; no jumps in a lake cube). A discovery there
+  route keeps to the shore (every fluid is deadly, the water over the head; no jumps in a lake cube). A discovery there
   waits on an islet (level with the shore, water all round it) reached by a bridge (a stair onto
   or off it costs 40 more, `setPieceRoute`). A fall from
   the cube above lands in the lake (it is its catch pool).

@@ -5,18 +5,20 @@ import { takeDamage, regenerate } from '../core/progression.js';
 import { player, state } from '../game/state.js';
 import { hurt } from '../game/flow.js';
 import { knockDown, dieInFluid } from '../game/ragdoll.js';
-import { inFluid, fluidSurface } from './fluid.js';
+import { inFluid, fluidSurface, wading } from './fluid.js';
 import { startFall, landFall } from '../game/fall.js';
 import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
 
-// returns false when the player got respawned. Entering any fluid is fatal; walking
-// is kept off fluid edges (and holes into the void) by canMove, so only jumps, falls and
-// knockbacks get here.
+// returns false when the player got respawned. Lava and acid are fatal, and water over the
+// head (physics/fluid.js); walking is kept off such edges (and holes into the void) by canMove,
+// so only jumps, falls, knockbacks and a rising fluid get here. Shallower water is waded
+// through (`wade`: how deep, physics/move.js slows the player by it).
 function fluids(gr) {
   player.swimming = false; player.fluid = 0;
   const fluid = inFluid(gr, player.y);
-  if (fluid) { dieInFluid(fluid, fluidSurface(gr)); return false; }
+  if (fluid) { player.wade = 0; dieInFluid(fluid, fluidSurface(gr)); return false; }
+  player.wade = player.grounded ? wading(gr, player.y) : 0;
   return true;
 }
 

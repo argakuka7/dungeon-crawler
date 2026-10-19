@@ -231,8 +231,9 @@ that stops it.
 - **Water:** the depth's river fluid (water, lava, acid). It starts one level under the lowest
   ground and rises in pulses: 2 levels over 3 s, then holds for 4 s. It stops 2 levels under
   the summit's top. From about 50 s to 70 s in all.
-- **Rules:** the fluid kills on contact, as every fluid does (`inFluid` reads
-  `max(floor surf, trial level)`). Enemies drown too, without rewards. The water is one surface
+- **Rules:** the fluid kills as every fluid does (`inFluid` reads `max(floor surf, trial
+  level)`): lava and acid on contact, water once it is over the head (it is waded through until
+  then, [bosses.md](bosses.md#water-wading-and-drowning)). Enemies drown too, without rewards. The water is one surface
   clipped to the glass box (the room fills like an aquarium).
 - **Goal:** the button (`F`). The water drains back in 5 s and the seals open.
 - **Telegraph (idle):** tide lines on rocks and walls, the button glowing on the summit.

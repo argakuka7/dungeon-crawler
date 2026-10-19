@@ -1,4 +1,4 @@
-// Projectiles in flight: the fireball / Triangle punch / ice ball / Totnar's skull meshes exported
+// Projectiles in flight: the fireball / Triangle punch / ice ball / Totnar's skull / water ball meshes exported
 // beside their thrower (enemymodel.js props), turned along the flight (a `tumble`ing one end over
 // end), each with a light and a particle trail.
 // A thrower's kind recolours the mesh and replaces the light and trail colours.
@@ -10,6 +10,7 @@ import { fireFaceModel } from './firefacemodel.js';
 import { triangleModel } from './trianglemodel.js';
 import { shrapsModel } from './shrapsmodel.js';
 import { totnarModel } from './totnarmodel.js';
+import { squirtleModel } from './squirtlemodel.js';
 import { kindColors, recolor } from './recolor.js';
 
 const LOOKS = {
@@ -19,6 +20,8 @@ const LOOKS = {
   iceball: { model: shrapsModel, prop: () => shrapsModel.props?.ShrapsIceBall, light: [0x9fdcff, 2, 3], trail: ['#ffffff', '#c4ecff', '#7fc8ff'], rate: 50, gravity: 2.5 },
   // its eyes glow; bone dust and embers stream off it
   skull: { model: totnarModel, prop: () => totnarModel.props?.TotnarSkull, light: [0xff5a1e, 1.4, 2.5], trail: ['#efe6cf', '#ff8a3a', '#bfb49a'], rate: 30, gravity: 1.5 },
+  // a Squirtle's ball of water, wobbling, dripping as it flies
+  water: { model: squirtleModel, prop: () => squirtleModel.props?.SquirtleDrop, light: [0x8fdcff, 0.8, 2], trail: ['#ffffff', '#c8f0ff', '#7fcaf0'], rate: 40, gravity: 6 },
 };
 const ahead = new THREE.Vector3();
 
@@ -44,6 +47,7 @@ export function drawProjectiles(list, dt, off = { x: 0, y: 0, z: 0 }) {
     if (pr.spec.spin) g.rotateZ(pr.t * pr.spec.spin);
     if (pr.spec.tumble) g.rotateX(pr.t * pr.spec.tumble);
     if (pr.kind === 'fireball') g.scale.setScalar(1 + 0.08 * Math.sin(pr.t * 40));
+    if (pr.kind === 'water') g.scale.set(1 + 0.12 * Math.sin(pr.t * 31), 1 - 0.1 * Math.sin(pr.t * 31), 1 + 0.15 * Math.sin(pr.t * 17));
     v.light.intensity = v.base * (0.8 + 0.2 * Math.sin(pr.t * 31) * Math.sin(pr.t * 13));
     const colors = v.trail, n = Math.floor(v.look.rate * dt + Math.random());
     for (let i = 0; i < n; i++) {
