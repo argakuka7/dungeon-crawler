@@ -21,6 +21,7 @@ import { updateTide, resetTide, drownEnemies, floatSwimmers } from './tide.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
+import { spawnLineup } from './devspawn.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { updateProjectiles, drawAllProjectiles, clearProjectiles } from './projectiles.js';
 import { updateBeams, drawAllBeams, clearBeams } from './beams.js';
@@ -91,6 +92,7 @@ export function resetEnemies() {
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
   resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetGustos(); resetTotnars(); resetSquarlos();
+  spawnLineup();   // a dev test room's every kind (game/devspawn.js)
   for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
   hordeGroups = createHordeGroups(state.map, allEnemies());

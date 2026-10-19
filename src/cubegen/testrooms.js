@@ -3,7 +3,8 @@
 // either flat terraces (`put` a floor of a level) or shaped by a height function over the cell
 // corners (`shaped`): a cell with a corner under the water line is under water, its bed the
 // shape's, so a shore runs down into the water as one slope. Floors next to each other link
-// where their edges meet. No portals, no props, no enemies (/spawn brings some): nothing leads
+// where their edges meet. No portals, no props, no enemies of the cube's own (/spawn brings
+// some; the `enemies` and `guardians` rooms line every kind up, game/devspawn.js): nothing leads
 // in or out but /testroom.
 import { N, LH, DIRS, OPP, EDGE_CORNERS, WATER, LAVA, ACID, FLUID_NAME } from '../core/constants.js';
 import { idx } from '../core/util.js';
@@ -12,6 +13,7 @@ import { indexBlockers } from '../core/blockers.js';
 import { createContext } from './context.js';
 import { ladderInfo } from './climbs.js';
 import { testRoomOf } from '../world/testrooms.js';
+import { ENEMY_KINDS } from '../core/enemies.js';
 
 const flat = top => Array(4).fill(top * LH);
 const corners = (H, x, z) => [H(x, z), H(x + 1, z), H(x, z + 1), H(x + 1, z + 1)];
@@ -53,7 +55,7 @@ function start(spec) {
 }
 
 // the floors indexed and linked (where the edges meet), the map
-function finish(ctx, spec, { K = 1, B = [0], arrival, note }) {
+function finish(ctx, spec, { K = 1, B = [0], arrival, note, lineup = [] }) {
   const floors = ctx.floors = [];
   for (const col of ctx.cols) {
     col.sort((a, b) => a.top - b.top);
@@ -84,7 +86,7 @@ function finish(ctx, spec, { K = 1, B = [0], arrival, note }) {
     cave: false, walled: false, enemyFree: false, populationScale: 0, horde: null,
     rewardSites: [], siteFailures: [], sitePlacements: [], siteReservations: [], spots: [],
     staticBlockers: blockers, blockers, occluders: [], authoredProps: [], routes: [],
-    testRoom: { name, arrival, note },
+    testRoom: { name, arrival, note, lineup },
   };
 }
 
@@ -153,7 +155,49 @@ function climb(spec) {
     note: `towers: ${STYLES.join(', ')}; hanging from the platform: ${HANGING.join(', ')}` });
 }
 
-const BUILD = { water_hill: waterHill, fluids, climb };
+// Flat ground (level 2) with every enemy kind standing in it, idle (game/devspawn.js
+// spawnLineup): `enemies` has the species with their kinds and their bosses' minions, a row per
+// species; `guardians` the side guardians in front, the descent guardians behind them (a
+// species' two in one column) and the bosses at the back. The shortest stand in front, all
+// face the arrival. lineup: [{ type, x, z, yaw }]
+const KINDS = Object.values(ENEMY_KINDS);
+const tallest = row => Math.max(...row.map(k => k.height));
+const bySpecies = list => [...new Set(list.map(k => k.species))].map(s => list.filter(k => k.species === s));
+const byHeight = list => [...list].sort((a, b) => a.height - b.height);
+const LINEUPS = {
+  enemies: () => bySpecies(KINDS.filter(k => !k.guardian)).sort((a, b) => tallest(a) - tallest(b)),
+  guardians: () => {
+    const side = byHeight(KINDS.filter(k => k.guardianRole === 'side'));
+    const descent = side.map(g => KINDS.find(k => k.guardianRole === 'descent' && !k.boss && k.species === g.species));
+    return [side, descent, byHeight(KINDS.filter(k => k.boss))];
+  },
+};
+const LINE = { front: 2, back: N - 0.6, width: N - 2, room: 1.2, gap: 2 };
+// rows of kinds (the front one first) between LINE.front and LINE.back (in the middle if they
+// leave room), centred across the cube
+export function lineUp(rows) {
+  const r = rows.map(row => Math.max(...row.map(k => k.radius)));
+  const depth = r.reduce((s, x) => s + 2 * x, 0), room = LINE.back - LINE.front - depth;
+  const gap = Math.min(LINE.gap, room / Math.max(1, rows.length - 1));
+  const out = [];
+  let z = LINE.front + (room - gap * (rows.length - 1)) / 2;
+  rows.forEach((row, j) => {
+    z += r[j];
+    const step = Math.min(2 * r[j] + LINE.room, LINE.width / row.length);
+    row.forEach((k, i) => out.push({ type: k.type, x: N / 2 + (i - (row.length - 1) / 2) * step, z, yaw: Math.PI }));
+    z += r[j] + gap;
+  });
+  return out;
+}
+function lineupRoom(spec, name) {
+  const ctx = start(spec), G = 2;
+  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) ctx.put(x, z, { top: G });
+  const lineup = lineUp(LINEUPS[name]());
+  return finish(ctx, spec, { arrival: { x: 8, z: 1.2, yaw: 0 }, lineup,
+    note: `${lineup.length} kinds standing idle until hit (/passive keeps them so)` });
+}
+
+const BUILD = { water_hill: waterHill, fluids, climb, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians') };
 // spec: { key, depth, seed, biome (the depth's theme) }
 export function generateTestRoom(spec) {
   const name = testRoomOf(spec.key);

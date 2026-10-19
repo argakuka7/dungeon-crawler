@@ -469,12 +469,13 @@ export function stepEnemies(list, dt) {
   for (const e of list) {
     knockback(e, dt);
     if (e.mode === 'dead') { e.deadT += dt; continue; }
-    if (e.hp < (e.lastHp ?? e.hp)) provoke(e);
+    if (e.hp < (e.lastHp ?? e.hp)) { e.dormant = false; provoke(e); }
     e.lastHp = e.hp;
     e.cool = Math.max(0, e.cool - dt); e.hurtT = Math.max(0, e.hurtT - dt); e.poised = Math.max(0, (e.poised || 0) - dt);
     e.provoked = Math.max(0, (e.provoked || 0) - dt);
     if (e.stun > 0) { e.stun -= dt; e.speed = 0; continue; }
-    if (state.devPassive) { e.speed = 0; e.path = null; if (e.mode !== 'idle') { e.mode = 'idle'; e.t = 1; } continue; }
+    // passive (/passive), or dormant (a test room's lineup, game/devspawn.js: till it is hit)
+    if (state.devPassive || e.dormant) { e.speed = 0; e.path = null; if (e.mode !== 'idle') { e.mode = 'idle'; e.t = 1; } continue; }
     if ((e.think -= dt) <= 0) { e.think = THINK * (0.8 + Math.random() * 0.4); decide(e); }
     if (e.profile.burrow) burrow(e, dt);
     act(e, dt);

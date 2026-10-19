@@ -71,8 +71,7 @@ docs that explain how the game works, from the big ideas down to the real code:
 - `tests/`: `node --test` unit tests; `tests/browser/` holds integration checks
   that run from the game's devtools console.
 - `tools/`: dev server, the prop metadata generator, the GLB compressor (`compress-assets.mjs`;
-  `glb.mjs` reads the GLBs for the tools and tests), the enemy kinds preview
-  (`/tools/kinds.html`, see `docs/enemy-kinds.md`), the depth population measurement, the
+  `glb.mjs` reads the GLBs for the tools and tests), the depth population measurement, the
   weapon drop tables (`node tools/loot-table.mjs`) and the balance simulation
   (`node tools/balance.mjs`, see `docs/balance.md`).
 - `docs/`: design notes; `docs/assets/` documents the asset libraries.

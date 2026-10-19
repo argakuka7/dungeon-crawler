@@ -1,8 +1,10 @@
 // Dev tools (?dev=1): spawn any enemy kind, at any level, into the current cube; kill or
 // remove them all. The console's /spawn, /kill, /remove and /passive (game/devcommands.js).
 // Spawns are ordinary enemies with ids of their own (never in the run's defeated set) and
-// vanish when the cube resets. Guardian kinds get their bars and drops but no gate.
+// vanish when the cube resets. Guardian kinds get their bars and drops but no gate. The test
+// rooms that line every kind up (cubegen/testrooms.js) are filled here as well: spawnLineup.
 import { N } from '../core/constants.js';
+import { idx } from '../core/util.js';
 import { ENEMY_KINDS, enemyRoll, coinRange, guardianLevel, makeEnemy } from '../core/enemies.js';
 import { damageEnemy } from '../core/combat.js';
 import { walkable, floorAt, groundY } from '../physics/enemynav.js';
@@ -42,18 +44,36 @@ export function spawnEnemies(type, { level = null, n = 1, at = null } = {}) {
   at ??= (pointer.inside && pickFloor()) || { x: player.x + Math.sin(player.yaw) * 2.5, y: player.y, z: player.z + Math.cos(player.yaw) * 2.5 };
   const x = Math.min(N - 0.5, Math.max(0.5, at.x)), z = Math.min(N - 0.5, Math.max(0.5, at.z));
   const list = spotsNear(kind, x, at.y, z, n).map(({ f, y }, i) => {
-    const lv = level ?? (kind.guardian ? guardianLevel(state.map.depth, kind.guardianRole) : enemyRoll(state.map, kind, f.id).level);
-    const [lo, hi] = coinRange(kind, lv);
     const ex = f.x + 0.5, ez = f.z + 0.5;
-    return makeEnemy({
-      id: `dev:${++serial}`, level: lv, coinDrop: lo + Math.floor(Math.random() * (hi - lo + 1)),
-      kind, f, x: ex, y, z: ez, yaw: Math.atan2(player.x - ex, player.z - ez),
-      ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, boss: kind.boss }),
-    }, kind, i);
+    return spawned(kind, f, ex, y, ez, Math.atan2(player.x - ex, player.z - ez), level, i);
   });
-  // a boss fights its own fight (game/gusto.js, game/totnar.js, game/squarlo.js)
-  if (kind.boss) ({ gusto: addGustos, totnar: addTotnars, squarlo: addSquarlos })[kind.boss](list); else addEnemies(list);
+  enlist(kind, list);
   return list;
+}
+// one enemy of kind standing on floor f at (x, y, z), facing yaw
+function spawned(kind, f, x, y, z, yaw, level, i) {
+  const lv = level ?? (kind.guardian ? guardianLevel(state.map.depth, kind.guardianRole) : enemyRoll(state.map, kind, f.id).level);
+  const [lo, hi] = coinRange(kind, lv);
+  return makeEnemy({
+    id: `dev:${++serial}`, level: lv, coinDrop: lo + Math.floor(Math.random() * (hi - lo + 1)), kind, f, x, y, z, yaw,
+    ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, boss: kind.boss }),
+  }, kind, i);
+}
+// a boss fights its own fight (game/gusto.js, game/totnar.js, game/squarlo.js)
+function enlist(kind, list) {
+  if (kind.boss) ({ gusto: addGustos, totnar: addTotnars, squarlo: addSquarlos })[kind.boss](list); else addEnemies(list);
+}
+
+// A test room's lineup (map.testRoom.lineup, cubegen/testrooms.js): every kind where it stands,
+// at the level this depth gives it, `dormant`: idle until it is hit (game/enemyai.js). Each time
+// the cube's enemies are reset (game/enemies.js), so they are all back after a death.
+export function spawnLineup() {
+  for (const [i, { type, x, z, yaw }] of (state.map?.testRoom?.lineup ?? []).entries()) {
+    const kind = ENEMY_KINDS[type], f = state.map.cols[idx(Math.floor(x), Math.floor(z))].at(-1);
+    const e = spawned(kind, f, x, groundY(f, x, z), z, yaw, null, i);
+    e.dormant = true;
+    enlist(kind, [e]);
+  }
 }
 
 // every living enemy dies (and pays out as if slain)

@@ -11,6 +11,8 @@ export const TEST_ROOMS = Object.freeze({
   water_hill: 'a hill standing in a lake to halfway up; a shallow shelf to wade on, deep water past it',
   fluids: 'a waterfall into a lake, a lava pool and an acid pool',
   climb: 'every ladder style: up towers, and hanging from a floating platform',
+  enemies: 'every species and kind (and the bosses\' minions) lined up, idle',
+  guardians: 'every side and descent guardian and the bosses lined up, idle',
 });
 export const TEST_ROOM_NAMES = Object.keys(TEST_ROOMS);
 

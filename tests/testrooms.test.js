@@ -14,6 +14,8 @@ import { groundAt } from '../src/physics/collide.js';
 import { inFluid, wading, tooDeep, wadeable, WADE_MARGIN } from '../src/physics/fluid.js';
 import { supportedPoint } from '../src/physics/respawn.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
+import { ENEMY_KINDS } from '../src/core/enemies.js';
+import { walkable } from '../src/physics/enemynav.js';
 
 const DT = 1 / 60;
 function place(m, x, z, y = null) {
@@ -148,5 +150,26 @@ test('climb: every ladder style, the hanging ones hanging too, and every ladder 
     assert.equal(player.y, l.y1, `${l.style}${l.hang ? ' (hanging)' : ''}: up to the top`);
     assert.equal(player.climb, null);
     assert.equal(groundAt(player.x, player.z, player.y + 0.1, 0).s, m.floors[l.hi], 'stepped onto the floor at its top');
+  }
+});
+
+test('enemies and guardians: every kind lined up once, on the ground, apart, the shortest in front', () => {
+  const w = new World(6), rooms = ['enemies', 'guardians'].map(n => w.cube(testRoomKey(n, 5)).map);
+  const all = rooms.flatMap(m => m.testRoom.lineup.map(l => l.type));
+  assert.deepEqual([...all].sort(), Object.keys(ENEMY_KINDS).sort(), 'every kind, once');
+  assert.ok(rooms[1].testRoom.lineup.every(l => ENEMY_KINDS[l.type].guardian));
+  assert.ok(rooms[0].testRoom.lineup.every(l => !ENEMY_KINDS[l.type].guardian));
+  for (const m of rooms) {
+    const line = m.testRoom.lineup, a = m.testRoom.arrival;
+    state.map = m;
+    for (const l of line) {
+      const k = ENEMY_KINDS[l.type], gr = groundAt(l.x, l.z, 99, 0);
+      assert.ok(l.x - k.radius > 0 && l.x + k.radius < N && l.z - k.radius > a.z + CHAR_R && l.z + k.radius < N, l.type);
+      assert.ok(walkable(gr.s, k.height), `${l.type} stands on walkable ground`);
+      for (const o of line) if (o !== l) assert.ok(Math.hypot(o.x - l.x, o.z - l.z) > k.radius + ENEMY_KINDS[o.type].radius, `${l.type} and ${o.type} apart`);
+    }
+    // row by row (front to back), never shorter than the row before
+    const rows = [...new Set(line.map(l => l.z))].sort((p, q) => p - q).map(z => Math.max(...line.filter(l => l.z === z).map(l => ENEMY_KINDS[l.type].height)));
+    if (m === rooms[0]) rows.forEach((h, i) => assert.ok(!i || h >= rows[i - 1]));
   }
 });
