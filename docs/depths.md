@@ -85,45 +85,52 @@ A roster entry is `species chance count (packs) [kinds]`:
 | Depth | mix | Roster |
 |---:|---:|---|
 | 0 | 1 | snakes 1–2 |
-| 1 | 2 | snakes 2–4, Stunders 20% 1, Wolks 25% 1 |
-| 2 | 3 | snakes 2–5 [80% Grass snake, 20% Sand viper], spiders 60% 2–4 (packs ≤2), Stunders 25% 1, Wolks 35% 1–2, Squirtles 60% 1–3 (Lagoon isles only) |
-| 3 | 3 | spiders 8–14 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], Shraps 20% 1, Wolks 40% 1–2, Triangles 12% 1 |
-| 4 | 3 | snakes 3–6 (packs ≤2) [67% Sand viper, 22% Grass snake, 11% Blood viper], spiders 80% 4–8 (packs ≤3) [80% Spider, 20% Redback], Stunders 60% 1–2 [50% Stone stunder, 50% Stunder] |
-| 5 | 3 | snakes 4–7 (packs ≤2) [67% Sand viper, 22% Grass snake, 11% Blood viper], spiders 80% 5–9 (packs ≤3) [80% Spider, 20% Redback], Stunders 60% 1–2 [67% Stone stunder, 33% Stunder], Wolks 35% 1–2, Wollas 25% 1–2 [50% Storm wolla, 50% Wolla] |
-| 6 | 3 | snakes 5–8 (packs ≤2) [50% Sand viper, 25% Grass snake, 25% Blood viper], spiders 80% 6–10 (packs ≤3) [67% Spider, 33% Redback], Stunders 60% 1–3 [67% Stone stunder, 33% Stunder], Wolks 40% 1–2, Wollas 35% 1–2 [50% Storm wolla, 50% Wolla], Octonauts 15% 1 |
-| 7 | 3 | spiders 7–12 (packs ≤3) [67% Spider, 22% Bog spider, 11% Redback], snakes 80% 4–7 (packs ≤2) [29% Grass snake, 57% Sand viper, 14% Blood viper], Stunders 60% 1–2 [67% Stunder, 33% Stone stunder], Wollas 35% 1–2, Octonauts 20% 1 |
-| 8 | 3 | spiders 8–13 (packs ≤3) [60% Spider, 20% Bog spider, 20% Redback], snakes 80% 4–8 (packs ≤2) [25% Grass snake, 50% Sand viper, 25% Blood viper], Stunders 60% 1–3 [67% Stunder, 33% Stone stunder], Wollas 45% 1–2, Octonauts 25% 1–2 |
-| 9 | 3 | Octonauts 3–4, Shraps 80% 1–3, spiders 80% 6–10 (packs ≤3) [75% Frost spider, 25% Spider], Stunders 50% 1–2 [Frost stunder], snakes 30% 3–5 (packs ≤2) [75% Frost adder, 25% Grass snake], Squirtles 80% 2–4 (packs ≤2) [67% Squirtle, 33% Coral squirtle] (Sunken grotto only) |
-| 10 | 3 | Octonauts 3–5 (packs ≤2) [75% Octonaut, 25% Coral octonaut], Shraps 90% 2–3, spiders 80% 7–12 (packs ≤4) [75% Frost spider, 25% Spider], Stunders 60% 1–2 [67% Frost stunder, 33% Stone stunder], Triangles 15% 1, Squirtles 80% 2–4 (packs ≤2) [67% Coral squirtle, 33% Squirtle] (Sunken grotto only) |
-| 11 | 3 | snakes 6–10 (packs ≤3) [40% Venom adder, 40% Grass snake, 20% Blood viper], Octonauts 80% 2–4 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 60% 1–2, Wollas 35% 1–2 [75% Bog wolla, 25% Wolla], spiders 60% 6–10 (packs ≤4) [75% Bog spider, 25% Spider], Stunders 25% 1–2 |
-| 12 | 3 | snakes 7–12 (packs ≤3) [50% Venom adder, 25% Grass snake, 25% Blood viper], Octonauts 80% 3–5 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 80% 1–3, Wollas 50% 1–2 [75% Bog wolla, 25% Wolla], spiders 60% 8–12 (packs ≤4) [75% Bog spider, 25% Spider], Fire-faces 10% 1 |
-| 13 | 3 | snakes 8–12 (packs ≤3) [29% Venom adder, 57% Blood viper, 14% Shadow mamba], Octonauts 80% 3–5 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], Spicies 60% 1–2, Triangles 40% 1–2 [67% Emerald triangle, 33% Triangle], Wollas 30% 1–2 [50% Storm wolla, 50% Bog wolla], spiders 30% 10–14 (packs ≤4) [50% Bog spider, 50% Redback], Squirtles 60% 2–3 (packs ≤2) [Coral squirtle] (Jungle cenote only) |
-| 14 | 3 | spiders 18–26 (packs ≤6) [55% Spider, 18% Bog spider, 27% Redback], Stunders 50% 1–2 [50% Stunder, 50% Stone stunder], Octonauts 30% 1–2 [40% Octonaut, 40% Bog octonaut, 20% Coral octonaut], snakes 30% 4–6 (packs ≤3) [50% Venom adder, 50% Blood viper], Spicies 25% 1–2 |
-| 15 | 3 | spiders 20–28 (packs ≤7) [40% Spider, 20% Bog spider, 40% Redback], Stunders 60% 1–3 [50% Stunder, 50% Stone stunder], Octonauts 40% 1–2 [40% Octonaut, 40% Bog octonaut, 20% Coral octonaut], Triangles 15% 1 |
-| 16 | 3 | Triangles 2–3 [67% Emerald triangle, 33% Triangle], Stunders 70% 1–3 [Stone stunder], Octonauts 70% 2–5 (packs ≤2) [50% Octonaut, 50% Coral octonaut], Wollas 50% 1–3 [67% Storm wolla, 33% Bog wolla], spiders 50% 10–14 (packs ≤4) [50% Spider, 25% Frost spider, 25% Redback], Fire-cats 10% 1 |
-| 17 | 3 | Triangles 80% 1–3 [33% Triangle, 33% Emerald triangle, 33% Crimson triangle], Octonauts 80% 3–6 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], snakes 60% 10–14 (packs ≤4) [57% Blood viper, 43% Shadow mamba], Fire-cats 50% 2–3 (packs ≤2), spiders 40% 10–16 (packs ≤5) [50% Redback, 50% Spider] |
-| 18 | 4 | Fire-faces 1–3, Fire-cats 3–5 (packs ≤2), Shraps 70% 1–3 [Fire shraps], Stunders 60% 1–3 [Magma stunder], snakes 40% 10–14 (packs ≤4) [67% Shadow mamba, 33% Blood viper], Wollas 40% 1–2 [Ember wolla], spiders 25% 14–20 (packs ≤6) [Redback] |
-| 19 | 3 | Fire-faces 2–3, Fire-cats 5–8 (packs ≤3), Shraps 40% 1–2 [Fire shraps], Triangles 60% 1–2 [67% Crimson triangle, 33% Triangle], Wollas 40% 1–2 [67% Ember wolla, 33% Storm wolla], Stunders 40% 1–2 [67% Magma stunder, 33% Stone stunder] |
-| 20 | 4 | Fire-cats 5–9 (packs ≤3), Fire-faces 2–4, Triangles 80% 2–3 [67% Crimson triangle, 33% Triangle], Stunders 50% 2–3 [67% Magma stunder, 33% Stone stunder], spiders 30% 18–26 (packs ≤8) [67% Redback, 33% Spider] |
+| 1 | 2 | snakes 2–4, Stunders 20% 1, Wolks 25% 1, Squirtles 60% 1–2 (Lagoon isles only) |
+| 2 | 3 | snakes 2–5 [75% Grass snake, 25% Sand viper], spiders 60% 2–4 (packs ≤2), Stunders 25% 1, Wolks 35% 1–2, Squirtles 60% 1–3 (Lagoon isles only) |
+| 3 | 3 | spiders 8–14 (packs ≤3) [Frost spider], Stunders 70% 1–2 [Frost stunder], Shraps 30% 1, Wolks 50% 1–2 [67% Storm wolk, 33% Wolk], snakes 70% 2–4 (packs ≤2) [Frost adder], Triangles 20% 1 |
+| 4 | 3 | snakes 3–6 (packs ≤2) [Sand viper], spiders 80% 4–8 (packs ≤3) [80% Spider, 20% Redback], Stunders 60% 1–2 [50% Stone stunder, 50% Stunder], Wolks 50% 1–2 [Dust wolk] |
+| 5 | 3 | snakes 4–7 (packs ≤2) [Sand viper], spiders 80% 5–9 (packs ≤3) [80% Spider, 20% Redback], Stunders 60% 1–2 [50% Stone stunder, 50% Stunder], Wolks 40% 1–2 [50% Dust wolk, 50% Storm wolk], Wollas 30% 1–2 |
+| 6 | 3 | snakes 5–8 (packs ≤2) [50% Sand viper, 50% Blood viper], spiders 80% 6–10 (packs ≤3) [67% Spider, 33% Redback], Stunders 60% 1–3 [50% Stone stunder, 50% Stunder], Wolks 40% 1–2 [50% Dust wolk, 50% Storm wolk], Wollas 35% 1–2, Octonauts 15% 1 |
+| 7 | 3 | spiders 7–12 (packs ≤3) [67% Spider, 33% Bog spider], snakes 80% 4–7 (packs ≤2) [50% Grass snake, 50% Blood viper], Stunders 60% 1–2, Wollas 40% 1–2, Octonauts 20% 1 |
+| 8 | 3 | spiders 8–13 (packs ≤3) [57% Spider, 29% Bog spider, 14% Redback], snakes 80% 4–8 (packs ≤2) [Blood viper], Stunders 60% 1–3 [50% Stunder, 50% Stone stunder], Wollas 45% 1–2, Octonauts 25% 1–2 |
+| 9 | 3 | Octonauts 3–4, Shraps 80% 1–3, spiders 80% 6–10 (packs ≤3) [Frost spider], Stunders 70% 1–2 [Frost stunder], snakes 80% 3–5 (packs ≤2) [Frost adder], Squirtles 80% 2–4 (packs ≤2) [50% Moss squirtle, 50% Coral squirtle] (Sunken grotto only) |
+| 10 | 3 | Octonauts 3–5 (packs ≤2) [75% Octonaut, 25% Coral octonaut], Shraps 90% 2–3, spiders 80% 7–12 (packs ≤4) [Frost spider], Stunders 70% 1–2 [Frost stunder], snakes 70% 3–5 (packs ≤2) [Frost adder], Triangles 15% 1, Squirtles 80% 2–4 (packs ≤2) [50% Coral squirtle, 50% Squirtle] (Sunken grotto only) |
+| 11 | 3 | snakes 6–10 (packs ≤3) [Venom adder], Octonauts 80% 2–4 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 60% 1–2 [50% Spicy, 50% Habanero], Wollas 40% 1–2 [Bog wolla], spiders 60% 6–10 (packs ≤4) [Bog spider], Stunders 25% 1–2, Fire-faces 30% 1 [Blaze-face] |
+| 12 | 3 | snakes 7–12 (packs ≤3) [67% Venom adder, 33% Blood viper], Octonauts 80% 3–5 (packs ≤2) [75% Bog octonaut, 25% Octonaut], Spicies 80% 1–3 [50% Spicy, 50% Habanero], Wollas 50% 1–2 [Bog wolla], spiders 60% 8–12 (packs ≤4) [Bog spider], Fire-faces 30% 1 [Blaze-face] |
+| 13 | 3 | snakes 8–12 (packs ≤3) [50% Venom adder, 50% Blood viper], Octonauts 80% 3–5 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], Spicies 60% 1–2 [50% Habanero, 50% Spicy], Triangles 40% 1–2 [Emerald triangle], Wollas 30% 1–2 [50% Bog wolla, 50% Storm wolla], spiders 30% 10–14 (packs ≤4) [50% Bog spider, 50% Redback], Squirtles 60% 2–3 (packs ≤2) [50% Moss squirtle, 50% Coral squirtle] (Jungle cenote only) |
+| 14 | 3 | spiders 18–26 (packs ≤6) [50% Redback, 50% Bog spider], Stunders 50% 1–2 [Stone stunder], Octonauts 30% 1–2 [50% Octonaut, 50% Coral octonaut], snakes 40% 4–6 (packs ≤3) [50% Venom adder, 50% Shadow mamba], Spicies 50% 1–2 [Nightshade], Wollas 30% 1–2 [Storm wolla] |
+| 15 | 3 | spiders 20–28 (packs ≤7) [50% Redback, 50% Spider], Stunders 60% 1–3 [Stone stunder], Octonauts 40% 1–2 [Coral octonaut], Spicies 60% 1–2 [Nightshade], snakes 60% 4–6 (packs ≤3) [Shadow mamba], Triangles 15% 1 |
+| 16 | 3 | Triangles 2–3 [67% Triangle, 33% Emerald triangle], Stunders 70% 1–3 [Stone stunder], Octonauts 70% 2–5 (packs ≤2) [50% Octonaut, 50% Coral octonaut], Wollas 50% 1–3 [Storm wolla], spiders 50% 10–14 (packs ≤4) [50% Frost spider, 50% Redback], Shraps 70% 1–2 [Amethyst shraps], Fire-cats 40% 1–2 [Ash cat] |
+| 17 | 3 | Triangles 80% 1–3 [33% Triangle, 33% Emerald triangle, 33% Crimson triangle], Octonauts 80% 3–6 (packs ≤2) [67% Coral octonaut, 33% Bog octonaut], snakes 60% 10–14 (packs ≤4) [Shadow mamba], Fire-cats 50% 2–3 (packs ≤2) [50% Ash cat, 50% Fire-cat], spiders 40% 10–16 (packs ≤5) [Redback], Shraps 50% 1–2 [Amethyst shraps], Wollas 30% 1–2 [Storm wolla] |
+| 18 | 4 | Fire-faces 1–3, Fire-cats 3–5 (packs ≤2) [50% Fire-cat, 50% Ash cat], Shraps 80% 1–3 [Fire shraps], Stunders 80% 1–3 [Magma stunder], snakes 60% 10–14 (packs ≤4) [Shadow mamba], Wollas 50% 1–2 [Ember wolla], spiders 25% 14–20 (packs ≤6) [Redback] |
+| 19 | 3 | Fire-faces 2–3 [50% Fire-face, 50% Blaze-face], Fire-cats 5–8 (packs ≤3) [50% Fire-cat, 50% Void cat], Shraps 60% 1–2 [Fire shraps], Triangles 60% 1–2 [Crimson triangle], Wollas 50% 1–2 [Ember wolla], Stunders 70% 1–2 [Magma stunder] |
+| 20 | 4 | Fire-cats 5–9 (packs ≤3) [Void cat], Fire-faces 2–4 [Wisp-face], Triangles 80% 2–3 [50% Crimson triangle, 50% Triangle], Stunders 70% 2–3 [Magma stunder], Wollas 40% 1–2 [Ember wolla], spiders 30% 18–26 (packs ≤8) [Redback] |
 
 The design rules behind the table:
 
-- **The surface ramps up slowly.** Depth 1 has only snakes and a rare Stunder. Depth 2 adds
-  a few spiders. Depth 3 is the first spider-heavy depth, with more Stunders and a rare
-  Triangle as a mini-boss. Depth 4 mixes snakes, spiders and Stunders, and the canyon (5–6)
-  goes on with them, Sand vipers and Stone stunders first, and Storm wollas in the wind.
+- **The surface ramps up slowly.** Depth 1 has only snakes, a rare Stunder and Wolk, and
+  Squirtles in the lagoons. Depth 2 adds a few spiders. Depth 3 is the first spider-heavy
+  depth, with more Stunders, Frost adders and a rare Triangle as a mini-boss. Depth 4 mixes
+  snakes, spiders and Stunders, and the canyon (5–6) goes on with them, Sand vipers and Stone
+  stunders first, Dust wolks in the wind and the first Wollas.
 - **Each theme has one or two signature species:** Wolks under the open sky of the meadows, the
   snowy peaks and the canyon, Octonauts and Shraps in the frozen caves,
   snakes and Spicies in the swamp and the cenote, Wollas (by kind) from the canyon down, spiders in the nests, Triangles in the mines and ruins, Fire-faces,
   Fire-cats and Fire shraps in the volcanic depths and the abyss.
-- **Kinds follow the theme and get stronger with depth.** Frost spiders and Frost stunders
-  live in the snow and ice, as do Frost adders. Bog spiders, Bog octonauts and Venom adders
-  live in the swamp. Stone stunders live in the badlands, mines and ruins, and Magma
-  stunders in the volcanic depths. Within a species the stronger kinds take over deeper
-  down. The snakes go from Grass snakes to Sand vipers (badlands), then Blood vipers, then
-  Shadow mambas (cenote, ruins and volcanic depths). Spiders go from plain spiders to Redbacks.
+- **Kinds take turns where they fit, and get stronger with depth.** A kind keeps its colours
+  everywhere; the rosters place it where its look and name fit ([enemy-kinds.md](enemy-kinds.md#the-palette)).
+  Frost spiders, Frost stunders, Frost adders and the Shraps live in the snow and ice. Bog
+  spiders, Bog octonauts, Bog wollas and Venom adders live in the swamp, with the Spicies and
+  their Habaneros; Nightshades in the nests. Stone stunders live in the badlands, canyons and
+  nests, Amethyst shraps and Ash cats in the mines and the forge, and the fire kinds burn
+  hotter the deeper they live (orange, yellow, blue). Within a species the stronger kinds take
+  over deeper down. The snakes go from Grass snakes to Sand vipers (badlands), then Blood vipers,
+  then Shadow mambas (nests, ruins and volcanic depths). Spiders go from plain spiders to Redbacks.
+- **A species' kinds turn up about as often as each other.** Each takes its own stretch of
+  depths rather than a sliver of another's: summed over the depths, no kind is seen more than
+  about three times as often as its rarest sibling (`/tools/palette.html` measures it).
 - **Rare guests preview the next theme.** A 10–20% roll lets a species show up a theme
-  early: an Octonaut at 6 and 7, a Shraps at 3, a Triangle at 10 and 15, a Fire-face at 12, a Fire-cat at 16.
+  early: an Octonaut at 6 and 7, a Shraps at 3, a Triangle at 10 and 15, a Blaze-face at 11 and 12, an Ash cat at 16.
 - **Ranged species stay few.** Fire-faces, Triangles, Shraps, Spicies, Wollas and Wolks never go above 4 per
   cube, because several shooters at once are hard to read and to dodge. The Shraps throws and
   pinches, so it stays at 1–3; so does the Spicy, whose lasers are easy to dodge one at a time

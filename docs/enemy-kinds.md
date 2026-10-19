@@ -6,20 +6,22 @@ drawn with the species' model. The base profile of a species is its first kind. 
 are in `ENEMY_KINDS`. Each depth's roster says which kinds of a species spawn there and how
 often (`src/core/spawns.js`, see `docs/depths.md`).
 
-Kinds need no new models. They recolour the species' materials at load time in OKLCH.
+Kinds need no new models. They recolour the species' materials at load time in OKLCH, with
+colours from one palette (see [The palette](#the-palette)). Every species comes in at least
+three ordinary kinds, its base kind included (a boss's minions do not count).
 
 ## Defining a kind
 
 ```js
 export const BLOOD_VIPER = enemyKind(SNAKE, {
   type: 'bloodviper', label: 'Blood viper', reason: 'Bitten by a Blood viper!',
-  colors: { skin: 'oklch(0.60 0.19 27)', eyes: 'oklch(0.93 0.18 100)' },
-  ichor: Object.freeze(['#e0503a', '#6a1410']),
+  colors: paints({ skin: 'crimson.mid', eyes: 'eyes.sun' }), ichor: ['#e0503a', '#6a1410'],
   mods: { hp: 1.4, damage: 1.4, speed: 1.2, size: 1.1 },
 });
 ```
 
-Then add it to `ENEMY_KINDS` and to the rosters that should spawn it.
+Then add it to `ENEMY_KINDS` and to the rosters that should spawn it. `/tools/palette.html`
+shows how often each kind turns up and how it stands out from its siblings and the ground.
 
 - `mods` multiply the base:
   - `hp` and `damage` scale the base values and their growth per level.
@@ -41,10 +43,38 @@ Then add it to `ENEMY_KINDS` and to the rosters that should spawn it.
 - `light` (a colour string) replaces the glow light of a species that has one (`GLOW` in
   `src/render/enemies.js`) and the light of its projectile. `sparks` (a list of colours)
   replaces its embers and its projectile trail.
+- `beamColor` colours a Spicy's laser or a Wolk's bolt; `gloom` replaces the colour a Wolk's
+  cloud darkens to; `trail` the colour of a Wolla's wet trail.
 - A kind keeps its species' `seedSalt`, and an enemy's id uses the species. So where an enemy
   stands, its level and its id do not depend on the kind it drew. Behaviour is still the
   species'. A kind that needs to behave differently would override the attack fields, or
   get new ones that `game/enemyai.js` reads.
+
+## The palette
+
+`colors` names swatches of `src/core/palette.js` (`paints` turns them into colour strings,
+`paint` a single one). A swatch is a hue family and a tone:
+
+- **Families**: crimson 25, ember 45, ochre 80, moss 130, jade 165, frost 230, azure 260 and
+  violet 305, and two near-greys: `ink` (cool) and `stone` (warm). Pink 350 and amber 65
+  (`GUARDIAN_HUES`) belong to the guardians; no other kind takes a hue near them.
+- **Tones**: `pale` (L 0.88), `light` (0.76), `mid` (0.62), `deep` (0.46), `dark` (0.32), `glow`
+  (0.72, for what shines) and `vivid` (0.72, as strong as the hue goes: the guardians'). Each
+  tone aims for a chroma, capped at 85% of the most sRGB shows at its lightness and hue
+  (`vivid`: all of it), so every family's `mid` looks about as strong: sRGB holds far more red
+  or violet than teal or ochre.
+- A swatch may turn its hue a little, `@±deg` (at most 12°): the frost kinds of different
+  species are all frost, but not the very same blue (`frost.pale`, `frost.light@-8`,
+  `frost.pale@+10`).
+- **Eyes** come in four colours: `eyes.sun`, `eyes.ember`, `eyes.ice` and `eyes.bone`.
+
+A kind's colours are its own wherever it spawns. The rosters put it where it fits: frost
+kinds in the snow and ice, bog kinds in the swamp, sand and dust in the badlands and canyons, and
+the fire species burn hotter the deeper they live (orange, then yellow, then blue). It may
+come close to the ground's colour, like the Frost spider in the frozen caves; its legs, eyes
+and shading still set it apart. The kinds of a species stay clearly apart from each other
+(OKLab ΔE ≥ 0.08 between their bodies, `tests/palette.test.js`), and they take turns down the
+depths so that each turns up about as often as the others.
 
 ## Recolouring
 
@@ -58,7 +88,7 @@ parts: { skin: ['SnakeBody', 'SnakeRibs'], eyes: ['SnakeEyes_glow'] }
 The first material of a role is its **anchor**. Teeth, fangs, pupils and mouths are left out,
 so they never change. The Stunder's green mouth is the exception: it moves with the skin.
 
-`colors` maps a role, or a single material name, to an op (`recolorFn` in
+`colors` maps a role, or a single material name, to an op (the palette's swatches are colours) (`recolorFn` in
 `src/core/oklch.js`):
 
 - **A colour** (`'oklch(L C H)'` or `'#rrggbb'`): the anchor becomes exactly that colour. The
@@ -96,64 +126,93 @@ again. The lineup is planned with the room (`cubegen/testrooms.js` `lineUp`), so
 
 ## The kinds
 
-| Kind | Species | Main colour | HP | Damage | Speed | Size | XP | Depths |
+| Kind | Species | Colour | HP | Damage | Speed | Size | XP | Depths |
 |---|---|---|---|---|---|---|---|---|
-| Sand viper | Grass snake | `oklch(0.80 0.12 82)` ochre | ×1.25 | ×1.2 | ×1.1 | 1 | ×1.23 | 2, 4–7, 9–11, 15–16 |
-| Blood viper | Grass snake | `oklch(0.60 0.19 27)` red | ×1.4 | ×1.4 | ×1.2 | 1.1 | ×1.4 | 4, 6, 9–11, 15–17 |
-| Frost adder | Grass snake | `oklch(0.88 0.04 225)` icy | ×1.35 | ×1.1 | ×0.95 | 1 | ×1.23 | 7 |
-| Venom adder | Grass snake | `oklch(0.58 0.15 310)` violet | ×1.2 | ×1.35 | ×1.1 | 1 | ×1.27 | 9–11 |
-| Shadow mamba | Grass snake | `oklch(0.34 0.025 280)` near-black | ×1.6 | ×1.6 | ×1.3 | 1.15 | ×1.6 | 15–17 |
-| Frost spider | Spider | `oklch(0.82 0.035 235)` icy | ×1.35 | ×1.1 | ×0.9 | 1 | ×1.2 | 3, 7–8, 13–14 |
-| Bog spider | Spider | `oklch(0.40 0.06 135)` moss | ×1.15 | ×1.25 | ×1.05 | 1 | ×1.2 | 5–6, 9–12 |
-| Redback | Spider | `oklch(0.34 0.11 25)` crimson | ×1.3 | ×1.4 | ×1.2 | 1.1 | ×1.35 | 4, 6, 11–14, 16, 18, 20 |
-| Frost stunder | Stunder | `oklch(0.80 0.04 235)` icy | ×1.25 | ×1 | ×0.9 | 1 | ×1.11 | 3, 7–8 |
-| Stone stunder | Stunder | `oklch(0.55 0.03 70)` stone | ×1.6 | ×1.15 | ×0.85 | 1.12 | ×1.36 | 4–6, 8, 11–14, 19–20 |
-| Magma stunder | Stunder | `oklch(0.30 0.09 27)` charred red | ×1.35 | ×1.4 | ×1.15 | 1 | ×1.38 | 17–20 |
-| Bog octonaut | Octonaut | `oklch(0.74 0.10 130)` olive | ×1.2 | ×1.15 | ×1 | 1 | ×1.18 | 9–12, 15–16 |
-| Coral octonaut | Octonaut | `oklch(0.74 0.13 30)` coral | ×1.3 | ×1.35 | ×1.2 | 1 | ×1.33 | 12–16 |
-| Emerald triangle | Triangle | `oklch(0.80 0.20 155)` green glow | ×1.25 | ×1.1 | ×1 | 1 | ×1.17 | 13–16 |
-| Crimson triangle | Triangle | `oklch(0.64 0.22 25)` red glow | ×1.35 | ×1.35 | ×1 | 1 | ×1.35 | 15–16, 19–20 |
-| Fire shraps | Shraps | `oklch(0.56 0.17 32)` red, fire head | ×1.45 | ×1.4 | ×1.1 | 1 | ×1.42 | 17–19 |
-| Bog wolla | Wolla | `oklch(0.70 0.17 145)` green | ×1.2 | ×1.15 | ×1 | 1 | ×1.17 | 9–10, 14 |
-| Storm wolla | Wolla | `oklch(0.56 0.20 300)` purple | ×1.3 | ×1.3 | ×1.1 | 1.08 | ×1.3 | 13–15, 19 |
-| Ember wolla | Wolla | `oklch(0.72 0.17 52)` orange | ×1.45 | ×1.4 | ×1.1 | 1.12 | ×1.42 | 18–19 |
+| Spider | (base) | `ink.dark` | | | | | | 2, 4–8, 15 |
+| Frost spider | Spider | `frost.pale` | ×1.35 | ×1.1 | ×0.9 | 1 | ×1.2 | 3, 9–10, 16 |
+| Bog spider | Spider | `moss.deep` | ×1.15 | ×1.25 | ×1.05 | 1 | ×1.2 | 7–8, 11–14 |
+| Redback | Spider | `crimson.deep` | ×1.3 | ×1.4 | ×1.2 | ×1.1 | ×1.35 | 4–6, 8, 13–18, 20 |
+| Stunder | (base) | `moss.mid` | | | | | | 1–2, 4–8, 11 |
+| Frost stunder | Stunder | `frost.light@-8` | ×1.25 | 1 | ×0.9 | 1 | ×1.11 | 3, 9–10 |
+| Stone stunder | Stunder | `stone.mid` | ×1.6 | ×1.15 | ×0.85 | ×1.12 | ×1.36 | 4–6, 8, 14–16 |
+| Magma stunder | Stunder | `crimson.dark` | ×1.35 | ×1.4 | ×1.15 | 1 | ×1.38 | 18–20 |
+| Grass snake | (base) | `moss.light` | | | | | | 0–2, 7 |
+| Sand viper | Grass snake | `ochre.light` | ×1.25 | ×1.2 | ×1.1 | 1 | ×1.23 | 2, 4–6 |
+| Blood viper | Grass snake | `crimson.mid` | ×1.4 | ×1.4 | ×1.2 | ×1.1 | ×1.4 | 6–8, 12–13 |
+| Frost adder | Grass snake | `frost.pale@+10` | ×1.35 | ×1.1 | ×0.95 | 1 | ×1.23 | 3, 9–10 |
+| Venom adder | Grass snake | `violet.mid` | ×1.2 | ×1.35 | ×1.1 | 1 | ×1.27 | 11–14 |
+| Shadow mamba | Grass snake | `ink.dark` | ×1.6 | ×1.6 | ×1.3 | ×1.15 | ×1.6 | 14–15, 17–18 |
+| Octonaut | (base) | `azure.light` | | | | | | 6–12, 14, 16 |
+| Bog octonaut | Octonaut | `moss.light@+8` | ×1.2 | ×1.15 | 1 | 1 | ×1.18 | 11–13, 17 |
+| Coral octonaut | Octonaut | `crimson.light@+8` | ×1.3 | ×1.35 | ×1.2 | 1 | ×1.33 | 10, 13–17 |
+| Fire-face | (base) | `ember.glow` | | | | | | 18–19 |
+| Blaze-face | Fire-face | `ochre.glow` | ×1.25 | ×1.2 | 1 | 1 | ×1.22 | 11–12, 19 |
+| Wisp-face | Fire-face | `azure.glow` | ×1.5 | ×1.45 | ×1.1 | 1 | ×1.48 | 20 |
+| Triangle | (base) | `violet.glow` | | | | | | 3, 10, 15–17, 20 |
+| Emerald triangle | Triangle | `jade.glow` | ×1.25 | ×1.1 | 1 | 1 | ×1.17 | 13, 16–17 |
+| Crimson triangle | Triangle | `crimson.glow` | ×1.35 | ×1.35 | 1 | 1 | ×1.35 | 17, 19–20 |
+| Fire-cat | (base) | `crimson.deep, ember flame` | | | | | | 17–19 |
+| Ash cat | Fire-cat | `stone.mid, crimson flame` | ×1.2 | ×1.15 | 1 | 1 | ×1.18 | 16–18 |
+| Void cat | Fire-cat | `ink.dark, azure flame` | ×1.5 | ×1.45 | ×1.1 | 1 | ×1.47 | 19–20 |
+| Shraps | (base) | `frost.light@+6, ice head` | | | | | | 3, 9–10 |
+| Fire shraps | Shraps | `crimson.mid, fire head` | ×1.45 | ×1.4 | ×1.1 | 1 | ×1.43 | 18–19 |
+| Amethyst shraps | Shraps | `violet.deep, violet.light head` | ×1.3 | ×1.25 | 1 | 1 | ×1.27 | 16–17 |
+| Spicy | (base) | `moss.light` | | | | | | 11–13 |
+| Habanero | Spicy | `ember.mid` | ×1.25 | ×1.3 | 1 | 1 | ×1.28 | 11–13 |
+| Nightshade | Spicy | `violet.deep` | ×1.4 | ×1.35 | 1 | 1 | ×1.38 | 14–15 |
+| Wolla | (base) | `azure.mid` | | | | | | 5–8 |
+| Bog wolla | Wolla | `moss.mid` | ×1.2 | ×1.15 | 1 | 1 | ×1.17 | 11–13 |
+| Storm wolla | Wolla | `violet.mid` | ×1.3 | ×1.3 | ×1.1 | ×1.08 | ×1.3 | 13–14, 16–17 |
+| Ember wolla | Wolla | `ember.mid` | ×1.45 | ×1.4 | ×1.1 | ×1.12 | ×1.42 | 18–20 |
+| Wolk | (base) | `frost.pale` | | | | | | 1–3 |
+| Dust wolk | Wolk | `ochre.pale` | ×1.2 | ×1.15 | 1 | 1 | ×1.17 | 4–6 |
+| Storm wolk | Wolk | `ink.mid` | ×1.3 | ×1.3 | ×1.1 | 1 | ×1.3 | 3, 5–6 |
+| Squirtle | (base) | `azure.mid` | | | | | | 1–2, 10 |
+| Coral squirtle | Squirtle | `crimson.mid@+10` | ×1.5 | ×1.4 | ×1.1 | 1 | ×1.43 | 9–10, 13 |
+| Moss squirtle | Squirtle | `moss.mid` | ×1.2 | ×1.15 | 1 | 1 | ×1.17 | 9, 13 |
 
-Gusto's Custo triangle (half size, light blue, 1.9× as fast, `minion`: in no roster, only he
+The base kinds are painted from the palette too (their `colors`); the other columns are theirs.
+Depths are those whose rosters draw the kind (`src/core/spawns.js`, [depths.md](depths.md)).
+
+Gusto's Custo triangle (half size, `frost.light@-6`, 1.9× as fast, `minion`: in no roster, only he
 summons it) is a Triangle kind too, and Totnar's Twig spider (0.55×) and Bramble stunder
-(0.72×) are a Spider and a Stunder kind; his snapping skull is a species of its own that only he
-brings (`MINION_PROFILES`); see [bosses.md](bosses.md). The Squirtle is a species of its own
-(blue), with the Coral squirtle (coral red, ×1.5 health, ×1.4 damage, ×1.1 speed; the grotto
-and the cenote) and Squarlo's Tide squirtle (teal, ×0.7 health, ×0.6 damage, a minion).
+(0.72×), both `ochre.deep`, are a Spider and a Stunder kind; his snapping skull (`stone.pale`) is
+a species of its own that only he brings (`MINION_PROFILES`); see [bosses.md](bosses.md).
+Squarlo's Tide squirtle (`jade.mid`, ×0.7 health, ×0.6 damage) is a Squirtle minion.
 
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red
 one bites 40% harder and moves 20% faster than the green one. The mamba bites 60% harder and
-moves 30% faster. The Frost adder (slow and tough) and the Venom adder (bites hard) give the
-ice and the swamp snakes of their own.
+moves 30% faster. The Frost adder (slow and tough) and the Venom adder (bites hard, poisons)
+give the ice and the swamp snakes of their own.
 
 The Fire shraps swaps the Shraps' ice head for a burning one (`hide`), throws fireballs that
-burn instead of ice balls that chill (`attacks`) and glows like the fire species (`fx`).
+burn instead of ice balls that chill (`attacks`) and glows like the fire species (`fx`). The
+Amethyst shraps keeps the ice head and its ice balls (they still chill), recoloured violet,
+with a light and a trail of its own.
 
-The Wollas are strength tiers too: blue, then green in the swamp, purple in the mines and ruins,
-orange in the volcanic depths and the abyss. Their eyes take a contrasting colour, and each kind
-leaves a trail of its own colour (`trail`).
+The fire species burn hotter the deeper they live: the Fire-face's orange flame, the Blaze-face's
+yellow one (the honey hive and the abyss) and the Wisp-face's blue one (the core); the
+Fire-cat, the grey Ash cat with red flames (the forge and the volcanic depths) and the black
+Void cat with blue ones (the abyss). Each sets its flames' colour with `colors` (its fireballs
+too) and its light and embers with `light` and `sparks`.
 
-Fire-face, Fire-cat and Spicy have `parts` (flame, fur, eyes; the Spicy's body, glow, wheels and
-eyes) but no kinds yet. A Spicy kind can give its laser a colour of its own with `beamColor`. A blue-fire kind
-would also need its embers, its light and its fireball trail recoloured through `sparks`
-and `light`.
+The Spicies: the green Spicy, the orange Habanero (its laser orange, `beamColor`) and the violet
+Nightshade, whose laser poisons (`toxin`). The Wolks: the pale blue Wolk, the ochre Dust wolk
+over the badlands and canyons, and the dark Storm wolk with violet lightning (`beamColor`),
+its cloud darkening almost to black (`gloom`).
 
-The Wolk has `parts` (body, limbs) but no kinds yet. Its `gloom` darkens the `body` role towards
-a colour of its own while it gathers its lightning, so a kind's cloud darkens from the kind's
-colour; a kind may set its own `gloom` too.
+The Wollas are strength tiers too: blue, then green in the swamp, purple in the cenote, the nests,
+the mines and the ruins, orange in the volcanic depths and the abyss. Their eyes take a contrasting
+colour, and each kind leaves a trail of its own colour (`trail`).
 
 ## Guardians
 
 Every species' guardians are kinds as well (`GUARDIAN_KINDS`, `DESCENT_GUARDIAN_KINDS`):
-hot pink and amber with pale eyes ([guardians.md](guardians.md)). A species can dress them
+`pink.vivid` and `amber.vivid` with `eyes.bone` ([guardians.md](guardians.md)). A species can dress them
 otherwise with `guardianLooks.side` and `.descent`, which replace those fields (`colors`,
-`light`, `sparks`, `ichor`, ...). The Wolk's side guardian is a grey rain cloud that darkens
-almost to black, its descent guardian a polished silver cloud: its `finish` (`{ parts,
+`light`, `sparks`, `ichor`, ...). The Wolk's side guardian is a grey rain cloud (`ink.light`) that
+darkens almost to black, its descent guardian a polished silver cloud (`ink.pale`): its `finish` (`{ parts,
 roughness, metalness, sheen, glints }`, `render/enemies.js`) makes those materials smoother and
 a little metallic, with a faint sheen of their own colour (the scene has no environment to
 mirror, so fully metallic would look dark) and white glints twinkling on it.
