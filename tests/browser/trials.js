@@ -361,16 +361,17 @@ export async function runTrialChecks(kind = 'flood') {
     check(Number(document.getElementById('trial-line').textContent.match(/\d+/)[0]) < before, 'warm by it the cold drops');
     results.push('the cold');
   }
-  // the storm: armed, a gust pulls whoever stands out in the open leeward, not one in shelter
+  // the storm: armed, a gust pulls whoever stands out on the ramp off the hill, not one behind a boulder
   if (kind === 'storm') {
-    const m = state.map.trial, path = m.check.path, shelter = new Set(m.shelter);
+    const m = state.map.trial, path = m.check.path, exposed = new Set(m.exposed);
     Object.assign(player, { x: path[0].x, y: path[0].y, z: path[0].z, vx: 0, vz: 0 });
     player.autoDir = DIRS[t.fromDir];
     await until(() => state.trial.phase === 'running', 'running', 6000);
     player.autoDir = null;
     const { stormPhase } = await import('../../src/core/trials.js');
-    const open = path.find(p => !shelter.has(Math.floor(p.z) * 16 + Math.floor(p.x)) && Math.hypot(p.x - path[0].x, p.z - path[0].z) > 2);
-    const cover = m.shelter.map(c => ({ x: c % 16 + 0.5, z: Math.floor(c / 16) + 0.5 })).find(q => state.map.cols[Math.floor(q.z) * 16 + Math.floor(q.x)].some(f => !f.fluid));
+    const cell = p => Math.floor(p.z) * 16 + Math.floor(p.x);
+    const open = path.find(p => exposed.has(cell(p)));
+    const cover = path.find((p, i) => i > path.indexOf(open) && !exposed.has(cell(p)) && m.check.path.length - i > 3);
     await until(() => stormPhase(state.trial.t).phase === 'warning', 'a warning', 9000);
     const floorAt = q => state.map.cols[Math.floor(q.z) * 16 + Math.floor(q.x)].find(f => !f.fluid);
     for (const [q, moved] of [[open, true], [cover, false]]) {
@@ -380,7 +381,7 @@ export async function runTrialChecks(kind = 'flood') {
       await until(() => stormPhase(state.trial.t).phase === 'gust', 'the gust', 3000);
       await delay(800);
       const d = Math.hypot(player.x - q.x, player.z - q.z);
-      if (player.hp > 0) check(moved ? d > 0.8 : d < 0.2, `${moved ? 'out in the open' : 'in shelter'}: carried ${d.toFixed(2)}`);
+      if (player.hp > 0) check(moved ? d > 0.5 || player.y < y - 0.4 : d < 0.2, `${moved ? 'out in the open' : 'in shelter'}: carried ${d.toFixed(2)}`);   // (out: off its cell, or down over the edge)
     }
     results.push('the gusts');
     if (player.hp <= 0 || state.cubeKey !== t.key) return results;

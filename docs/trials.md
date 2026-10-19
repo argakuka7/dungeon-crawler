@@ -31,7 +31,7 @@ above, and every puzzle you solve drains it one stage further.
 | `sunken` | event + puzzles | no | no | solve 2–3 puzzles, each drains a stage | (ordinary death) | 2–19, any |
 | `collapse` | event | yes | yes | reach the exit apron | falling in | 1–19, any |
 | `cold` | event | yes | meter | light the great fire | freezing | peaks, frozen caves (3, 9–10) |
-| `storm` | event | yes | gusts | pull the lightning rod | blown off | sky and surface themes (1–6) |
+| `storm` | event | yes | gusts | pull the lightning rod on top of the hill | (blown off: a fall) | sky and surface themes (1–6) |
 | `siege` | event | yes | yes | hold the beacon long enough | death | 2–19, any |
 | `chase` | event | yes | yes | drop the portcullis on the hunter | being grabbed | 4–19, any |
 | `miasma` | event | yes | yes | open the vent valve at the bottom | the fog (damage) | walled: canyon 5–6, caves 7–19 |
@@ -333,32 +333,32 @@ The cold sets in. Keep warm by lighting braziers along the way to the great fire
 
 ### `storm`: The storm
 
-Gusts sweep across the room towards the edge. Wait them out behind windbreaks, cross in the
-lulls, and pull the lightning rod at the end.
+The lightning rod stands on top of a tall hill, the way up a ramp round it with no rails. Gusts tear
+off the hill in a steady rhythm: climb in the lulls, wait out the gusts behind the boulders, and
+pull the rod at the top.
 
-- **Room:** one layer, the way running along a drop to the void (or a gorge) on the leeward
-  side. Windbreaks (rock outcrops, ruined walls, at least `CHAR_H` tall and 2 cells wide)
-  along the way. The lightning rod stands near the exit.
-- **Gusts:** from one fixed side, in a cycle of `GUST_PERIOD` (7 s): 1.5 s warning (whistle,
-  streaks), 2.5 s gust, 3 s lull. A gust pushes bodies outside shelter leeward, hard enough to
-  carry a player who pushes back 3 cells over one gust (`core/gusts.js`, `physics/move.js`). Shelter:
-  within 2 cells downwind of a windbreak. Bridges keep their invisible rails, so they are
-  safe, which is fine.
-- **Rules:** blown off the edge fails the trial.
+- **Room:** one layer, a needle of rock in the middle, sixteen levels over its foot, its ramp once
+  round it. Boulders stand on the ramp's outer edge every few cells; the summit is the storm's calm
+  eye. The lightning rod stands in the middle of the summit.
+- **Gusts:** a steady cycle of `STORM.period` (9 s) from the clock running: 2 s warning (a whistle,
+  a tick each second, streaks starting), 2.5 s gust, 4.5 s lull. Out on the ramp and not behind a
+  boulder, a gust pulls a body outwards off the hill (away from its middle) at 2.6 cells/s and takes
+  half its steering against it (`core/trials.js`, `physics/move.js`): over the ramp's edge, to the
+  ground. The HUD counts each phase down.
+- **Rules:** being blown off is a fall (its damage as any fall's), back at the foot; dying fails.
 - **Goal:** the lightning rod (`F`). The storm ends.
-- **Check:** gaps: every exposed stretch between two shelters takes at most
-  `(lull + warning) / SLACK` (3 s, about 5.5 cells at walking speed).
-- **Population:** few; light kinds get blown too.
+- **Check:** gaps: every stretch of the slow player's way out in the wind between two shelters
+  takes at most `(lull + warning) / SLACK` (about 4.3 s); the way climbs at least 20 cells of the
+  hill.
+- **Population:** few, never on the hill.
 - **As built** (`cubegen/trials/storm.js`, `index.js finishStorm`; `core/trials.js STORM`,
-  `game/trials.js stepStorm`): the room is entered and left on opposite faces (the planner asks
-  it), the wind blows across from one of the other two, and the "drop" is a gorge: two rows of
-  the depth's sea along the leeward face (blown in, you drown: back in the room before). The
-  windbreaks are lines every third row from the upwind face: outcrops two cells wide, four levels
-  up, two-cell gaps, staggered, kept off the pads and the rod; the two cells downwind of each are
-  shelter. A gust (`player.pull`, as Gusto's breath) carries a body out of shelter at 2.6 cells/s
-  and takes half its steering against it: about three cells a gust running back. The checked way
-  is the fastest that keeps to the shelter (exposed time counts five times, `arrivals`' `weigh`);
-  its real exposed stretches must each be at most 3 s. Enemies are not blown yet.
+  `game/trials.js stepStorm`): the hill as the flood's summit (`HILL`: a summit of radius 2.3, the
+  ramp two cells wide round it over 0.9 of a turn, a ring of flat foot), in the middle of the room
+  as far from the pads as it gets, nothing built onto it (`stormRoute`), no fences on it. A boulder
+  (three levels up) stands on the ramp's outer half every five cells along it, only where there is
+  room to pass inside it; the cells whose way out from the hill's middle meets a boulder within a
+  cell and a half are shelter, the rest of the ramp `exposed`. The checked way is the fastest that
+  keeps to the shelter (exposed time counting five times, `arrivals`' `weigh`).
 
 ### `siege`: Hold the beacon
 

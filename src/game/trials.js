@@ -46,7 +46,7 @@ const HOW = {
   collapse: 'The floor crumbles behind you. Run for the far side!',
   miasma: 'Poison fog sinks from above. Get down to the vent valve!',
   cold: 'The cold sets in. Light the braziers on your way to the great fire!',
-  storm: 'Gusts sweep the room. Shelter behind the rocks, cross in the lulls, pull the lightning rod!',
+  storm: 'Gusts tear off the hill. Climb in the lulls, wait out the gusts behind the boulders, pull the lightning rod on top!',
   ...EVENT_HOW,
 };
 const SEALED = 'The portals are sealed.';
@@ -58,7 +58,7 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
   if (state.trial && map.trial.kind === 'sunken') state.trial.stage = state.run.trials.get(map.trial.key) ?? 0;   // (drained for the run)
-  gone.clear(); crust.clear(); ice = null; player.skidding = false; cold = 0; shelterOf = null; resetEvents();
+  gone.clear(); crust.clear(); ice = null; player.skidding = false; cold = 0; exposedOf = null; resetEvents();
   partBlockers(map?.trial);
   showTrial(true);
 }
@@ -114,21 +114,27 @@ function frost(k) {
   }
   frostEl.style.opacity = String(Math.min(1, Math.pow(k, 0.7)));
 }
-// the storm: out of shelter a gust pulls you leeward (physics/move.js pulled, set anew each frame)
-let shelterOf = null, lastGust = null;
+// the storm: out on the hill's ramp and not behind a boulder, a gust pulls you outwards off the hill
+// (physics/move.js pulled, set anew each frame). Its rhythm is steady and heard: a whistle as the
+// warning starts, a tick each second of it, the gust's roar.
+let exposedOf = null, lastGust = null, lastTick = null;
 function stepStorm(m, s, dt) {
   if (m.kind !== 'storm') return;
   const live = s.phase === 'running' || s.phase === 'armed', g = live ? stormPhase(s.t) : { phase: 'calm' };
   if (g.phase !== lastGust) {
     if (g.phase === 'warning') sfx('swing', { volume: 0.5, pitch: 0.4 });
-    if (g.phase === 'gust') sfx('rumble', { volume: 0.35, pitch: 1.6 });
+    if (g.phase === 'gust') sfx('gust', { volume: 0.6 });
     lastGust = g.phase;
   }
-  setStorm(state.world, g.phase, m.wind, dt);
+  const tick = g.phase === 'warning' ? Math.ceil(g.left) : null;
+  if (tick !== lastTick && tick != null) sfx('clink', { volume: 0.4, pitch: 1.6 - tick * 0.2 });
+  lastTick = tick;
+  setStorm(state.world, g.phase, m.eye, dt);
   if (g.phase !== 'gust' || player.hp <= 0) return;
-  shelterOf ??= new Set(m.shelter);
-  if (shelterOf.has(Math.floor(player.z) * N + Math.floor(player.x))) return;
-  player.pull = { ux: m.wind[0], uz: m.wind[1], speed: STORM.speed, room: Infinity, hold: STORM.hold };
+  exposedOf ??= new Set(m.exposed);
+  if (!exposedOf.has(Math.floor(player.z) * N + Math.floor(player.x))) return;
+  const dx = player.x - m.eye.x, dz = player.z - m.eye.z, d = Math.hypot(dx, dz) || 1;
+  player.pull = { ux: dx / d, uz: dz / d, speed: STORM.speed, room: Infinity, hold: STORM.hold };
 }
 // the keystone: stepping onto the exit apron stops the wave
 function keystone(m, s) {
@@ -407,7 +413,7 @@ function hud() {
   if (ev) ({ line, fill } = ev);
   if (s.kind === 'storm') {
     const g = stormPhase(s.t);
-    line = s.phase === 'armed' ? 'The wind rises…' : g.phase === 'warning' ? `A gust is coming! Take cover (${Math.ceil(g.left)})` : g.phase === 'gust' ? 'GUST! Stay behind the rocks' : `A lull: cross now (${Math.ceil(g.left)})`;
+    line = s.phase === 'armed' ? 'The wind rises…' : g.phase === 'warning' ? `A gust is coming! Behind a boulder (${Math.ceil(g.left)})` : g.phase === 'gust' ? 'GUST! Hold on behind the boulders' : `A lull: climb on (${Math.ceil(g.left)})`;
     fill = g.phase === 'gust' ? 1 : g.phase === 'warning' ? 1 - g.left / STORM.warning : g.left / STORM.lull;
   }
   if (s.kind === 'cold') {
@@ -517,7 +523,7 @@ function stepParts(m, s) {
     const met = RULES[pz.kind]?.(pz, s, bodies);
     if (met && !puzzleSolved(s, pz.index) && s.phase !== 'resolved') solvePuzzle(pz.index);
   }
-  setGridParts(state.world, m, s, shown);
+  setGridParts(state.world, m, s, shown, partInReach()?.id ?? null);
 }
 export function devTrial(what) {
   const s = state.trial, m = mapTrial();

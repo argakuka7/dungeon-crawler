@@ -21,7 +21,7 @@ import { RIM } from './deck.js';
 import { shapeTimed, timedGoal } from './timed.js';
 import { shapeMiasma, miasmaGoal } from './miasma.js';
 import { shapeCold, coldGoal, coldRoute } from './cold.js';
-import { shapeStorm, stormGoal } from './storm.js';
+import { shapeStorm, stormGoal, stormRoute } from './storm.js';
 import { shapeSiege, siegeGoal, RING } from './siege.js';
 import { shapeChase, chaseGoal } from './chase.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
@@ -32,7 +32,7 @@ const KINDS = {
   collapse: { shape: shapeCollapse, goal: collapseGoal, costs: collapseRoute, finish: finishCollapse },
   miasma: { shape: shapeMiasma, goal: miasmaGoal, costs: null, finish: finishMiasma },
   cold: { shape: shapeCold, goal: coldGoal, costs: coldRoute, finish: finishCold },
-  storm: { shape: shapeStorm, goal: stormGoal, costs: null, finish: finishStorm },
+  storm: { shape: shapeStorm, goal: stormGoal, costs: stormRoute, finish: finishStorm },
   siege: { shape: shapeSiege, goal: siegeGoal, costs: null, finish: finishSiege },
   chase: { shape: shapeChase, goal: chaseGoal, costs: collapseRoute, finish: finishChase },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
@@ -229,12 +229,14 @@ function finishCold(ctx, t, out) {
 
 // --- storm --------------------------------------------------------------------------------------------
 
-// The way across (a slow player's fastest from the entry to the lightning rod) is out in the wind
-// for stretches between shelters: each must take at most (lull + warning) / SLACK s.
+// The way up (a slow player's fastest from the entry to the lightning rod, round the hill) is out in
+// the wind for stretches between the boulders' shelter: each must take at most (lull + warning) /
+// SLACK s. The hill's top must be its summit (the highest ground), and the way must climb it.
 function finishStorm(ctx, t, out) {
-  const rod = t.goal, shelter = new Set(t.shelter), safe0 = n => n.landing || shelter.has(n.c);
+  const rod = t.goal, exposed = new Set(t.exposed), safe0 = n => n.landing || !exposed.has(n.c);
+  if (!t.hill.has(rod.c) || rod.top < t.top - 1) return null;
   const weighed = arrivals(ctx, t.entry, undefined, n => safe0(n) ? 1 : STORM.shun), path = pathOf(weighed, rod);
-  if (!path) return null;
+  if (!path || path.filter(n => t.hill.has(n.c)).length < 20) return null;
   const arr = { ...weighed, time: weighed.real }, safe = n => safe0(n) || n === path[0] || n === rod;
   let worst = 0, from = null;
   for (const n of path) {
@@ -243,9 +245,9 @@ function finishStorm(ctx, t, out) {
   }
   if (worst > (STORM.lull + STORM.warning) / SLACK) return null;
   const at = { x: rod.x + 0.5, y: floorY(rod, 0.5, 0.5), z: rod.z + 0.5 };
-  for (const c of t.gorge) for (const f of ctx.cols[c]) f.noSpawn = true;
-  return { wind: t.wind, shelter: t.shelter, gorge: t.gorge, rod: at, parts: [{ id: 'rod', type: 'rod', ...at }],
-    check: { exposed: Math.round(worst * 100) / 100, path: checkPath(path, arr, () => null) } };
+  for (const c of t.hill) for (const f of ctx.cols[c]) f.noSpawn = true;
+  return { eye: t.eye, exposed: t.exposed, stones: t.stones, rod: at, parts: [{ id: 'rod', type: 'rod', ...at }],
+    check: { exposed: Math.round(worst * 100) / 100, climb: path.filter(n => t.hill.has(n.c)).length, path: checkPath(path, arr, () => null) } };
 }
 
 // --- siege --------------------------------------------------------------------------------------------

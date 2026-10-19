@@ -161,13 +161,43 @@ function cratePart(p) {
   g.add(box);
   return { obj: at(g, p) };
 }
-// the carved lines between linked braziers
+// The glowing lines between linked braziers: a ring round each brazier's foot and a strip from
+// ring to ring for every link. The brazier in reach lights up its ring, its strips and the rings
+// of those it would light or put out with it (setGridParts).
+const LINK_DIM = { color: 0xffa040, opacity: 0.35 }, LINK_HOT = { color: 0xffe0a0, opacity: 0.95 };
+const floorMat = ({ color, opacity }) => Object.assign(glow(color, opacity), { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 function linkLines(pz) {
-  const pts = [], at = new Map(pz.parts.filter(p => p.type === 'brazier').map(p => [p.i, p]));
-  pz.field.links.forEach((list, i) => { for (const j of list) if (j > i) { const a = at.get(i), b = at.get(j); pts.push(a.x, a.y + 0.03, a.z, b.x, b.y + 0.03, b.z); } });
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x3a2a1a, transparent: true, opacity: 0.8 }));
+  const group = new THREE.Group(), dim = floorMat(LINK_DIM), hot = floorMat(LINK_HOT);
+  const at = new Map(pz.parts.filter(p => p.type === 'brazier').map(p => [p.i, p])), links = pz.field.links;
+  let near = Infinity;   // the nearest two braziers: how big a ring fits
+  links.forEach((list, i) => { for (const j of list) near = Math.min(near, Math.hypot(at.get(i).x - at.get(j).x, at.get(i).z - at.get(j).z)); });
+  const r = Math.min(0.55, near * 0.35), w = 0.07, rings = new Map(), strips = [];
+  for (const [i, p] of at) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r - w / 2, r + w / 2, 40), dim);
+    ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, p.y + 0.03, p.z);
+    group.add(ring); rings.set(i, ring);
+  }
+  links.forEach((list, i) => {
+    for (const j of list) {
+      if (j < i && links[j].includes(i)) continue;   // (one strip for a link both ways)
+      const a = at.get(i), b = at.get(j), len = Math.hypot(b.x - a.x, b.z - a.z) - 2 * r;
+      if (len <= 0) continue;
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(len, w * 1.6).rotateX(-Math.PI / 2), dim);   // (flat, along x)
+      strip.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);
+      strip.position.set((a.x + b.x) / 2, (a.y + b.y) / 2 + 0.03, (a.z + b.z) / 2);
+      group.add(strip); strips.push({ i, j, mesh: strip });
+    }
+  });
+  return { group, rings, strips, dim, hot, near: undefined };
+}
+// the brazier in reach (its part id, or null) lit up with its links
+function setLinks(lk, pz, nearId) {
+  const p = nearId && pz.parts.find(q => q.id === nearId && q.type === 'brazier'), i = p ? p.i : -1;
+  if (lk.near === i) return;
+  lk.near = i;
+  const flips = new Set(i < 0 ? [] : [i, ...pz.field.links[i]]);
+  for (const [k, ring] of lk.rings) ring.material = flips.has(k) ? lk.hot : lk.dim;
+  for (const s of lk.strips) s.mesh.material = (s.i === i && flips.has(s.j)) || (s.j === i && flips.has(s.i)) ? lk.hot : lk.dim;
 }
 
 // tide lines: marks on the glass all round, every few levels up to where the water will stop
@@ -257,7 +287,7 @@ export function buildTrialView(m, group) {
   if (!t) return null;
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
-    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map() };
+    plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), links: new Map() };
   // the crumbling crust
   if (t.crust) {
     const theme = themeOf(m);
@@ -286,7 +316,7 @@ export function buildTrialView(m, group) {
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
-    if (pz.kind === 'braziers') group.add(linkLines(pz));
+    if (pz.kind === 'braziers') { const lk = linkLines(pz); group.add(lk.group); view.links.set(pz.index, lk); }
     if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '' }); }
   }
   // the siege's mouths: dark arches the waves come out of
@@ -344,17 +374,17 @@ function hunterMesh() {
   g.add(body, light); g.scale.setScalar(1.6); g.visible = false;
   return g;
 }
-// the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; wind: the way it blows): streaks
-// across the room, a few in the warning, many in the gust
-export function setStorm(world, phase, wind, dt) {
+// the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; eye: the hill's middle, cells):
+// streaks tearing outwards off the hill and round it, a few in the warning, many in the gust
+export function setStorm(world, phase, eye, dt) {
   const v = world?.trialView;
-  if (!v || (phase !== 'warning' && phase !== 'gust')) return;
-  const n = (phase === 'gust' ? 60 : 12) * dt;
+  if (!v || !eye || (phase !== 'warning' && phase !== 'gust')) return;
+  const n = (phase === 'gust' ? 70 : 14) * dt;
   for (let k = n; k > 0; k--) {
     if (k < 1 && Math.random() > k) break;
-    const along = Math.random() * N, x = wind[0] ? (wind[0] > 0 ? 0.5 : N - 0.5) : along, z = wind[1] ? (wind[1] > 0 ? 0.5 : N - 0.5) : along;
-    emit(soft, x, 2 + Math.random() * 5, z, { v: [wind[0] * 9, 0, wind[1] * 9], spread: 0.3, life: 1.6, size: 0.12, grow: 4,
-      color: '#e8ecff', alpha: phase === 'gust' ? 0.5 : 0.3, gravity: 0, drag: 0 });
+    const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 3, ux = Math.cos(a), uz = Math.sin(a), speed = phase === 'gust' ? 9 : 5;
+    emit(soft, eye.x + ux * r, 2 + Math.random() * 8, eye.z + uz * r, { v: [(ux - uz * 0.4) * speed, 0, (uz + ux * 0.4) * speed], spread: 0.3,
+      life: 1.2, size: 0.12, grow: 4, color: '#e8ecff', alpha: phase === 'gust' ? 0.5 : 0.3, gravity: 0, drag: 0 });
   }
 }
 
@@ -424,9 +454,10 @@ function dust(mesh, n) {
 // The grid puzzles as their bits say (game/trials.js): mirrors turned, braziers lit, crates pushed,
 // the beam along its way (shown: puzzle index -> { beam: { cells, lit } } | { held })
 const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0.85, depthWrite: false });
-export function setGridParts(world, m, s, shown) {
+export function setGridParts(world, m, s, shown, nearId = null) {
   const v = world?.trialView;
   if (!v || !s) return;
+  for (const [i, lk] of v.links) if (m.puzzles?.[i]) setLinks(lk, m.puzzles[i], nearId);
   for (const [id, g] of v.grid) {
     const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
     if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;

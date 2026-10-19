@@ -166,10 +166,11 @@ export function coldStep(meter, dt, warm) {
 }
 
 // --- storm -------------------------------------------------------------------------------------------
-// The gusts, from one side in a cycle of STORM.period s from the clock running: a warning, the
-// gust, a lull. Out of shelter a gust pulls a body leeward at STORM.speed cells/s and takes STORM.hold
-// of its steering against it (physics/move.js pulled): running back, about three cells a gust.
-export const STORM = { warning: 1.5, gust: 2.5, lull: 3, period: 7, speed: 2.6, hold: 0.5, shun: 5 };   // (shun: the way checked keeps to the shelter, exposed time counting so much more)
+// The gusts, in a steady cycle of STORM.period s from the clock running: a warning, the gust, a
+// lull. Out on the hill's ramp and not behind a boulder, a gust pulls a body outwards off the hill
+// (away from its eye) at STORM.speed cells/s and takes STORM.hold of its steering against it
+// (physics/move.js pulled): over the ramp's edge.
+export const STORM = { warning: 2, gust: 2.5, lull: 4.5, period: 9, speed: 2.6, hold: 0.5, shun: 5 };   // (shun: the way checked keeps to the shelter, exposed time counting so much more)
 export function stormPhase(t) {
   if (t < ARM_TIME) return { phase: 'calm', left: ARM_TIME - t };
   const c = (t - ARM_TIME) % STORM.period;

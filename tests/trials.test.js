@@ -822,14 +822,18 @@ test('the storm\'s cycle: a warning, the gust, a lull, from the clock running', 
   assert.equal(stormPhase(ARM_TIME + STORM.period + 0.5).phase, 'warning');
 });
 
-test('every storm room: straight across, the gorge leeward, its way out in the wind at most (lull + warning) / SLACK at a time', () => {
+test('every storm room: the rod on a tall hill, the way round it, out in the wind at most (lull + warning) / SLACK at a time', () => {
   let n = 0;
-  for (const { seed, d, m, t } of events('storm', [0, 1, 2])) {
-    const tr = m.trial;
-    assert.equal(t.exit, t.fromDir);   // (in on one side, out on the opposite one)
+  for (const { seed, d, m } of events('storm', [0, 1, 2])) {
+    const tr = m.trial, rod = tr.parts.find(p => p.type === 'rod'), foot = tr.check.path[0];
     assert.ok(tr.check.exposed <= (STORM.lull + STORM.warning) / SLACK + 1e-9, `${seed}/${d}: ${tr.check.exposed} s in the wind`);
-    assert.ok(tr.gorge.every(c => m.cols[c].some(f => f.fluid)), `${seed}/${d}: the gorge is not wet`);
-    assert.ok(tr.shelter.length > 10 && tr.parts.some(p => p.type === 'rod'));
+    assert.ok(rod.y - foot.y >= 6, `${seed}/${d}: the rod ${rod.y - foot.y} over the way's start`);   // (12 levels at least)
+    assert.ok(tr.check.climb >= 20 && tr.stones.length >= 2 && tr.exposed.length > 10, `${seed}/${d}: ${tr.check.climb} cells up, ${tr.stones.length} boulders`);
+    // the way goes round the hill: its angle about the eye sweeps most of a turn
+    let turn = 0;
+    const ang = p => Math.atan2(p.z - tr.eye.z, p.x - tr.eye.x), low = Math.min(...tr.check.path.map(p => p.y)), r = p => Math.hypot(p.x - tr.eye.x, p.z - tr.eye.z), path = tr.check.path.filter(p => p.y > low + 0.4 && r(p) < 4.8 && r(p) > 2.3);   // (up on the ramp, not the summit)
+    for (let i = 1; i < path.length; i++) turn += ((ang(path[i]) - ang(path[i - 1]) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+    assert.ok(Math.abs(turn) > Math.PI * 1.2, `${seed}/${d}: the way turns ${Math.abs(turn).toFixed(2)} round the hill`);
     n++;
   }
   assert.ok(n > 10, `${n}`);

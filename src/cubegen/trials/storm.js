@@ -1,46 +1,85 @@
-// The storm (docs/trials.md, `storm`): the way runs across the room from the entry to the exit
-// (opposite faces), the gusts blow across it from one of the other faces towards the gorge along
-// the leeward one (two rows of the depth's sea under the edge: blown in, you drown). Lines of
-// windbreaks (rock outcrops two cells wide, four levels up, two-cell gaps between, every third
-// row, staggered, off the pads and the rod) shelter the two cells downwind of them. The lightning rod stands by the exit.
-//   build: { wind: [dx, dz] (the way it blows), shelter: [cells], rocks: [cells], gorge: [cells], rod }
-import { N } from '../../core/constants.js';
-import { idx } from '../../core/util.js';
-import { edgeCell } from '../portals.js';
+// The storm (docs/trials.md, `storm`): a tall hill in the room with the lightning rod on its summit
+// (a needle of rock, sixteen levels over its foot), the way up a ramp once round it (the pinnacle's
+// shape, cubegen/heights.js), with no rails. The gusts tear outwards off the hill (core/trials.js stormPhase,
+// game/trials.js stepStorm): out on the ramp a gust carries you over its edge, down a lap or to the
+// ground. Boulders stand on the ramp's outer edge every few cells; the cells inside one are
+// shelter (the gust only presses you against it). The summit is the storm's calm eye.
+//   build: { eye: { x, z } (the hill's middle, cells), ramp: [cells], stones: [cells],
+//            exposed: [cells] (the ramp's cells out in the wind), summit: [cells], rod: { c } }
+import { N, MAX_L } from '../../core/constants.js';
+import { idx, clamp } from '../../core/util.js';
+
+const TAU = Math.PI * 2;
+export const HILL = { summit: 2.3, lap: 2, arc: 0.9, rise: 16, stone: 5, up: 3 };   // (radii and widths in cells, arc in turns, the stones every `stone` cells along the way)
+
+// where the side portals' pads are (their cells one step in from the face)
+const pads = spec => spec.portals.filter(p => p.dir < 4).map(p => [[N - 2, p.pos], [1, p.pos], [p.pos, N - 2], [p.pos, 1]][p.dir]);
 
 export function shapeStorm(ctx) {
   const { spec, lvl0, void0, R } = ctx;
   ctx.trialBuild = { kind: 'storm', failed: true, keep: [] };
   ctx.stats.mode = `${spec.kind} / storm`;
-  const entry = spec.portals.find(p => p.dir === spec.trial.entry), exit = spec.portals.find(p => p.dir === spec.trial.exit);
-  if (!entry || !exit || (entry.dir ^ 1) !== exit.dir) return;
-  const up = (entry.dir < 2 ? 2 : 0) + (R() < 0.5 ? 0 : 1), lee = up ^ 1;   // the face it blows from, and to
-  const wind = [[-1, 0], [1, 0], [0, -1], [0, 1]][up];   // (from face `up` inwards)
-  // the cell t along the way, j in from the upwind face
-  const cell = (t, j) => edgeCell(up, t, j);
-  const gorge = [], rocks = [], shelter = new Set(), lines = [];
-  for (let t = 3; t <= N - 4; t++) for (const j of [1, 2]) gorge.push(edgeCell(lee, t, j));
-  for (const c of gorge) { void0[c] = 0; lvl0[c] = 0; ctx.seaCells.push(c); ctx.keep.add(c); }
-  const rod = edgeCell(exit.dir, exit.pos, 3), free = [rod];
-  for (const p of [entry, exit]) for (let t = p.pos - 1; t <= p.pos + 1; t++) for (let j = 0; j <= 2; j++) free.push(edgeCell(p.dir, t, j));
-  const near = c => free.some(f => Math.max(Math.abs(c % N - f % N), Math.abs(((c / N) | 0) - ((f / N) | 0))) <= 1);
-  for (let j = 3, k = 0; j <= N - 6; j += 3, k++) {
-    const off = Math.floor(R() * 4);
-    lines.push(j);
-    for (let t = 2; t <= N - 3; t++) {
-      if ((t + off + k) % 4 >= 2) continue;
-      const c = cell(t, j);
-      if (near(c)) continue;
-      rocks.push(c);
-      for (const d of [1, 2]) shelter.add(cell(t, j + d));
-    }
+  const { summit: rs, lap: w, rise, stone: every } = HILL, rOut = rs + w, foot = rOut + 1;
+  // the hill's middle: in the middle of the room, as far from the pads as it gets
+  const ps = pads(spec), spots = [];
+  for (let z = 6; z <= 9; z++) for (let x = 6; x <= 9; x++)
+    spots.push({ x, z, d: Math.min(...ps.map(([px, pz]) => Math.hypot(px - x, pz - z))) + R() * 1.5 });
+  spots.sort((a, b) => b.d - a.d);
+  const cx = spots[0].x + 0.5, cz = spots[0].z + 0.5;
+  const t0 = R() * TAU, sense = R() < 0.5 ? 1 : -1, total = TAU * HILL.arc;   // (the way up, in radians from its foot)
+  const around = [];
+  for (let z = 2; z < N - 2; z++) for (let x = 2; x < N - 2; x++) if (Math.hypot(x + 0.5 - cx, z + 0.5 - cz) >= foot) around.push(lvl0[idx(x, z)]);
+  const lo = clamp(Math.round(around.reduce((s, v) => s + v, 0) / Math.max(1, around.length)), 3, 6), top = Math.min(lo + rise, MAX_L - 2);
+  const ramp = [], summit = [], stones = [], info = new Map();
+  for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {
+    const i = idx(x, z), dx = x + 0.5 - cx, dz = z + 0.5 - cz, d = Math.hypot(dx, dz);
+    if (d >= foot + 1) { lvl0[i] = clamp(lvl0[i], lo - 1, lo + 1); continue; }   // (the field round it worn about flat)
+    void0[i] = 0; ctx.keep.add(i);
+    if (d < rs) { lvl0[i] = top; summit.push(i); continue; }
+    if (d >= rOut) { lvl0[i] = lo; continue; }   // (the foot: a ring of flat ground round it)
+    const u = ((sense * Math.atan2(dz, dx) - t0) % TAU + TAU) % TAU;   // (the way's angle from its foot)
+    if (u > total) { lvl0[i] = lo; continue; }   // (the gap between the way's foot and its top: the foot)
+    lvl0[i] = Math.round(lo + (top - 1 - lo) * u / total);
+    ramp.push(i); info.set(i, { u, off: d - (rs + w / 2) });
   }
-  for (const c of rocks) { void0[c] = 0; lvl0[c] = Math.max(lvl0[c], lvl0[cell((c % N), 0)] ?? 0) + 4; ctx.keep.add(c); }
-  for (const c of rocks) shelter.delete(c);
-  const rodCells = [rod]; void0[rod] = 0; ctx.keep.add(rod);
-  ctx.trialKeep = new Set([...rocks, ...rodCells]);
-  ctx.noFence = new Set([...ctx.noFence || [], ...rocks]);   // (bare rock: no rails along its top)
-  Object.assign(ctx.trialBuild, { failed: false, wind, up, lee, rocks, gorge, shelter: [...shelter], rod: { c: rod }, keep: [...ctx.trialKeep] });
+  const radius = () => rs + w / 2;
+  // the boulders: on the outer edge of the way every `every` cells along it (by its middle line's
+  // length), but near its foot and its top
+  const along = u => radius() * u;
+  const inward = i => { const x = i % N + 0.5, z = ((i / N) | 0) + 0.5, d = Math.hypot(x - cx, z - cz); return idx(Math.floor(x - (x - cx) / d), Math.floor(z - (z - cz) / d)); };
+  for (const i of ramp) {
+    const { u, off } = info.get(i), s = along(u), j = inward(i);
+    if (off < w / 2 - 1 || s < 3 || u > total - 0.5 || s % every >= 1.2) continue;
+    if (!info.has(j) || Math.abs(lvl0[j] - lvl0[i]) > 1 || info.get(j).off > w / 2 - 1) continue;   // (room to pass inside it)
+    if (stones.some(q => Math.abs(q % N - i % N) <= 1 && Math.abs(((q / N) | 0) - ((i / N) | 0)) <= 1)) continue;
+    stones.push(i);
+  }
+  for (const i of stones) lvl0[i] += HILL.up;
+  // shelter: a ramp cell whose way out (from the eye) meets a boulder within a cell and a half
+  const stoneSet = new Set(stones), exposed = [];
+  for (const i of ramp) {
+    if (stoneSet.has(i)) continue;
+    const x = i % N + 0.5, z = ((i / N) | 0) + 0.5, d = Math.hypot(x - cx, z - cz), ux = (x - cx) / d, uz = (z - cz) / d;
+    let shelter = false;
+    for (const r of [0.6, 1, 1.4]) if (stoneSet.has(idx(Math.floor(x + ux * r), Math.floor(z + uz * r)))) shelter = true;
+    if (!shelter) exposed.push(i);
+  }
+  // the rod in the middle of the summit
+  const rod = summit.slice().sort((a, b) => Math.hypot(a % N + 0.5 - cx, ((a / N) | 0) + 0.5 - cz) - Math.hypot(b % N + 0.5 - cx, ((b / N) | 0) + 0.5 - cz))[0];
+  const hill = [...summit, ...ramp];
+  ctx.trialKeep = new Set(hill);
+  ctx.noFence = new Set([...ctx.noFence || [], ...hill]);   // (no rails: the gusts carry you off)
+  ctx.noBuild ??= new Set();
+  for (const i of hill) ctx.noBuild.add(i);
+  Object.assign(ctx.trialBuild, { failed: false, eye: { x: cx, z: cz }, lo, top, ramp, stones, exposed, summit, hill: new Set(hill),
+    rod: { c: rod }, keep: hill });
+}
+
+// the way up is the ramp: nothing built onto, off or over the hill (walks, jumps and drops only)
+export function stormRoute(ctx) {
+  const movesFrom = ctx.movesFrom, on = f => !!ctx.trialBuild?.hill?.has(f.c);
+  ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => m.kind === 'walk' || m.kind === 'drop' || m.kind === 'jump'
+    || (!on(f) && !on(m.to) && !m.cells?.some(c => ctx.trialBuild.hill.has(c))));
 }
 
 export const stormGoal = ctx => ctx.trialBuild.failed ? null : ctx.layerFloor(ctx.trialBuild.rod.c, 0);
