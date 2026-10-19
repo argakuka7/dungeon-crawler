@@ -57,8 +57,8 @@ The game never puts tools on the floor: the portal scrolls' models only show the
 - `assets/items.glb`: complete library, all 115 named roots at the origin.
 - `assets/items/<name>.glb` and `<name>.png`: standalone exports and individual previews (256 pixels;
   the overview is 1600 by 1000, the quest things in a block of their own on the right)
-  (the kids' guide uses some of the PNGs as pictures; the game draws every item from its model,
-  `src/render/itemviews.js`).
+  (the kids' guide uses a few of the PNGs as room pictures; the game and the guide's demos draw
+  every item from its model, `src/render/itempictures.js`).
 - `assets/items/manifest.json`: names, triangles, authoring bounds, sizes and unit/scale contract.
 - `blender/previews/items-preview.png`: overview render.
 - `blender/tests/test_items.py`: geometry, repeatability and actual binary GLB validation.

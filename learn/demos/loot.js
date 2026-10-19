@@ -7,15 +7,16 @@ import { itemStats, weaponDps, affixLines, displayName, baseLine } from '../../s
 import { AFFIX } from '../../src/core/gear/affixes.js';
 import { ITEMS } from '../../src/core/items.js';
 import { mulberry32 } from '../../src/core/util.js';
+import { pictureImg } from '../../src/render/itempictures.js';
 import { canvas, html, t as tr } from '../deck.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const icon = item => new URL('../../' + ITEMS[item.itemId].icon, import.meta.url).href;
+// (every weapon is drawn from its 3D model, like in the game's bag)
 
 // a weapon's card, like the detail panel of the game's inventory
 function weaponCard(item) {
   const r = RARITY[item.gen.rarity], s = itemStats(item);
-  return `<div class="weapon" style="--rarity:${r.css}"><img src="${icon(item)}" alt="">
+  return `<div class="weapon" style="--rarity:${r.css}">${pictureImg(item.itemId)}
       <div><h4>${esc(displayName(item))}</h4><div class="base">${r.name} \u00B7 ${tr('item level', 'Stufe')} ${item.gen.ilvl}${baseLine(item) ? ' \u00B7 ' + baseLine(item) : ''}</div>
       <div class="stats">${tr(`${s.damage} damage \u00B7 ${(1 / s.interval).toFixed(2)} attacks per second \u00B7 ${Math.round(weaponDps(s))} damage per second
 ${s.ranged ? 'range' : 'reach'} ${s.range.toFixed(2)} cells \u00B7 ${Math.round(s.crit * 100)}% critical hits`, `${s.damage} Schaden \u00B7 ${(1 / s.interval).toFixed(2)} Angriffe pro Sekunde \u00B7 ${Math.round(weaponDps(s))} Schaden pro Sekunde
@@ -74,7 +75,7 @@ export default function mount(el) {
     const dps = it => weaponDps(itemStats(it));
     items.sort((a, b) => RARITY[b.gen.rarity].rank - RARITY[a.gen.rarity].rank || dps(b) - dps(a));
     card.innerHTML = `<div>${RARITIES.filter(r => n[r.id]).map(r => `<span class="chip" style="border-color:${r.css};color:${r.css}">${r.name}: ${n[r.id]}</span>`).join('')}</div>
-      <div class="loots">${items.map((it, i) => `<button class="it" data-i="${i}" style="--rarity:${RARITY[it.gen.rarity].css}" aria-label="${esc(displayName(it))}"><img src="${icon(it)}" alt=""></button>`).join('')}</div>
+      <div class="loots">${items.map((it, i) => `<button class="it" data-i="${i}" style="--rarity:${RARITY[it.gen.rarity].css}" aria-label="${esc(displayName(it))}">${pictureImg(it.itemId)}</button>`).join('')}</div>
       <div class="pinned"></div>`;
     const tiles = [...card.querySelectorAll('.it')], pinned = card.querySelector('.pinned');
     tiles.forEach(b => {

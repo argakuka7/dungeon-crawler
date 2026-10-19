@@ -85,8 +85,9 @@ Scroll** ([world.md](world.md#town-portal-gametownportaljs)). It is **bound**: D
 for it and `takeItem` refuses it, so it never lies on the floor and has no `model`; the bag
 shows it as its `picture` model (`assets/items/item_town_portal.glb`). Every item shows as its
 model wherever it appears (the bag, the quick bar, the potions at work, the chat's suggestions,
-the touch buttons, the heroes in the main menu): `render/itemviews.js` renders each once into a
-picture. There are no icon images in the game.
+the touch buttons, the heroes in the main menu): `render/itempictures.js` renders each once into
+a picture (the kids' guide's demos use it too), `render/itemviews.js` adds the inventory's live
+views. There are no icon images in the game.
 
 ## Quick bar (`game/quickbar.js`)
 

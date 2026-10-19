@@ -6,9 +6,9 @@ import { ITEMS, HEALTH_POTION } from '../../src/core/items.js';
 import { rollWeapon } from '../../src/core/gear/generate.js';
 import { rarityOf } from '../../src/core/gear/rarities.js';
 import { mulberry32 } from '../../src/core/util.js';
+import { pictureImg } from '../../src/render/itempictures.js';
 import { html, t as tr } from '../deck.js';
 
-const icon = id => new URL('../../' + ITEMS[id].icon, import.meta.url).href;
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 export default function mount(el) {
@@ -28,7 +28,7 @@ export default function mount(el) {
   function cell(slot, count) {
     if (!slot) return '<div class="slot"></div>';
     const r = slot.gen ? rarityOf(slot) : null;
-    return `<div class="slot" style="${r ? `border-color:${r.css}` : ''}" title="${esc(slot.gen?.name ?? ITEMS[slot.itemId].name)}"><img src="${icon(slot.itemId)}" alt="">${count > 1 ? `<span>${count}</span>` : ''}</div>`;
+    return `<div class="slot" style="${r ? `border-color:${r.css}` : ''}" title="${esc(slot.gen?.name ?? ITEMS[slot.itemId].name)}">${pictureImg(slot.itemId)}${count > 1 ? `<span>${count}</span>` : ''}</div>`;
   }
   function draw() {
     view.querySelector('.slots').innerHTML = inv.slots.map(s => cell(s, s?.count)).join('');
@@ -36,7 +36,7 @@ export default function mount(el) {
     view.querySelector('.qslots').innerHTML = Array.from({ length: BAR_SIZE }, (_, i) => {
       const e = barEntry(inv, i);
       // a note for a used-up stack stays: shown faded, with 0
-      return e && !e.slot ? `<div class="slot gone"><img src="${icon(e.itemId)}" alt=""><span>0</span></div>` : cell(e?.slot ?? null, e?.count);
+      return e && !e.slot ? `<div class="slot gone">${pictureImg(e.itemId)}<span>0</span></div>` : cell(e?.slot ?? null, e?.count);
     }).join('');
     const refs = inv.bar.map((r, i) => `  bar[${i}]: ${r ? esc(JSON.stringify(r)) : 'null'}`).join('\n');
     out.innerHTML = `${said}\n\n<span class="muted">${tr('What the quick bar really holds:', 'Was die Schnellleiste wirklich enthält:')}</span>\n${refs}`;

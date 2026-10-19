@@ -58,7 +58,7 @@ Plain HTML, CSS and ES modules, no build step, like the game.
 | `crawl.js` | reads the game's import graph from `src/main.js` and its worker, for demos that show the code's structure |
 | `stamps.json` | fingerprints of the code the slides explain; slides noted as outdated |
 | `kids.css` | the look, taken from the game's `style.css` |
-| `<room>.html` | one room: `<main class="deck">` with `<section class="slide">` slides |
+| `<room>.html` | one room: `<main class="deck">` with `<section class="slide">` slides; its `<head>` has the import map for three.js, so demos can draw items from their models (`src/render/itempictures.js`), as the game does |
 | `words.html` | the glossary; `<a class="w" href="words.html#seed">` anywhere shows its entry on hover |
 | `demos/*.js` | interactive demos, loaded when they scroll into view |
 | `img/` | screenshots of the game |
