@@ -3,8 +3,8 @@
 //   level, box: a standing fluid (a trial's, a boss's tide): its level (world units, -1e9 for
 //     none) and the cells it stands over [x0, z0, x1, z1]; the cube's own fluids are not drawn
 //     under it there (render/surface.js ownUnder);
-//   boxes: the small things standing in the fluids' way (render/shore.js waterBoxes): per cell
-//     its boxes, two texels each ([x0, z0, x1, z1], [y0, y1]): the foam goes round them;
+//   boxes: what stands in the fluids' way (render/shore.js waterBoxes): per cell its boxes, two
+//     texels each ([x0, z0, x1, z1], [y0, ya, yb, axis]): the foam goes round them;
 //   fixed: per cell the cube's own fluid (its surface's rest height, its bed, its kind, its
 //     palette row; none: rest -1e4), stand / standKind: the standing fluid now (its rest height,
 //     its tide now, its wet line over its rest height, 1 while it stands; its kind, its palette
@@ -28,10 +28,7 @@ const texture = (w, h, data) => {
 
 export function waterUniforms(m) {
   const boxes = new Float32Array(BOXES * 2 * N * N * 4);
-  waterBoxes(m).forEach((list, c) => list.forEach(([x0, z0, x1, z1, y0, y1], k) => {
-    const i = ((c / N | 0) * BOXES * 2 * N + (c % N) * BOXES * 2 + k * 2) * 4;
-    boxes.set([x0, z0, x1, z1, y0, y1, 0, 0], i);
-  }));
+  waterBoxes(m).forEach((list, c) => list.forEach((b, k) => boxes.set(b, ((c / N | 0) * BOXES * 2 * N + (c % N) * BOXES * 2 + k * 2) * 4)));
   const fixed = new Float32Array(N * N * 4);
   for (let c = 0; c < N * N; c++) {
     const f = m.cols[c].filter(g => g.fluid && !g.crust).at(-1);

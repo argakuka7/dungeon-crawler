@@ -116,7 +116,8 @@ export function tickTides() {
     FIXED_TIDE.value.setComponent(t - 1, tideY(S, WIND.value)); FIXED_WET.value.setComponent(t - 1, u.value);
   }
 }
-// GLSL: how far p is from the boxes round its cell that stand out of the water (at `water`)
+// GLSL: how far p is from the boxes round its cell where they stand out of the water (at
+// `water`; render/shore.js waterBoxes, their tops ramps)
 const BOXES_GLSL = `
   uniform highp sampler2D uWaterBoxes;
   float boxDist(vec2 p, float water) {
@@ -128,10 +129,12 @@ const BOXES_GLSL = `
       for (int k = 0; k < ${BOXES}; k++) {
         ivec2 t = ivec2(q.x * ${BOXES * 2} + k * 2, q.y);
         vec4 span = texelFetch(uWaterBoxes, t + ivec2(1, 0), 0);
-        if (span.y <= span.x) break;
-        if (water < span.x || water > span.y) continue;
+        if (max(span.y, span.z) <= span.x) break;
         vec4 r = texelFetch(uWaterBoxes, t, 0);
-        d = min(d, length(max(r.xy - p, 0.0) + max(p - r.zw, 0.0)));
+        vec2 c = clamp(p, r.xy, r.zw);
+        float top = mix(span.y, span.z, span.w > 0.5 ? (c.y - r.y) / max(r.w - r.y, 1e-4) : (c.x - r.x) / max(r.z - r.x, 1e-4));
+        if (water < span.x || water > top) continue;
+        d = min(d, length(p - c));
       }
     }
     return d;

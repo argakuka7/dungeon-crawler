@@ -70,7 +70,7 @@ export function shapeStructures(ctx) {
       const lo = Math.min(p.y0, p.y1), sup = floorBelow(p.c, lo);
       p.ground = groundY(sup); p.bed = bedY(sup);
       p.supported = r.kind === 'stair' && !!sup && lo - sup.top * LH < SHEAD * LH;
-      p.base = p.supported ? p.ground : lo - 0.4;
+      p.base = p.supported ? (sup.fluid ? p.bed : p.ground) : lo - 0.4;   // (in a fluid: on its bed)
     });
     if (r.kind !== 'bridge') continue;
     // supports under bridges (BRIDGE_STYLES `supports`): stone piers between arches, timber legs

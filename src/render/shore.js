@@ -49,20 +49,27 @@ export function waterSolids(m, c) {
   return all[c];
 }
 
-// The small things standing in a fluid's way, each a box [x0, z0, x1, z1] (the cube's
-// coordinates) from y0 to y1 (world units), per cell (at most BOXES; materials.js cellMaterial
-// finds the foam round them, section.js WATER_BOXES): pillars (bridge piers and legs, a landing's
-// post), the rails of a ladder that has them, a fence's posts.
+// What stands in a fluid's way, each a box [x0, z0, x1, z1] (the cube's coordinates) from y0 up
+// to its top, which runs from ya at its low end to yb at its high end along x (axis 0) or z (1)
+// (world units), per cell (at most BOXES; materials.js cellMaterial finds the foam round where
+// they stand out of it, render/wet.js): the pieces of stairs, landings and bridge decks (a ramp
+// as their run goes; where they stand in the water only partly, the cell's edges are no wall),
+// pillars (bridge piers and legs, a landing's post), the rails of a ladder that has them, a
+// fence's posts.
 export const BOXES = 3;
 export function waterBoxes(m) {
   const cells = Array.from({ length: N * N }, () => []);
-  const add = (x0, z0, x1, z1, y0, y1) => {
+  const add = (x0, z0, x1, z1, y0, ya, yb = ya, axis = 0) => {
     const c = Math.floor((z0 + z1) / 2) * N + Math.floor((x0 + x1) / 2);
-    if (c >= 0 && c < N * N && cells[c].length < BOXES && y1 > y0) cells[c].push([x0, z0, x1, z1, y0, y1]);
+    if (c >= 0 && c < N * N && cells[c].length < BOXES && Math.max(ya, yb) > y0) cells[c].push([x0, z0, x1, z1, y0, ya, yb, axis]);
   };
-  for (const list of m.pieces || []) for (const p of list) if (p.kind === 'pillar') {
+  for (const list of m.pieces || []) for (const p of list) {
     const x = p.c % N, z = (p.c / N) | 0;
-    add(x + p.x0, z + p.z0, x + p.x1, z + p.z1, p.bottom, p.top);
+    if (p.kind === 'pillar') add(x + p.x0, z + p.z0, x + p.x1, z + p.z1, p.bottom, p.top);
+    else if (p.run) {
+      const s = waterSolids(m, p.c).find(g => g.piece === p), axis = p.dz ? 1 : 0;
+      add(x, z, x + 1, z + 1, s.bottom * LH, runY(p, 0, 0), runY(p, axis ? 0 : 1, axis ? 1 : 0), axis);
+    }
   }
   for (const l of m.ladders || []) if (l.style === 'wood' || l.style === 'rope' || l.style === 'vine') {
     const [dx, dz] = DIRS[l.d];
