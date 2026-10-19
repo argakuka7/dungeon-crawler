@@ -13,7 +13,7 @@ import { climb } from '../src/physics/climb.js';
 import { groundAt } from '../src/physics/collide.js';
 import { inFluid, wading, tooDeep, wadeable, WADE_MARGIN } from '../src/physics/fluid.js';
 import { supportedPoint } from '../src/physics/respawn.js';
-import { buildCubeGeometry } from '../src/render/cubegeo.js';
+import { buildCubeGeometry, buildCubeParts } from '../src/render/cubegeo.js';
 import { ENEMY_KINDS } from '../src/core/enemies.js';
 import { walkable } from '../src/physics/enemynav.js';
 
@@ -172,4 +172,20 @@ test('enemies and guardians: every kind lined up once, on the ground, apart, the
     const rows = [...new Set(line.map(l => l.z))].sort((p, q) => p - q).map(z => Math.max(...line.filter(l => l.z === z).map(l => ENEMY_KINDS[l.type].height)));
     if (m === rooms[0]) rows.forEach((h, i) => assert.ok(!i || h >= rows[i - 1]));
   }
+});
+
+test('fluids: the lake\'s shore slopes up out of the water inside its cells, and its tops know it', () => {
+  const m = new World(2).cube(testRoomKey('fluids', 3)).map, geo = buildCubeParts(m), p = geo.parts.water;
+  const at = new Map();
+  let out = 0;
+  for (let v = 0; v < p.uv.length / 2; v++) {
+    if (p.uv[v * 2] < 0) continue;
+    const x = p.pos[v * 4] * geo.scale, z = p.pos[v * 4 + 2] * geo.scale, [ground, slope] = p.shore.slice(v * 4, v * 4 + 2);
+    if (ground > p.uv[v * 2 + 1]) { out++; assert.ok(slope > 0.05, `the ground out of the water slopes (${x}, ${z})`); }
+    // the same ground and slope on a cell's edge from either side
+    const k = `${x.toFixed(3)},${z.toFixed(3)},${p.uv[v * 2 + 1]}`, seen = at.get(k);
+    if (seen) { assert.ok(Math.abs(seen[0] - ground) < 1e-3 && Math.abs(seen[1] - slope) < 1e-3, `(${x}, ${z}): ${seen} / ${ground}, ${slope}`); }
+    else at.set(k, [ground, slope]);
+  }
+  assert.ok(out > 20, `${out} tops over ground out of the water`);
 });

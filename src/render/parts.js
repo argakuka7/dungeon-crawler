@@ -29,11 +29,13 @@ export const PARTS = [
 //   pal      Uint16 x4 (fluids and falls only): the palette rows of its colours (themes/fluids.js,
 //            cubegen/fluidbodies.js): a fall's at its top and at its foot, and how far down the
 //            sheet it is (0..1000: the one turns into the other); a surface's twice, 0
+//   shore    Float32 x4 (fluids only): the ground under a surface's top (render/shore.js: its
+//            height, its slope; 0, 0), zeros elsewhere
 // 20 bytes a vertex for solids instead of 36, and shared corners are stored once.
 const SCALE = 1 / 1024, LIMIT = 32767;
 
 // layers: buildCubeGeometry's per-layer GeoBuilder arrays; m: the map (for the falls)
-// -> { parts: { [name]: { pos, nor, col?, uv?, index } }, scale, bounds: [x0, y0, z0, x1, y1, z1] }
+// -> { parts: { [name]: { pos, nor, col?, uv?, pal?, shore?, index } }, scale, bounds: [x0, y0, z0, x1, y1, z1] }
 export function packParts(layers, m) {
   const sources = {};
   for (const part of PARTS) {
@@ -57,18 +59,18 @@ export function packParts(layers, m) {
 // the buffers to transfer (instead of copy) when posting the parts
 export function partBuffers(geo) {
   const out = [];
-  for (const p of Object.values(geo.parts)) for (const a of [p.pos, p.nor, p.col, p.uv, p.pal, p.index]) if (a) out.push(a.buffer);
+  for (const p of Object.values(geo.parts)) for (const a of [p.pos, p.nor, p.col, p.uv, p.pal, p.shore, p.index]) if (a) out.push(a.buffer);
   return out;
 }
 
 // triangle soup -> indexed, quantized arrays; identical corners (after quantizing) are merged
 function pack(list, scale, { kind, sway }) {
-  const color = kind === 'solid', uvs = kind !== 'solid' || !!sway, pals = kind !== 'solid';
+  const color = kind === 'solid', uvs = kind !== 'solid' || !!sway, pals = kind !== 'solid', shores = kind === 'fluid';
   let total = 0;
   for (const a of list) total += a.pos.length / 3;
   const pos = new Int16Array(total * 4), nor = new Int8Array(total * 4);
   const col = color ? new Uint16Array(total * 4) : null, uv = uvs ? new Float32Array(total * 2) : null;
-  const pal = pals ? new Uint16Array(total * 4) : null, p = new Int32Array(3);
+  const pal = pals ? new Uint16Array(total * 4) : null, p = new Int32Array(3), shore = shores ? new Float32Array(total * 4) : null;
   const index = new Uint32Array(total), seen = new Map();
   let n = 0, k = 0;
   const q = new Int32Array(6), c = new Int32Array(3);
@@ -87,6 +89,7 @@ function pack(list, scale, { kind, sway }) {
       else { p[0] = p[1] = a.pal[i]; p[2] = 0; }
       key += ',' + p.join(',');
     }
+    if (shores) for (let j = 0; j < 4; j++) key += ',' + a.shore[i * 4 + j];
     let v = seen.get(key);
     if (v === undefined) {
       v = n++;
@@ -95,12 +98,13 @@ function pack(list, scale, { kind, sway }) {
       if (color) { for (let j = 0; j < 3; j++) col[v * 4 + j] = c[j]; col[v * 4 + 3] = 65535; }
       if (uvs) { uv[v * 2] = a.uv[i * 2]; uv[v * 2 + 1] = a.uv[i * 2 + 1]; }
       if (pals) for (let j = 0; j < 3; j++) pal[v * 4 + j] = p[j];
+      if (shores) for (let j = 0; j < 4; j++) shore[v * 4 + j] = a.shore[i * 4 + j];
     }
     index[k++] = v;
   }
   return {
     pos: pos.slice(0, n * 4), nor: nor.slice(0, n * 4), col: col ? col.slice(0, n * 4) : null, uv: uv ? uv.slice(0, n * 2) : null,
-    pal: pal ? pal.slice(0, n * 4) : null,
+    pal: pal ? pal.slice(0, n * 4) : null, shore: shore ? shore.slice(0, n * 4) : null,
     index: n <= 65535 ? Uint16Array.from(index) : index,
   };
 }

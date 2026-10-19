@@ -6,6 +6,7 @@ import { cliffWall } from './walls.js';
 import { palRow } from '../themes/fluids.js';
 import { buildInteriorFloors } from './interior.js';
 import { restY } from './surface.js';
+import { groundAt, slopeAt } from './shore.js';
 
 const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
@@ -54,6 +55,8 @@ function walls(m, f, b) {
 //   side: u = -2
 //   wet band: u = -1, a strip on a bank's wall just inside the fluid, from under the lowest
 //        the surface sinks to over the highest it rises, darkened where the water has just been
+// and the top's `shore` the bed under it (render/shore.js: its height, its slope), so the foam
+// also follows a shore that slopes down into the water inside the cell.
 const SUB = 4, DIAG = [[1, 1], [-1, 1], [1, -1], [-1, -1]], BAND = 0.4;
 function fluidVolume(m, f, b) {
   const x = f.x, z = f.z, sy = restY(f.surf * LH), by = f.top * LH;
@@ -71,10 +74,16 @@ function fluidVolume(m, f, b) {
   const white = C('#ffffff');
   b.palNow = f.pal ?? m.fluidRows?.[f.fluid] ?? palRow(m.depth ?? 0, f.fluid, 0);   // its colours (cubegen/fluidbodies.js)
   b.uvNow = [(z * N + x) * 256 + shores, sy];
+  // the bed under every corner (render/shore.js); its quads split along the bed's own diagonal, so
+  // that the bed's height between them is what it is
+  const memo = new Map();
+  b.shoreAt = v => memo.get(v[0] + ',' + v[2]) ?? memo.set(v[0] + ',' + v[2], [groundAt(f, v[0], v[2]), slopeAt(m, f, v[0], v[2]), 0, 0]).get(v[0] + ',' + v[2]);
   for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
     const x0 = x + i / SUB, x1 = x + (i + 1) / SUB, z0 = z + j / SUB, z1 = z + (j + 1) / SUB;
-    b.quad([x0, sy, z0], [x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [0, 1, 0], white);
+    if (f.split) b.quad([x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [x0, sy, z0], [0, 1, 0], white);
+    else b.quad([x0, sy, z0], [x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [0, 1, 0], white);
   }
+  b.shoreAt = null;
   for (let d = 0; d < 4; d++) {
     const [[ax, az], [bx, bz]] = edgePts(x, z, d);
     const at = k => [ax + (bx - ax) * k / SUB, az + (bz - az) * k / SUB];
