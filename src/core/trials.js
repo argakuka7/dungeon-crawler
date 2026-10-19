@@ -306,7 +306,8 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60, stones: 50, sluices: 90, timedgate: 40 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60, stones: 50, sluices: 90, timedgate: 40,
+  miasma: 55, cold: 40, storm: 50, siege: 75, chase: 30, drift: 45, runes: 45 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------

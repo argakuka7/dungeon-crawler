@@ -698,8 +698,10 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 8. [x] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
 9. [x] **`siege`, `chase`, `drift`.**
 10. [x] **`runes`** (the clue room across cubes).
-11. [ ] Weights and numbers tuned in play; the balance simulation (`docs/balance.md`) counts
-    trial time and rewards.
+11. [x] The balance simulation (`docs/balance.md`, `tools/balance.mjs`) counts trial time (every
+    kind has its `TRIAL_TIME`) and rewards (a siege's waves as kills, a vault's site with the
+    chests). The weights and numbers are still the starting values above (some already fitted
+    to a cube's size, see each kind's "As built"); tuning them is for play.
 
 ## Step 1 in phases
 

@@ -41,8 +41,11 @@ chests, combat stats) and prints where the player stands on arrival at every dep
 
 - **Trial rooms take their time.** A trial room ([trials.md](trials.md)) is a few minutes of a run
   that are not fights: the simulation counts them per depth (`trials`: how many on the way, and
-  their minutes, `core/trials.js trialTime`) and over the whole run. A flood room has half the
-  usual enemies, and the water takes those it reaches without a reward.
+  their minutes, `core/trials.js trialTime`) and over the whole run: about 16 minutes with every
+  kind on. A flood room has half the usual enemies, and the water takes those it reaches without
+  a reward. A siege's waves are counted as kills (the horde's kinds at swarm strength, half
+  rewards, half of them falling before the hold is full); a vault's reward site is counted with
+  the other chests of the branches visited.
 
 ## The model
 

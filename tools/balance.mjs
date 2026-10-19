@@ -30,6 +30,7 @@ const { mulberry32, hash32 } = await import('../src/core/util.js');
 const { RESPAWN } = await import('../src/core/respawn.js');
 const { ITEMS } = await import('../src/core/items.js');
 const { trialTime } = await import('../src/core/trials.js');
+const { hordeKinds, hordeSize } = await import('../src/world/hordes.js');
 
 const ranged = item => ITEMS[item.itemId]?.weapon?.kind !== 'sword';
 const SEEDS = Number(process.argv[2] || 8), SHARE = Number(process.argv[3] || 0.6);
@@ -78,7 +79,15 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     const cubes = [...L.route.map(k => ({ k, share: L.guardians.has(k) ? 1 : SHARE })),
       ...[...L.exists].filter(k => !L.route.includes(k)).map(k => ({ k, share: R() < 0.5 ? SHARE : 0 }))];
     // the trial rooms on the way (and those in the branches visited): their time
-    for (const t of L.trials) if (t.role === 'route' || R() < 0.5) { row.trials++; row.trialTime += trialTime(t.kind); }
+    for (const t of L.trials) if (t.role === 'route' || R() < 0.5) {
+      row.trials++; row.trialTime += trialTime(t.kind);
+      // a siege's waves (game/trialevents.js): the horde's kinds at swarm strength, half rewards;
+      // about half of them fall before the hold is full, the rest flee
+      if (t.kind === 'siege') {
+        const [lo, hi] = hordeSize(depth), kinds = hordeKinds(depth);
+        for (let i = 0; i < Math.round((lo + hi) / 4); i++) kill(swarmKind(ENEMY_KINDS[kinds[i % kinds.length]], 0.5), depthLevel(depth));
+      }
+    }
     for (const { k, share } of cubes) {
       if (enemyFreeAt(k) || !share) continue;
       const g = L.guardians.get(k), map = { seed: hash32(seed * 31 + serial * 977), depth, key: k, guardian: g ?? null, horde: L.hordes.get(k), populationScale: L.populationScale.get(k) ?? 1 };
