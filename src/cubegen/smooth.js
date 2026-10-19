@@ -32,6 +32,8 @@ function makeLinks(ctx) {
   for (const m of pathWalks) setLink(m.from, m.d, m.to);
 }
 
+const STAIR_SINK = 0.3;   // units; more than half the tallest step (render/stairs.js)
+
 export function smooth(ctx) {
   const { floors, runs } = ctx;
   makeLinks(ctx);
@@ -67,8 +69,13 @@ export function smooth(ctx) {
       mean += ((hash32(X * 7919 + Z * 104729 + Math.round(mean * 8) * 31337) % 1000) / 1000 - 0.5) * 0.08;
     return mean;
   }
+  // the ground a stair rests on sinks a little: its terraces meet the flight's heights at the
+  // cell edges, and would show through between steps that straddle a cell edge (or lie flush with
+  // a tread). Sunk by more than half a step it stays inside the stair's body.
+  const pinnedAt = f => [0, 1, 2, 3].some(k => pins.has(f.id + ':' + (f.x + (k & 1)) + ',' + (f.z + (k >> 1))));
   for (const f of floors) {
     f.cs = [0, 1, 2, 3].map(k => computeCorner(f, k & 1, k >> 1));
+    if (f.underStair && !f.fluid && !pinnedAt(f)) f.cs = f.cs.map(v => v - STAIR_SINK);
     f.split = Math.abs(f.cs[0] - f.cs[3]) <= Math.abs(f.cs[1] - f.cs[2]) ? 0 : 1;
   }
 }

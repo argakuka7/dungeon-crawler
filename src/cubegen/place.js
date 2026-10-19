@@ -39,7 +39,10 @@ export function placeStructures(ctx) {
     walkedIn[cl.c].every(g => !(g.top > cl.lo - SHEAD && g.top <= cl.hi + 1)) &&   // room for the character's head
     sweeps[cl.c].every(([a, b]) => !(cl.lo <= b && cl.hi >= a)));
   // floors right under a stair / landing are covered by it: they must not be smoothed up through it
-  const coverBelow = (c, lo) => { for (const g of cols[c]) if (g.top <= lo && lo - g.top < SHEAD) g.covered = true; };
+  // (under a stair they also sink a little, cubegen/smooth.js)
+  const coverBelow = (c, lo, stair = false) => {
+    for (const g of cols[c]) if (g.top <= lo && lo - g.top < SHEAD) { g.covered = true; if (stair) g.underStair = true; }
+  };
 
   function placeLanding(n) {
     const run = { kind: 'landing', from: n, to: n, cells: [n.c], k: 1, sag: 0, layer: n.layer, conn: new Set() };
@@ -59,7 +62,7 @@ export function placeStructures(ctx) {
     const lo = m.from.top <= m.to.top ? m.from : m.to, hi = lo === m.from ? m.to : m.from;
     const run = { kind: m.kind, from: m.from, to: m.to, d: m.d, dx: m.dx, dz: m.dz, cells: m.cells, k: m.cells.length, sag: 0, span: !!m.span,
       layerLo: lo.layer, layerHi: hi.layer, layer: Math.min(lo.layer, hi.layer) };
-    if (m.kind === 'stair') for (const cl of runClaims(m)) coverBelow(cl.c, cl.lo + 1);
+    if (m.kind === 'stair') for (const cl of runClaims(m).slice(0, m.cells.length)) coverBelow(cl.c, cl.lo + 1, true);
     run.pieces = m.cells.map((c, j) => { const p = { kind: m.kind, c, j, dx: m.dx, dz: m.dz, run, y0: 0, y1: 0, base: 0 }; pieces[c].push(p); return p; });
     if (m.from.landing) landings.get(m.from.id).conn.add(m.d);
     if (m.to.landing) landings.get(m.to.id).conn.add(OPP[m.d]);

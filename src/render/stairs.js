@@ -22,15 +22,19 @@ export function buildLanding(r, L) {
 }
 
 // uniform steps over the whole flight, side walls, solid where the flight rests on ground;
-// stone, or wood for `r.wood` (inside houses)
+// stone, or wood for `r.wood` (inside houses). A step straddling a cell edge reaches down to the
+// lower ground of the cells it spans, or it would leave a hole over the lower one.
 export function buildStair(r, L) {
   const F = runFrame(r), k = r.k, S = r.wood ? L.wood : L.stone;
   const [STEP_A, STEP_B, SIDE, RIM, UNDER] = r.wood ? [WOOD, WOOD2, BEAM, POST, BEAM] : [STONE, STONE2, CHEEK, CAP, SOFFIT];
   const rise = r.y1 - r.y0, n = Math.max(2, Math.round(Math.abs(rise) / 0.2)), half = Math.abs(rise) / n / 2;
   for (let i = 0; i < n; i++) {
     const s0 = i * k / n, s1 = (i + 1) * k / n, top = r.y0 + rise * (i + 0.5) / n;
-    const p = r.pieces[clamp(Math.floor((s0 + s1) / 2), 0, k - 1)];
-    const bot = p.supported ? p.base : top - 0.16;
+    let bot = Infinity;
+    for (let j = clamp(Math.floor(s0 + 1e-6), 0, k - 1); j <= clamp(Math.ceil(s1 - 1e-6) - 1, 0, k - 1); j++) {
+      const p = r.pieces[j];
+      bot = Math.min(bot, p.supported ? p.base : top - 0.16);
+    }
     slab(S, F, s0, s1, -0.4, 0.4, bot, top, bot, top, i & 1 ? STEP_A : STEP_B, SIDE);
   }
   for (let j = 0; j < k; j++) {
