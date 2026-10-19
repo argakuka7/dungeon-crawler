@@ -17,6 +17,10 @@
 // few cells at a player it sees.
 import { hash32, mulberry32 } from './util.js';
 import { toxinOf } from './status.js';
+import { paint } from './palette.js';
+
+// a kind's colours: role -> palette swatch (core/palette.js), as colour strings for recolorFn
+const paints = roles => Object.fromEntries(Object.entries(roles).map(([role, name]) => [role, paint(name)]));
 
 // what every species gains per level, as a share of its level-1 value: health keeps pace with
 // the weapons and levels a player finds and gains on the way down, damage with the player's
@@ -42,6 +46,7 @@ export const SPIDER = {
   arc: 0.5, knockDown: false, hop: 3.5, reason: 'Bitten by a spider!', ichor: ['#a6d84e', '#5f8f22'], pitch: 1.1,
   poise: 0, hitStun: 0.18, deathTime: 2, corpseTime: 3.5,
   parts: { body: ['SpiderBody'], eyes: ['SpiderEyes'] },
+  colors: paints({ body: 'ink.dark', eyes: 'eyes.sun' }),
   style: 'skirmish', circle: 1.5, strafe: true,
   seedSalt: 0x5b1d3a, spacing: 3,
 };
@@ -55,6 +60,7 @@ export const STUNDER = {
   arc: 0.5, knockDown: true, hop: 4, reason: 'Rammed by a Stunder!', ichor: ['#d0503a', '#7a2418'], pitch: 0.8,
   poise: 1.5, hitStun: 0.25, deathTime: 2.4, corpseTime: 4,
   parts: { skin: ['StunderBody', 'StunderEarInset', 'StunderLegRidges', 'StunderMouth'], eyes: ['StunderEyes_glow'] },
+  colors: paints({ skin: 'moss.mid', eyes: 'eyes.ember' }),
   style: 'brute', charge: 1.8,
   seedSalt: 0x57a4de2, spacing: 5,
 };
@@ -69,6 +75,7 @@ export const SNAKE = {
   arc: 0.5, knockDown: false, hop: 3.5, reason: 'Bitten by a snake!', ichor: ['#b4e67e', '#4f8f2a'], pitch: 1.25,
   poise: 0, hitStun: 0.18, deathTime: 2, corpseTime: 3.5,
   parts: { skin: ['SnakeBody', 'SnakeRibs'], eyes: ['SnakeEyes_glow'] },
+  colors: paints({ skin: 'moss.light', eyes: 'eyes.ember' }),
   style: 'skirmish', circle: 1.6, strafe: false,
   seedSalt: 0x5a4e7c1, spacing: 3,
 };
@@ -91,6 +98,7 @@ export const OCTONAUT = {
   attacks: [OCTO_SLAP, OCTO_SPIN],
   poise: 0.8, hitStun: 0.22, deathTime: 2.2, corpseTime: 4,
   parts: { skin: ['OctonautBody', 'OctonautHair'], eyes: ['OctonautEyes_glow'] },
+  colors: paints({ skin: 'azure.light', eyes: 'eyes.sun' }),
   style: 'brute',
   seedSalt: 0x0c7a9a5, spacing: 4,
 };
@@ -111,6 +119,7 @@ export const FIREFACE = {
     muzzle: [-0.03, 0.444, 0.523], burn: { time: 0.5, damage: 6, ticks: 2 } },
   poise: 0.8, hitStun: 0.2, deathTime: 2, corpseTime: 3.5,
   parts: { flame: ['FireFaceCore_glow', 'FireFaceBall_glow', 'FireFaceFlame_glow', 'FireFaceTips_glow'], eyes: ['FireFaceEyes_glow'] },
+  colors: paints({ flame: 'ember.glow', eyes: 'eyes.bone' }),
   style: 'ranged', keep: [2.2, 4],
   seedSalt: 0xf12efa, spacing: 4,
 };
@@ -126,6 +135,7 @@ export const TRIANGLE = {
     muzzle: [-0.037, 0.699, 0.87] },
   poise: 1.2, hitStun: 0.22, deathTime: 2, corpseTime: 4,
   parts: { glow: ['TriangleCore_glow', 'TriangleRing_glow', 'TriangleFrame_glow', 'TriangleBrows'], eyes: ['TriangleEyes_glow'] },
+  colors: paints({ glow: 'violet.glow', eyes: 'eyes.bone' }),
   style: 'ranged', keep: [2, 3.6],
   seedSalt: 0x7a1a9e1, spacing: 5,
 };
@@ -142,6 +152,7 @@ export const FIRECAT = {
   lunge: { from: 0.3, to: 0.6, max: 1.9, stop: 0.55 },
   poise: 0.4, hitStun: 0.2, deathTime: 2, corpseTime: 3.5,
   parts: { fur: ['FireCatBody', 'FireCatStripes', 'FireCatNose'], flame: ['FireCatFlame_glow', 'FireCatFlameCore_glow'], eyes: ['FireCatEyes_glow'] },
+  colors: paints({ fur: 'crimson.deep', flame: 'ember.glow', eyes: 'eyes.sun' }),
   style: 'skirmish', circle: 2, strafe: false,
   seedSalt: 0xca7f12e, spacing: 4,
 };
@@ -173,6 +184,7 @@ export const SHRAPS = {
   attacks: [SHRAPS_PINCH, SHRAPS_THROW],
   poise: 0.8, hitStun: 0.2, deathTime: 2, corpseTime: 4,
   parts: { shell: ['ShrapsShell', 'ShrapsClaw'], ice: [...ICE_HEAD], eyes: ['ShrapsEyes_glow'] },
+  colors: paints({ shell: 'frost.light@+6', ice: 'frost.pale@-6', eyes: 'eyes.ice' }),
   hide: FIRE_HEAD, style: 'brute',
   seedSalt: 0x5a7a95, spacing: 4,
 };
@@ -196,6 +208,7 @@ export const SPICY = {
     muzzle: [0, 1.279, 0.06] },
   poise: 0.6, hitStun: 0.2, deathTime: 2, corpseTime: 4,
   parts: { body: ['SpicyBody', 'SpicyClaw'], glow: ['SpicyTips_glow'], wheels: ['SpicyTire', 'SpicyHub'], eyes: ['SpicyEyes_glow'] },
+  colors: paints({ body: 'moss.light', glow: 'moss.glow', wheels: 'ink.dark', eyes: 'eyes.ember' }),
   style: 'ranged', keep: [2.4, 4.2],
   seedSalt: 0x5b1c7e3, spacing: 4,
 };
@@ -219,6 +232,7 @@ export const WOLLA = {
     muzzle: [0, 0.584, 0.466], thunder: [13 / 30, 20 / 30] },
   poise: 0.6, hitStun: 0.2, deathTime: 2, corpseTime: 4,
   parts: { waves: ['WollaWaves', 'WollaWavesDeep'], eyes: ['WollaEyes_glow'] },
+  colors: paints({ waves: 'azure.mid', eyes: 'eyes.sun' }),
   style: 'ranged', keep: [1.5, 2.8],
   seedSalt: 0x3a77e1a, spacing: 4,
 };
@@ -240,17 +254,18 @@ export const WOLK = {
   arc: 0.5, knockDown: false, hop: 3, reason: 'Struck by a Wolk!', ichor: ['#d4ecff', '#6a9cc8'], pitch: 1,
   beam: { kind: 'bolt', aim: 'feet', time: 0.8, track: 1.4, lock: 0.35, radius: 0.3, range: 7, shock: 0.9,
     color: '#fff6b0', muzzle: [0, 0.837, 0.251] },
-  gloom: { color: 'oklch(0.46 0.02 255)', parts: ['body'] },
+  gloom: { color: paint('ink.deep'), parts: ['body'] },
   poise: 0.5, hitStun: 0.25, deathTime: 2, corpseTime: 4,
   parts: { body: ['WolkCloud', 'WolkCloudBelly'], limbs: ['WolkLimbs'] },
+  colors: paints({ body: 'frost.pale', limbs: 'azure.deep' }),
   // its guardians are no pink or amber clouds: a heavy grey rain cloud, and a shining silver one
   guardianLooks: {
-    side: { colors: { body: 'oklch(0.76 0.01 250)', limbs: 'oklch(0.4 0.02 255)' },
-      gloom: { color: 'oklch(0.32 0.015 255)', parts: ['body'] },
+    side: { colors: paints({ body: 'ink.light', limbs: 'ink.deep' }),
+      gloom: { color: paint('ink.dark'), parts: ['body'] },
       light: '#c4ccd8', sparks: ['#c4ccd8', '#f0f3f8'], ichor: ['#c8ccd4', '#4a4f58'] },
-    descent: { colors: { body: 'oklch(0.9 0.008 250)', limbs: 'oklch(0.64 0.012 250)' },
+    descent: { colors: paints({ body: 'ink.pale', limbs: 'ink.mid' }),
       finish: { parts: ['body', 'limbs'], roughness: 0.16, metalness: 0.5, sheen: 0.12, glints: 4 },
-      gloom: { color: 'oklch(0.42 0.012 250)', parts: ['body'] },
+      gloom: { color: paint('ink.deep'), parts: ['body'] },
       light: '#e6eeff', sparks: ['#ffffff', '#dfe8ff'], ichor: ['#eef2f8', '#7a808a'] },
   },
   style: 'ranged', keep: [2.6, 4.2],
@@ -274,6 +289,7 @@ export const SQUIRTLE = {
   burrow: { speed: 3.4, up: [2.4, 3.6], under: [1.4, 2.4], sink: 0.35 },
   poise: 0, hitStun: 0.2, deathTime: 1.4, corpseTime: 3,
   parts: { body: ['SquirtleBody'], belly: ['SquirtleBelly'], eyes: ['SquirtleEyes'] },
+  colors: paints({ body: 'azure.mid', belly: 'frost.pale' }),
   style: 'ranged', keep: [2.4, 4.4],
   seedSalt: 0x5917e1, spacing: 3,
 };
@@ -506,80 +522,80 @@ export function enemyKind(base, { mods = {}, attacks = base.attacks, ...spec }) 
 // Three snakes in rising strength: green, ochre, red.
 export const SAND_VIPER = enemyKind(SNAKE, {
   type: 'sandviper', label: 'Sand viper', reason: 'Bitten by a Sand viper!',
-  colors: { skin: 'oklch(0.80 0.12 82)', eyes: 'oklch(0.62 0.22 28)' }, ichor: ['#d9c46a', '#8a6a22'],
+  colors: paints({ skin: 'ochre.light', eyes: 'eyes.ember' }), ichor: ['#d9c46a', '#8a6a22'],
   mods: { hp: 1.25, damage: 1.2, speed: 1.1 },
 });
 // learn: enemies.html#kind-code #kinds (see learn/README.md)
 export const BLOOD_VIPER = enemyKind(SNAKE, {
   type: 'bloodviper', label: 'Blood viper', reason: 'Bitten by a Blood viper!',
-  colors: { skin: 'oklch(0.60 0.19 27)', eyes: 'oklch(0.93 0.18 100)' }, ichor: ['#e0503a', '#6a1410'],
+  colors: paints({ skin: 'crimson.mid', eyes: 'eyes.sun' }), ichor: ['#e0503a', '#6a1410'],
   mods: { hp: 1.4, damage: 1.4, speed: 1.2, size: 1.1 },
 });
 // Three more for the themes: a slow, tough one in the ice, a venomous one in the swamp and a
 // near-black one, the strongest, in the ruins and the volcanic depths.
 export const FROST_ADDER = enemyKind(SNAKE, {
   type: 'frostadder', label: 'Frost adder', reason: 'Bitten by a Frost adder!',
-  colors: { skin: 'oklch(0.88 0.04 225)', eyes: 'oklch(0.72 0.15 250)' }, ichor: ['#c4ecff', '#4f8fbf'],
+  colors: paints({ skin: 'frost.pale@+10', eyes: 'eyes.ice' }), ichor: ['#c4ecff', '#4f8fbf'],
   mods: { hp: 1.35, damage: 1.1, speed: 0.95 },
 });
 export const VENOM_ADDER = enemyKind(SNAKE, {
   type: 'venomadder', label: 'Venom adder', reason: 'Bitten by a Venom adder!', toxin: { time: 5, ticks: 5, share: 0.7 },
-  colors: { skin: 'oklch(0.58 0.15 310)', eyes: 'oklch(0.90 0.21 125)' }, ichor: ['#c6ff5a', '#5a8f12'],
+  colors: paints({ skin: 'violet.mid', eyes: 'eyes.sun' }), ichor: ['#c6ff5a', '#5a8f12'],
   mods: { hp: 1.2, damage: 1.35, speed: 1.1 },
 });
 export const SHADOW_MAMBA = enemyKind(SNAKE, {
   type: 'shadowmamba', label: 'Shadow mamba', reason: 'Bitten by a Shadow mamba!',
-  colors: { skin: 'oklch(0.34 0.025 280)', eyes: 'oklch(0.80 0.18 55)' }, ichor: ['#9a6ad8', '#2a1648'],
+  colors: paints({ skin: 'ink.dark', eyes: 'eyes.ember' }), ichor: ['#9a6ad8', '#2a1648'],
   mods: { hp: 1.6, damage: 1.6, speed: 1.3, size: 1.15 },
 });
 export const FROST_SPIDER = enemyKind(SPIDER, {
   type: 'frostspider', label: 'Frost spider',
-  colors: { body: 'oklch(0.82 0.035 235)', eyes: 'oklch(0.85 0.13 210)' }, ichor: ['#c4ecff', '#4f8fbf'],
+  colors: paints({ body: 'frost.pale', eyes: 'eyes.ice' }), ichor: ['#c4ecff', '#4f8fbf'],
   mods: { hp: 1.35, damage: 1.1, speed: 0.9 },
 });
 export const BOG_SPIDER = enemyKind(SPIDER, {
   type: 'bogspider', label: 'Bog spider', toxin: { time: 4, ticks: 4, share: 0.5 },
-  colors: { body: 'oklch(0.40 0.06 135)', eyes: 'oklch(0.90 0.18 105)' },
+  colors: paints({ body: 'moss.deep', eyes: 'eyes.sun' }),
   mods: { hp: 1.15, damage: 1.25, speed: 1.05 },
 });
 export const REDBACK = enemyKind(SPIDER, {
   type: 'redback', label: 'Redback', reason: 'Bitten by a Redback!', toxin: { time: 5, ticks: 5, share: 0.6 },
-  colors: { body: 'oklch(0.34 0.11 25)', eyes: 'oklch(0.78 0.17 55)' }, ichor: ['#d8442e', '#5a1008'],
+  colors: paints({ body: 'crimson.deep', eyes: 'eyes.sun' }), ichor: ['#d8442e', '#5a1008'],
   mods: { hp: 1.3, damage: 1.4, speed: 1.2, size: 1.1 },
 });
 export const FROST_STUNDER = enemyKind(STUNDER, {
   type: 'froststunder', label: 'Frost stunder', reason: 'Rammed by a Frost stunder!',
-  colors: { skin: 'oklch(0.80 0.04 235)', eyes: 'oklch(0.85 0.13 210)' }, ichor: ['#c4ecff', '#4f8fbf'],
+  colors: paints({ skin: 'frost.light@-8', eyes: 'eyes.ice' }), ichor: ['#c4ecff', '#4f8fbf'],
   mods: { hp: 1.25, speed: 0.9 },
 });
 export const STONE_STUNDER = enemyKind(STUNDER, {
   type: 'stonestunder', label: 'Stone stunder', reason: 'Rammed by a Stone stunder!',
-  colors: { skin: 'oklch(0.55 0.03 70)', eyes: 'oklch(0.82 0.16 85)' }, ichor: ['#b8a890', '#5a4a3a'],
+  colors: paints({ skin: 'stone.mid', eyes: 'eyes.sun' }), ichor: ['#b8a890', '#5a4a3a'],
   mods: { hp: 1.6, damage: 1.15, speed: 0.85, size: 1.12 },
 });
 export const MAGMA_STUNDER = enemyKind(STUNDER, {
   type: 'magmastunder', label: 'Magma stunder', reason: 'Rammed by a Magma stunder!', fireproof: true,
-  colors: { skin: 'oklch(0.30 0.09 27)', eyes: 'oklch(0.84 0.17 75)' }, ichor: ['#ffb030', '#a02a10'],
+  colors: paints({ skin: 'crimson.dark', eyes: 'eyes.ember' }), ichor: ['#ffb030', '#a02a10'],
   mods: { hp: 1.35, damage: 1.4, speed: 1.15 },
 });
 export const BOG_OCTONAUT = enemyKind(OCTONAUT, {
   type: 'bogoctonaut', label: 'Bog octonaut',
-  colors: { skin: 'oklch(0.74 0.10 130)', eyes: 'oklch(0.90 0.18 105)' }, ichor: ['#b4e67e', '#4f8f2a'],
+  colors: paints({ skin: 'moss.light@+8', eyes: 'eyes.sun' }), ichor: ['#b4e67e', '#4f8f2a'],
   mods: { hp: 1.2, damage: 1.15 },
 });
 export const CORAL_OCTONAUT = enemyKind(OCTONAUT, {
   type: 'coraloctonaut', label: 'Coral octonaut',
-  colors: { skin: 'oklch(0.74 0.13 30)', eyes: 'oklch(0.80 0.14 190)' }, ichor: ['#ff9a7a', '#a0402a'],
+  colors: paints({ skin: 'crimson.light@+8', eyes: 'eyes.ice' }), ichor: ['#ff9a7a', '#a0402a'],
   mods: { hp: 1.3, damage: 1.35, speed: 1.2 },
 });
 export const EMERALD_TRIANGLE = enemyKind(TRIANGLE, {
   type: 'emeraldtriangle', label: 'Emerald triangle', reason: 'Punched by an Emerald triangle!',
-  colors: { glow: 'oklch(0.80 0.20 155)', eyes: 'oklch(0.96 0.06 150)' }, light: '#40e890', sparks: ['#c8ffd8', '#40d080'],
+  colors: paints({ glow: 'jade.glow', eyes: 'eyes.bone' }), light: '#40e890', sparks: ['#c8ffd8', '#40d080'],
   ichor: ['#a8ffc8', '#1e9a5a'], mods: { hp: 1.25, damage: 1.1 },
 });
 export const CRIMSON_TRIANGLE = enemyKind(TRIANGLE, {
   type: 'crimsontriangle', label: 'Crimson triangle', reason: 'Punched by a Crimson triangle!',
-  colors: { glow: 'oklch(0.64 0.22 25)', eyes: 'oklch(0.95 0.05 60)' }, light: '#ff4836', sparks: ['#ffc0b0', '#ff4836'],
+  colors: paints({ glow: 'crimson.glow', eyes: 'eyes.bone' }), light: '#ff4836', sparks: ['#ffc0b0', '#ff4836'],
   ichor: ['#ffa08a', '#a01a10'], mods: { hp: 1.35, damage: 1.35 }, cooldown: TRIANGLE.cooldown * 0.8,
 });
 // The Shraps of the volcanic depths: red, with a head of fire instead of ice, and it throws
@@ -587,7 +603,7 @@ export const CRIMSON_TRIANGLE = enemyKind(TRIANGLE, {
 // render/enemies.js: a light, flickering flame tongues and embers.
 export const FIRE_SHRAPS = enemyKind(SHRAPS, {
   type: 'fireshraps', label: 'Fire shraps', reason: 'Pinched by a Fire shraps!', fireproof: true,
-  colors: { shell: 'oklch(0.56 0.17 32)', eyes: 'oklch(0.95 0.12 95)' }, hide: ICE_HEAD, fx: 'fireshraps',
+  colors: paints({ shell: 'crimson.mid', eyes: 'eyes.sun' }), hide: ICE_HEAD, fx: 'fireshraps',
   attacks: [{ ...SHRAPS_PINCH, reason: 'Pinched by a Fire shraps!' }, { ...SHRAPS_THROW, reason: 'Scorched by a Fire shraps!',
     projectile: { ...FIREFACE.projectile, speed: 6.5, range: 7, muzzle: SHRAPS_THROW.projectile.muzzle } }],
   ichor: ['#ffb030', '#a02a10'], pitch: 0.9, mods: { hp: 1.45, damage: 1.4, speed: 1.1 },
@@ -596,23 +612,23 @@ export const FIRE_SHRAPS = enemyKind(SHRAPS, {
 // volcanic depths, each stronger than the one before. Their eyes take the opposite colour.
 export const BOG_WOLLA = enemyKind(WOLLA, {
   type: 'bogwolla', label: 'Bog wolla', reason: 'Blown away by a Bog wolla!',
-  colors: { waves: 'oklch(0.70 0.17 145)', eyes: 'oklch(0.78 0.17 350)' }, ichor: ['#b4f08a', '#3f8f2a'], trail: '#4f7a34',
+  colors: paints({ waves: 'moss.mid', eyes: 'eyes.ember' }), ichor: ['#b4f08a', '#3f8f2a'], trail: '#4f7a34',
   mods: { hp: 1.2, damage: 1.15 },
 });
 export const STORM_WOLLA = enemyKind(WOLLA, {
   type: 'stormwolla', label: 'Storm wolla', reason: 'Blown away by a Storm wolla!',
-  colors: { waves: 'oklch(0.56 0.20 300)', eyes: 'oklch(0.92 0.18 110)' }, ichor: ['#d6a8ff', '#5a2ca0'], trail: '#5a3f86',
+  colors: paints({ waves: 'violet.mid', eyes: 'eyes.sun' }), ichor: ['#d6a8ff', '#5a2ca0'], trail: '#5a3f86',
   mods: { hp: 1.3, damage: 1.3, speed: 1.1, size: 1.08 },
 });
 export const EMBER_WOLLA = enemyKind(WOLLA, {
   type: 'emberwolla', label: 'Ember wolla', reason: 'Blown away by an Ember wolla!', fireproof: true,
-  colors: { waves: 'oklch(0.72 0.17 52)', eyes: 'oklch(0.86 0.12 205)' }, ichor: ['#ffc07a', '#a0480f'], trail: '#7a4a24',
+  colors: paints({ waves: 'ember.mid', eyes: 'eyes.ice' }), ichor: ['#ffc07a', '#a0480f'], trail: '#7a4a24',
   mods: { hp: 1.45, damage: 1.4, speed: 1.1, size: 1.12 },
 });
 // The Squirtles of the sunken grotto and the cenote: coral red, tougher and quicker.
 export const CORAL_SQUIRTLE = enemyKind(SQUIRTLE, {
   type: 'coralsquirtle', label: 'Coral squirtle', reason: 'Splashed by a Coral squirtle!',
-  colors: { body: 'oklch(0.68 0.15 32)', belly: 'oklch(0.9 0.06 70)' }, ichor: ['#ffc0a8', '#b0402a'],
+  colors: paints({ body: 'crimson.mid@+10', belly: 'ochre.pale' }), ichor: ['#ffc0a8', '#b0402a'],
   mods: { hp: 1.5, damage: 1.4, speed: 1.1 },
 });
 // from half his health on: a giant, six cells tall (the model at `size`), who stomps; he walks
@@ -654,14 +670,13 @@ const guardianMods = (base, t) => ({
   damage: Math.max(t.damageMult, t.threat / threat(base)),
   xp: t.xp / base.xp,
 });
-// Hot pink (hue 350) is reserved for side guardians, amber for descent guardians; eyes remain
-// pale for contrast. A species may dress its guardians otherwise (`guardianLooks.side` /
+// Hot pink (the palette's `pink`, hue 350) is reserved for side guardians, `amber` (65) for
+// descent guardians (core/palette.js GUARDIAN_HUES); eyes remain pale for contrast. A species may dress its guardians otherwise (`guardianLooks.side` /
 // `.descent`: colours, glow, `finish` and the like, in place of these): the Wolk's are grey and
 // silver.
 export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
   type: 'guardian' + base.type, label: 'Guardian ' + base.label.toLowerCase(), guardian: true, guardianRole: 'side', bossPlaceholder: false,
-  colors: Object.fromEntries(Object.keys(base.parts).map(role => [role,
-    role === 'eyes' ? 'oklch(0.97 0.025 350)' : 'oklch(0.70 0.25 350)'])),
+  colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'pink.vivid']))),
   light: '#ff3fa8', sparks: ['#ff3fa8', '#ffd0ee'], ichor: ['#ff3fa8', '#9b165d'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.side.poise), mods: guardianMods(base, GUARDIAN_TIERS.side),
   ...base.guardianLooks?.side,
@@ -670,8 +685,7 @@ export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [bas
 export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
   type: 'descentGuardian' + base.type, label: 'Descent guardian ' + base.label.toLowerCase(),
   guardian: true, guardianRole: 'descent', bossPlaceholder: true,
-  colors: Object.fromEntries(Object.keys(base.parts).map(role => [role,
-    role === 'eyes' ? 'oklch(0.97 0.025 65)' : 'oklch(0.78 0.19 65)'])),
+  colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'amber.vivid']))),
   light: '#ff9b35', sparks: ['#ff9b35', '#fff0cc'], ichor: ['#ff9b35', '#9b4b16'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.descent.poise), mods: guardianMods(base, GUARDIAN_TIERS.descent),
   ...base.guardianLooks?.descent,
@@ -681,7 +695,7 @@ export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base
 // coins and no weapons, now and then a minor health potion (`drops`, core/gear/drops.js).
 export const CUSTO_TRIANGLE = enemyKind(TRIANGLE, {
   type: 'custotriangle', label: 'Custo triangle', reason: 'Punched by a Custo triangle!', minion: true,
-  colors: { glow: 'oklch(0.84 0.11 225)', eyes: 'oklch(0.97 0.03 220)' }, light: '#7fd0ff', sparks: ['#e0f6ff', '#7fd0ff'],
+  colors: paints({ glow: 'frost.light@-6', eyes: 'eyes.bone' }), light: '#7fd0ff', sparks: ['#e0f6ff', '#7fd0ff'],
   ichor: ['#c4ecff', '#4f8fbf'], aggro: 9, giveUp: 14, knockDown: false, cooldown: 1.6, poise: 0, coins: [0, 0],
   projectile: { ...TRIANGLE.projectile, speed: 9.5, radius: 0.2, muzzle: TRIANGLE.projectile.muzzle.map(v => v * 0.5) },
   drops: { weapons: false, potion: 0.08, potions: ['item_potion_health_minor'] },
@@ -704,6 +718,7 @@ export const SNAP_SKULL = {
   lunge: { from: 0.12, to: 0.38, max: 1.1, stop: 0.45 },
   poise: 0, hitStun: 0.2, deathTime: 1, corpseTime: 2,
   parts: { bone: ['SnapBone'], eyes: ['SnapEyes_glow'] },
+  colors: paints({ bone: 'stone.pale', eyes: 'eyes.ember' }),
   light: '#ff5a1e', puff: { colors: ['#efe6cf', '#d8cdb0', '#a89a80'], size: 0.45 },
   drops: MINION_DROPS(0.03),
   style: 'brute', charge: 1.3,
@@ -715,21 +730,21 @@ export const MINION_PROFILES = [SNAP_SKULL];
 const SPLASH_PUFF = { colors: ['#e8fbff', '#9fe0f0', '#6ac2d8'], size: 0.5 };
 export const TIDE_SQUIRTLE = enemyKind(SQUIRTLE, {
   type: 'tidesquirtle', label: 'Tide squirtle', reason: 'Splashed by a tide squirtle!', minion: true,
-  colors: { body: 'oklch(0.68 0.11 188)', belly: 'oklch(0.9 0.05 190)' }, ichor: ['#b8f4ff', '#2a9fa8'],
+  colors: paints({ body: 'jade.mid', belly: 'jade.pale' }), ichor: ['#b8f4ff', '#2a9fa8'],
   aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: SPLASH_PUFF,
   mods: { hp: 0.7, damage: 0.6, xp: 0.15 },
 });
 // small spiders of twigs, poured out of his ball by the dozen
 export const TOT_SPIDER = enemyKind(SPIDER, {
   type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
-  colors: { body: 'oklch(0.46 0.06 62)', eyes: 'oklch(0.68 0.21 35)' }, ichor: ['#b08a58', '#4a3018'],
+  colors: paints({ body: 'ochre.deep', eyes: 'eyes.ember' }), ichor: ['#b08a58', '#4a3018'],
   aggro: 9, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.02), puff: LEAF_PUFF,
   mods: { hp: 0.4, damage: 0.45, speed: 1.2, size: 0.55, xp: 0.12 },
 });
 // and, at the last, Stunders of brambles: smaller, weaker, and their rams do not knock you over
 export const TOT_STUNDER = enemyKind(STUNDER, {
   type: 'totstunder', label: 'Bramble stunder', reason: 'Rammed by a bramble stunder!', minion: true, knockDown: false,
-  colors: { skin: 'oklch(0.44 0.05 55)', eyes: 'oklch(0.7 0.2 35)' }, ichor: ['#b08a58', '#4a3018'],
+  colors: paints({ skin: 'ochre.deep', eyes: 'eyes.ember' }), ichor: ['#b08a58', '#4a3018'],
   aggro: 9, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.12), puff: { ...LEAF_PUFF, size: 0.8 },
   mods: { hp: 0.55, damage: 0.55, speed: 1.1, size: 0.72, xp: 0.12 },
 });
