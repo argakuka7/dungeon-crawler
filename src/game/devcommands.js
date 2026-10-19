@@ -27,6 +27,8 @@ import { pickFloor, pointer } from './pointer.js';
 import { heroLevel, MAX_WORLDS } from '../core/save.js';
 import { store, play, saveAs, newSavedWorld, savedHero, savedWorld, forget } from './save.js';
 import { quitToMenu } from './menu.js';
+import { setFluidPalettes, paletteOf } from '../render/fluidpal.js';
+import { rowSlot } from '../themes/fluids.js';
 
 const dev = cmd => addCommand(commands, { ...cmd, dev: true });
 const ahead = (d = 2.5) => ({ x: player.x + Math.sin(player.yaw) * d, y: player.y, z: player.z + Math.cos(player.yaw) * d });
@@ -137,6 +139,23 @@ dev({
     if (online.role === 'guest') return 'Only the host starts a new world';
     if (seed === undefined) { nextCube(); return; }
     newWorld(seed);
+  },
+});
+dev({
+  name: 'palette', help: 'other colours for the fluids (themes/fluids.js): another seed\'s, none: a random one, "classic": the old look',
+  args: [{ name: 'seed', type: 'text', optional: true }],
+  run({ seed }) {
+    if (!state.cubes) return 'No world';
+    if (seed === 'classic') setFluidPalettes();
+    else {
+      const s = seed === undefined || !Number.isFinite(+seed) ? (Math.random() * 2 ** 32) >>> 0 : +seed >>> 0;
+      setFluidPalettes(s, state.cubes.layout.themes);
+      seed = s;
+    }
+    // what the fluids here are now
+    // (what the fluids here are now; *: what runs on from cube to cube)
+    const rows = Object.values(state.map?.fluidRows || {});
+    return `Fluid palettes: ${seed}` + (rows.length ? ' (here: ' + rows.map(r => paletteOf(r).name + (rowSlot(r) ? '' : '*')).join(', ') + ')' : '');
   },
 });
 

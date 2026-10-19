@@ -18,6 +18,8 @@ import { flaskFx } from './juice.js';
 import { pickFloor, aimPoint, hoveredEnemy, pointer } from './pointer.js';
 import { syncEquippedWeapon } from './equipment.js';
 import { controls } from './inputstate.js';
+import { inFluid, trialFluid } from '../physics/fluid.js';
+import { douses } from '../core/douse.js';
 import { screenToWorld, aimReach } from '../core/stick.js';
 import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
@@ -82,10 +84,11 @@ function burst(f, enemies) {
     if (s.toxin) afflictEnemy(e, 'toxic', s.toxin);
   }
   if (!f.ghost) state.enemyGrace = 0;   // you started it
-  const floor = groundAt(at.x, at.z, at.y + 0.3, 0).h;
+  const ground = groundAt(at.x, at.z, at.y + 0.3, 0), floor = ground.h;
   const y = Number.isFinite(floor) && at.y - floor < 2.5 ? floor : null;
   const ghost = !!f.ghost;
-  if (y !== null && s.patch) areas.push({ kind: 'fire', status: 'burning', spec: s.burn, x: at.x, y, z: at.z, r: s.radius * 0.8, t: 0, time: s.patch, ghost });
+  // (no fire burns on the bed under water or acid)
+  if (y !== null && s.patch && !douses(inFluid(ground, y + 0.05))) areas.push({ kind: 'fire', status: 'burning', spec: s.burn, x: at.x, y, z: at.z, r: s.radius * 0.8, t: 0, time: s.patch, ghost });
   if (y !== null && s.cloud) areas.push({ kind: 'toxic', status: 'toxic', spec: s.toxin, x: at.x, y, z: at.z, r: s.radius, t: 0, time: s.cloud, ghost });
   flaskFx(f, 'burst');
 }
@@ -102,8 +105,11 @@ export function updateThrows(dt, enemies) {
   });
   // what walks into a burning patch catches fire, what stands in a cloud is poisoned (a status
   // already running is left to run, core/status.js)
+  const tf = trialFluid();
   for (const a of areas) {
     a.t += dt;
+    // a trial's water rising over a burning patch puts it out
+    if (a.kind === 'fire' && tf && douses(tf.fluid) && tf.y > a.y + 0.05) a.t = a.time;
     if (!a.ghost) for (const e of enemies)
       if (!e[a.status] && !absent(e) && inArea(a, e.x, e.y, e.z, e.profile.radius)) afflictEnemy(e, a.status, a.spec);
   }

@@ -1,7 +1,7 @@
 // Builds (and animates) all meshes for one generated map.
 import * as THREE from 'three';
 import { scene } from './scene.js';
-import { FLUID_LOOK, fluidGlow, scrollFalls, tickTides, WIND } from './materials.js';
+import { FLUID_LOOK, fluidGlow, tickTides, WIND } from './materials.js';
 import { partMeshes } from './partmeshes.js';
 import { bakeCells } from './watercells.js';
 import { buildCubeParts } from './cubegeo.js';
@@ -104,11 +104,9 @@ export function setPortalSeals(world, dirs, immediate = false) {
 // per-frame animation of fluids, waterfalls, lights and the portal
 export function animateWorld(world, dt, time) {
   for (const m of world.fluidMeshes) {
-    const t = m.userData.fluid, motion = FLUID_LOOK[t].motion;
-    if (motion.bob) m.position.y = Math.sin(time * motion.rate + motion.phase) * motion.bob;
-    else m.material.emissiveIntensity = fluidGlow(t, time);
+    const t = m.userData.fluid;
+    if (FLUID_LOOK[t].motion.pulse) m.material.emissiveIntensity = fluidGlow(t, time);
   }
-  scrollFalls(dt);
   WIND.value = time;
   tickTides();
   bakeCells(time);

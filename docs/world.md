@@ -651,6 +651,38 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
   its own props), the same route whatever the picks, and every theme generating its depths
   dressed from its own set.
 
+### The fluids' colours (`themes/fluids.js`, `cubegen/fluidbodies.js`, `render/fluidpal.js`)
+
+Water, lava and acid are not one colour each: every world makes its own palettes from its
+seed, a few per fluid and depth, within the family of each theme (`FAMILY`: anchor colours by
+name, the blue and green waters from bright royal and lagoon down to the deep's navy and dark
+teal; acid only greens; lava orange to crimson). A palette is picked between two of the
+family's anchors and jittered; the rest of it (darker swirls, the light lines between the
+cells, foam, glow, the falls' colours) follows from its body colour in OKLCH: dark water is
+duller, its pattern fainter, its lines leaning towards green.
+
+- **One colour per fluid in a cube** (`stampFluidBodies`, from the map alone, in
+  `World.cube`): what runs on into another cube (fluid at the cube's edge, a spout, a fall out
+  through the bottom) or a trial's rising fluid takes its depth's running palette (slot 0, the
+  same through a stretch of depths with one theme), so rivers keep their colour across the
+  faces; otherwise a fall from the depth above brings that depth's; otherwise the cube picks one
+  of its depth's other slots from its key. Every fluid floor carries its row (`f.pal`, and the
+  map `fluidRows`), every fall the rows at its top and foot (`fall.pal`): a fall from above into
+  a cube whose fluid runs on turns from the one into the other on its way down (only where the
+  theme changes between the two depths do they differ).
+- **Drawing:** the rows go into the fluid geometry (`pal` attribute, `render/parts.js`), the
+  palettes into one small texture (`render/fluidpal.js`), so the active cube, the batched
+  proxies, the trial's water, caps and splashes all agree. With no world: the classic look.
+- **Looks per fluid** (`render/materials.js FLUID_LOOK style`, patterns baked in
+  `render/watercells.js`, each only while shown): water's wandering cells; lava's crust, big
+  slow dark plates hotter towards the glowing cracks, a hot seam along the banks; acid's
+  sludge, cells with bubbles blowing up and popping, a green stain on the banks.
+- **Dev:** `?palette=classic` (the old look) or `?palette=<seed>` (another world's),
+  `/palette [seed|classic]` re-rolls them live and names the ones here;
+  `tests/browser/palettes.html?seed=<n>` shows a world's palettes. **Checks:**
+  `tests/fluidcolors.test.js` (in gamut, hues per fluid, stretches, one colour per fluid in a
+  cube, the same across every face and down every fall).
+
 ## Themed structures (`themes/builds.js`, `render/bridges.js`)
 
 - **Materials per theme:** each theme (by its prop set) names the stone, wood, rope, iron and

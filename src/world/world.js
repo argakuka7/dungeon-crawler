@@ -11,6 +11,7 @@ import { makeLayouts } from './layout.js';
 import { voidAllowed, fallMask } from './voids.js';
 import { isTown, isMerchantCamp, isClearing, enemyFreeAt, isInterior } from './town.js';
 import { generateInterior } from '../cubegen/interior.js';
+import { stampFluidBodies } from '../cubegen/fluidbodies.js';
 import { spanSpec } from './spans.js';
 import { heightSpec, heightsOf, shaftAbove } from './heights.js';
 import { areaSpec } from './areas.js';
@@ -124,7 +125,8 @@ export class World {
     }
     if (!c) {
       this.prepare(k);
-      c = { key: k, map: generate(this.spec(k)), visits: 0 };
+      // (and the colour of each body of fluid in it: cubegen/fluidbodies.js)
+      c = { key: k, map: stampFluidBodies(generate(this.spec(k))), visits: 0 };
       this.cubes.set(k, c);
     }
     return c;

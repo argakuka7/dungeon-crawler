@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- The fluid palettes of a world (themes/fluids.js), every depth's slots side by side: slot 0
+     (marked *) is what runs on from cube to cube, the rest for cubes whose fluid stays in them. A swatch shows the
+     body with its darker swirls and a light line, foam along the bottom. ?seed=<n> (default 1),
+     ?fluid=water|lava|acid (default all). Served by tools/serve.py: /tests/browser/palettes.html -->
+<meta charset="utf-8">
+<title>Fluid palettes</title>
+<style>
+  body { background: #1b1d22; color: #ccc; font: 12px ui-monospace, monospace; margin: 16px; }
+  table { border-collapse: collapse; }
+  td { padding: 2px 4px; }
+  .sw { width: 92px; height: 34px; position: relative; border-radius: 4px; overflow: hidden; }
+  .sw i { position: absolute; display: block; }
+  .name { font-size: 10px; color: #999; }
+</style>
+<p id="head"></p>
+<table id="out"></table>
+<script type="module">
+import { worldPalettes, palRow, PAL_SLOTS } from '../../src/themes/fluids.js';
+import { worldThemes, themeAt, MAX_DEPTH } from '../../src/themes/depth.js';
+import { WATER, LAVA, ACID } from '../../src/core/constants.js';
+
+const q = new URLSearchParams(location.search), seed = +(q.get('seed') ?? 1) >>> 0;
+const fluids = { water: [WATER], lava: [LAVA], acid: [ACID] }[q.get('fluid')] ?? [WATER, ACID, LAVA];
+const themes = worldThemes(seed), rows = worldPalettes(seed, themes), out = document.getElementById('out');
+document.getElementById('head').textContent = `seed ${seed}: ${themes.map(s => s.at + ' ' + s.theme.name).join(' · ')}`;
+const swatch = p => {
+  const h = p.hex;
+  return `<div class="sw" style="background:${h.body}">
+    <i style="left:8px;top:6px;width:30px;height:14px;border-radius:7px;background:${h.dark}"></i>
+    <i style="left:44px;top:11px;width:40px;height:3px;background:${h.line}"></i>
+    <i style="left:0;bottom:0;width:100%;height:5px;background:${h.foam}"></i>
+  </div><div class="name">${p.name} ${h.body}</div>`;
+};
+for (let d = 0; d <= MAX_DEPTH; d++) for (const f of fluids) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${d} ${themeAt(d, themes).props} ${{ [WATER]: 'water', [LAVA]: 'lava', [ACID]: 'acid' }[f]}</td>`
+    + Array.from({ length: PAL_SLOTS }, (_, s) => `<td>${swatch(rows[palRow(d, f, s)])}${s ? '' : '*'}</td>`).join('');
+  out.append(tr);
+}
+</script>

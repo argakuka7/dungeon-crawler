@@ -772,7 +772,11 @@ Trials stay off in real worlds until the last phase: the planner's chance is 0 u
   trial's level, on any floor or structure; `canMove` and `floornav` stop at its edge like at
   any fluid; enemies under it drown (removed, no rewards, `game/enemies.js`).
 - `render/trials.js`: one fluid surface at the level, clipped to the cube's box, in the depth
-  fluid's material; tide lines while idle. The HUD: the trial's name on arming, a countdown
+  fluid's material and the cube's colours of it (`map.fluidRows`); tide lines while idle. The
+  fires under it (the props' and the trial's own) go out while it stands over a quarter of
+  their flames and flare up again once drained if they are meant to burn (`douseFlames`,
+  `render/flames.js`; water and acid, not lava; only how they look, the puzzle's bits stay);
+  a fire flask's burning patch goes out under it too (`game/throws.js`). The HUD: the trial's name on arming, a countdown
   (time to the next pulse).
 - **The button:** the action key's new kind `part` (`game/action.js`). Pressing it resolves:
   the gate into `run.unlockedGates`, `refreshOpenFaces()`, the exit's seal off

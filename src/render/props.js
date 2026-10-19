@@ -130,19 +130,21 @@ export function buildProps(placed, group) {
       mesh.receiveShadow = true;
       group.add(mesh);
     }
-    // a fire's flames, where its model's stood
+    // a fire's flames, where its model's stood (the first of them for each of the props: flames
+    // first0 + its index in the list)
+    const first0 = flames.length;
     for (const f of p.flames ?? []) for (const q of list) {
       const at = new THREE.Vector3(f.x, f.y, f.z).applyMatrix4(propMatrix(q, m4)), s = q.s ?? 1;
       flames.push({ x: at.x, y: at.y, z: at.z, w: f.w * s, h: f.h * s, seed: fireSeed(q) });
     }
     // a few glowing props light their surroundings (the light pool picks the nearest); a fire's
     // light flickers with its flame
-    if (p.light && !p.cover) for (const q of list) {
+    if (p.light && !p.cover) for (const [qi, q] of list.entries()) {
       if (lights >= 6) break;
       if (q.unlit) continue;   // e.g. daytime lamp posts in the town clearings
       const l = new THREE.PointLight(p.light, p.intensity * 2, 4, 2);
       l.position.set(q.x, q.y + (p.attach === 'ceiling' ? -0.4 : 0.5), q.z);
-      if (p.flames) fireLights.push({ light: l, gain: p.intensity * 2, seed: fireSeed(q) });
+      if (p.flames) fireLights.push({ light: l, gain: p.intensity * 2, seed: fireSeed(q), i: p.flames.length ? first0 + qi : -1 });
       group.add(l); lights++;
     }
   }

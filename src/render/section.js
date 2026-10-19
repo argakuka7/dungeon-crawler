@@ -12,7 +12,8 @@ import { N, LH, CUBE_H } from '../core/constants.js';
 import { floorY, runY } from '../core/surfaces.js';
 import { GeoBuilder } from './builder.js';
 import { C, gradient } from './palette.js';
-import { FLUID_LOOK } from './materials.js';
+import { paletteOf } from './fluidpal.js';
+import { palRow } from '../themes/fluids.js';
 import { themeOf } from '../themes/depth.js';
 import { buildOf } from '../themes/builds.js';
 import { scene, camera, renderer } from './scene.js';
@@ -114,7 +115,8 @@ export function capTwin(mesh, caps, wrap = m => m) {
 const fluidCaps = new THREE.Mesh(new THREE.BufferGeometry(), inject(new THREE.MeshBasicMaterial({ vertexColors: true }),
   fs => fs.replace('#include <clipping_planes_fragment>', 'if (cutRegion(false) < 0.5) discard;\n#include <clipping_planes_fragment>'), 'cut-fluid-cap'));
 scene.add(fluidCaps);
-const capColor = t => C(FLUID_LOOK[t].cap);
+// (a fluid's cap: its palette's, render/fluidpal.js)
+const capColor = row => C(paletteOf(row).hex.cap);
 
 // A trial's rising fluid (render/trials.js) is one box over the whole cube, inside the solids
 // too. A cut solid shows its back faces as its cap, below the cut, so the fluid inside it would
@@ -124,8 +126,8 @@ const capColor = t => C(FLUID_LOOK[t].cap);
 // cube's base), where the fluid draws nothing. The cutaway drops it above the cut, and its cap
 // covers only the cells open at the cut height. level: its surface (world units; null: none)
 let trialWater = null, solidKey = '', solidMap = null;
-export function setTrialWaterCap(level, fluid) {
-  trialWater = level == null ? null : { level, fluid };
+export function setTrialWaterCap(level, fluid, pal = palRow(0, fluid, 0)) {
+  trialWater = level == null ? null : { level, fluid, pal };
 }
 export const WATER_SOLID = { value: new THREE.DataTexture(new Float32Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.FloatType) };
 function waterSolids(map) {
@@ -229,14 +231,14 @@ export function setCut(y, map, px, py, pz, walls = true) {
   capColors(map, on ? y : py + 1);
 
   waterSolids(map);
-  const water = on && trialWater && trialWater.level - 0.06 > y ? trialWater.fluid : null;
+  const water = on && trialWater && trialWater.level - 0.06 > y ? trialWater.pal : null;
   const k = on ? y.toFixed(3) + ':' + (water ?? '') : 'off';
   if (k === key && map === fluidCaps.userData.map) return;
   key = k; fluidCaps.userData.map = map;
   const b = new GeoBuilder(), capped = new Set();
   if (on && map) for (const f of map.floors) {
     if (!f.fluid || f.top * LH >= y || f.surf * LH - 0.06 <= y) continue;
-    b.quad([f.x, y, f.z], [f.x + 1, y, f.z], [f.x + 1, y, f.z + 1], [f.x, y, f.z + 1], [0, 1, 0], capColor(f.fluid));
+    b.quad([f.x, y, f.z], [f.x + 1, y, f.z], [f.x + 1, y, f.z + 1], [f.x, y, f.z + 1], [0, 1, 0], capColor(f.pal ?? map.fluidRows?.[f.fluid] ?? palRow(map.depth ?? 0, f.fluid, 0)));
     capped.add(f.z * N + f.x);
   }
   if (water != null && map) for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {

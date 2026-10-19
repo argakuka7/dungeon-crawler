@@ -4,6 +4,7 @@
 // thread only wraps the arrays (render/partmeshes.js) and decides how each part looks
 // (render/materials.js). A new part added here shows up in both the cube and its proxy.
 import { N, LH, DIRS, FLUIDS, FLUID_NAME } from '../core/constants.js';
+import { palRow } from '../themes/fluids.js';
 
 // kind: 'solid' (vertex coloured, cut with a section cap of `cap`; `sway`: with uvs saying how
 // far each vertex swings in the wind, render/materials.js swayMaterial), 'fluid' (a surface of
@@ -24,6 +25,9 @@ export const PARTS = [
 //   color    Uint16 x4, normalized (solids only; alpha 1); linear colours keep their dark shades
 //   uv       Float32 x2 (fluids, falls and swaying solids only; a fluid's say what each face is
 //            and where its shores are, render/floors.js fluidVolume)
+//   pal      Uint16 x4 (fluids and falls only): the palette rows of its colours (themes/fluids.js,
+//            cubegen/fluidbodies.js): a fall's at its top and at its foot, and how far down the
+//            sheet it is (0..1000: the one turns into the other); a surface's twice, 0
 // 20 bytes a vertex for solids instead of 36, and shared corners are stored once.
 const SCALE = 1 / 1024, LIMIT = 32767;
 
@@ -52,17 +56,18 @@ export function packParts(layers, m) {
 // the buffers to transfer (instead of copy) when posting the parts
 export function partBuffers(geo) {
   const out = [];
-  for (const p of Object.values(geo.parts)) for (const a of [p.pos, p.nor, p.col, p.uv, p.index]) if (a) out.push(a.buffer);
+  for (const p of Object.values(geo.parts)) for (const a of [p.pos, p.nor, p.col, p.uv, p.pal, p.index]) if (a) out.push(a.buffer);
   return out;
 }
 
 // triangle soup -> indexed, quantized arrays; identical corners (after quantizing) are merged
 function pack(list, scale, { kind, sway }) {
-  const color = kind === 'solid', uvs = kind !== 'solid' || !!sway;
+  const color = kind === 'solid', uvs = kind !== 'solid' || !!sway, pals = kind !== 'solid';
   let total = 0;
   for (const a of list) total += a.pos.length / 3;
   const pos = new Int16Array(total * 4), nor = new Int8Array(total * 4);
   const col = color ? new Uint16Array(total * 4) : null, uv = uvs ? new Float32Array(total * 2) : null;
+  const pal = pals ? new Uint16Array(total * 4) : null, p = new Int32Array(3);
   const index = new Uint32Array(total), seen = new Map();
   let n = 0, k = 0;
   const q = new Int32Array(6), c = new Int32Array(3);
@@ -75,6 +80,12 @@ function pack(list, scale, { kind, sway }) {
     let key = q.join(',');
     if (color) key += ',' + c.join(',');
     if (uvs) key += ',' + a.uv[i * 2] + ',' + a.uv[i * 2 + 1];
+    if (pals) {
+      // (a surface's: one row; a fall's: top, foot, how far down)
+      if (a.pal.length === a.pos.length) { p[0] = a.pal[i * 3]; p[1] = a.pal[i * 3 + 1]; p[2] = Math.round(a.pal[i * 3 + 2] * 1000); }
+      else { p[0] = p[1] = a.pal[i]; p[2] = 0; }
+      key += ',' + p.join(',');
+    }
     let v = seen.get(key);
     if (v === undefined) {
       v = n++;
@@ -82,11 +93,13 @@ function pack(list, scale, { kind, sway }) {
       for (let j = 0; j < 3; j++) { pos[v * 4 + j] = q[j]; nor[v * 4 + j] = q[j + 3]; }
       if (color) { for (let j = 0; j < 3; j++) col[v * 4 + j] = c[j]; col[v * 4 + 3] = 65535; }
       if (uvs) { uv[v * 2] = a.uv[i * 2]; uv[v * 2 + 1] = a.uv[i * 2 + 1]; }
+      if (pals) for (let j = 0; j < 3; j++) pal[v * 4 + j] = p[j];
     }
     index[k++] = v;
   }
   return {
     pos: pos.slice(0, n * 4), nor: nor.slice(0, n * 4), col: col ? col.slice(0, n * 4) : null, uv: uv ? uv.slice(0, n * 2) : null,
+    pal: pal ? pal.slice(0, n * 4) : null,
     index: n <= 65535 ? Uint16Array.from(index) : index,
   };
 }
@@ -98,7 +111,7 @@ function pack(list, scale, { kind, sway }) {
 // (splash rings and lights stay with the active cube, render/falls.js).
 export const FALL_WIDTH = 0.9;   // world units across at the lip
 function fallSheets(m, type) {
-  const pos = [], nor = [], uv = [], ACROSS = 6, R = 0.22, LIP = 0.25;
+  const pos = [], nor = [], uv = [], pal = [], ACROSS = 6, R = 0.22, LIP = 0.25;
   // falls of lower layers first: drawn back to front from above
   for (const f of (m.falls || []).filter(f => f.type === type).sort((a, b) => a.layer - b.layer)) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
@@ -129,11 +142,17 @@ function fallSheets(m, type) {
       const l = Math.hypot(nx, ny, nz) || 1;
       return [nx / l, ny / l, nz / l];
     };
-    const vert = (i, j) => { const g = grid[i][j]; pos.push(g[0], g[1], g[2]); nor.push(...normal(i, j)); uv.push(g[3], g[4]); };
+    // its colours: from its top's to its foot's, turning over the drop (cubegen/fluidbodies.js)
+    const [palTop, palFoot] = f.pal ?? [palRow(m.depth ?? 0, type, 0), palRow(m.depth ?? 0, type, 0)], total = prof[prof.length - 1][2] || 1;
+    const vert = (i, j) => {
+      const g = grid[i][j];
+      pos.push(g[0], g[1], g[2]); nor.push(...normal(i, j)); uv.push(g[3], g[4]);
+      pal.push(palTop, palFoot, Math.min(1, Math.max(0, (prof[i][2] / total - 0.15) / 0.75)));
+    };
     for (let i = 0; i + 1 < grid.length; i++) for (let j = 0; j < ACROSS; j++) {
       vert(i, j); vert(i + 1, j); vert(i + 1, j + 1);
       vert(i, j); vert(i + 1, j + 1); vert(i, j + 1);
     }
   }
-  return { pos, nor, uv };
+  return { pos, nor, uv, pal };
 }

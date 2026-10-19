@@ -1,28 +1,24 @@
-// The cartoon water's pattern (materials.js cellMaterial), drawn once a frame into a small tiling
-// texture instead of for every pixel of water on screen: rounded cells whose centres wander (so
-// they swell, shrink and change shape), wobbly outlines, gaps of varying width between them, and
-// a finer, faster pattern of darker swirls inside, broken up. Everything in it repeats every TILE
-// cells (the hashes and noises wrap at whole periods), so the texture tiles seamlessly.
-//   r: the gaps, as a distance field around 0.5 (over: in a gap; the shader thresholds it, sharp
-//      at any zoom), g: the swirls the same way, b: where the swirls are not broken up (0..1)
+// The cartoon fluids' patterns (materials.js cellMaterial), drawn once a frame into small tiling
+// textures instead of for every pixel of fluid on screen, one for each look (CELLS):
+//   water: rounded cells whose centres wander (so they swell, shrink and change shape), wobbly
+//     outlines, gaps of varying width between them, and a finer, faster pattern of darker
+//     swirls inside, broken up
+//     r: the gaps, as a distance field around 0.5 (over: in a gap; the shader thresholds it,
+//     sharp at any zoom), g: the swirls the same way, b: where the swirls are not broken up (0..1)
+//   crust (lava): big, slow plates of crust with glowing cracks between them
+//     r: the cracks like water's gaps, g: hot spots on the plates (0..1), b: how hot a crack
+//     burns there (0..1), a: how near a crack (1 at it, 0 well inside a plate)
+//   sludge (acid): water's cells, slower and thicker, with bubbles rising and popping
+//     r, g, b like water's, a: the bubbles' rings as a distance field around 0.5
+// Everything in them repeats every `tile` cells (the hashes and noises wrap at whole periods), so
+// the textures tile seamlessly. A look's texture is drawn only while something showed it lately
+// (its materials' onBeforeRender: useCells).
 import * as THREE from 'three';
 import { renderer } from './scene.js';
 
-export const TILE = 12;          // cells the texture spans
-export const CELLS_PER_UNIT = 1.6;
-const SIZE = 512;                // texels
+const SIZE = 512;   // texels
 
-const target = new THREE.WebGLRenderTarget(SIZE, SIZE, {
-  depthBuffer: false, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping,
-  magFilter: THREE.LinearFilter, minFilter: THREE.LinearMipmapLinearFilter, generateMipmaps: true,
-});
-export const CELL_TEX = { value: target.texture };
-
-const material = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 } },
-  depthTest: false, depthWrite: false,
-  vertexShader: 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-  fragmentShader: `
+const COMMON = `
     precision highp float;
     varying vec2 vUv;
     uniform float uTime;
@@ -57,36 +53,105 @@ const material = new THREE.ShaderMaterial({
       }
       return md;
     }
-    void main() {
-      float tm = uTime, T = ${TILE.toFixed(1)};
-      vec2 p = vUv * T;
+    // the water's cells and swirls at p (tile T), time tm: r, g, b (see above)
+    vec3 cells(vec2 p, float T, float tm, float gap) {
       // a slow wobble of the whole pattern, so the outlines are never straight (11 / T: the noise
       // repeats 11 times a tile)
       vec2 s = p * (11.0 / T);
       p += vec2(noise(s + tm * 0.13, 11.0), noise(s - tm * 0.11 + 7.0, 11.0)) * 0.55;
       float b = border(p + vec2(tm * 0.05, tm * 0.03), T, tm * 0.55, 0.14);
-      float w = 0.045 + 0.035 * noise(p * (28.0 / T) + tm * 0.2, 28.0);
+      float w = gap + 0.035 * noise(p * (28.0 / T) + tm * 0.2, 28.0);
       // the swirls: borders of a finer (20 a tile), faster pattern, thick, broken up
       vec2 r = p * (17.0 / T);
       vec2 q = p * (20.0 / T) + vec2(noise(r - tm * 0.17, 17.0), noise(r + tm * 0.15 + 3.0, 17.0)) * 0.7;
       float b2 = border(q - vec2(tm * 0.04, tm * 0.06), 20.0, tm * 0.8 + 2.0, 0.3);
       float keep = smoothstep(0.38, 0.52, noise(q * (16.0 / 20.0) + 11.0, 16.0));
-      gl_FragColor = vec4(clamp(0.5 - (b - w) * 2.0, 0.0, 1.0), clamp(0.5 + (0.13 - b2) * 2.0, 0.0, 1.0), keep, 1.0);
-    }`,
-});
-const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+      return vec3(clamp(0.5 - (b - w) * 2.0, 0.0, 1.0), clamp(0.5 + (0.13 - b2) * 2.0, 0.0, 1.0), keep);
+    }
+`;
+
+// tile: cells a texture spans; perUnit: cells a world unit
+const STYLES = {
+  water: { tile: 12, perUnit: 1.6, main: `
+    void main() {
+      float T = 12.0;
+      gl_FragColor = vec4(cells(vUv * T, T, uTime, 0.045), 1.0);
+    }` },
+  crust: { tile: 8, perUnit: 1.25, main: `
+    void main() {
+      float T = 8.0, tm = uTime * 0.22;
+      vec2 p = vUv * T, s = p;
+      p += vec2(noise(s + tm * 0.13, 8.0), noise(s - tm * 0.11 + 7.0, 8.0)) * 0.45;
+      float b = border(p + vec2(tm * 0.05, tm * 0.03), T, tm * 0.55, 0.1);
+      float w = 0.03 + 0.045 * noise(p * (24.0 / T) + tm * 0.3, 24.0);
+      float hot = noise(p * (6.0 / T) + tm * 0.2, 6.0) * 0.6 + noise(p * (13.0 / T) - tm * 0.3 + 4.0, 13.0) * 0.4;
+      float burn = noise(p * (20.0 / T) + vec2(uTime * 0.5, -uTime * 0.3), 20.0);
+      gl_FragColor = vec4(clamp(0.5 - (b - w) * 2.5, 0.0, 1.0), smoothstep(0.5, 0.85, hot), burn, clamp(1.0 - (b - w) / 0.3, 0.0, 1.0));
+    }` },
+  sludge: { tile: 12, perUnit: 1.3, main: `
+    void main() {
+      float T = 12.0, P = 18.0;
+      vec3 c = cells(vUv * T, T, uTime * 0.55, 0.06);
+      // bubbles: some of the points of a lattice (P a tile) blow one up, round and round
+      vec2 q = vUv * P, n = floor(q), f = fract(q);
+      float a = 0.0;
+      for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j)), h = hash2(mod(n + g, P));
+        if (h.x > 0.26) continue;
+        float ph = fract(uTime * (0.25 + 0.3 * h.y) + h.x * 9.0);
+        vec2 at = g + 0.3 + 0.4 * hash2(mod(n + g, P) + 3.7);
+        float rad = mix(0.05, 0.38, sqrt(ph)), wid = 0.06 * (1.0 - ph) + 0.02, d = length(f - at);
+        a = max(a, clamp(0.5 + (wid - abs(d - rad)) * 5.0, 0.0, 1.0) * (1.0 - smoothstep(0.8, 1.0, ph)));
+      }
+      gl_FragColor = vec4(c, a);
+    }` },
+};
+
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 quad.frustumCulled = false;
 const bakeScene = new THREE.Scene(), bakeCamera = new THREE.Camera();
 bakeScene.add(quad);
 
-// draw the pattern at `time` (once a frame, before the scene)
+// per look: { tex (uniform), tile, perUnit, used (the frame it was last shown in) }
+export const CELLS = {};
+for (const [name, s] of Object.entries(STYLES)) {
+  const target = new THREE.WebGLRenderTarget(SIZE, SIZE, {
+    depthBuffer: false, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping,
+    magFilter: THREE.LinearFilter, minFilter: THREE.LinearMipmapLinearFilter, generateMipmaps: true,
+  });
+  const material = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: COMMON + s.main,
+  });
+  CELLS[name] = { tex: { value: target.texture }, tile: s.tile, perUnit: s.perUnit, used: -Infinity, target, material };
+}
+// (the water's, for what rides on it: render/falls.js)
+export const CELL_TEX = CELLS.water.tex, TILE = CELLS.water.tile, CELLS_PER_UNIT = CELLS.water.perUnit;
+
+// a material that shows a look's pattern: drawn while it is shown (and the frame after)
+let frame = 0;
+export function useCells(mat, style) {
+  const before = mat.onBeforeRender;
+  mat.onBeforeRender = (...args) => { CELLS[style].used = frame; before?.apply(mat, args); };
+  return mat;
+}
+
+// draw the patterns at `time` (once a frame, before the scene): those shown lately, and all of
+// them the first time
 let last = null;
 export function bakeCells(time) {
   if (time === last) return;
+  const first = last === null;
   last = time;
-  material.uniforms.uTime.value = time;
+  frame++;
   const prev = renderer.getRenderTarget();
-  renderer.setRenderTarget(target);
-  renderer.render(bakeScene, bakeCamera);
+  for (const c of Object.values(CELLS)) {
+    if (!first && frame - c.used > 2) continue;
+    c.material.uniforms.uTime.value = time;
+    quad.material = c.material;
+    renderer.setRenderTarget(c.target);
+    renderer.render(bakeScene, bakeCamera);
+  }
   renderer.setRenderTarget(prev);
 }

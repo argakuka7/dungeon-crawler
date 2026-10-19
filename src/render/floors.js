@@ -3,6 +3,7 @@ import { N, LH, DIRS, OPP, DIRV, EDGE_CORNERS, edgePts } from '../core/constants
 import { idx, inb, hash32 } from '../core/util.js';
 import { C, gradient, TOP_STOPS, UNDERSIDE, SOFT, fluidBed, fluidBank } from './palette.js';
 import { cliffWall } from './walls.js';
+import { palRow } from '../themes/fluids.js';
 import { buildInteriorFloors } from './interior.js';
 
 const ICE_TOP = C('#cfe8f4');
@@ -67,6 +68,7 @@ function fluidVolume(m, f, b) {
   for (let d = 0; d < 4; d++) if (bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]])) shores |= 1 << d;
   DIAG.forEach(([dx, dz], i) => { if (bank(x + dx, z + dz, [(dx > 0 ? 0 : 1) + (dz > 0 ? 0 : 2)])) shores |= 16 << i; });
   const white = C('#ffffff');
+  b.palNow = f.pal ?? m.fluidRows?.[f.fluid] ?? palRow(m.depth ?? 0, f.fluid, 0);   // its colours (cubegen/fluidbodies.js)
   b.uvNow = [(z * N + x) * 256 + shores, sy];
   for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
     const x0 = x + i / SUB, x1 = x + (i + 1) / SUB, z0 = z + j / SUB, z1 = z + (j + 1) / SUB;

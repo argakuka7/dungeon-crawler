@@ -14,6 +14,7 @@ export function partGeometry(p) {
   g.setAttribute('normal', new THREE.BufferAttribute(p.nor, 4, true));
   if (p.col) g.setAttribute('color', new THREE.BufferAttribute(p.col, 4, true));
   if (p.uv) g.setAttribute('uv', new THREE.BufferAttribute(p.uv, 2));
+  if (p.pal) g.setAttribute('pal', new THREE.BufferAttribute(p.pal, 4));   // (fluids: their palettes, render/fluidpal.js)
   g.setIndex(new THREE.BufferAttribute(p.index, 1));
   return g;
 }

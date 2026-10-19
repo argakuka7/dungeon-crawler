@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { cutMaterial } from './section.js';
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { scene } from './scene.js';
+import { doused } from '../core/douse.js';
+import { sfx } from '../audio/sfx.js';
 
 export const FIRE_COLORS = ['#fff0a0', '#ffd25a', '#ff8a2a', '#ff4a17'];
 // how a fire flickers (seed: its own phase): the flame's height and brightness and its light
@@ -146,10 +148,27 @@ export function flameSet(specs, lights = []) {
   const m4 = new THREE.Matrix4();
   specs.forEach((f, i) => mesh.setMatrixAt(i, m4.makeTranslation(f.x, f.y, f.z)));
   mesh.frustumCulled = false; mesh.renderOrder = 900;
-  const set = { mesh, specs, lights, want: specs.map(f => f.power ?? 1), attr, t: 0 };
+  // want: what the game wants (lit or out); wet: the flames under a fluid now (douseFlames)
+  const set = { mesh, specs, lights, want: specs.map(f => f.power ?? 1), wet: specs.map(() => false), douse: null, attr, t: 0 };
   set.power = (i, v) => { set.want[i] = v; };
   sets.add(set);
   return set;
+}
+
+// A fluid rising and sinking over a cube's fires (a trial's, render/trials.js): the flames under
+// it go out, and those meant to burn flare up again once it has gone (y: its surface in the
+// group's coordinates, null: none). Only how they look: what is lit stays the game's.
+export function douseFlames(group, y, fluid) {
+  for (const set of sets) if (set.mesh.parent === group) set.douse = y == null ? null : { y, fluid };
+}
+
+// steam where a flame is put out (or flares up again out of the drained fluid)
+function steam(x, y, z, w, out) {
+  for (let k = 0; k < (out ? 7 : 3); k++) {
+    const [dx, dz] = ring(w * 0.4);
+    emit(soft, x + dx, y + rand(0, 0.15), z + dz, { v: [dx * 0.4, rand(0.5, 0.9), dz * 0.4], spread: 0.2, life: rand(0.9, 1.5),
+      size: 0.12 + 0.2 * w, grow: 2.4, color: '#e8eef2', alpha: out ? 0.4 : 0.22, drag: 0.6 });
+  }
 }
 
 const at = new THREE.Vector3();
@@ -164,8 +183,19 @@ export function tickFlames(dt, time, focus) {
     set.t = 0;
     let changed = false;
     set.specs.forEach((f, i) => {
-      const p = set.attr.array[i * 4 + 3], want = set.want[i];
-      if (p !== want) { set.attr.array[i * 4 + 3] = want > p ? Math.min(want, p + dt * 2.5) : Math.max(want, p - dt * 1.5); changed = true; }
+      const wet = !!set.douse && doused(f.y, f.h, set.douse.y, set.douse.fluid);
+      if (wet !== set.wet[i]) {
+        set.wet[i] = wet;
+        // (only a flame burning, or about to: an unlit brazier just gets wet)
+        if (set.want[i] > 0 && set.mesh.parent.visible) {
+          set.mesh.localToWorld(at.set(f.x, f.y, f.z));
+          steam(at.x, at.y, at.z, f.w, wet);
+          if (wet) sfx('sizzle', { at, volume: 0.5, pitch: 0.8 + Math.random() * 0.3 });
+        }
+      }
+      const p = set.attr.array[i * 4 + 3], want = wet ? 0 : set.want[i];
+      // (put out by a fluid: quickly)
+      if (p !== want) { set.attr.array[i * 4 + 3] = want > p ? Math.min(want, p + dt * 2.5) : Math.max(want, p - dt * (wet ? 6 : 1.5)); changed = true; }
       const power = set.attr.array[i * 4 + 3];
       if (power <= 0 || !set.mesh.parent.visible) return;
       set.mesh.localToWorld(at.set(f.x, f.y, f.z));

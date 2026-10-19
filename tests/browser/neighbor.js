@@ -92,9 +92,9 @@ export async function runExpandedTravelChecks() {
 }
 // a slab with a pool of each fluid and a waterfall, packed like the worker does
 function fixture() {
-  const box = (x0, y0, z0, x1, y1, z1) => { const b = new GeoBuilder(), col = new THREE.Color('gray'); b.box(x0, y0, z0, x1, y1, z1, col, col); return b.arrays(); };
+  const box = (x0, y0, z0, x1, y1, z1, uvs = false) => { const b = new GeoBuilder({ uvs }), col = new THREE.Color('gray'); b.box(x0, y0, z0, x1, y1, z1, col, col); return b.arrays(); };
   const layer = { terrain: box(0, 0, 0, N, 2, N), stone: null, wood: null,
-    fluids: { [WATER]: box(1, 2, 1, 4, 2.5, 4), [LAVA]: box(6, 2, 6, 9, 2.5, 9), [ACID]: box(11, 2, 11, 14, 2.5, 14) } };
+    fluids: { [WATER]: box(1, 2, 1, 4, 2.5, 4, true), [LAVA]: box(6, 2, 6, 9, 2.5, 9, true), [ACID]: box(11, 2, 11, 14, 2.5, 14, true) } };
   return packParts([layer], { falls: [{ type: WATER, d: 0, c: 5 * N + 5, top: 8, bot: 4, layer: 0 }] });
 }
 
@@ -141,7 +141,8 @@ export async function runNeighborChecks() {
       const dim = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
       for (const t of FLUIDS) {
         const mat = list[0].instances.find(i => i.batch.part?.fluid === t && i.batch.part.kind === 'fluid').batch.mesh.material;
-        check(mat.color.equals(dim(FLUID_LOOK[t].color, PROXY.fluid)) && mat.opacity === FLUID_LOOK[t].opacity, `Proxy ${t} must look like the fluid it is`);
+        // (its colours are its palettes', render/fluidpal.js: the material only darkens them)
+        check(mat.color.equals(dim(0xffffff, PROXY.fluid)) && mat.transparent === FLUID_LOOK[t].clear, `Proxy ${t} must look like the fluid it is`);
       }
       check(!lava.batch.mesh.material.transparent && water.batch.mesh.material.transparent, 'Lava is opaque, water is not');
       check(list[0].instances[0].batch === list[1].instances[0].batch && list[0].instances[0].id !== list[1].instances[0].id,

@@ -1,41 +1,38 @@
 // How every cube part looks (render/parts.js): one table of looks, from which the materials of
 // the active cube ('full': PBR, cut, shadowed, animated) and of the low-detail proxies ('proxy':
 // Lambert, darker, batched) are both made, so the two cannot disagree about what a part is.
-// Also the fluids' section cap colours (section.js), splash foam (falls.js), surface motion
-// (world.js) and the scrolling waterfall textures.
+// Also the fluids' surface motion (world.js); their colours are their palettes' (fluidpal.js).
 import * as THREE from 'three';
 import { N, WATER, LAVA, ACID } from '../core/constants.js';
-import { mulberry32 } from '../core/util.js';
-import { CELL_TEX, TILE, CELLS_PER_UNIT } from './watercells.js';
+import { CELLS, useCells } from './watercells.js';
+import { PAL_TEX, PAL_GLSL } from './fluidpal.js';
 import { FALL_WIDTH } from './parts.js';
 
-// motion: bob (world units) at rate (rad/s) and phase, or an emissive pulse around base (none:
-// still, or its cells' tide moves it);
-// fall: the sheet pouring over an edge, base / streak colours of its texture, speed of the
-// streaks (texture repeats a second); glow: the texture lights itself; cells: instead of the
-// texture, the cartoon look of the fluid's cells streaming down it (fallCellMaterial: veins in
-// `line`, faster streaks in `light`, `flow` world units a second); cells: the surface
-// drawn as drifting cartoon cells (cellMaterial) in the colour, darker swirls in `dark`, the
-// gaps between them in `line`, glowing by `glow`, more opaque (lineOpacity). The whole surface
-// rises and falls with the tide, `tide` from high to low water (world units) every `period`
-// seconds, a minor pattern of waves `ripple` high (crest to trough) over it; the highest crest
-// stands `lift` over the surface's rest height (which is 0.06 under its banks, render/floors.js:
-// keep lift under that). Where it meets a bank, foam in `foam` hugs the shore with a second line
-// lapping in at it; the bank's wall stays dark where the water has just been (`wet`: how dark),
-// drying off `dry` world units a second.
+// How each fluid moves and is drawn; its colours are its palette's (themes/fluids.js, one per
+// body of fluid: render/fluidpal.js), not these.
+// style: the look of its cells (watercells.js CELLS: 'water', 'crust' for lava's plates and
+// glowing cracks, 'sludge' for acid's bubbling cells); clear: drawn see-through (its palette's
+// opacity); motion: an emissive pulse around base (none: its cells' tide moves it);
+// cells: the surface drawn as drifting cartoon cells (cellMaterial). The whole surface rises and
+// falls with the tide, `tide` from high to low water (world units) every `period` seconds, a
+// minor pattern of waves `ripple` high (crest to trough) over it; the highest crest stands
+// `lift` over the surface's rest height (which is 0.06 under its banks, render/floors.js: keep
+// lift under that). Where it meets a bank, foam hugs the shore with a second line lapping in at
+// it; the bank's wall stays dark where the water has just been (`wet`: how dark), drying off
+// `dry` world units a second (lava: a glowing seam instead).
+// fall: the sheet pouring over an edge, its cells streaming down it (fallCellMaterial: veins,
+// faster streaks over them, `flow` world units a second), lighting themselves by `glow`;
+// rides: foam and ripples where a fall lands on it (render/falls.js), else a splash ring.
 export const FLUID_LOOK = {
-  [WATER]: { color: 0x2c9ad8, emissive: 0x08304e, emissiveIntensity: 1, opacity: 0.7, roughness: 0.55, metalness: 0,
-    cells: { dark: 0x0c7cc0, line: 0xc8f2ff, glow: 0.25, lineOpacity: 0.92,
-      tide: 0.2, period: 7, ripple: 0.02, lift: 0.02, wet: 0.55, dry: 0.012 },
-    cap: '#1f5d99', foam: 0xf8fdff, motion: {},
-    fall: { base: '#3f8fe0', streak: '#eaf7ff', emissive: 0x0a2a4a, emissiveIntensity: 1, opacity: 0.82, glow: false, speed: 1.5,
-      cells: { line: 0xd6f8ff, light: 0x7cc4f2, glow: 0.3, flow: 4.5 } } },
-  [LAVA]: { color: 0xff6a00, emissive: 0xff3a00, emissiveIntensity: 1.2, opacity: 1, roughness: 0.6, metalness: 0,
-    cap: '#c2410a', foam: 0xffc06a, motion: { pulse: 0.3, base: 1.1, rate: 3 },
-    fall: { base: '#ff5a00', streak: '#ffd27a', emissive: 0xff4a00, emissiveIntensity: 1.3, opacity: 1, glow: true, speed: 0.5 } },
-  [ACID]: { color: 0x7dff3a, emissive: 0x3a9a10, emissiveIntensity: 0.8, opacity: 0.82, roughness: 0.3, metalness: 0,
-    cap: '#4f9a24', foam: 0xd8ff9a, motion: { bob: 0.02, rate: 2.3, phase: 1 },
-    fall: { base: '#66e030', streak: '#eaffc8', emissive: 0x2a7a10, emissiveIntensity: 1, opacity: 0.85, glow: false, speed: 1.5 } },
+  [WATER]: { style: 'water', clear: true, emissiveIntensity: 1, roughness: 0.55, metalness: 0, motion: {}, rides: true,
+    cells: { tide: 0.2, period: 7, ripple: 0.02, lift: 0.02, wet: 0.55, dry: 0.012 },
+    fall: { emissiveIntensity: 1, cells: { glow: 0.3, flow: 4.5 } } },
+  [LAVA]: { style: 'crust', clear: false, emissiveIntensity: 1.2, roughness: 0.6, metalness: 0, motion: { pulse: 0.2, base: 1.1, rate: 3 }, rides: false,
+    cells: { tide: 0.035, period: 11, ripple: 0.008, lift: 0.012, wet: 0, dry: 0.01 },
+    fall: { emissiveIntensity: 1.3, cells: { glow: 1, flow: 1.3 } } },
+  [ACID]: { style: 'sludge', clear: true, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0, motion: {}, rides: true,
+    cells: { tide: 0.07, period: 5, ripple: 0.016, lift: 0.016, wet: 0.45, dry: 0.01 },
+    fall: { emissiveIntensity: 1, cells: { glow: 0.35, flow: 3.2 } } },
 };
 
 // The surroundings are drawn darker than the cube you are in: solids (and props) take this
@@ -56,21 +53,20 @@ export function solidMaterial(detail) {
     : new THREE.MeshLambertMaterial({ vertexColors: true, color: PROXY.tint });
 }
 
+// (white: the palette's colours as they are; the proxies' a share of them, PROXY.fluid)
 export function fluidMaterial(t, detail) {
-  const L = FLUID_LOOK[t], clear = L.opacity < 1;
-  const common = { transparent: clear, opacity: L.opacity, depthWrite: !clear };
-  if (detail === 'full') return new THREE.MeshStandardMaterial({ ...common, color: L.color, emissive: L.emissive,
+  const L = FLUID_LOOK[t], common = { transparent: L.clear, depthWrite: !L.clear };
+  if (detail === 'full') return new THREE.MeshStandardMaterial({ ...common, color: 0xffffff, emissive: 0xffffff,
     emissiveIntensity: L.emissiveIntensity, roughness: L.roughness, metalness: L.metalness });
-  return new THREE.MeshLambertMaterial({ ...common, color: dim(L.color, PROXY.fluid), emissive: dim(L.emissive, PROXY.fluid),
+  return new THREE.MeshLambertMaterial({ ...common, color: dim(0xffffff, PROXY.fluid), emissive: dim(0xffffff, PROXY.fluid),
     emissiveIntensity: L.emissiveIntensity });
 }
 
 // (a fall is one ribbon, render/parts.js fallSheets: seen from both sides)
 export function fallMaterial(t, detail) {
-  const F = FLUID_LOOK[t].fall, tex = F.cells ? null : fallTex[t], color = F.cells ? F.base : 0xffffff;
-  const common = { map: tex, transparent: true, opacity: F.opacity, depthWrite: false, side: THREE.DoubleSide, emissiveMap: F.glow ? tex : null };
-  if (detail === 'full') return new THREE.MeshStandardMaterial({ ...common, color, roughness: 0.3, emissive: F.emissive, emissiveIntensity: F.emissiveIntensity });
-  return new THREE.MeshLambertMaterial({ ...common, color: dim(color, PROXY.fluid), emissive: dim(F.emissive, PROXY.fluid),
+  const F = FLUID_LOOK[t].fall, common = { transparent: true, depthWrite: false, side: THREE.DoubleSide };
+  if (detail === 'full') return new THREE.MeshStandardMaterial({ ...common, color: 0xffffff, roughness: 0.3, emissive: 0xffffff, emissiveIntensity: F.emissiveIntensity });
+  return new THREE.MeshLambertMaterial({ ...common, color: dim(0xffffff, PROXY.fluid), emissive: dim(0xffffff, PROXY.fluid),
     emissiveIntensity: F.emissiveIntensity });
 }
 
@@ -169,39 +165,44 @@ const TRIAL_SHORES = `
 // The cartoon look of a fluid's surface (FLUID_LOOK cells), like Wind Waker's sea: on its top,
 // rounded cells that wander and change shape, light gaps between them, darker swirls inside;
 // its sides keep the plain colour. The pattern is drawn once a frame into a tiling texture
-// (watercells.js); here it is only looked up (through a slow wobble that hides the tiling) and
-// thresholded. It is laid out in the cube's own coordinates (the position attribute, in units
-// of the part's scale), so it stays put when the cubes slide during travel and matches between
-// a cube and its proxy. A chained shader edit like swayMaterial (after the cut's inject). The
-// colours go in as ratios to the material's own, so the proxies' darker fluids stay as much darker.
+// (watercells.js, the fluid's style); here it is only looked up (through a slow wobble that
+// hides the tiling) and thresholded. It is laid out in the cube's own coordinates (the position
+// attribute, in units of the part's scale), so it stays put when the cubes slide during travel
+// and matches between a cube and its proxy. A chained shader edit like swayMaterial (after the
+// cut's inject). The colours are the palette's of each vertex (its `pal` attribute, render/
+// parts.js; fluidpal.js), times the material's own (white; the proxies' darker).
 // The surface rises and falls with the tide and the waves (swellGLSL), sides and all. Where it
 // meets a bank (the shores in its uvs, render/floors.js fluidVolume) foam hugs the shore, and the
 // bank's wall is dark where the water has just been, a band (in front of it, in this mesh) drawn
 // from the water's surface up to the wet line (WET_LINE) only.
+// The styles: water as above; sludge (acid) the same, with bubbles blowing up and popping in the
+// cells and a green stain on the banks; crust (lava): big slow plates of dark crust, hotter
+// towards the glowing cracks between them and in spots, cooler at the shore where a bright seam
+// runs along the bank instead of the foam and the wet band.
 // trial: a trial's fluid (render/trials.js) instead, one box rising and sinking through the room:
 // { level, wet } uniforms (its surface's rest height; how far over it the room is wet), solid
 // (section.js WATER_SOLID, which cells are solid where): its shores are the cells round about
 // that are solid at its level, and its wet bands (a mesh of their own with this material, uvs
 // (-1, 0)) go by its level.
+const STYLE_ID = { water: 0, sludge: 1, crust: 2 };
 export function cellMaterial(mat, t, trial = null) {
-  const S = FLUID_LOOK[t].cells;
+  const L = FLUID_LOOK[t], S = L.cells;
   if (!S) return mat;
-  const base = new THREE.Color(FLUID_LOOK[t].color), ratio = hex => new THREE.Color(hex).multiply(new THREE.Color(1 / base.r, 1 / base.g, 1 / base.b));
-  const uniforms = { uCellTime: WIND, uCellTex: CELL_TEX, uCellDark: { value: ratio(S.dark) },
-    uCellLine: { value: ratio(S.line) }, uCellGlow: { value: S.glow }, uCellOpacity: { value: S.lineOpacity },
-    uShoreFoam: { value: ratio(FLUID_LOOK[t].foam) }, uWetLine: trial ? trial.wet : WET_LINE[t],
+  const C = CELLS[L.style];
+  useCells(mat, L.style);
+  const uniforms = { uCellTime: WIND, uCellTex: C.tex, uPalTex: PAL_TEX, uWetLine: trial ? trial.wet : WET_LINE[t],
     ...trial && { uTrialLevel: trial.level, uShoreSolid: trial.solid } };
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
     Object.assign(sh.uniforms, uniforms);
     // the cube's own coordinates in texture tiles (the matrix's scale is the part's)
-    const tile = (TILE / CELLS_PER_UNIT).toFixed(4);
+    const tile = (C.tile / C.perUnit).toFixed(4);
     // the swell moves the tops and the sides' upper edges (render/floors.js fluidVolume uvs: v,
     // the rest height), not the bed or the wet bands; with zero uvs (the trial's box) every
     // vertex, undoing the matrix's scale y (it is scaled to its depth)
     const rise = trial ? TRIAL_RISE(S) : 0;
-    sh.vertexShader = 'uniform float uCellTime;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\n' + swellGLSL(S, rise) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal;\nflat varying vec2 vPalRows;\n' + (trial ? 'uniform float uTrialLevel;\n' : '') + 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\n' + swellGLSL(S, rise) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
           mat4 cellM = modelMatrix * batchingMatrix;
@@ -214,23 +215,31 @@ export function cellMaterial(mat, t, trial = null) {
         vCellWave = swellW(cw, uCellTime);
         if (!band && upper) transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);
         vCellP = cw / ${tile}; vCellW = cw; vCellUv = uv; vCellY = cy - ${trial ? 'uTrialLevel' : 'uv.y'};
-        vCellN = normal;
+        vCellN = normal; vPalRows = pal.xy;
       }`);
-    sh.fragmentShader = 'varying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nuniform float uCellTime, uCellGlow, uCellOpacity, uWetLine;\nuniform vec3 uCellDark, uCellLine, uShoreFoam;\nuniform sampler2D uCellTex;\n'
-      + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreSolid;\n' : '') + swellGLSL(S, rise) + `
+    sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
+      + PAL_GLSL + (trial ? 'uniform float uTrialLevel;\nuniform sampler2D uShoreSolid;\n' : '') + swellGLSL(S, rise) + `
       float shoreMin(float a, float b) { float h = max(0.14 - abs(a - b), 0.0) / 0.14; return min(a, b) - h * h * 0.035; }
       // how far p is from the banks round its cell, 9 if none near
       float shoreDist(vec2 p, float code) {
         ${trial ? TRIAL_SHORES : UV_SHORES}
       }
 ` + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-      float cellLine = 0.0, cellBand = 0.0;
+      float cellLine = 0.0, cellBand = 0.0, cellHeat = 0.0;
+      vec3 cellEmissive = palColor(vPalRows, 0.0, 4);
       {
+        vec3 pBody = palColor(vPalRows, 0.0, 0), pDark = palColor(vPalRows, 0.0, 1), pLine = palColor(vPalRows, 0.0, 2), pFoam = palColor(vPalRows, 0.0, 3);
+        vec4 pNum = palParams(vPalRows, 0.0);
         float top = smoothstep(0.6, 0.9, abs(normalize(vCellN).y)), tm = uCellTime;
         // a wet band on a bank: from the water up to the wet line (wobbly), nothing elsewhere
+        // (lava: a thin seam glowing along the bank)
         bool band = vCellUv.x < -0.5 && vCellUv.x > -1.5;
         float bandLevel = swellY(vCellW, tm), bw = vCellW.x + vCellW.y;
-        float bandEdge = uWetLine + 0.008 * sin(bw * 7.3) + 0.005 * sin(bw * 17.0 + 1.3);
+        #if CELL_STYLE == 2
+          float bandEdge = bandLevel + 0.03 + 0.012 * sin(bw * 9.0 + tm * 1.3) + 0.006 * sin(bw * 23.0 - tm * 2.1);
+        #else
+          float bandEdge = uWetLine + 0.008 * sin(bw * 7.3) + 0.005 * sin(bw * 17.0 + 1.3);
+        #endif
         if (band && (vCellY < bandLevel - 0.003 || vCellY > bandEdge)) discard;
         // how far the shore is (wobbling); sides and bands: far
         vec2 w = vCellW;
@@ -242,80 +251,116 @@ export function cellMaterial(mat, t, trial = null) {
         vec2 g = swellG(vCellW, tm) * top;
         float shade = smoothstep(-0.3, 0.3, dot(g, vec2(-0.6, -0.8)));
         vec2 p = vCellP + g * 0.018;
+        #if CELL_STYLE == 2
+          p += vec2(tm * 0.004, tm * 0.003);   // (the crust drifts)
+        #endif
         p += 0.012 * vec2(sin(p.y * 1.7 + tm * 0.21) + sin(p.y * 4.3 - p.x * 1.1), sin(p.x * 1.9 - tm * 0.17) + sin(p.x * 3.7 + p.y * 1.3));
         vec4 c = texture2D(uCellTex, p);
         float aa = fwidth(c.r) * 0.7 + 1e-3, aa2 = fwidth(c.g) * 0.7 + 1e-3;
         // (the cells' gaps thin out and give way to the foam at the shore)
-        float thin = 0.55 * (1.0 - smoothstep(0.15, 0.55, sd));
+        float thin = ${L.style === 'crust' ? '0.15' : '0.55'} * (1.0 - smoothstep(0.15, 0.55, sd));
         cellLine = smoothstep(0.5 + thin - aa, 0.5 + thin + aa, c.r) * top;
-        // inside the cells only (well away from the gaps)
-        float dark = smoothstep(0.5 - aa2, 0.5 + aa2, c.g) * c.b * smoothstep(0.44, 0.32, c.r) * top;
         float wave = mix(1.0, mix(0.82, 1.06, shade) * (1.0 + 0.05 * vCellWave), top);
-        diffuseColor.rgb *= mix(mix(vec3(1.0), uCellDark, dark) * wave, uCellLine, cellLine);
-        diffuseColor.a = mix(diffuseColor.a, uCellOpacity, cellLine);
+        vec3 col;
+        #if CELL_STYLE == 2
+          // the crust: hot towards the cracks and in spots, cooler at the shore; the sides molten
+          float cool = smoothstep(0.08, 0.45, sd);
+          cellHeat = mix(0.85, clamp(c.a * c.a * c.a * 0.8 + c.g * 0.4, 0.0, 1.0) * mix(0.4, 1.0, cool), top);
+          cellLine *= mix(0.6, 1.0, c.b);
+          col = mix(mix(pDark * wave, pBody, cellHeat), pLine, cellLine);
+        #else
+          // inside the cells only (well away from the gaps)
+          float dark = smoothstep(0.5 - aa2, 0.5 + aa2, c.g) * c.b * smoothstep(0.44, 0.32, c.r) * top;
+          col = mix(mix(pBody, pDark, dark) * wave, pLine, cellLine);
+          #if CELL_STYLE == 1
+            // bubbles blowing up and popping
+            float ab = fwidth(c.a) * 0.7 + 1e-3, bub = smoothstep(0.5 - ab, 0.5 + ab, c.a) * top * (1.0 - cellLine);
+            col = mix(col, pLine, bub * 0.85);
+            cellLine = max(cellLine, bub * 0.6);
+          #endif
+        #endif
+        diffuseColor.rgb *= col;
+        diffuseColor.a *= mix(pNum.x, pNum.z, cellLine);
         // the shore: a wobbly band of foam hugging the bank, wider at high water, and a thinner
         // line lapping in at it from further out, broken up, thinning and fading as it comes
         {
           float ad = fwidth(sd) + 1e-4, high = 0.5 + 0.5 * sin(tm * ${(TAU / S.period).toFixed(5)});
           float hug = 0.07 + 0.035 * high, foam = 1.0 - smoothstep(hug - ad, hug + ad, sd);
-          float ph = fract(tm * 0.3 + 0.15 * sin(w.x * 0.8 + w.y * 0.6)), r = mix(0.36, hug + 0.03, ph * ph * (3.0 - 2.0 * ph));
-          float gn = sin(w.x * 2.1 - w.y * 1.7 + tm * 0.5) + 0.5 * sin(w.x * 4.7 + w.y * 3.9) + 0.35, ag = fwidth(gn) + 1e-4;
-          float wid = 0.034 * smoothstep(0.0, 0.15, ph) * (1.0 - ph * 0.7) * smoothstep(-ag, ag, gn);
-          foam = max(foam, 1.0 - smoothstep(wid - ad, wid + ad, abs(sd - r)));
+          #if CELL_STYLE != 2
+            float ph = fract(tm * 0.3 + 0.15 * sin(w.x * 0.8 + w.y * 0.6)), r = mix(0.36, hug + 0.03, ph * ph * (3.0 - 2.0 * ph));
+            float gn = sin(w.x * 2.1 - w.y * 1.7 + tm * 0.5) + 0.5 * sin(w.x * 4.7 + w.y * 3.9) + 0.35, ag = fwidth(gn) + 1e-4;
+            float wid = 0.034 * smoothstep(0.0, 0.15, ph) * (1.0 - ph * 0.7) * smoothstep(-ag, ag, gn);
+            foam = max(foam, 1.0 - smoothstep(wid - ad, wid + ad, abs(sd - r)));
+          #endif
           foam *= top;
-          diffuseColor.rgb = mix(diffuseColor.rgb, diffuse * uShoreFoam, foam);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuse * pFoam, foam);
           diffuseColor.a = mix(diffuseColor.a, 0.97, foam);
           cellLine = max(cellLine, foam);
         }
         if (band) {
-          // dark, paler higher up
           float k = clamp((vCellY - bandLevel) / max(bandEdge - bandLevel, 1e-3), 0.0, 1.0);
-          diffuseColor.rgb = vec3(0.02, 0.035, 0.045);
-          diffuseColor.a = ${S.wet.toFixed(3)} * mix(1.0, 0.6, k);
-          cellLine = 0.0; cellBand = 1.0;
+          #if CELL_STYLE == 2
+            // the seam: hot rock where the lava laps at the bank
+            diffuseColor.rgb = diffuse * mix(pLine, pBody, k);
+            cellLine = 1.0; cellHeat = 1.0;
+          #else
+            // dark (acid: a green stain), paler higher up
+            diffuseColor.rgb = ${L.style === 'sludge' ? 'diffuse * pDark * 0.3' : 'vec3(0.02, 0.035, 0.045)'};
+            diffuseColor.a = ${S.wet.toFixed(3)} * mix(1.0, 0.6, k);
+            cellLine = 0.0; cellBand = 1.0;
+          #endif
         }
+        cellLine *= pNum.y;
       }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      totalEmissiveRadiance = totalEmissiveRadiance * (1.0 - cellBand) + diffuseColor.rgb * cellLine * uCellGlow;`);
+      #if CELL_STYLE == 2
+        totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (0.04 + cellHeat * 0.8) + diffuseColor.rgb * cellLine;
+      #else
+        totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (1.0 - cellBand) + diffuseColor.rgb * cellLine;
+      #endif`);
   };
-  mat.customProgramCacheKey = () => key + (trial ? '-cells-trial' : '-cells');
+  mat.customProgramCacheKey = () => key + '-cells-' + L.style + (trial ? '-trial' : '');
   return mat;
 }
 
 // A fall in the cartoon look (FLUID_LOOK fall.cells): the fluid's cells (watercells.js),
-// stretched long, stream down it as white veins, fainter light streaks faster over them; its
-// sides are eaten away in a wobble with a white rim, a band of foam where it curls over the lip
-// (its lower edge ragged), and it fades in where it leaves the pool. The sheet ripples a little
-// (along its normal). By its uvs (render/parts.js fallSheets), so the proxies' falls flow alike.
-// A chained shader edit (after the cut's inject), colours as ratios like cellMaterial's.
+// stretched long, stream down it as light veins, fainter streaks faster over them; its sides are
+// eaten away in a wobble with a light rim, a band of foam where it curls over the lip (its lower
+// edge ragged), and it fades in where it leaves the pool. The sheet ripples a little (along its
+// normal). By its uvs (render/parts.js fallSheets), so the proxies' falls flow alike. Its
+// colours are its palettes' (fluidpal.js), from the one at its top to the one at its foot (its
+// `pal` attribute). Lava's runs slowly, molten, its veins the hot cracks and its streaks crust.
+// A chained shader edit (after the cut's inject).
 export function fallCellMaterial(mat, t) {
-  const F = FLUID_LOOK[t].fall, S = F.cells;
+  const L = FLUID_LOOK[t], F = L.fall, S = F.cells;
   if (!S) return mat;
-  const base = new THREE.Color(F.base), ratio = hex => new THREE.Color(hex).multiply(new THREE.Color(1 / base.r, 1 / base.g, 1 / base.b));
-  const uniforms = { uCellTime: WIND, uCellTex: CELL_TEX, uFallLine: { value: ratio(S.line) }, uFallLight: { value: ratio(S.light) },
-    uFallGlow: { value: S.glow } };
-  const T = (TILE / CELLS_PER_UNIT).toFixed(4), W = FALL_WIDTH.toFixed(3), V = '0.7';
+  const C = CELLS[L.style];
+  useCells(mat, L.style);
+  const uniforms = { uCellTime: WIND, uCellTex: C.tex, uPalTex: PAL_TEX, uFallGlow: { value: S.glow } };
+  const T = (C.tile / C.perUnit).toFixed(4), W = FALL_WIDTH.toFixed(3), V = '0.7';
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
     Object.assign(sh.uniforms, uniforms);
     // where it leaves the pool and curls over the lip it rises and falls with the pool (swellGLSL)
-    const pool = FLUID_LOOK[t].cells;
-    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vFallUv;\n' + (pool ? swellGLSL(pool) : '') + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    const pool = L.cells;
+    sh.vertexShader = 'uniform float uCellTime;\nattribute vec4 pal;\nflat varying vec2 vPalRows;\nvarying float vPalK;\nvarying vec2 vFallUv;\n' + (pool ? swellGLSL(pool) : '') + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
           float fallS = length((modelMatrix * batchingMatrix)[0].xyz);
         #else
           float fallS = length(modelMatrix[0].xyz);
         #endif
-        vFallUv = uv;
+        vFallUv = uv; vPalRows = pal.xy; vPalK = pal.z / 1000.0;
         float s = uv.y / ${V};
         transformed += normal * 0.022 * sin(s * 2.6 - uCellTime * 9.0 + uv.x * 2.0) * smoothstep(0.3, 0.9, s) / fallS;
         ${pool ? 'transformed.y += swellY(position.xz * fallS, uCellTime) * (1.0 - smoothstep(0.25, 0.75, s)) / fallS;' : ''}
       }`);
-    sh.fragmentShader = 'uniform float uCellTime, uFallGlow;\nuniform vec3 uFallLine, uFallLight;\nuniform sampler2D uCellTex;\nvarying vec2 vFallUv;\n'
+    sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nuniform float uCellTime, uFallGlow;\nuniform sampler2D uCellTex;\nflat varying vec2 vPalRows;\nvarying float vPalK;\nvarying vec2 vFallUv;\n' + PAL_GLSL
       + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       float fallWhite = 0.0;
+      vec3 fallEmissive = palColor(vPalRows, vPalK, 4);
       {
+        vec3 pBase = palColor(vPalRows, vPalK, 5), pLine = palColor(vPalRows, vPalK, 6), pLight = palColor(vPalRows, vPalK, 7);
         float u = vFallUv.x, s = vFallUv.y / ${V}, tm = uCellTime;
         // the sides, eaten away in a wobble
         float e = min(u, 1.0 - u) * ${W}, side = u < 0.5 ? 0.0 : 1.7;
@@ -331,12 +376,21 @@ export function fallCellMaterial(mat, t) {
         float lipEdge = 0.62 + 0.07 * sin(u * 17.0 + tm * 3.0) + 0.04 * sin(u * 31.0 - tm * 5.0), al = fwidth(s) + 1e-4;
         float lip = smoothstep(0.18, 0.28, s) * (1.0 - smoothstep(lipEdge - al, lipEdge + al, s));
         fallWhite = max(max(vein, rim), lip);
-        diffuseColor.rgb *= mix(mix(vec3(1.0), uFallLight, streak * 0.7), uFallLine, fallWhite);
-        diffuseColor.a = mix(diffuseColor.a, 0.95, fallWhite) * smoothstep(0.0, 0.22, s);
+        #if CELL_STYLE == 2
+          // molten rock with flakes of crust riding down it, the cracks glowing
+          streak = smoothstep(0.5 - a2, 0.5 + a2, c2.g);
+          fallWhite = max(vein, rim * 0.6);
+          diffuseColor.rgb *= mix(mix(pBase, pLight, streak * 0.75), pLine, fallWhite);
+        #else
+          diffuseColor.rgb *= mix(mix(pBase, pLight, streak * 0.7), pLine, fallWhite);
+        #endif
+        vec4 pNum = palParams(vPalRows, vPalK);
+        diffuseColor.a *= mix(pNum.w, 0.95, fallWhite) * smoothstep(0.0, 0.22, s);
+        fallEmissive *= ${L.style === 'crust' ? '1.0 - streak * 0.7' : '1.0'};
       }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      totalEmissiveRadiance += diffuseColor.rgb * fallWhite * uFallGlow;`);
+      totalEmissiveRadiance = totalEmissiveRadiance * fallEmissive + diffuseColor.rgb * fallWhite * uFallGlow;`);
   };
-  mat.customProgramCacheKey = () => key + '-fallcells';
+  mat.customProgramCacheKey = () => key + '-fallcells-' + L.style;
   return mat;
 }
 
@@ -350,25 +404,4 @@ export function partMaterial(part, detail) {
   if (part.kind === 'solid') return solidMaterial(detail);
   if (part.kind === 'fluid') return fluidMaterial(part.fluid, detail);
   return fallMaterial(part.fluid, detail);
-}
-
-// streaky textures for falling fluids (offset scrolled every frame, scrollFalls)
-function makeFallTex(base, streak) {
-  const c = document.createElement('canvas'); c.width = 32; c.height = 64;
-  const g = c.getContext('2d'), R = mulberry32(7);
-  g.fillStyle = base; g.fillRect(0, 0, 32, 64);
-  g.fillStyle = streak;
-  for (let i = 0; i < 46; i++) {
-    g.globalAlpha = 0.2 + R() * 0.55;
-    const x = Math.floor(R() * 32), y = Math.floor(R() * 64), w = 1 + Math.floor(R() * 2), h = 6 + Math.floor(R() * 22);
-    g.fillRect(x, y, w, h); g.fillRect(x, y - 64, w, h);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-export const fallTex = Object.fromEntries(Object.entries(FLUID_LOOK).map(([t, L]) => [t, makeFallTex(L.fall.base, L.fall.streak)]));
-// shared by every cube and proxy: their falls stream at once
-export function scrollFalls(dt) {
-  for (const [t, tex] of Object.entries(fallTex)) tex.offset.y -= dt * FLUID_LOOK[t].fall.speed;   // (v runs down the sheet)
 }

@@ -15,10 +15,11 @@ import { gradient } from './palette.js';
 import { cutMaterial, setTrialWaterCap, WATER_SOLID } from './section.js';
 import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
+import { palRow } from '../themes/fluids.js';
 import { soft, glow as glowLayer, rand, emit } from './particles.js';
 import { props } from './props.js';
 import { TRIAL_PROPS } from './propplace.js';
-import { flameSet } from './flames.js';
+import { flameSet, douseFlames } from './flames.js';
 import { BODY } from './fonts.js';
 
 const glow = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
@@ -359,17 +360,20 @@ export function buildTrialView(m, group) {
     // by them, materials.js cellMaterial; its uvs zero: all of it rises and falls). Its shores are
     // the cells solid at its level, and the room's walls stay wet where it has just been (wetBands,
     // with the same material: its level and wet line in `waterTide`, tickTrialView).
+    // (its colours: the cube's of its fluid, its depth's running one: cubegen/fluidbodies.js)
+    const pal = m.fluidRows?.[fluid] ?? palRow(m.depth ?? 0, fluid, 0);
     const box = new THREE.BoxGeometry(N - 0.04, 1, N - 0.04, N * 4, 1, N * 4).translate(N / 2, 0, N / 2);
     box.getAttribute('uv').array.fill(0);
+    box.setAttribute('pal', palAttribute(box, pal));
     const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, solid: WATER_SOLID } : null;
     const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
     water.material.side = THREE.DoubleSide;
-    water.userData.fluid = fluid; water.visible = false; water.renderOrder = 5;
+    water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
     group.add(water);
     view.water = water;
     if (tide) {
       view.waterTide = tide;
-      view.wetBands = new THREE.Mesh(wetBands(m), water.material);
+      view.wetBands = new THREE.Mesh(wetBands(m, pal), water.material);
       view.wetBands.visible = false; view.wetBands.renderOrder = 5;
       group.add(view.wetBands);
     }
@@ -407,7 +411,13 @@ export function setTrialFog(world, y) {
 // The walls of a trial's room, for its fluid's wet bands (materials.js cellMaterial, trial): a
 // strip a little in front of every bit of wall a column shows to its neighbour, all the way up
 // (the shader draws only between the fluid's surface and its wet line)
-function wetBands(m) {
+// every vertex of a geometry in palette row `row` (materials.js cellMaterial's `pal`)
+function palAttribute(geo, row) {
+  const n = geo.getAttribute('position').count, a = new Uint16Array(n * 4);
+  for (let i = 0; i < n; i++) { a[i * 4] = row; a[i * 4 + 1] = row; }
+  return new THREE.BufferAttribute(a, 4);
+}
+function wetBands(m, pal) {
   const b = new GeoBuilder({ uvs: true }), white = new THREE.Color(1, 1, 1);
   b.uvNow = [-1, 0];
   for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) for (let d = 0; d < 4; d++) {
@@ -429,6 +439,7 @@ function wetBands(m) {
   geo.setAttribute('position', new THREE.BufferAttribute(a.pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(a.nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(a.uv, 2));
+  geo.setAttribute('pal', palAttribute(geo, pal));
   return geo;
 }
 
@@ -442,8 +453,10 @@ export function setTrialWater(world, y, phase) {
   if (!v.water) return;
   v.water.visible = y != null && y > -BASE + 0.01;
   if (v.wetBands) v.wetBands.visible = v.water.visible;
+  // the fires under it go out (the props' and the trial's own; render/flames.js)
+  douseFlames(world.group, v.water.visible ? y : null, v.water.userData.fluid);
   if (!v.water.visible) { v.wetAt = null; return; }
-  setTrialWaterCap(y, v.water.userData.fluid);
+  setTrialWaterCap(y, v.water.userData.fluid, v.water.userData.pal);
   if (v.waterTide) v.waterTide.level.value = y;
   const h = y + BASE;
   v.water.scale.y = h; v.water.position.y = -BASE + h / 2;

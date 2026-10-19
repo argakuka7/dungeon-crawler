@@ -28,7 +28,7 @@ export function spoutGround(ctx) {
       const c1 = edgeCell(d, s.pos, 1), [dx, dz] = DIRS[d];   // DIRS[d] points out through the face
       const [pc, S] = pool(ctx, c1 % N + 0.5 - dx * 0.5, ((c1 / N) | 0) + 0.5 - dz * 0.5, 1.6, s.type);
       pc.forEach(c => sky.add(c));
-      sp.fall = { c: c1, d: d ^ 1, top: ctx.B[s.layer] - 1, bot: S, type: s.type, layer: 0 };
+      sp.fall = { c: c1, d: d ^ 1, top: ctx.B[s.layer] - 1, bot: S, type: s.type, layer: 0, spout: true };   // (spout: from the cube beside)
     }
     ctx.spouts.push(sp);
   });

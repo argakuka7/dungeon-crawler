@@ -23,6 +23,7 @@ import { player, state, view } from './state.js';
 import { resetEnemies } from './enemies.js';
 import { resetCut } from './cut.js';
 import { fadeOut, fadeIn } from './hud.js';
+import { setFluidPalettes } from '../render/fluidpal.js';
 
 export const SWAP = 10;      // s each cube shows
 const FADE_MS = 380;         // the fade between two (game/hud.js fadeOut)
@@ -62,6 +63,7 @@ export function startShowcase(focus = null) {
     if (prev?.cubes && state.cubes === prev.cubes) { prev.cubes.dispose(); state.cubes = null; }
     const cubes = new WorldClient(focus ? focus.seed : (Math.random() * 2 ** 32) >>> 0, { load: cubeAssets, warm: warmCube });
     s.cubes = cubes;
+    setFluidPalettes(cubes.seed, cubes.layout.themes);
     state.cubes = cubes; state.run = createRun(); state.openedFaces.clear();
     if (focus) {
       for (const id of focus.run.defeated) state.run.defeated.add(id);

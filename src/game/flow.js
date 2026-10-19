@@ -38,6 +38,7 @@ import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
 import { depthOf } from '../themes/depth.js';
 import { enterTrial, restartTrial, refreshTrialView, sealedIn, warnTrials } from './trials.js';
+import { setFluidPalettes } from '../render/fluidpal.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -337,6 +338,11 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
     themes: state.dev && params.get('theme') ? params.get('theme').split(',') : [],
     bridge: state.dev && params.get('bridge'), ladder: state.dev && params.get('ladder'),
     trial: state.dev && params.get('trial') || null });   // ?trial=flood: every depth gets one (world/trials.js)
+  // the colours of its fluids (themes/fluids.js; dev: ?palette=classic the old look everywhere,
+  // ?palette=<seed> another world's)
+  const pal = state.dev && params.get('palette');
+  if (pal === 'classic') setFluidPalettes();
+  else setFluidPalettes(pal && Number.isFinite(+pal) ? +pal >>> 0 : seed, state.cubes.layout.themes);
   state.openedFaces.clear(); state.boundaryLock = -1; state.fallFrom = null;
   state.transitioning = true;
   cancelSword(true);
