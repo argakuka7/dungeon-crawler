@@ -631,6 +631,62 @@ export const CORAL_SQUIRTLE = enemyKind(SQUIRTLE, {
   colors: paints({ body: 'crimson.mid@+10', belly: 'ochre.pale' }), ichor: ['#ffc0a8', '#b0402a'],
   mods: { hp: 1.5, damage: 1.4, speed: 1.1 },
 });
+// Every species comes in at least three ordinary kinds. The fire species burn hotter the deeper
+// they live: orange, then yellow, then blue.
+export const BLAZE_FACE = enemyKind(FIREFACE, {
+  type: 'blazeface', label: 'Blaze-face', reason: 'Scorched by a Blaze-face!',
+  colors: paints({ flame: 'ochre.glow', eyes: 'eyes.bone' }), light: '#ffc23a', sparks: ['#fff3b0', '#ffd84a', '#ffa82a'],
+  ichor: ['#fff0a0', '#d08a1a'], mods: { hp: 1.25, damage: 1.2 },
+});
+export const WISP_FACE = enemyKind(FIREFACE, {
+  type: 'wispface', label: 'Wisp-face', reason: 'Scorched by a Wisp-face!',
+  colors: paints({ flame: 'azure.glow', eyes: 'eyes.bone' }), light: '#5a8cff', sparks: ['#e4f0ff', '#8ab8ff', '#4a6cff'],
+  ichor: ['#c8dcff', '#3a4ab0'], mods: { hp: 1.5, damage: 1.45, speed: 1.1 },
+});
+export const ASH_CAT = enemyKind(FIRECAT, {
+  type: 'ashcat', label: 'Ash cat', reason: 'Bitten by an Ash cat!',
+  colors: paints({ fur: 'stone.mid', flame: 'crimson.glow', eyes: 'eyes.ember' }), light: '#ff4a30', sparks: ['#ffb4a0', '#ff5a3a', '#c02a1a'],
+  ichor: ['#d8d0c8', '#5a524c'], mods: { hp: 1.2, damage: 1.15 },
+});
+export const VOID_CAT = enemyKind(FIRECAT, {
+  type: 'voidcat', label: 'Void cat', reason: 'Bitten by a Void cat!',
+  colors: paints({ fur: 'ink.dark', flame: 'azure.glow', eyes: 'eyes.ice' }), light: '#5a8cff', sparks: ['#e4f0ff', '#8ab8ff', '#4a6cff'],
+  ichor: ['#8ab8ff', '#1a1a3a'], mods: { hp: 1.5, damage: 1.45, speed: 1.1 },
+});
+// the Shraps of the crystal mines: its ice head is amethyst, and so is what it throws (it still chills)
+export const AMETHYST_SHRAPS = enemyKind(SHRAPS, {
+  type: 'amethystshraps', label: 'Amethyst shraps', reason: 'Pinched by an Amethyst shraps!',
+  colors: paints({ shell: 'violet.deep', ice: 'violet.light', eyes: 'eyes.sun' }), light: '#b07aff', sparks: ['#ffffff', '#e2ccff', '#a87aff'],
+  attacks: [{ ...SHRAPS_PINCH, reason: 'Pinched by an Amethyst shraps!' }, { ...SHRAPS_THROW, reason: 'Hit by an amethyst!' }],
+  ichor: ['#d6b8ff', '#5a2ca0'], mods: { hp: 1.3, damage: 1.25 },
+});
+// the Spicies: a hotter one in the honey hive, a poisonous one in the nests
+export const HABANERO = enemyKind(SPICY, {
+  type: 'habanero', label: 'Habanero', reason: 'Blasted by a Habanero!',
+  colors: paints({ body: 'ember.mid', glow: 'ochre.glow', wheels: 'ink.dark', eyes: 'eyes.sun' }), beamColor: '#ff8a2a',
+  ichor: ['#ffb070', '#a0400f'], mods: { hp: 1.25, damage: 1.3 },
+});
+export const NIGHTSHADE = enemyKind(SPICY, {
+  type: 'nightshade', label: 'Nightshade', reason: 'Blasted by a Nightshade!', toxin: { time: 4, ticks: 4, share: 0.5 },
+  colors: paints({ body: 'violet.deep', glow: 'violet.glow', wheels: 'ink.dark', eyes: 'eyes.sun' }), beamColor: '#b46aff',
+  ichor: ['#d6a8ff', '#4a1a80'], mods: { hp: 1.4, damage: 1.35 },
+});
+// the Wolks: a dust cloud over the badlands and the canyon, a dark storm cloud with violet lightning
+export const DUST_WOLK = enemyKind(WOLK, {
+  type: 'dustwolk', label: 'Dust wolk', reason: 'Struck by a Dust wolk!',
+  colors: paints({ body: 'ochre.pale', limbs: 'ochre.deep' }), gloom: { color: paint('stone.deep'), parts: ['body'] },
+  ichor: ['#efe0b8', '#8a7040'], mods: { hp: 1.2, damage: 1.15 },
+});
+export const STORM_WOLK = enemyKind(WOLK, {
+  type: 'stormwolk', label: 'Storm wolk', reason: 'Struck by a Storm wolk!',
+  colors: paints({ body: 'ink.mid', limbs: 'violet.deep' }), gloom: { color: paint('ink.dark'), parts: ['body'] }, beamColor: '#e0ccff',
+  ichor: ['#c4c4d4', '#3a3a4a'], mods: { hp: 1.3, damage: 1.3, speed: 1.1 },
+});
+export const MOSS_SQUIRTLE = enemyKind(SQUIRTLE, {
+  type: 'mosssquirtle', label: 'Moss squirtle', reason: 'Splashed by a Moss squirtle!',
+  colors: paints({ body: 'moss.mid', belly: 'ochre.pale' }), ichor: ['#c8f0a0', '#4f8f2a'],
+  mods: { hp: 1.2, damage: 1.15 },
+});
 // from half his health on: a giant, six cells tall (the model at `size`), who stomps; he walks
 // over the hills on the floors like any enemy, but keeps clear of the bank (game/squarlo.js)
 export const SQUARLO_GIANT = enemyKind(SQUARLO, {
@@ -750,7 +806,8 @@ export const TOT_STUNDER = enemyKind(STUNDER, {
 });
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
-  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
+  BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
+  NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
   TIDE_SQUIRTLE].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,

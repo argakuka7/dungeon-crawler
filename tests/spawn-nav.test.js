@@ -146,13 +146,13 @@ test('each depth draws its species from its own roster, within the counts and th
 test('the surface rosters: snakes, a rare Stunder and a lonely Wolk first, then a few spiders, then a lot', () => {
   const share = (depth, type) => { let n = 0; for (let s = 0; s < 400; s++) n += population(at(s, depth)).has(type); return n / 400; };
   const mean = (depth, type) => { let n = 0; for (let s = 0; s < 400; s++) n += population(at(s, depth)).get(type)?.count ?? 0; return n / 400; };
-  assert.deepEqual(DEPTH_SPAWNS[1].roster.map(e => e.type), ['snake', 'stunder', 'wolk']);
+  assert.deepEqual(DEPTH_SPAWNS[1].roster.map(e => e.type), ['snake', 'stunder', 'wolk', 'squirtle']);
   assert.equal(share(1, 'snake'), 1);
   assert.ok(share(1, 'stunder') > 0.1 && share(1, 'stunder') < 0.35);
   // the Wolk lives under the open sky only (the meadows, the snowy peaks, the canyons), alone or in twos
   assert.ok(share(1, 'wolk') > 0.1 && share(1, 'wolk') < 0.35);
   assert.ok(share(3, 'wolk') > share(1, 'wolk'));
-  assert.deepEqual(DEPTH_SPAWNS.flatMap((r, d) => r.roster.some(e => e.type === 'wolk') ? [d] : []), [1, 2, 3, 5, 6]);
+  assert.deepEqual(DEPTH_SPAWNS.flatMap((r, d) => r.roster.some(e => e.type === 'wolk') ? [d] : []), [1, 2, 3, 4, 5, 6]);
   assert.ok(Math.max(...DEPTH_SPAWNS.map(r => r.roster.find(e => e.type === 'wolk')?.hi ?? 0)) <= 2);
   assert.ok(mean(2, 'spider') > 0.5 && mean(2, 'spider') < 3);
   assert.equal(share(3, 'spider'), 1);

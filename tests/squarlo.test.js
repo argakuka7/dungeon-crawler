@@ -186,7 +186,7 @@ test('Squirtles burrow (nothing touches one under the floor) and live in the wat
   assert.ok(TIDE_SQUIRTLE.minion && TIDE_SQUIRTLE.coins[1] === 0);
   assert.ok(CORAL_SQUIRTLE.hp > SQUIRTLE.hp);
   const where = DEPTH_SPAWNS.flatMap((r, d) => r.roster.filter(e => e.type === 'squirtle').map(e => [d, e.where]));
-  assert.deepEqual(where, [[2, ['lagoon']], [9, ['grotto']], [10, ['grotto']], [13, ['cenote']]]);
+  assert.deepEqual(where, [[1, ['lagoon']], [2, ['lagoon']], [9, ['grotto']], [10, ['grotto']], [13, ['cenote']]]);
   for (let seed = 0; seed < 60; seed++) {
     assert.ok(!population({ seed, depth: 2, biome: 'meadow' }).has('squirtle'));
   }

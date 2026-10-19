@@ -46,4 +46,7 @@ test('the kinds of a species are told apart at a glance', () => {
     const role = Object.keys(a.parts)[0];
     assert.ok(dE(a.colors[role], b.colors[role]) >= 0.08, `${a.type} vs ${b.type}`);
   }
+  // and every species but the bosses' own minions comes in at least three ordinary kinds
+  for (const [s, list] of Object.entries(species)) if (list.some(k => !k.minion))
+    assert.ok(list.filter(k => !k.minion).length >= 3, s);
 });
