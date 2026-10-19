@@ -211,7 +211,7 @@
     "src/world/heights.js#planHeights": "16c2be39",
     "src/world/heights.js#planSetPiece": "c8d3ac79",
     "src/world/heights.js#planSlots": "b6eedccd",
-    "src/world/layout.js#build": "f1498a09",
+    "src/world/layout.js#build": "cdd81340",
     "src/world/layout.js#MAX_ROUTE_ROOMS": "6530660c",
     "src/world/layout.js#MIN_ROUTE_ROOMS": "6530660c",
     "src/world/layout.js#route": "55722423",

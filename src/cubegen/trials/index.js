@@ -18,7 +18,7 @@ import { shapeSlide, puzzleGoal, slideRoute } from './slide.js';
 import { shapeSunken, sunkenGoal } from './sunken.js';
 import { shapeGrid, gridRecord } from './grid.js';
 import { RIM } from './deck.js';
-import { shapeTimed, timedGoal } from './timed.js';
+import { shapeTimed, timedGoal, timedRoute } from './timed.js';
 import { shapeMiasma, miasmaGoal } from './miasma.js';
 import { shapeCold, coldGoal, coldRoute } from './cold.js';
 import { shapeStorm, stormGoal, stormRoute } from './storm.js';
@@ -41,7 +41,7 @@ const KINDS = {
   braziers: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   crates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   runes: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
-  timedgate: { shape: shapeTimed, goal: timedGoal, costs: null, finish: finishTimed },
+  timedgate: { shape: shapeTimed, goal: timedGoal, costs: timedRoute, finish: finishTimed },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -408,21 +408,22 @@ function finishSlide(ctx, pz, id) {
 
 // --- the timed gate --------------------------------------------------------------------------------
 
-// The lever on the perch opens the exit's seal for T s: the way back down to the exit at RUN_SPEED
-// x TIMED.factor + TIMED.extra (tighter from depth 10); 4-22 s of running, or the room is retried.
-// Its path is the checked one (no props in its way, nobody spawning on it).
-export const TIMED = { factor: 1.35, extra: 1.5, deepFactor: 1.2, deepExtra: 1, least: 4, most: 22 };
+// The lever on the entry's apron opens the exit's seal for T s: the run along the causeway to the
+// exit at RUN_SPEED x TIMED.factor + TIMED.extra (tighter from depth 10); 6-22 s of running, or the
+// room is retried. Its path is the checked one (no props in its way, nobody spawning on it).
+export const TIMED = { factor: 1.15, extra: 0.5, deepFactor: 1.08, deepExtra: 0.3, least: 6, most: 22 };
 function finishTimed(ctx, t, out) {
-  const perch = t.goal, exit = ctx.portalFloors[ctx.portals.findIndex(p => p.dir === ctx.spec.trial.exit)];
+  const start = t.goal, exit = ctx.portalFloors[ctx.portals.findIndex(p => p.dir === ctx.spec.trial.exit)];
   if (!exit) return null;
-  const arr = arrivals(ctx, perch, RUN_SPEED), path = pathOf(arr, exit);
+  const arr = arrivals(ctx, start, RUN_SPEED), path = pathOf(arr, exit);
   if (!path) return null;
   const run = arr.time.get(exit.id);
   if (run < TIMED.least || run > TIMED.most) return null;
   const deep = ctx.spec.depth >= 10, T = Math.ceil((run * (deep ? TIMED.deepFactor : TIMED.factor) + (deep ? TIMED.deepExtra : TIMED.extra)) * 2) / 2;
-  const y = floorY(perch, 0.5, 0.5), pad = { x: exit.x + 0.5, y: floorY(exit, 0.5, 0.5), z: exit.z + 0.5 };
-  const lever = { id: 'p0:lever', type: 'lever', x: perch.x + 0.5, y, z: perch.z + 0.5, puzzle: 0, yaw: 0 };
-  return { puzzles: [{ id: 'p0', kind: 'timedgate', index: 0, T, pad, parts: [lever], check: { run: Math.round(run * 100) / 100 } }],
+  const y = floorY(start, 0.5, 0.5), pad = { x: exit.x + 0.5, y: floorY(exit, 0.5, 0.5), z: exit.z + 0.5 };
+  const lever = { id: 'p0:lever', type: 'lever', x: start.x + 0.5, y, z: start.z + 0.5, puzzle: 0, yaw: 0 };
+  for (const c of t.crust.keys()) for (const f of ctx.cols[c]) f.noSpawn = true;
+  return { puzzles: [{ id: 'p0', kind: 'timedgate', index: 0, T, pad, parts: [lever], check: { run: Math.round(run * 100) / 100, gaps: t.gaps.length, branches: t.branches } }],
     parts: [lever], start: {}, check: { slack: Math.round((T - run) * 100) / 100, path: checkPath(path, arr, () => null) } };
 }
 

@@ -39,7 +39,7 @@ function roomFits(kind, seed, k, entry, exit, depth) {
   }
   // (the cold: its ridges across the way, from one face to the opposite one)
   if (kind === 'cold') return exit != null && (entry ^ 1) === exit;
-  if (kind !== 'collapse' || exit == null || (entry ^ 1) === exit || entry === (exit ^ 1)) return true;
+  if ((kind !== 'collapse' && kind !== 'timedgate') || exit == null || (entry ^ 1) === exit || entry === (exit ^ 1)) return true;
   const [a, b] = [at(entry, 3), at(exit, 3)];
   return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) >= 7;
 }
@@ -155,8 +155,9 @@ function add(plan, t, cell, d, theme) {
 
 // Part two (after the branches and the annex): the puzzle slots.
 //   ctx: { spine, K, blocked, pinned, branches: [{ cell, parent }] (one-room branches, not
-//          islands nor the annex), busy(key) (a room no puzzle may take: the annex's parent) }
-export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches, busy = () => false }) {
+//          islands nor the annex), busy(key) (a room no puzzle may take: the annex's parent),
+//          sides(key) (how many side portals a room has: the timed gate's causeway wants two) }
+export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches, busy = () => false, sides = () => 2 }) {
   const { R, force, d, theme } = plan;
   if (d < 1 || d >= MAX_DEPTH) return plan;
   const puzzles = kindsFor('puzzle', d, theme, force);
@@ -164,7 +165,13 @@ export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches
   for (const [slot, chance] of PUZZLE_CHANCES.entries()) {
     const roll = R(), kindRoll = R(), roomRoll = R();
     if (!puzzles.length || !(force ? isPuzzle(force.kind) : roll < chance)) continue;
-    const kind = weighted(puzzles, kindRoll);
+    const fit = k => routeRooms(plan, spine, K, c => blocked(c) || busy(K(c)), pinned, guarded)
+      .filter(i => roomFits(k, plan.seed, K(spine[i]), direction(spine[i], spine[i - 1]), direction(spine[i], spine[i + 1]), d)
+        && (k !== 'timedgate' || sides(K(spine[i])) === 2));
+    let kind = weighted(puzzles, kindRoll);
+    // (the timed gate wants a room on the route its causeway fits: where none does, another kind)
+    if (kind === 'timedgate' && !force && !fit(kind).length) kind = weighted(puzzles.filter(([k]) => k !== 'timedgate'), kindRoll);
+    if (!kind) continue;
     // a forced puzzle: the first slot in a branch, the second on the route (both get tried)
     // (the timed gate: on the route only, its gate the exit)
     const vaults = force && slot === 1 || kind === 'timedgate' ? [] : branches.filter(b => !blocked(b.cell) && !pinned(b.cell) && !nb(b.cell).some(pinned) && !plan.clues?.has(K(b.cell))
@@ -175,7 +182,7 @@ export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches
       if (kind === 'runes') clueFor(plan, t, spine, K, blocked, spine.findIndex(c => K(c) === t.from) + 1);
       continue;
     }
-    const rooms = routeRooms(plan, spine, K, c => blocked(c) || busy(K(c)), pinned, guarded);
+    const rooms = fit(kind);
     if (!rooms.length) continue;
     const i = rooms[Math.floor(roomRoll * rooms.length)];
     const t = add(plan, { kind, role: 'route', key: K(spine[i]), from: K(spine[i - 1]), fromDir: direction(spine[i - 1], spine[i]),

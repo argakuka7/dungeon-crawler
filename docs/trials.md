@@ -39,7 +39,7 @@ above, and every puzzle you solve drains it one stage further.
 | `mirror` | puzzle | no | no | the beam hits the receiver | – | mines, forge, ruins, abyss, highlands |
 | `braziers` | puzzle | no | no | every brazier lit | – | any |
 | `crates` | puzzle | no | no | a crate on every plate | – | any |
-| `timedgate` | puzzle | no | no | through the gate before it shuts | – | any |
+| `timedgate` | puzzle | no | no | run the causeway through the gate before it shuts | – | any |
 | `runes` | puzzle | no | no | press the runestones in the order carved elsewhere | – | ruins, highlands, ossuary, karst, abyss |
 
 All numbers below are starting values, to be tuned in play.
@@ -524,20 +524,23 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 
 ### `timedgate`: Timed gate
 
-- **Field:** a lever and a gate apart, the way between them a short run of jumps, a ladder, a
-  narrow ledge. From depth 10, two gates in a row on one lever, the nearer one shutting first.
-- **Rules:** the lever opens the gate for `T` s. Missing it means going back and pulling again.
-- **Generator:** `T = route time at RUN_SPEED × 1.35 + 1.5 s`. The route search must find no
-  shorter way than the designed one (no trivial short cut).
+- **Field:** the crumbling floor's room with a floor that holds: a winding causeway over a basin of
+  the depth's fluid, walled in, with a dead end or two and now and then a gap to jump, from the
+  entry's apron to the exit's. The lever stands in the middle of the entry's apron; the gate is
+  the exit's seal.
+- **Rules:** the lever opens the gate for `T` s. Missing it means going back and pulling again; a
+  slip into the fluid is an ordinary death. Walk the causeway first to learn it, then run it.
+- **Generator:** `T = route time at RUN_SPEED × 1.15 + 0.5 s` (× 1.08 + 0.3 s from depth 10): a run
+  along the right way with hardly a wrong step. Nothing is built in the room (the causeway is the
+  only way, `collapseRoute`), so nothing shorter exists.
 - **Themes:** any.
-- **As built** (`cubegen/trials/timed.js`, `index.js finishTimed`): on the route only (a branch's
-  reward site is placed after the trial, so the way to it cannot be timed); the gate is the exit's
-  seal. The lever stands on a perch of rock (2x2, three metres over the ground round it) at least
-  eight cells from the exit's pad; the route search builds the way up. The way back is the
-  fastest at RUN_SPEED to the exit's floor (4-22 s, else retried; so nothing shorter exists), T
-  from it, rounded up to half a second. From depth 10 it is tighter (x 1.2 + 1 s) instead of two
-  gates in a row: an open room has no corridor a second gate could close. Reaching the exit's pad
-  while open passes it for good; a pull while open starts the time again.
+- **As built** (`cubegen/trials/timed.js` on `collapse.js`, `index.js finishTimed`): on the route only
+  (a branch's reward site is placed after the trial, so the way to it cannot be timed), in a room
+  whose only side portals are its way in and out (`world/trials.js planPuzzles` asks the layout's
+  `sides`; where no room fits, the slot draws another kind) and whose aprons fit (`roomFits`, as the
+  collapse's). Its faces get rock walls like the collapse's (`world/profile.js`). The run is 6-22 s,
+  else the room is retried. Reaching the exit's pad while open passes it for good; a pull while open
+  starts the time again.
 
 ### `runes`: Rune order
 

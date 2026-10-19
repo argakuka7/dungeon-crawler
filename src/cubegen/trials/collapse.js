@@ -180,7 +180,7 @@ function build(ctx, entry, exit, level, path, o, branches) {
   });
   ctx.trialKeep = new Set([...crust.keys(), ...entry.cells, ...exit.cells]);
   ctx.noFence = new Set(crust.keys());
-  Object.assign(ctx.trialBuild, { failed: false, entryApron: entry.cells, exitApron: exit.cells, exitCentre: exit.centre,
+  Object.assign(ctx.trialBuild, { failed: false, entryApron: entry.cells, exitApron: exit.cells, entryCentre: entry.centre, exitCentre: exit.centre,
     crust, gaps: [...gaps], branches: branches.length, blocks: n, keep: [...ctx.trialKeep] });
 }
 

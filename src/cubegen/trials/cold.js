@@ -70,7 +70,7 @@ export function shapeCold(ctx) {
 export function coldRoute(ctx) {
   const movesFrom = ctx.movesFrom, on = f => !!ctx.trialBuild?.ridgeSet?.has(f.c);   // (a stair's landing up there too)
   ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => !on(f) && !on(m.to) && (m.kind === 'walk' || m.kind === 'drop'
-    || !m.cells?.some(c => ctx.trialBuild.ridgeSet.has(c))));
+    || !m.cells?.some(c => ctx.trialBuild?.ridgeSet?.has(c))));
 }
 
 export const coldGoal = ctx => ctx.trialBuild.failed ? null : ctx.layerFloor(ctx.trialBuild.fire.c, 0);

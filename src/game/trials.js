@@ -37,7 +37,7 @@ const PUZZLE_HINT = {
   mirror: 'Turn the mirrors till the beam lights the receiver',
   braziers: 'Light every brazier: each one lights or puts out those it is linked to',
   crates: 'Push a crate onto every plate (the lever by the way in puts them back)',
-  timedgate: 'Pull the lever on the rock, then run for the exit before it shuts',
+  timedgate: 'Pull the lever, then run the causeway to the exit before the gate shuts',
   runes: 'Press the runestones in the order the carved tablet tells',
 };
 // what the banner says as an event arms

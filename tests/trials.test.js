@@ -716,16 +716,20 @@ test('every crates room generates: solvable in its band from the way in, no crat
 
 // --- the timed gate ----------------------------------------------------------------------------
 
-test('every timed gate room generates as proved', () => {
-  let n = 0;
+test('every timed gate room: a causeway over the fluid with gaps to jump, the run along it tight', () => {
+  let n = 0, gaps = 0;
   for (const { seed, d, m } of puzzlesOf('timedgate', [0, 1])) {
     n++;
-    const pz = m.trial.puzzles[0];
+    const pz = m.trial.puzzles[0], deep = d >= 10;
     assert.equal(m.trial.role, 'route');
-    assert.ok(pz.check.run >= 4 && pz.T > pz.check.run * (d >= 10 ? 1.2 : 1.35), `${seed}/${d}: ${pz.check.run} s, open ${pz.T}`);
-    assert.ok(m.trial.check.path.length > 2);
+    assert.ok(pz.check.run >= 6 && pz.T >= pz.check.run * (deep ? 1.08 : 1.15) && pz.T <= pz.check.run * (deep ? 1.08 : 1.15) + 1.01, `${seed}/${d}: ${pz.check.run} s, open ${pz.T}`);
+    assert.ok(m.trial.check.path.length > 15, `${seed}/${d}: ${m.trial.check.path.length} cells`);
+    gaps += pz.check.gaps;
+    // the way runs over the fluid: the cells beside it are wet
+    const wet = m.trial.check.path.filter(p => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => m.cols[Math.floor(p.z + dz) * 16 + Math.floor(p.x + dx)]?.some(f => f.fluid)));
+    assert.ok(wet.length > 8, `${seed}/${d}: ${wet.length} cells by the fluid`);
   }
-  assert.ok(n > 20, `${n}`);
+  assert.ok(n > 20 && gaps >= n / 3, `${n} rooms, ${gaps} gaps`);   // (many have a gap or two to jump)
 });
 
 // --- miasma -------------------------------------------------------------------------------------

@@ -79,7 +79,7 @@ export function shapeStorm(ctx) {
 export function stormRoute(ctx) {
   const movesFrom = ctx.movesFrom, on = f => !!ctx.trialBuild?.hill?.has(f.c);
   ctx.movesFrom = (f, ...rest) => movesFrom(f, ...rest).filter(m => m.kind === 'walk' || m.kind === 'drop' || m.kind === 'jump'
-    || (!on(f) && !on(m.to) && !m.cells?.some(c => ctx.trialBuild.hill.has(c))));
+    || (!on(f) && !on(m.to) && !m.cells?.some(c => ctx.trialBuild?.hill?.has(c))));
 }
 
 export const stormGoal = ctx => ctx.trialBuild.failed ? null : ctx.layerFloor(ctx.trialBuild.rod.c, 0);
