@@ -168,6 +168,32 @@ function wheelPart(p) {
   g.position.set(p.x, p.y, p.z); g.rotation.y = p.side < 2 ? 0 : Math.PI / 2;
   return { obj: g, wheel, spin: 0 };
 }
+// a sluice basin: a stone tank as tall as it holds (UNIT a level), notches up its front, the water
+// in it; the marked one a red line at its mark and a float on the water
+const UNIT = 0.11, TANK_BASE = 0.25;
+function basinPart(p) {
+  const g = new THREE.Group(), stone = STONE(), H = TANK_BASE + p.cap * UNIT + 0.05, wall = 0.07;
+  for (const [w, d, x, z] of [[0.9, wall, 0, -0.42], [0.9, wall, 0, 0.42], [wall, 0.9, -0.42, 0], [wall, 0.9, 0.42, 0]]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), stone); m.position.set(x, H / 2, z); m.castShadow = true; m.receiveShadow = true; g.add(m);
+  }
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(0.84, TANK_BASE, 0.84), stone); floor.position.y = TANK_BASE / 2; g.add(floor);
+  const notch = new THREE.MeshBasicMaterial({ color: 0x202020 });
+  for (let k = 1; k <= p.cap; k++) {
+    const n = new THREE.Mesh(new THREE.BoxGeometry(k % 5 ? 0.12 : 0.24, 0.012, 0.01), notch);
+    n.position.set(-0.3, TANK_BASE + k * UNIT, 0.46); g.add(n);
+  }
+  const water = new THREE.Mesh(new THREE.BoxGeometry(0.78, 1, 0.78), fluidMaterial(1, 'full'));
+  water.position.y = TANK_BASE; g.add(water);
+  let float = null;
+  if (p.mark != null) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.03, 0.94), new THREE.MeshBasicMaterial({ color: 0xe03020 }));
+    line.position.y = TANK_BASE + p.mark * UNIT; g.add(line);
+    float = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd0a040, roughness: 0.6 }));
+    g.add(float);
+  }
+  g.position.set(p.x, p.y, p.z);
+  return { obj: g, water, float, level: -1 };
+}
 // a heavy crate: planks round a box, iron at its corners
 function cratePart(p) {
   const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.85, flatShading: true });
@@ -219,9 +245,9 @@ function barrier(p) {
 
 // a crust cell of the crumbling floor (cubegen/trials/collapse.js): its column of rock, drawn
 // on its own (render/floors.js leaves it out) round its centre, so it can shake and fall
-function crustCell(m, f, theme) {
+function crustCell(m, f, theme, stone = false) {
   const b = new GeoBuilder(), cs = f.cs, y0 = f.bottom * LH, cx = f.x + 0.5, cz = f.z + 0.5;
-  const avg = (cs[0] + cs[1] + cs[2] + cs[3]) / 4, top = gradient(theme.top, avg / LH).multiplyScalar(0.92);
+  const avg = (cs[0] + cs[1] + cs[2] + cs[3]) / 4, top = gradient(stone ? theme.side : theme.top, avg / LH).multiplyScalar(stone ? 1.15 : 0.92);
   const P = [[-0.5, cs[0], -0.5], [0.5, cs[1], -0.5], [-0.5, cs[2], 0.5], [0.5, cs[3], 0.5]];
   b.tri(P[0], P[1], P[3], top, [0, 1, 0]); b.tri(P[0], P[3], P[2], top, [0, 1, 0]);
   for (let d = 0; d < 4; d++) {
@@ -241,10 +267,15 @@ export function buildTrialView(m, group) {
   const color = new THREE.Color(TRIALS[t.kind].color);
   const view = { kind: t.kind, parts: new Map(), water: null, tide: null, level: null, phase: null, barriers: new Map(), crust: null,
     plates: new Map(), gates: new Map(), levers: new Map(), cage: null, grid: new Map(), beams: new Map(), driven: new Set() };
-  if (t.crust) {
-    const theme = themeOf(m);
-    view.crust = new Map(t.crust.map(q => {
-      const f = m.floors[q.f], mesh = crustCell(m, f, theme);
+  // the crumbling crust, or the sinking stones (the last one, the goal, bright)
+  const sinking = t.crust ?? t.puzzles?.[0]?.stones;
+  if (sinking) {
+    const theme = themeOf(m), goal = !t.crust && sinking.at(-1);
+    view.crust = new Map(sinking.map(q => {
+      const f = m.floors[q.f], mesh = crustCell(m, f, theme, !t.crust);
+      if (!t.crust) mesh.scale.set(0.84, 1, 0.84);   // (a stone each: the fluid shows between them)
+      if (q === goal) mesh.material.color.lerp(new THREE.Color(0xffe070), 0.6);
+      else if (!t.crust && q === sinking[0]) mesh.material.color.lerp(color, 0.35);
       group.add(mesh);
       return [q.c, { mesh, f, state: 'whole', t: 0, base: mesh.material.color.clone() }];
     }));
@@ -254,10 +285,10 @@ export function buildTrialView(m, group) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
     if (p.type === 'plate') { const b = plate(p, color); b.puzzle = p.puzzle ?? 0; b.cell = p.cell; group.add(b.obj); view.plates.set(p.id, b); }
     if (p.type === 'gate') { const b = portcullis(p); b.puzzle = p.puzzle ?? 0; group.add(b.obj); view.gates.set(p.id, b); }
-    if (p.type === 'lever' || p.type === 'reset') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
+    if (p.type === 'lever' || p.type === 'reset' || p.type === 'sluice') { const b = lever(p, color); group.add(b.obj); view.levers.set(p.id, b); }
     const grid = p.type === 'mirror' ? mirrorPart(p) : p.type === 'emitter' ? crystal(p, 0xffe060) : p.type === 'receiver' ? crystal(p, 0x6080a0)
       : p.type === 'brazier' ? brazierPart(p) : p.type === 'tile' ? tilePart(p) : p.type === 'spout' ? spoutPart(p, t.fluid === 2) : p.type === 'wheel' ? wheelPart(p)
-        : p.type === 'crate' ? cratePart(p) : null;
+        : p.type === 'crate' ? cratePart(p) : p.type === 'basin' ? basinPart(p) : null;
     if (grid) { grid.part = p; group.add(grid.obj); view.grid.set(p.id, grid); }
   }
   for (const pz of t.puzzles || []) {
@@ -346,7 +377,12 @@ export function setGridParts(world, m, s, shown) {
       for (const w of g.wet) w.visible = wet;
     } else if (p.type === 'receiver') { const lit = !!info?.beam?.lit; g.gem.material.emissiveIntensity = lit ? 2.5 : 0.4; g.light.intensity = lit ? 3 : 0.3; }
     else if (p.type === 'wheel') g.driven = !!info?.wheel;
-    else if (p.type === 'crate') {   // where its bit says (a field cell), slid there
+    else if (p.type === 'basin') {   // its water at its level, filling or emptying smoothly
+      g.level = g.level < 0 ? bit : g.level + (bit - g.level) * 0.08;
+      const h = Math.max(0.001, g.level * UNIT);
+      g.water.scale.y = h; g.water.position.y = TANK_BASE + h / 2; g.water.visible = g.level > 0.02;
+      if (g.float) g.float.position.y = TANK_BASE + h + 0.04;
+    } else if (p.type === 'crate') {   // where its bit says (a field cell), slid there
       const pz = m.puzzles[p.puzzle ?? 0], F = pz.field, D = pz.deck;
       const x = D.x0 + bit % F.w + 0.5, z = D.z0 + Math.floor(bit / F.w) + 0.5, o = g.obj.position;
       o.x += (x - o.x) * 0.25; o.z += (z - o.z) * 0.25;

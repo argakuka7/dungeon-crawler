@@ -68,7 +68,7 @@ export function canMove(nx, nz, axis, sign) {
     // remain walkable. Rim probes keep the body off the edge.
     if (player.grounded && !player.swimming) {
       const gr = groundAt(sx, sz, y, step);
-      if (!gr.s || !gr.s.kind && gr.s.fluid || underTrialFluid(gr.h)) return false;
+      if (!gr.s || !gr.s.kind && gr.s.fluid || underTrialFluid(gr.h, si)) return false;
     }
     if (hopBlocked(rx, rz, sx, sz, y, step)) return false;
     if (fenceBlocks(ci, si, y)) return false;

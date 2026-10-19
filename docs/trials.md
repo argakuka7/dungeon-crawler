@@ -1,7 +1,8 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 6 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
-`sunken`, `mirror`, `braziers`, `channels`, `crates` and `plates` are planned, built, checked, playable (alone and
+Status: steps 1 to 7 are done: the framework, `flood`, `collapse`, the puzzle parts, `slide`,
+`sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`, `sluices` and `timedgate`
+are planned, built, checked, playable (alone and
 together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
 "Implementation order" at the end).
@@ -513,6 +514,14 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   the stones' adjacency graph has enough branch points (cells of degree ≥ 3: 2 at depths
   1–9, 4 from 10) for wrong turns to be possible.
 - **Themes:** lagoon, grotto, cenote, swamp, volcanic, abyss.
+- **As built** (`grid.js`, `solve.js makeStones`; `game/trials.js stepStones`): a 5x5 field of
+  12-16 stones (7x7, 22-30 from depth 10) in a rim, the way in a gap beside the start stone; the
+  cells between them the depth's sea (`RIVER_SURF`), the stones floors at the deck's level drawn
+  apart (the fluid shows between them). A stone is a crust floor: sunk, it is gone like the
+  collapse's, and the trial's fluid stands over the field's cells only (`physics/fluid.js` `cells`),
+  so a sunk stone drowns. The goal stone is bright, the start one tinted. Each player walks the
+  stones on their own (the first to finish solves it for all); stepping off the field onto dry
+  ground raises them all. Too wet and too big for a sunken platform.
 
 ### `sluices`: Sluices
 
@@ -526,6 +535,11 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
   hundred) gives the reachable levels of the float basin with their minimal steps; pick as the
   mark one whose minimum is within the depth band (4–6, then 6–9).
 - **Themes:** grotto, cenote, lagoon, hive (honey), mines (water tanks).
+- **As built** (`grid.js`, `solve.js makeSluices`, `sluiceWay`; `core/trials.js pourSluice`): a
+  walk-on deck of 5x3 (7x3 with four basins from depth 10), the tanks along its back row, pipes
+  between neighbours both ways (a lever each way), a spring on 60% of them and a drain on 40%,
+  the first basin full at the start. The tanks are as tall as they hold, notched each level, the
+  marked one with a red line and a float. A lever's label names its pour and both levels.
 
 ### `timedgate`: Timed gate
 
@@ -535,6 +549,14 @@ starts unsolved. They are built at one level on a deck or in a hollow of the roo
 - **Generator:** `T = route time at RUN_SPEED × 1.35 + 1.5 s`. The route search must find no
   shorter way than the designed one (no trivial short cut).
 - **Themes:** any.
+- **As built** (`cubegen/trials/timed.js`, `index.js finishTimed`): on the route only (a branch's
+  reward site is placed after the trial, so the way to it cannot be timed); the gate is the exit's
+  seal. The lever stands on a perch of rock (2x2, three metres over the ground round it) at least
+  eight cells from the exit's pad; the route search builds the way up. The way back is the
+  fastest at RUN_SPEED to the exit's floor (4-22 s, else retried; so nothing shorter exists), T
+  from it, rounded up to half a second. From depth 10 it is tighter (x 1.2 + 1 s) instead of two
+  gates in a row: an open room has no corridor a second gate could close. Reaching the exit's pad
+  while open passes it for good; a pull while open starts the time again.
 
 ### `runes`: Rune order
 
@@ -611,7 +633,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 4. [x] **`sunken`** with `slide` as its only stage puzzle, then any built puzzle.
 5. [x] **`mirror`, `braziers`, `channels`** (rotors, braziers, beam).
 6. [x] **`crates`, `plates`** (crates, Sokoban solver).
-7. [ ] **`stones`, `sluices`, `timedgate`.**
+7. [x] **`stones`, `sluices`, `timedgate`.**
 8. [ ] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
 9. [ ] **`siege`, `chase`, `drift`.**
 10. [ ] **`runes`** (the clue room across cubes).

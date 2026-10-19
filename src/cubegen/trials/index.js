@@ -7,7 +7,7 @@
 //   finishTrial   at the end, with the final slopes and fences: the goal must be reachable from
 //                 the entry and lead on to the exit, and the kind's own check must pass (the
 //                 timing of an event, cubegen/trials/timing.js); else the attempt is retried
-import { N, LH } from '../../core/constants.js';
+import { N, LH, RUN_SPEED } from '../../core/constants.js';
 import { floorY } from '../../core/surfaces.js';
 import { search, take } from '../route.js';
 import { reachFrom, reachTo, graph } from '../reach.js';
@@ -17,6 +17,7 @@ import { shapeSlide, puzzleGoal, slideRoute } from './slide.js';
 import { shapeSunken, sunkenGoal } from './sunken.js';
 import { shapeGrid, gridRecord } from './grid.js';
 import { RIM } from './deck.js';
+import { shapeTimed, timedGoal } from './timed.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel } from './timing.js';
 import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime } from '../../core/trials.js';
 
@@ -30,6 +31,9 @@ const KINDS = {
   channels: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   crates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   plates: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  stones: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  sluices: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
+  timedgate: { shape: shapeTimed, goal: timedGoal, costs: null, finish: finishTimed },
 };
 
 // before the route search: what the kind makes its ways cost (cubegen/index.js)
@@ -202,7 +206,7 @@ function gateAt(deck, x, z, side, id) {
 
 // Each puzzle of the room as plain data (map.trial.puzzles; its parts, `puzzle`: its index, also in
 // map.trial.parts), checked against the built ground
-const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid };
+const FINISH = { slide: finishSlide, mirror: finishGrid, braziers: finishGrid, channels: finishGrid, crates: finishGrid, plates: finishGrid, stones: finishStones, sluices: finishGrid };
 function finishPuzzles(ctx, t) {
   const puzzles = [], parts = [], start = {};
   for (const [i, pz] of t.puzzles.entries()) {
@@ -233,6 +237,23 @@ function finishGrid(ctx, pz, id) {
   return { id, kind: pz.kind, deck: deckOf(deck), ...rec };
 }
 
+// The stones: each a floor at the deck's level (a crust floor: it sinks, game/trials.js), the rest
+// of the field the depth's fluid (the trial's fluid stands over the field at its surface, BASIN:
+// what falls through a sunk stone is in it)
+function finishStones(ctx, pz, id) {
+  const { deck } = pz, F = pz.made.field, on = new Map(F.stones.map(([x, z], i) => [deck.cell(x, z), i]));
+  const stones = [];
+  for (let z = 0; z < deck.h; z++) for (let x = 0; x < deck.w; x++) {
+    const c = deck.cell(x, z), f = ctx.cols[c].find(g => g.layer === 0);
+    if (ctx.pieces[c].length || !f) return null;
+    if (!on.has(c)) { if (!f.fluid) return null; continue; }
+    if (f.fluid || f.top !== deck.level || ctx.cols[c].length > 1) return null;
+    f.crust = true; f.noSpawn = true;
+    stones[on.get(c)] = { c, f: f.id, x, z };
+  }
+  return { id, kind: 'stones', deck: deckOf(deck), ...gridRecord(pz, id), stones };
+}
+
 // The ice: flat, every field cell at the deck's level but the rocks (up at the rim's), nothing built
 // over it; the goal plate at its cell, the gate in the rim's gap beside it
 function finishSlide(ctx, pz, id) {
@@ -248,6 +269,26 @@ function finishSlide(ctx, pz, id) {
   return { id, kind: 'slide', deck: deckOf(deck), field: F, entryGap: pz.entryGap, goalGap: pz.goalGap,
     parts: [{ id: `${id}:goal`, type: 'plate', x: g % N + 0.5, y, z: Math.floor(g / N) + 0.5 }, gateAt(deck, F.goal.x, F.goal.z, F.goal.side, `${id}:gate`)],
     check: { solution: pz.solution.way, slides: pz.solution.slides, decoys: pz.solution.decoys, stops: pz.solution.stops } };
+}
+
+// --- the timed gate --------------------------------------------------------------------------------
+
+// The lever on the perch opens the exit's seal for T s: the way back down to the exit at RUN_SPEED
+// x TIMED.factor + TIMED.extra (tighter from depth 10); 4-22 s of running, or the room is retried.
+// Its path is the checked one (no props in its way, nobody spawning on it).
+export const TIMED = { factor: 1.35, extra: 1.5, deepFactor: 1.2, deepExtra: 1, least: 4, most: 22 };
+function finishTimed(ctx, t, out) {
+  const perch = t.goal, exit = ctx.portalFloors[ctx.portals.findIndex(p => p.dir === ctx.spec.trial.exit)];
+  if (!exit) return null;
+  const arr = arrivals(ctx, perch, RUN_SPEED), path = pathOf(arr, exit);
+  if (!path) return null;
+  const run = arr.time.get(exit.id);
+  if (run < TIMED.least || run > TIMED.most) return null;
+  const deep = ctx.spec.depth >= 10, T = Math.ceil((run * (deep ? TIMED.deepFactor : TIMED.factor) + (deep ? TIMED.deepExtra : TIMED.extra)) * 2) / 2;
+  const y = floorY(perch, 0.5, 0.5), pad = { x: exit.x + 0.5, y: floorY(exit, 0.5, 0.5), z: exit.z + 0.5 };
+  const lever = { id: 'p0:lever', type: 'lever', x: perch.x + 0.5, y, z: perch.z + 0.5, puzzle: 0, yaw: 0 };
+  return { puzzles: [{ id: 'p0', kind: 'timedgate', index: 0, T, pad, parts: [lever], check: { run: Math.round(run * 100) / 100 } }],
+    parts: [lever], start: {}, check: { slack: Math.round((T - run) * 100) / 100, path: checkPath(path, arr, () => null) } };
 }
 
 // --- sunken ------------------------------------------------------------------------------------------

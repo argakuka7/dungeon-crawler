@@ -9,7 +9,7 @@ import { camera } from '../render/scene.js';
 import { pointer } from './pointer.js';
 import { TRIALS, ARM_DISTANCE, ARM_TIME, PART_REACH, newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel,
   nextPulse, floodEnd, trialSealed, trialGate, crustState, PART_LABELS, slideStop, fieldIn, isRock, isPuzzle, useBit, plateHeld, sinkStage,
-  traceBeam, allLit, channelFlow, pressBrazier, pushTarget } from '../core/trials.js';
+  traceBeam, allLit, channelFlow, pressBrazier, pushTarget, pourSluice } from '../core/trials.js';
 import { groundAt } from '../physics/collide.js';
 import { setTrialFluid } from '../physics/fluid.js';
 import { setTrialWater, setTrialParts, setTrialBarriers, setCrust, setGridParts } from '../render/trials.js';
@@ -22,7 +22,7 @@ import { log } from './log.js';
 import { allEnemies, mirroring } from './enemies.js';
 import { relay, online } from '../net/online.js';
 import { followTrial } from '../net/trials.js';
-import { solveMirror, solveBraziers } from '../cubegen/trials/solve.js';
+import { solveMirror, solveBraziers, sluiceWay } from '../cubegen/trials/solve.js';
 import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld } from './flow.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
@@ -35,6 +35,9 @@ const PUZZLE_HINT = {
   braziers: 'Light every brazier: each one lights or puts out those it is linked to',
   crates: 'Push a crate onto every plate (the lever by the way in puts them back)',
   plates: 'Hold both plates down at once: a friend, or the crate',
+  sluices: 'Bring the marked basin to its red line: each sluice pours till one basin is empty or the other full',
+  timedgate: 'Pull the lever on the rock, then run for the exit before it shuts',
+  stones: 'Stand on every stone once and end on the bright one: each sinks as you leave it',
   channels: 'Turn the channels till the water drives the wheel',
 };
 // what the banner says as an event arms
@@ -51,7 +54,7 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
   if (state.trial && map.trial.kind === 'sunken') state.trial.stage = state.run.trials.get(map.trial.key) ?? 0;   // (drained for the run)
-  gone.clear(); crust.clear(); ice = null;
+  gone.clear(); crust.clear(); ice = null; resetStones();
   partBlockers(map?.trial);
   showTrial(true);
 }
@@ -59,7 +62,7 @@ export function enterTrial(map) {
 // the crumbling floor (collapse): which crust cells are gone (their floors are not there for the
 // physics, physics/collide.js) and how each looks
 const gone = new Set(), crust = new Map();
-setGoneFloors(f => gone.has(f.id));
+setGoneFloors(f => gone.has(f.id) || sunk.has(f.id));
 function stepCrust(m, s, dt) {
   if (!m.crust) return;
   let fell = 0;
@@ -93,6 +96,7 @@ export function sealedDirs() {
   const s = state.trial, m = mapTrial();
   if (!s || !m || s.phase === 'resolved') return [];
   if (trialSealed(s)) return state.map.portals.filter(p => p.kind === 'side').map(p => p.dir);
+  if (timedOpen(m, s)) return [];   // (the timed gate's lever pulled: the exit open for a while)
   return m.exit == null ? [] : [m.exit];
 }
 
@@ -109,6 +113,7 @@ export function beforeTrialSpot() {
 export function restartTrial() {
   if (!state.trial || state.trial.phase === 'resolved') return;
   resetTrial(state.trial, mapTrial()?.start);
+  resetStones();
   showTrial();
 }
 
@@ -122,7 +127,7 @@ function showTrial(immediate = false) {
     setPortalSeals(state.world, dirs, immediate);
     setTrialBarriers(state.world, trialSealed(s) ? dirs : [], openedSides(state.openedFaces, state.cubeKey));
   }
-  setTrialFluid(level == null ? null : { y: level * LH, fluid: m.fluid });
+  setTrialFluid(level == null ? null : { y: level * LH, fluid: m.fluid, ...m.kind === 'stones' && { cells: stoneField(m) } });
   setTrialWater(state.world, level == null ? null : level * LH, s?.phase ?? null);
   setTrialParts(state.world, s, immediate);
   hud();
@@ -152,6 +157,8 @@ export function updateTrial(dt) {
   stepCrust(m, s, dt);
   keystone(m, s);
   stepCrates(m, s, dt);
+  stepStones(m, s, dt);
+  stepTimed(m, s, dt);
   stepParts(m, s);
   showTrial();
   if (!mirroring()) drown(m, s);
@@ -184,6 +191,7 @@ export function trialActFrom(m) {
   if (m.act === 'away') awayFrom = true;
   if (m.act === 'part' && m.id === 'keystone') { resolve(); return; }
   if (m.act === 'part' && m.id.startsWith('solve:')) { solvePuzzle(+m.id.slice(6)); return; }
+  if (m.act === 'part' && m.id === 'timed:reach') { if (timedOpen(mapTrial(), s) || timed.t < (mapTrial()?.puzzles?.[0]?.T ?? 0) + 1) resolve(); return; }
   if (m.act === 'part' && m.id.startsWith('push:')) { const [, pi, i, d] = m.id.split(':').map(Number); const pz = mapTrial()?.puzzles?.[pi]; if (pz) pushCrateAt(pz, i, d, true); return; }
   if (m.act === 'part') { const p = mapTrial()?.parts?.find(q => q.id === m.id); if (p) usePart(p, true); }
 }
@@ -226,7 +234,12 @@ export function partInReach() {
   }
   return best && { ...best, label: partLabel(best) };
 }
-const partLabel = p => p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
+const BASIN = 'ABCD';
+const sluiceLabel = p => {
+  const l = p.lever, s = state.trial, pid = p.id.split(':')[0], basin = i => `${BASIN[i]} (${s?.bits[`${pid}:b${i}`] ?? 0}/${mapTrial().puzzles.find(q => q.id === pid).field.cap[i]})`;
+  return l.spring != null ? `Open the spring into ${basin(l.spring)}` : l.drain != null ? `Drain ${basin(l.drain)}` : `Pour ${basin(l.from)} into ${basin(l.to)}`;
+};
+const partLabel = p => p.type === 'sluice' ? sluiceLabel(p) : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
   : PART_LABELS[p.type] ?? 'Use it';
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's
@@ -238,8 +251,15 @@ export function usePart(p, fromOther = false) {
   if (p.type === 'button' && m.kind === 'flood') { if (!fromOther) sfx('clink'); resolve(); return true; }
   if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' || p.type === 'tile' ? 'door' : p.type === 'brazier' ? 'fireball' : 'clink');
   const pz = m.puzzles?.[p.puzzle ?? 0];
-  if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
+  if (m.kind === 'timedgate' && p.type === 'lever') { s.bits[p.id] = 1; timed.t = 0; setStatus(`The gate is open: ${pz.T} s to reach it`); sfx('gate', { delay: 0.2 }); }
+  else if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
   else if (p.type === 'tile') s.bits[p.id] = ((s.bits[p.id] ?? 0) + 1) & 3;
+  else if (p.type === 'sluice') {   // pour (the lever's own bit only swings it)
+    const levels = pourSluice(pz.field.cap, bitsOf(pz, s, 'basin'), p.lever);
+    for (const q of pz.parts) if (q.type === 'basin') s.bits[q.id] = levels[q.i];
+    s.bits[p.id] = s.bits[p.id] ? 0 : 1;
+    if (!fromOther) sfx('splash', { volume: 0.5 });
+  }
   else if (p.type === 'brazier') {   // it and every one linked to it
     const lit = bitsOf(pz, s, 'brazier');
     pressBrazier(lit, pz.field.links, p.i);
@@ -263,7 +283,7 @@ export function resolve(tell = true) {
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
   setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
   banner(isPuzzle(m.kind) ? 'Solved!' : 'Well done!', { flood: 'The water drains away.', collapse: 'The keystone holds: the floor is whole again.',
-    sunken: 'The room is drained: the way on is clear.',
+    sunken: 'The room is drained: the way on is clear.', timedgate: 'You made it through: the gate stays open.',
     slide: m.role === 'branch' ? 'The gate is open, and the vault with it.' : 'The gate is open: the way on too.' }[m.kind] ?? '');
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
   showTrial();
@@ -298,6 +318,7 @@ function hud() {
     fill = Math.min(1, s.t / floodEnd(tl));
   }
   if (isPuzzle(s.kind)) line = PUZZLE_HINT[s.kind] ?? '';
+  if (s.kind === 'timedgate' && timedOpen(m, s)) { const T = m.puzzles[0].T; line = `The gate is open: ${Math.max(0, Math.ceil(T - timed.t))} s`; fill = Math.max(0, 1 - timed.t / T); }
   if (s.kind === 'sunken') {
     line = `Stage ${(s.stage ?? 0) + 1} of ${m.stages}: solve the dry platform's puzzle to drain the room`;
     fill = (s.stage ?? 0) / m.stages;
@@ -318,6 +339,7 @@ function hud() {
 const bitsOf = (pz, s, type) => pz.parts.filter(p => p.type === type).sort((a, b) => a.i - b.i).map(p => s.bits[p.id] ?? 0);
 const shown = new Map();   // puzzle index -> { beam: { cells, lit } } | { wet: Set } | {}
 const RULES = {
+  sluices: (pz, s) => (s.bits[`${pz.id}:b${pz.field.float}`] ?? 0) === pz.field.mark,
   mirror(pz, s, bodies) {
     const D = pz.deck, y = D.level * LH;
     const blocked = (x, z) => bodies.some(b => Math.floor(b.x) === D.x0 + x && Math.floor(b.z) === D.z0 + z && Math.abs(b.y - y) < 1);
@@ -341,6 +363,80 @@ const RULES = {
   },
 };
 RULES.plates = RULES.crates;   // (the two plates: both held at once, then the gate stays open)
+
+// --- sinking stones ------------------------------------------------------------------------------
+// Each player walks the stones on their own (playing together, the first to finish solves it): a
+// stone sinks SINK_AFTER s after you step off it (its floor is gone: you fall into the pit's fluid);
+// standing on the goal stone having stood on every one solves it. Stuck (no standing stone beside
+// you) the stones rise again after STUCK_TIME s, and you start over from where you stand; stepping
+// off the field (out through the gap) puts them back too.
+export const SINK_AFTER = 1, STUCK_TIME = 3;
+const sunk = new Set();   // floor ids
+let stones = null;   // { visited: Set, on, off: Map(i -> t stepped off), stuck, t }
+function resetStones() { sunk.clear(); stones = { visited: new Set(), on: null, off: new Map(), stuck: 0, t: 0 }; }
+resetStones();
+const stoneField = m => {
+  const D = m.puzzles?.[0]?.deck;
+  if (!D) return new Set();
+  const out = new Set();
+  for (let z = 0; z < D.h; z++) for (let x = 0; x < D.w; x++) out.add((D.z0 + z) * N + D.x0 + x);
+  return out;
+};
+function stepStones(m, s, dt) {
+  const pz = m.puzzles?.[0];
+  if (pz?.kind !== 'stones') return;
+  const st = stones, solved = puzzleSolved(s, pz.index), list = pz.stones, D = pz.deck;
+  st.t += dt;
+  const cell = Math.floor(player.z) * N + Math.floor(player.x), standing = player.grounded && player.hp > 0 && Math.abs(player.y - D.level * LH) < 0.3;
+  const at = standing ? list.findIndex(q => q.c === cell) : -1;
+  if (solved) { if (sunk.size) { sunk.clear(); st.off.clear(); } }
+  else {
+    if (at >= 0 && at !== st.on) {
+      if (st.on != null) st.off.set(st.on, st.t);
+      st.visited.add(at); st.on = at;
+      sfx('step', { volume: 0.3, pitch: 0.8 });
+    }
+    // off the field onto dry ground: they all rise
+    if (standing && at < 0 && st.on != null && !stoneField(m).has(cell)) { resetStones(); setCrust(state.world, new Map(), dt, false); return; }
+    for (const [i, t] of st.off) if (st.t - t >= SINK_AFTER && !sunk.has(list[i].f)) { sunk.add(list[i].f); sfx('splash', { volume: 0.4 }); }
+    // stuck: nothing standing beside the stone you are on
+    const up = i => !st.off.has(i) && i !== st.on;
+    const q = st.on != null && list[st.on], beside = q && list.some((o, i) => up(i) && Math.abs(o.x - q.x) + Math.abs(o.z - q.z) === 1);
+    if (q && at === st.on && !beside && !(st.on === list.length - 1 && st.visited.size === list.length)) {
+      if ((st.stuck += dt) >= STUCK_TIME) {
+        const on = st.on;
+        resetStones(); stones.on = on; stones.visited.add(on);
+        setStatus('Stuck: the stones rise again. Start over from here'); sfx('rumble', { volume: 0.4, pitch: 1.4 });
+        setCrust(state.world, new Map(), dt, false);
+        return;
+      }
+    } else st.stuck = 0;
+    if (at === list.length - 1 && st.visited.size === list.length) solvePuzzle(pz.index);
+  }
+  // how they look: shaking while about to go, gone once sunk
+  const view = new Map(list.map((q, i) => [q.c, sunk.has(q.f) ? 'gone' : st.off.has(i) ? 'shaking' : 'whole']));
+  setCrust(state.world, view, dt, solved);
+}
+
+// --- the timed gate --------------------------------------------------------------------------------
+// The lever opens the exit (its seal) for the puzzle's T s (its bit 1 while open; the owner shuts
+// it); reaching the exit's pad while it is open passes the gate for good. A pull while open starts
+// the time again.
+const timed = { t: 0, was: 0, asked: false };
+const timedOpen = (m, s) => m?.kind === 'timedgate' && !!s?.bits['p0:lever'] && s.phase !== 'resolved';
+function stepTimed(m, s, dt) {
+  if (m.kind !== 'timedgate' || s.phase === 'resolved') return;
+  const pz = m.puzzles[0], open = timedOpen(m, s);
+  if (open && !timed.was) timed.t = 0;   // (opened: by us, or the owner's word)
+  timed.was = open ? 1 : 0;
+  if (!open) { timed.asked = false; return; }
+  timed.t += dt;
+  if (timed.t >= pz.T && !mirroring()) { s.bits['p0:lever'] = 0; timed.was = 0; sfx('gate'); setStatus('The gate shut: back to the lever'); return; }
+  const near = Math.hypot(player.x - pz.pad.x, player.z - pz.pad.z) < 1.3 && Math.abs(player.y - pz.pad.y) < 1 && player.hp > 0;
+  if (!near) return;
+  if (mirroring()) { if (!timed.asked) { timed.asked = true; relay.trialAct?.({ key: s.key, act: 'part', id: 'timed:reach' }); } return; }
+  resolve();
+}
 
 // --- crates (push only) ------------------------------------------------------------------------
 // Walking into a crate for PUSH_TIME s pushes it a cell on, if the cell beyond is free (core/trials.js
@@ -430,6 +526,21 @@ function solveLens() {
       });
       said.push(`${pz.check.slides} slides (${pz.check.decoys} stops lead nowhere)`);
     }
+    // the sluices: which lever, in what order (from the basins now); the timed gate: the run back
+    for (const pz of m.puzzles) if (pz.kind === 'sluices') {
+      const F = pz.field, way = sluiceWay(F.cap, bitsOf(pz, state.trial, 'basin'), F.levers, F.float, F.mark) || [];
+      const levers = pz.parts.filter(p => p.type === 'sluice'), steps = new Map();
+      way.forEach((j, k) => steps.set(j, [...steps.get(j) ?? [], k + 1]));
+      for (const [j, ks] of steps) { const p = levers.find(q => q.i === j); teachLabel({ x: p.x, y: p.y + 1.3, z: p.z }, ks.join(', '), { id: `trial-solve-${p.id}`, size: 0.22, ttl: 60, color: TRIALS.sluices.color }); }
+      said.push(`sluices: ${way.length} pulls`);
+    } else if (pz.kind === 'timedgate') {
+      teachPath(m.check.path.map(p => ({ x: p.x, y: p.y, z: p.z })), { id: 'trial-solve', color: TRIALS.timedgate.color, width: 0.07, head: true, ttl: 60 });
+      said.push(`the run back: ${pz.check.run} s, open ${pz.T} s`);
+    } else if (pz.kind === 'stones') {
+      const D = pz.deck, at = q => ({ x: D.x0 + q.x + 0.5, y: D.level * LH + 0.3, z: D.z0 + q.z + 0.5 });
+      teachPath(pz.stones.map(at), { id: 'trial-solve', color: TRIALS.stones.color, width: 0.07, head: true, ttl: 60 });
+      said.push(`stones: ${pz.stones.length} in this order`);
+    }
     // the grid puzzles: from where they are now, which part to use how often
     for (const pz of m.puzzles) {
       const moves = puzzleMoves(pz, state.trial);
@@ -502,6 +613,10 @@ let partCells = null, partBoxes = [];
 function partBlockers(m) {
   partBoxes = []; crateBoxes.clear();
   partCells = Array.from({ length: N * N }, () => []);
+  for (const p of m?.parts || []) if (p.type === 'basin') {   // a tank: always in the way
+    const b = { shape: 'box', part: p, bottom: p.y - 0.1, top: p.y + 3, x0: p.x - 0.45, x1: p.x + 0.45, z0: p.z - 0.45, z1: p.z + 0.45, fixed: true };
+    partCells[Math.floor(p.z) * N + Math.floor(p.x)].push(b);
+  }
   for (const p of m?.parts || []) if (p.type === 'gate') {
     const half = (p.w ?? 1) / 2, across = p.side < 2;
     const b = { shape: 'box', part: p, bottom: p.y - 0.1, top: p.y + 2.4,

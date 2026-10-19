@@ -1,7 +1,7 @@
 // The puzzle solvers (docs/trials.md "Puzzles"): every puzzle is made together with its solution
 // and checked by one of these before the cube is handed out. Pure, no generator state: the tests
 // and the game's /trial solve use them too.
-import { slideStop, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget } from '../../core/trials.js';
+import { slideStop, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, pourSluice } from '../../core/trials.js';
 
 // --- slide ---------------------------------------------------------------------------------------
 
@@ -388,6 +388,101 @@ export function makePlates(R, w, h, tries = 300) {
     if (crate === B || crate === A || crate === entry) continue;
     const sol = solveSokoban(F, [crate], entry, [B]);
     if (sol.pushes >= 2 && sol.pushes <= 4) return { field: F, start: [crate], solution: sol };
+  }
+  return null;
+}
+
+// --- stones ---------------------------------------------------------------------------------------
+
+// A walk over w x h that never meets itself, `want` cells long, from an edge cell (towards side
+// `side`: on that edge), each step to the neighbour with the fewest ways on (Warnsdorff's rule,
+// ties at random); null when it gets stuck short
+function warnsdorff(R, w, h, want, side) {
+  const t = Math.floor(R() * (side < 2 ? h : w)), start = [[w - 1, t], [0, t], [t, h - 1], [t, 0]][side];
+  const seen = new Set([`${start}`]), path = [start];
+  const free = (x, z) => x >= 0 && z >= 0 && x < w && z < h && !seen.has(`${x},${z}`);
+  const onward = (x, z) => SD.filter(([dx, dz]) => free(x + dx, z + dz)).length;
+  while (path.length < want) {
+    const [x, z] = path.at(-1);
+    const next = SD.map(([dx, dz]) => [x + dx, z + dz]).filter(([nx, nz]) => free(nx, nz));
+    if (!next.length) return null;
+    next.sort((a, b) => onward(...a) - onward(...b) || R() - 0.5);
+    const best = next.filter(n => onward(...n) === onward(...next[0]));
+    const n = best[Math.floor(R() * best.length)];
+    seen.add(`${n}`); path.push(n);
+  }
+  return path;
+}
+
+// Sinking stones over w x h: the stones are exactly the cells of a walk of `length` cells from the
+// entry's side (its first cell the start stone, its last the goal); kept when the stones join up in
+// enough places (branch points: a stone with three or more stones beside it) for wrong turns
+export function makeStones(R, w, h, length, branches, side, tries = 400) {
+  for (let n = 0; n < tries; n++) {
+    const path = warnsdorff(R, w, h, length, side);
+    if (!path) continue;
+    const set = new Set(path.map(c => `${c}`));
+    const degree = ([x, z]) => SD.filter(([dx, dz]) => set.has(`${x + dx},${z + dz}`)).length;
+    const branchPoints = path.filter(c => degree(c) >= 3).length;
+    if (branchPoints < branches) continue;
+    return { stones: path, start: 0, goal: path.length - 1, branchPoints, side };
+  }
+  return null;
+}
+
+// --- sluices ----------------------------------------------------------------------------------------
+
+// Every state the basins reach from `start` by the levers: Map('levels' -> fewest pulls)
+export function sluiceStates(cap, start, levers) {
+  const dist = new Map([[`${start}`, 0]]), queue = [start];
+  for (let i = 0; i < queue.length; i++) for (const l of levers) {
+    const next = pourSluice(cap, queue[i], l), k = `${next}`;
+    if (!dist.has(k)) { dist.set(k, dist.get(`${queue[i]}`) + 1); queue.push(next); }
+  }
+  return dist;
+}
+// The fewest pulls to bring basin `float` to `mark` from `start` (Infinity: never)
+export function solveSluices(cap, start, levers, float, mark) {
+  let best = Infinity;
+  for (const [k, d] of sluiceStates(cap, start, levers)) if (+k.split(',')[float] === mark && d < best) best = d;
+  return best;
+}
+
+// n basins (capacities 3-12), pipes both ways between neighbours, now and then a spring or a drain;
+// the marked basin's mark a level its fewest pulls reach in `band`
+export function makeSluices(R, n, band, tries = 400) {
+  const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
+  for (let k = 0; k < tries; k++) {
+    const cap = Array.from({ length: n }, () => ri(3, 12));
+    if (new Set(cap).size < n) continue;
+    const levers = [];
+    for (let i = 0; i + 1 < n; i++) levers.push({ from: i, to: i + 1 }, { from: i + 1, to: i });
+    if (R() < 0.6) levers.push({ spring: ri(0, n - 1) });
+    if (R() < 0.4) levers.push({ drain: ri(0, n - 1) });
+    const start = cap.map((c, i) => (i === 0 ? c : 0));
+    const float = ri(1, n - 1), dist = sluiceStates(cap, start, levers), best = new Map();
+    for (const [key, d] of dist) { const lv = +key.split(',')[float]; if (!best.has(lv) || d < best.get(lv)) best.set(lv, d); }
+    const marks = [...best].filter(([lv, d]) => lv !== start[float] && d >= band[0] && d <= band[1]);
+    if (!marks.length) continue;
+    const [mark, pulls] = marks[ri(0, marks.length - 1)];
+    return { cap, start, levers, float, mark, pulls };
+  }
+  return null;
+}
+// The fewest pulls as a list of lever indices from `levels` to the float at its mark (null: none)
+export function sluiceWay(cap, levels, levers, float, mark) {
+  const back = new Map([[`${levels}`, null]]), queue = [levels];
+  for (let i = 0; i < queue.length; i++) {
+    const cur = queue[i];
+    if (cur[float] === mark) {
+      const way = [];
+      for (let k = `${cur}`; back.get(k); k = back.get(k).from) way.unshift(back.get(k).lever);
+      return way;
+    }
+    levers.forEach((l, j) => {
+      const next = pourSluice(cap, cur, l), k = `${next}`;
+      if (!back.has(k)) { back.set(k, { from: `${cur}`, lever: j }); queue.push(next); }
+    });
   }
   return null;
 }

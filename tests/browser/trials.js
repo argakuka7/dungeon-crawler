@@ -11,9 +11,11 @@ import { checkPortals } from '../../src/game/portals.js';
 import { useTownPortal } from '../../src/game/townportal.js';
 import { useRoomPortal } from '../../src/game/roomportal.js';
 import { pendingAction, useAction } from '../../src/game/action.js';
-import { sealedIn } from '../../src/game/trials.js';
+import { sealedIn, sealedDirs } from '../../src/game/trials.js';
 import { portalLocked } from '../../src/core/guardians.js';
 import { trialFluid } from '../../src/physics/fluid.js';
+import { groundAt } from '../../src/physics/collide.js';
+import { sluiceWay } from '../../src/cubegen/trials/solve.js';
 import { DIRS } from '../../src/core/constants.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
@@ -91,9 +93,11 @@ export async function runSunkenChecks() {
     check(state.trial.stage === i, `at stage ${i}`);
     const level = trialFluid()?.y;
     check(level != null && level < pz.deck.level * 0.5 && level > (m.puzzles[i + 1]?.deck.level ?? 0) * 0.5, `the water between platform ${i} and the next`);
-    if (pz.kind !== 'slide') {   // a grid puzzle: its parts as its solver says, then off its field
+    if (pz.kind !== 'slide') {   // a grid puzzle: its parts as its solver says (crates: pushed), then off its field
       const { puzzleMoves } = await import('../../src/game/trials.js');
-      for (const [part, n] of puzzleMoves(pz, state.trial)) {
+      // (a body on a plate holds it too: the stage may be done before the last push)
+      if (pz.kind === 'crates') for (const [c, d] of pz.check.solution) { if (state.trial.stage > i) break; await pushCrate(pz, c, d); }
+      for (const [part, n] of puzzleMoves(pz, state.trial) ?? []) {
         const spots = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => ({ x: part.x + dx * 0.8, z: part.z + dz * 0.8 }));
         const spot = spots.find(q => !m.parts.some(o => o !== part && Math.hypot(o.x - q.x, o.z - q.z) < 0.6)) ?? spots[0];
         Object.assign(player, { x: spot.x, y: part.y, z: spot.z, vx: 0, vz: 0, yaw: Math.atan2(part.x - spot.x, part.z - spot.z) });
@@ -162,6 +166,18 @@ export async function runGridChecks(kind) {
   return [kind, `${used} uses`];
 }
 
+// crate i of puzzle pz pushed the way d: walking into it from the cell behind it
+const crateAt = (pz, i) => state.trial.bits[pz.parts.find(p => p.type === 'crate' && p.i === i).id];
+async function pushCrate(pz, i, d) {
+  const F = pz.field, D = pz.deck, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const c = crateAt(pz, i), bx = D.x0 + c % F.w - SD[d][0] + 0.5, bz = D.z0 + Math.floor(c / F.w) - SD[d][1] + 0.5;
+  Object.assign(player, { x: bx, y: D.level * 0.5, z: bz, vx: 0, vz: 0 });
+  player.autoDir = SD[d];
+  await until(() => crateAt(pz, i) !== c, `crate ${i} pushed ${d}`, 3000);
+  player.autoDir = null;
+  await delay(150);
+}
+
 // Crates (?trial=crates) or the two plates (?trial=plates): the reset lever puts a pushed crate back,
 // then the solver's pushes, each by walking into the crate from behind it; (the two plates: then
 // standing on the other plate) solved, the way on open
@@ -174,16 +190,8 @@ export async function runCratesChecks(kind = 'crates') {
   await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
   takePortal(state.map.portals.find(p => p.dir === t.fromDir));
   await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
-  const pz = state.map.trial.puzzles[0], F = pz.field, D = pz.deck, SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  const crate = i => state.trial.bits[pz.parts.find(p => p.type === 'crate' && p.i === i).id];
-  const push = async (i, d) => {
-    const c = crate(i), bx = D.x0 + c % F.w - SD[d][0] + 0.5, bz = D.z0 + Math.floor(c / F.w) - SD[d][1] + 0.5;
-    Object.assign(player, { x: bx, y: D.level * 0.5, z: bz, vx: 0, vz: 0 });
-    player.autoDir = SD[d];
-    await until(() => crate(i) !== c, `crate ${i} pushed ${d}`, 3000);
-    player.autoDir = null;
-    await delay(150);
-  };
+  const pz = state.map.trial.puzzles[0], F = pz.field, D = pz.deck;
+  const crate = i => crateAt(pz, i), push = (i, d) => pushCrate(pz, i, d);
   // a push, then the reset lever
   const [i0, d0] = pz.check.solution[0], before = crate(i0);
   await push(i0, d0);
@@ -201,6 +209,103 @@ export async function runCratesChecks(kind = 'crates') {
   await until(() => state.trial.phase === 'resolved', 'solved', 3000);
   check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
   return [kind, `${pz.check.solution.length} pushes`];
+}
+
+// The sinking stones (?trial=stones): a stone left sinks (its floor gone, the trial's fluid over the
+// pit), stepping off the field raises them, a jump into a sunk stone's hole drowns; then every stone
+// in the walk's order, ending on the goal: solved, the way on open
+export async function runStonesChecks() {
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'stones' && t.role === 'route'));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=stones');
+  const t = all[0];
+  await goTrial('stones', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
+  const pz = state.map.trial.puzzles[0], D = pz.deck, list = pz.stones, y = D.level * 0.5;
+  const standOn = async q => { Object.assign(player, { x: D.x0 + q.x + 0.5, y, z: D.z0 + q.z + 0.5, vx: 0, vy: 0, vz: 0 }); await delay(150); };
+  const view = () => state.world.trialView.crust;
+  await standOn(list[0]); await standOn(list[1]);
+  await delay(1300);
+  check(view().get(list[0].c).state !== 'whole', 'the first stone sank behind us');
+  check(groundAt(D.x0 + list[0].x + 0.5, D.z0 + list[0].z + 0.5, y + 0.1, 0.3).s !== state.map.floors[list[0].f], 'its floor is gone');
+  // off the field (the ground before the gap): they rise
+  const g = pz.entryGap;
+  Object.assign(player, { x: g % 16 + 0.5, y, z: Math.floor(g / 16) + 0.5, vx: 0, vz: 0 });
+  await delay(400);
+  check(groundAt(D.x0 + list[0].x + 0.5, D.z0 + list[0].z + 0.5, y + 0.1, 0.3).s === state.map.floors[list[0].f], 'off the field the stones rise');
+  for (const q of list) await standOn(q);
+  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return ['stones', `${list.length} stones, ${pz.check.branchPoints} branch points`];
+}
+
+// The sluices (?trial=sluices): a pull pours, the reset lever puts the basins back; then the
+// solver's pulls, each with the action key at its lever: the float at its mark solves it
+export async function runSluicesChecks() {
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'sluices' && t.role === 'route'));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=sluices');
+  const t = all[0];
+  await goTrial('sluices', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
+  const pz = state.map.trial.puzzles[0], F = pz.field;
+  const levels = () => pz.parts.filter(p => p.type === 'basin').sort((a, b) => a.i - b.i).map(p => state.trial.bits[p.id] ?? 0);
+  const pull = async p => {
+    Object.assign(player, { x: p.x, y: p.y, z: p.z + (p.yaw ? -0.45 : 0.45), vx: 0, vz: 0 });
+    await delay(80);
+    check(pendingAction()?.target?.id === p.id, `lever ${p.id} in reach (got ${pendingAction()?.target?.id})`);
+    useAction();
+    await delay(50);
+  };
+  const levers = pz.parts.filter(p => p.type === 'sluice').sort((a, b) => a.i - b.i), before = levels().join();
+  const way = sluiceWay(F.cap, levels(), F.levers, F.float, F.mark);
+  await pull(levers[way[0]]);
+  check(levels().join() !== before, 'a pull pours');
+  await pull(pz.parts.find(p => p.type === 'reset'));
+  check(levels().join() === before, 'the reset lever puts the basins back');
+  for (const j of way) await pull(levers[j]);
+  await until(() => state.trial.phase === 'resolved', 'solved', 3000);
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return ['sluices', `${F.cap.join('/')} mark ${F.mark}: ${way.length} pulls`];
+}
+
+// The timed gate (?trial=timedgate): the exit sealed; the lever on the perch opens it, it shuts
+// again after T s; pulled again and the generator's way run back (teleported along it at RUN_SPEED):
+// through, solved for good
+export async function runTimedChecks() {
+  const all = [];
+  for (let d = 1; d < 20; d++) all.push(...state.cubes.layout(d).trials.filter(t => t.kind === 'timedgate'));
+  check(state.dev && all.length, 'load the game with ?dev=1&trial=timedgate');
+  const t = all[0];
+  await goTrial('timedgate', t.depth, t.key);
+  await until(() => !state.transitioning && state.cubeKey === t.from, 'into the room before');
+  takePortal(state.map.portals.find(p => p.dir === t.fromDir));
+  await until(() => !state.transitioning && state.cubeKey === t.key, 'into the puzzle room');
+  const m = state.map.trial, pz = m.puzzles[0], lever = pz.parts[0];
+  check(sealedDirs().includes(t.exit), 'the exit sealed');
+  const pull = async () => {
+    Object.assign(player, { x: lever.x, y: lever.y, z: lever.z + 0.45, vx: 0, vz: 0 });
+    await delay(80);
+    check(pendingAction()?.target?.id === lever.id, 'the lever in reach');
+    useAction();
+  };
+  await pull();
+  await until(() => !sealedDirs().includes(t.exit), 'the exit opens', 2000);
+  await until(() => sealedDirs().includes(t.exit), 'the exit shuts again', (pz.T + 2) * 1000);
+  await pull();
+  // the way back, at the run's pace
+  const path = m.check.path, t0 = performance.now();
+  for (const p of path) {
+    await until(() => (performance.now() - t0) / 1000 >= p.t, 'the run', 30000);
+    Object.assign(player, { x: p.x, y: p.y, z: p.z, vx: 0, vz: 0 });
+  }
+  await until(() => state.trial.phase === 'resolved', 'through the gate', 2000);
+  check(!portalLocked(state.map, state.run, { dir: t.exit }), 'the way on is open');
+  return ['timedgate', `${pz.check.run} s run, open ${pz.T} s`];
 }
 
 export async function runTrialChecks(kind = 'flood') {

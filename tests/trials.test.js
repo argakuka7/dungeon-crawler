@@ -8,8 +8,8 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld } from '../src/core/trials.js';
-import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban } from '../src/cubegen/trials/solve.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice } from '../src/core/trials.js';
+import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban, solveSluices, sluiceWay } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
@@ -735,4 +735,51 @@ test('every crates and two-plates room generates: solvable in its band from the 
     }
   }
   assert.ok(n.crates > 30 && n.plates > 30, JSON.stringify(n));
+});
+
+// --- stones, sluices, the timed gate ------------------------------------------------------------
+
+test('sluices: a pour stops when one basin is empty or the other full; the BFS finds the fewest pulls', () => {
+  const cap = [5, 3];
+  assert.deepEqual(pourSluice(cap, [5, 0], { from: 0, to: 1 }), [2, 3]);
+  assert.deepEqual(pourSluice(cap, [2, 3], { from: 1, to: 0 }), [5, 0]);
+  assert.deepEqual(pourSluice(cap, [1, 1], { spring: 1 }), [1, 3]);
+  assert.deepEqual(pourSluice(cap, [1, 1], { drain: 0 }), [0, 1]);
+  // 2 in the 3 from a full 5: pour 5>3, drain the 3, pour 5>3: 3 pulls; 4 in the 5 never (water
+  // only leaves)
+  const levers = [{ from: 0, to: 1 }, { from: 1, to: 0 }, { drain: 1 }];
+  assert.equal(solveSluices(cap, [5, 0], levers, 1, 2), 3);
+  assert.deepEqual(sluiceWay(cap, [5, 0], levers, 1, 2), [0, 2, 0]);
+  assert.equal(solveSluices(cap, [5, 0], levers, 0, 4), Infinity);
+});
+
+test('every stones, sluices and timed gate room generates as proved', () => {
+  const n = {};
+  for (const kind of ['stones', 'sluices', 'timedgate']) for (const { seed, d, m } of puzzlesOf(kind, [0, 1])) {
+    n[kind] = (n[kind] ?? 0) + 1;
+    const pz = m.trial.puzzles[0];
+    if (kind === 'stones') {
+      // a walk over all of them, each beside the one before; they sink (crust floors) over the fluid
+      const L = pz.stones;
+      assert.ok(L.length >= (d >= 10 ? 22 : 12), `${seed}/${d}: ${L.length} stones`);
+      L.forEach((q, i) => {
+        assert.ok(m.floors[q.f].crust && m.floors[q.f].top === pz.deck.level);
+        if (i) assert.equal(Math.abs(q.x - L[i - 1].x) + Math.abs(q.z - L[i - 1].z), 1);
+      });
+      assert.equal(m.trial.fluid, m.fluid ?? m.trial.fluid);
+    }
+    if (kind === 'sluices') {
+      const F = pz.field, start = pz.parts.filter(p => p.type === 'basin').sort((a, b) => a.i - b.i).map(p => m.trial.start[p.id]);
+      const pulls = solveSluices(F.cap, start, F.levers, F.float, F.mark);
+      assert.ok(pulls === pz.check.pulls && pulls >= (d >= 10 ? 6 : 4) && pulls <= (d >= 10 ? 9 : 6), `${seed}/${d}: ${pulls} pulls`);
+      assert.equal(pz.parts.filter(p => p.type === 'sluice').length, F.levers.length);
+      assert.ok(pz.parts.some(p => p.type === 'reset'));
+    }
+    if (kind === 'timedgate') {
+      assert.equal(m.trial.role, 'route');
+      assert.ok(pz.check.run >= 4 && pz.T > pz.check.run * (d >= 10 ? 1.2 : 1.35), `${seed}/${d}: ${pz.check.run} s, open ${pz.T}`);
+      assert.ok(m.trial.check.path.length > 2);
+    }
+  }
+  assert.ok(n.stones > 20 && n.sluices > 20 && n.timedgate > 20, JSON.stringify(n));
 });

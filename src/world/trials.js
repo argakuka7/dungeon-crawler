@@ -164,7 +164,8 @@ export function planPuzzles(plan, { spine, K, blocked, pinned, guarded, branches
     if (!puzzles.length || !(force ? isPuzzle(force.kind) : roll < chance)) continue;
     const kind = weighted(puzzles, kindRoll);
     // a forced puzzle: the first slot in a branch, the second on the route (both get tried)
-    const vaults = force && slot === 1 ? [] : branches.filter(b => !blocked(b.cell) && !pinned(b.cell) && !nb(b.cell).some(pinned)
+    // (the timed gate: on the route only, its gate the exit)
+    const vaults = force && slot === 1 || kind === 'timedgate' ? [] : branches.filter(b => !blocked(b.cell) && !pinned(b.cell) && !nb(b.cell).some(pinned)
       && !near(b.cell) && !near(b.parent) && !busy(K(b.cell)) && !busy(K(b.parent)));
     if (vaults.length) {
       const b = vaults[Math.floor(roomRoll * vaults.length)];

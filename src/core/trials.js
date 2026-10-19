@@ -34,9 +34,12 @@ export const TRIALS = {
     lean: { ossuary: 2.5, ruins: 2.5 }, population: 0.5 },
   crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060', built: true,
     population: 0.5 },
-  stones: { name: 'Sinking stones', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['lagoon', 'grotto', 'cenote', 'swamp', 'volcanic', 'abyss'], weight: 1.5, color: '#60e0b0' },
-  sluices: { name: 'Sluices', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['grotto', 'cenote', 'lagoon', 'hive', 'mines'], weight: 1.5, color: '#40c8e0' },
-  timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0' },
+  stones: { name: 'Sinking stones', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['lagoon', 'grotto', 'cenote', 'swamp', 'volcanic', 'abyss'], weight: 1.5, color: '#60e0b0',
+    built: true, population: 0.5 },
+  sluices: { name: 'Sluices', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['grotto', 'cenote', 'lagoon', 'hive', 'mines'], weight: 1.5, color: '#40c8e0',
+    built: true, population: 0.5 },
+  timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0', built: true,
+    population: 0.5 },
   runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff' },
   plates: { name: 'Two plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#e0e0a0', built: true,
     population: 0.5 },
@@ -44,7 +47,7 @@ export const TRIALS = {
 for (const [id, t] of Object.entries(TRIALS)) {
   t.id = id;
   // a puzzle's deck in a sunken room (field and rim): 6 x 6 for the slide and the crates, else 5 x 5
-  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : id === 'plates' ? 9 : 5;   // (the two plates fit no platform)
+  if (t.family === 'puzzle') t.deck = id === 'slide' || id === 'crates' ? 6 : id === 'plates' || id === 'stones' || id === 'sluices' ? 9 : 5;   // (no platform: too big, or wet)
 }
 // may a sunken room have small stage puzzles (a 5 x 5 deck): any built? (then it has three stages
 // from depth 10, and its last may share the exit's quadrant: cubegen/trials/sunken.js)
@@ -197,6 +200,8 @@ export function trialFluidLevel(m, s) {
   if (m.kind === 'sunken') return sunkenLevel(m, s);
   // the collapse: what falls through the crust is in the basin's fluid (its surface over every hole)
   if (m.kind === 'collapse') return s.phase === 'armed' || s.phase === 'running' ? BASIN : null;
+  // the sinking stones: what falls through a sunk one is in the pit's fluid
+  if (m.kind === 'stones') return s.phase === 'resolved' ? null : BASIN;
   if (m.kind !== 'flood') return null;
   const tl = m.timeline;
   if (s.phase === 'idle') return null;
@@ -208,7 +213,7 @@ export const PART_REACH = 1.1;   // how near a part (a button, a lever ...) has 
 
 // About how long a trial room takes a player who knows what to do (s): the balance simulation's
 // estimate (tools/balance.mjs). An event: its clock to the goal; a puzzle: walking it through.
-export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60 };
+export const TRIAL_TIME = { flood: 45, collapse: 30, slide: 60, sunken: 150, mirror: 60, braziers: 50, channels: 70, crates: 120, plates: 60, stones: 50, sluices: 90, timedgate: 40 };
 export const trialTime = kind => TRIAL_TIME[kind] ?? 60;
 
 // --- collapse ----------------------------------------------------------------------------------------
@@ -232,7 +237,7 @@ export function crustState(m, s, q) {
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
-  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null };
+  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice' };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------
@@ -347,3 +352,15 @@ export function pushTarget(F, crates, c, d) {
 }
 // is every plate held? by a crate, or by a body standing on it (cells: the bodies' field cells)
 export const platesHeld = (F, crates, cells = []) => F.plates.every(p => crates.includes(p) || cells.includes(p));
+
+// --- sluices: the water jugs (docs/trials.md, `sluices`) ------------------------------------------
+// Basins of capacities cap[i] holding levels[i]; a lever pours a into b until a is empty or b full,
+// a spring fills its basin up, a drain empties it.
+//   lever: { from, to } | { spring: i } | { drain: i }
+export function pourSluice(cap, levels, lever) {
+  const out = levels.slice();
+  if (lever.spring != null) out[lever.spring] = cap[lever.spring];
+  else if (lever.drain != null) out[lever.drain] = 0;
+  else { const n = Math.min(out[lever.from], cap[lever.to] - out[lever.to]); out[lever.from] -= n; out[lever.to] += n; }
+  return out;
+}
