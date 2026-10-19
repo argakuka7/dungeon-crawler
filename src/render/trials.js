@@ -9,12 +9,14 @@ import * as THREE from 'three';
 import { N, BASE, LH, DIRS, OPP } from '../core/constants.js';
 import { EDGE_CORNERS, edgePts } from '../core/constants.js';
 import { fluidMaterial, cellMaterial, FLUID_LOOK, solidMaterial } from './materials.js';
-import { restY, tideY } from './surface.js';
+import { restY, tideY, stepWet } from './surface.js';
 import { TRIALS } from '../core/trials.js';
 import { GeoBuilder } from './builder.js';
 import { gradient } from './palette.js';
 import { cutMaterial, setTrialWaterCap, WATER_OWN, WATER_SHORE } from './section.js';
 import { groundAt, slopeAt } from './shore.js';
+import { wallPieces, wetWall, wetSlope } from './floors.js';
+import { inb } from '../core/util.js';
 import { inject } from './cutshader.js';
 import { themeOf } from '../themes/depth.js';
 import { palRow } from '../themes/fluids.js';
@@ -425,37 +427,29 @@ export function setTrialFog(world, y) {
   v.fog.children[1].position.y = y;
 }
 
-// The walls of a trial's room, for its fluid's wet bands (materials.js cellMaterial, trial): a
-// strip a little in front of every bit of wall a column shows to its neighbour, all the way up
-// (the shader draws only between the fluid's surface and its wet line)
 // every vertex of a geometry in palette row `row` (materials.js cellMaterial's `pal`)
 function palAttribute(geo, row) {
   const n = geo.getAttribute('position').count, a = new Uint16Array(n * 4);
   for (let i = 0; i < n; i++) { a[i * 4] = row; a[i * 4 + 1] = row; }
   return new THREE.BufferAttribute(a, 4);
 }
+// A standing fluid's wet bands (materials.js cellMaterial, trial), as the cube's own fluids have
+// them (render/floors.js wetWall, wetSlope): a strip a little in front of every bit of wall a
+// column shows to its neighbour, all the way up, and a skin over every sloping floor (the shader
+// draws them only between the fluid's surface and its wet line).
 function wetBands(m, pal) {
-  const b = new GeoBuilder({ uvs: true }), white = new THREE.Color(1, 1, 1);
+  const b = new GeoBuilder({ uvs: true });
   b.uvNow = [-1, 0];
-  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) for (let d = 0; d < 4; d++) {
-    const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
-    if (nx < 0 || nz < 0 || nx >= N || nz >= N) continue;
-    const [ea, eb] = EDGE_CORNERS[d], [na, nb] = EDGE_CORNERS[OPP[d]];
-    // our own floors cover the wall where they stand
-    const ours = m.cols[z * N + x].filter(f => !f.fluid).map(f => [f.bottom * LH, Math.max(f.cs[ea], f.cs[eb])]);
-    const [[ax, az], [bx, bz]] = edgePts(x, z, d), ix = -DIRS[d][0] * 0.005, iz = -DIRS[d][1] * 0.005;
-    for (const g of m.cols[nz * N + nx]) {
-      if (g.fluid || g.crust) continue;
-      let parts = [[Math.max(g.bottom * LH, -BASE), Math.min(g.cs[na], g.cs[nb])]];
-      for (const [lo, hi] of ours) parts = parts.flatMap(([p, q]) => [[p, Math.min(q, lo)], [Math.max(p, hi), q]]);
-      for (const [lo, hi] of parts) if (hi - lo > 0.01)
-        b.quad([ax + ix, lo, az + iz], [bx + ix, lo, bz + iz], [bx + ix, hi, bz + iz], [ax + ix, hi, az + iz], [-DIRS[d][0], 0, -DIRS[d][1]], white);
-    }
+  for (const f of m.floors) {
+    if (f.fluid || f.crust) continue;
+    for (let d = 0; d < 4; d++) if (inb(f.x + DIRS[d][0], f.z + DIRS[d][1])) wetWall(b, wallPieces(m, f, d), -BASE, 1e4);
+    wetSlope(b, f);
   }
   const a = b.arrays(), geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(a.pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(a.nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(a.uv, 2));
+  geo.setAttribute('shore', new THREE.BufferAttribute(a.shore, 4));
   geo.setAttribute('pal', palAttribute(geo, pal));
   return geo;
 }
@@ -719,8 +713,8 @@ export function tickTrialView(world, time) {
     if (v.waterTide) {
       // the wet line: the highest the fluid stood (with the tide), drying off as it sinks, and
       // never too far over it (a drained stage leaves a band that follows it down)
-      const S = FLUID_LOOK[t].cells, rest = restY(v.level), high = rest + tideY(S, time), dt = Math.max(0, time - (v.wetTime ?? time));
-      v.wetAt = v.wetAt == null ? high : Math.min(high + 0.35, Math.max(high, v.wetAt - S.dry * dt));
+      const S = FLUID_LOOK[t].cells, rest = restY(v.level), dt = Math.max(0, time - (v.wetTime ?? time));
+      v.wetAt = stepWet(S, v.wetAt, rest + tideY(S, time), dt);
       v.wetTime = time;
       v.waterTide.wet.value = v.wetAt - rest;
     }

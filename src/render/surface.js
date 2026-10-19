@@ -49,6 +49,13 @@ export const swellGLSL = S => `
   }
 `;
 export const tideY = (S, tm) => S.lift + S.tide / 2 * (Math.sin(tm * TAU / S.period) - 1);
+// The wet line: how high the banks are still wet, for every fluid alike (the cube's own,
+// materials.js tickTides; a standing one, render/trials.js): the highest its surface stood, less
+// what has dried off since (S.dry a second), never more than WET_REACH over where it stands now
+// (a fluid that drains away leaves a band that follows it down). wet: the line so far (null: none
+// yet), high: where the surface stands now, dt: the seconds since (heights: world units).
+export const WET_REACH = 0.35;
+export const stepWet = (S, wet, high, dt) => wet == null ? high : Math.min(high + WET_REACH, Math.max(high, wet - S.dry * dt));
 // where the surface of fluid t at `level` stands at time tm (the tide, not the waves)
 export const surfaceY = (t, level, tm) => restY(level) + tideY(FLUID_MOTION[t], tm);
 // the lowest and highest the surface of fluid t at `level` ever stands

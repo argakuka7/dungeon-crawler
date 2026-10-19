@@ -11,12 +11,15 @@
 import { N } from '../core/constants.js';
 import { floorY } from '../core/surfaces.js';
 
+// how far a fluid's wet band on sloping ground stands over it (render/floors.js wetSlope)
+export const WET_LIFT = 0.005;
+
 // the height of floor f's top at (x, z) (the cube's coordinates; in its cell or on its edge)
 export const groundAt = (f, x, z) => floorY(f, x - f.x, z - f.z);
 
 // how steep floor f's top is at (fx, fz) in its cell: its triangle's slope there (render/floors.js:
 // two triangles a cell, split along one diagonal or the other)
-function triangleSlope(f, fx, fz) {
+export function triangleSlope(f, fx, fz) {
   const c = f.cs;
   if (!f.split) return fx >= fz ? Math.hypot(c[1] - c[0], c[3] - c[1]) : Math.hypot(c[3] - c[2], c[2] - c[0]);
   return fx + fz <= 1 ? Math.hypot(c[1] - c[0], c[2] - c[0]) : Math.hypot(c[3] - c[2], c[3] - c[1]);

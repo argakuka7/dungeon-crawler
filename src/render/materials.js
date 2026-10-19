@@ -7,7 +7,8 @@ import { N, WATER, LAVA, ACID } from '../core/constants.js';
 import { CELLS, useCells } from './watercells.js';
 import { PAL_TEX, PAL_GLSL } from './fluidpal.js';
 import { FALL_WIDTH } from './parts.js';
-import { FLUID_MOTION, SINK, swellGLSL, tideY } from './surface.js';
+import { WET_LIFT } from './shore.js';
+import { FLUID_MOTION, SINK, swellGLSL, tideY, stepWet } from './surface.js';
 
 // How each fluid moves and is drawn; its colours are its palette's (themes/fluids.js, one per
 // body of fluid: render/fluidpal.js), not these.
@@ -99,16 +100,17 @@ export function swayMaterial(mat, scale) {
 const TAU = Math.PI * 2;
 
 // The wet line of each fluid with cells (FLUID_LOOK): how high (over the rest height) the banks
-// are still wet, the highest the tide stood a while back less what has dried off since. Set by
-// tickTides once a frame, shared by every cube and proxy.
-export const WET_LINE = Object.fromEntries(Object.entries(FLUID_LOOK).filter(([, L]) => L.cells).map(([t]) => [t, { value: 0 }]));
-export function wetLine(S, tm) {
-  let w = -Infinity;
-  for (let back = 0; back <= S.period; back += S.period / 120) w = Math.max(w, tideY(S, tm - back) - S.dry * back);
-  return w;
-}
+// of the cubes' own fluids are still wet (render/surface.js stepWet). Set by tickTides once a
+// frame, shared by every cube and proxy.
+export const WET_LINE = Object.fromEntries(Object.entries(FLUID_LOOK).filter(([, L]) => L.cells).map(([t]) => [t, { value: 0, wet: null }]));
+let tidesAt = null;
 export function tickTides() {
-  for (const [t, u] of Object.entries(WET_LINE)) u.value = wetLine(FLUID_LOOK[t].cells, WIND.value);
+  const dt = tidesAt == null ? 0 : Math.max(0, WIND.value - tidesAt);
+  tidesAt = WIND.value;
+  for (const [t, u] of Object.entries(WET_LINE)) {
+    const S = FLUID_LOOK[t].cells;
+    u.value = u.wet = stepWet(S, u.wet, tideY(S, WIND.value), dt);
+  }
 }
 // The walls a fluid's surface meets (cellMaterial wallDist): the banks round its cell that stand
 // over it, from the bits in its uvs (render/floors.js fluidVolume), or a standing fluid's from the
@@ -207,9 +209,10 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         bool band = uv.x < -0.5 && uv.x > -1.5, upper = uv.x > -0.5 || abs(cy - uv.y) < 0.004;
         vCellWave = swellW(cw, uCellTime);
         ${trial ? `if (uv.x > -0.5) transformed.y = uTrialLevel + swellY(cw, uCellTime);
-        else if (shore.w > 1.5) transformed.y = clamp(uTrialLevel + swellY(cw, uCellTime), shore.x, shore.z > 0.0 ? shore.z : 1e4);`
+        else if (shore.w > 1.5 && shore.w < 2.5) transformed.y = clamp(uTrialLevel + swellY(cw, uCellTime), shore.x, shore.z > 0.0 ? shore.z : 1e4);`
         : 'if (!band && upper) transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);'}
-        vCellP = cw / ${tile}; vCellW = cw; vCellUv = uv; vCellY = cy - ${trial ? 'uTrialLevel' : 'uv.y'};
+        // (a wet band on sloping ground, shore w 3: by the ground's height under it, render/floors.js wetSlope)
+        vCellP = cw / ${tile}; vCellW = cw; vCellUv = uv; vCellY = cy - (shore.w > 2.5 ? ${WET_LIFT.toFixed(4)} : 0.0) - ${trial ? 'uTrialLevel' : 'uv.y'};
         vCellN = normal; vPalRows = pal.xy; vShore = shore;
       }`);
     sh.fragmentShader = '#define CELL_STYLE ' + STYLE_ID[L.style] + '\nflat varying vec2 vPalRows;\nvarying vec2 vCellP, vCellW, vCellUv;\nvarying vec3 vCellN;\nvarying float vCellWave, vCellY;\nvarying vec4 vShore;\nuniform float uCellTime, uWetLine;\nuniform sampler2D uCellTex;\n'
@@ -245,7 +248,9 @@ export function cellMaterial(mat, t, trial = null, over = null) {
         #else
           float bandEdge = uWetLine + 0.008 * sin(bw * 7.3) + 0.005 * sin(bw * 17.0 + 1.3);
         #endif
-        if (band && (vCellY < bandLevel - 0.003 || vCellY > bandEdge)) discard;
+        // (one on sloping ground, render/floors.js wetSlope, from a little over the waterline: it
+        // stands WET_LIFT over the ground, and seen aslant would cover the foam at the waterline)
+        if (band && (vCellY < bandLevel + (vShore.w > 2.5 ? ${WET_LIFT.toFixed(4)} : -0.003) || vCellY > bandEdge)) discard;
         // how far the shore is (wobbling); sides and bands: far
         vec2 w = vCellW;
         // (no further than the foam reaches: a cell further out knows no shores, so it must not jump there)

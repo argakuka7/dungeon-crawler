@@ -2,11 +2,11 @@
 import { N, LH, DIRS, OPP, DIRV, EDGE_CORNERS, edgePts } from '../core/constants.js';
 import { idx, inb, hash32 } from '../core/util.js';
 import { C, gradient, TOP_STOPS, UNDERSIDE, SOFT, fluidBed, fluidBank } from './palette.js';
-import { cliffWall } from './walls.js';
+import { cliffWall, wallRegion } from './walls.js';
 import { palRow } from '../themes/fluids.js';
 import { buildInteriorFloors } from './interior.js';
 import { restY } from './surface.js';
-import { groundAt, slopeAt } from './shore.js';
+import { groundAt, slopeAt, triangleSlope, WET_LIFT } from './shore.js';
 
 const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
@@ -28,22 +28,52 @@ function topColor(m, f) {
   return top;
 }
 
-// our side face minus whatever the neighbouring column covers
-function walls(m, f, b) {
+// The uncovered pieces of floor f's side face towards d: from its bottom up to its top line, less
+// what the floors of the neighbouring column cover (a crumbling crust's floors, render/trials.js,
+// may be gone: walls behind them are drawn). Along the edge P0 -> P1, each piece over its `lows`
+// and under its `ups` (lines: [y at P0, y at P1]). Its cliff wall (walls) and the wet bands on it
+// (wetWall: a cube's own fluid's banks, a standing fluid's walls, render/trials.js) alike.
+export function wallPieces(m, f, d) {
   const fb = f.bottom * LH, cs = f.cs;
+  const [ea, eb] = EDGE_CORNERS[d], [na, nb] = EDGE_CORNERS[OPP[d]];
+  const topLine = [cs[ea], cs[eb]];
+  const nx = f.x + DIRS[d][0], nz = f.z + DIRS[d][1];
+  const nbs = inb(nx, nz) ? m.cols[idx(nx, nz)].filter(g => !g.crust).sort((a, b) => a.bottom - b.bottom) : [];
+  const [P0, P1] = edgePts(f.x, f.z, d);
+  let gl = [-1e9, -1e9];
+  const pieces = [];
+  for (const g of nbs) { pieces.push({ lows: [[fb, fb], gl], ups: [topLine, [g.bottom * LH, g.bottom * LH]] }); gl = [g.cs[na], g.cs[nb]]; }
+  pieces.push({ lows: [[fb, fb], gl], ups: [topLine, [1e9, 1e9]] });
+  return { d, P0, P1, topLine, pieces };
+}
+// our side faces minus whatever the neighbouring columns cover
+function walls(m, f, b) {
   for (let d = 0; d < 4; d++) {
-    const [ea, eb] = EDGE_CORNERS[d], [na, nb] = EDGE_CORNERS[OPP[d]];
-    const topLine = [cs[ea], cs[eb]];
-    const nx = f.x + DIRS[d][0], nz = f.z + DIRS[d][1];
-    // (a crumbling crust's floors, render/trials.js, may be gone: walls behind them are drawn)
-    const nbs = inb(nx, nz) ? m.cols[idx(nx, nz)].filter(g => !g.crust).sort((a, b) => a.bottom - b.bottom) : [];
-    const [P0, P1] = edgePts(f.x, f.z, d);
-    let gl = [-1e9, -1e9];
-    const gaps = [];
-    for (const g of nbs) { gaps.push([gl, [g.bottom * LH, g.bottom * LH]]); gl = [g.cs[na], g.cs[nb]]; }
-    gaps.push([gl, [1e9, 1e9]]);
-    for (const [lo, hi] of gaps) cliffWall(b, P0, P1, [[fb, fb], lo], [topLine, hi], topLine, DIRV[d], !f.fluid);
+    const w = wallPieces(m, f, d);
+    for (const p of w.pieces) cliffWall(b, w.P0, w.P1, p.lows, p.ups, w.topLine, DIRV[d], !f.fluid);
   }
+}
+
+// The wet bands a fluid leaves on its shores (in its own mesh, uv u -1: the shader draws them only
+// between its surface and its wet line, materials.js cellMaterial). On a wall (wallPieces), a
+// little in front of it, between the heights lo and hi; on the sloping top of floor f (its
+// triangles steeper than flat), WET_LIFT over it (its `shore` w 3: the shader goes by the
+// ground's height under it). b: the fluid's builder, its uvNow set.
+const WHITE = C('#ffffff');
+export function wetWall(b, w, lo, hi) {
+  const ox = DIRS[w.d][0] * 0.005, oz = DIRS[w.d][1] * 0.005;
+  const P0 = [w.P0[0] + ox, w.P0[1] + oz], P1 = [w.P1[0] + ox, w.P1[1] + oz];
+  for (const p of w.pieces) wallRegion(b, P0, P1, [...p.lows, [lo, lo]], [...p.ups, [hi, hi]], DIRV[w.d], WHITE);
+}
+const SLOPED = 0.03, ON_SLOPE = [0, 0, 0, 3];
+export function wetSlope(b, f) {
+  const P = [0, 1, 2, 3].map(k => [f.x + (k & 1), f.cs[k] + WET_LIFT, f.z + (k >> 1)]), was = b.shoreAt;
+  b.shoreAt = () => ON_SLOPE;
+  for (const t of f.split ? [[0, 1, 2], [1, 3, 2]] : [[0, 1, 3], [0, 3, 2]]) {
+    const c = t.map(k => P[k]), mid = [(c[0][0] + c[1][0] + c[2][0]) / 3 - f.x, (c[0][2] + c[1][2] + c[2][2]) / 3 - f.z];
+    if (triangleSlope(f, mid[0], mid[1]) > SLOPED) b.tri(c[0], c[1], c[2], WHITE, [0, 1, 0]);
+  }
+  b.shoreAt = was;
 }
 
 // A fluid box from the bed up to the surface, faces hidden where a neighbour covers them. The
@@ -54,7 +84,8 @@ function walls(m, f, b) {
 //        corners (DIAG order), so the foam can follow the shore
 //   side: u = -2
 //   wet band: u = -1, a strip on a bank's wall just inside the fluid, from under the lowest
-//        the surface sinks to over the highest it rises, darkened where the water has just been
+//        the surface sinks to over the highest it rises, and over its bed where that slopes up
+//        out of it (wetWall, wetSlope), darkened where the water has just been
 // and the top's `shore` the bed under it (render/shore.js: its height, its slope), so the foam
 // also follows a shore that slopes down into the water inside the cell.
 const SUB = 4, DIAG = [[1, 1], [-1, 1], [1, -1], [-1, -1]], BAND = 0.4;
@@ -84,16 +115,17 @@ function fluidVolume(m, f, b) {
     else b.quad([x0, sy, z0], [x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [0, 1, 0], white);
   }
   b.shoreAt = null;
+  // the wet band where the bed slopes up out of the water
+  b.uvNow = [-1, sy];
+  if (Math.max(...f.cs) > sy - BAND) wetSlope(b, f);
   for (let d = 0; d < 4; d++) {
     const [[ax, az], [bx, bz]] = edgePts(x, z, d);
     const at = k => [ax + (bx - ax) * k / SUB, az + (bz - az) * k / SUB];
     const g = bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]]);
     if (g) {
-      // the wet band, a little in front of the bank's wall, up to its top
-      const [ca, cb] = EDGE_CORNERS[OPP[d]], ix = -DIRS[d][0] * 0.005, iz = -DIRS[d][1] * 0.005, lo = Math.max(by, sy - BAND);
-      const ta = Math.min(g.cs[ca], sy + BAND), tb = Math.min(g.cs[cb], sy + BAND);
+      // the wet band on the bank's wall facing us, round the surface
       b.uvNow = [-1, sy];
-      b.quad([ax + ix, lo, az + iz], [bx + ix, lo, bz + iz], [bx + ix, tb, bz + iz], [ax + ix, ta, az + iz], [-DIRS[d][0], 0, -DIRS[d][1]], white);
+      wetWall(b, wallPieces(m, g, OPP[d]), sy - BAND, sy + BAND);
     } else if (!hidden(d)) {
       b.uvNow = [-2, sy];
       for (let k = 0; k < SUB; k++) {
