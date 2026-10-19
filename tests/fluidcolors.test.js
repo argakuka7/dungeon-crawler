@@ -7,11 +7,11 @@ import { N, DIRS, WATER, LAVA, ACID } from '../src/core/constants.js';
 import { World } from '../src/world/world.js';
 import { parse, step } from '../src/world/coords.js';
 import { worldThemes, MAX_DEPTH } from '../src/themes/depth.js';
-import { worldPalettes, palRow, rowDepth, rowSlot, rowFluid, linearToOklch, familyOf, ANCHORS, PAL_ROWS, PAL_SLOTS } from '../src/themes/fluids.js';
+import { worldPalettes, palRow, rowDepth, rowSlot, rowFluid, linearToOklch, familyOf, ANCHORS, PAL_ROWS, PAL_SLOTS, HUE, HUE_GAP } from '../src/themes/fluids.js';
 import { stampFluidBodies } from '../src/cubegen/fluidbodies.js';
 import { doused, douses } from '../src/core/douse.js';
 
-const HUES = { [WATER]: [160, 275], [ACID]: [118, 158], [LAVA]: [25, 72] };
+const HUES = { [WATER]: [188, 270], [ACID]: [118, 146], [LAVA]: [25, 72] };
 
 test('palettes: from the seed alone, in gamut, each fluid in its hues, the pattern lighter than the body', () => {
   for (const seed of [1, 2, 3, 99]) {
@@ -31,6 +31,24 @@ test('palettes: from the seed alone, in gamut, each fluid in its hues, the patte
       if (fluid !== LAVA) assert.ok(linearToOklch(p.dark)[0] < L, `${seed} row ${row}: its swirls are darker`);
       else assert.ok(linearToOklch(p.dark)[0] < L * 0.5, `${seed} row ${row}: lava's crust is dark`);
       assert.ok(p.opacity > 0.6 && p.opacity <= 1);
+    });
+  }
+});
+
+test('water and acid never look alike: hues far apart, acid always vivid, water\'s lines never green', () => {
+  assert.ok(HUE_GAP >= 40);
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const rows = worldPalettes(seed, worldThemes(seed));
+    rows.forEach((p, row) => {
+      const [L, C, h] = linearToOklch(p.body);
+      if (rowFluid(row) === ACID) {
+        assert.ok(C > 0.15 && L > 0.65, `${seed} row ${row}: acid ${p.hex.body} is vivid`);
+        assert.ok(h <= HUE[ACID][1] + 1, `${seed} row ${row}: acid hue ${h.toFixed(0)}`);
+      }
+      if (rowFluid(row) === WATER) for (const c of ['body', 'dark', 'line', 'fallBase', 'fallLine', 'fallLight']) {
+        const [, cc, hh] = linearToOklch(p[c]);
+        if (cc > 0.025) assert.ok(hh >= 170, `${seed} row ${row}: water's ${c} ${p.hex[c]} (hue ${hh.toFixed(0)}) is not green`);
+      }
     });
   }
 });

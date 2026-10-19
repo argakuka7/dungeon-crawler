@@ -655,11 +655,13 @@ The town's meadows (depth 0) do not carry over. The picks are kept as stretches
 
 Water, lava and acid are not one colour each: every world makes its own palettes from its
 seed, a few per fluid and depth, within the family of each theme (`FAMILY`: anchor colours by
-name, the blue and green waters from bright royal and lagoon down to the deep's navy and dark
-teal; acid only greens; lava orange to crimson). A palette is picked between two of the
-family's anchors and jittered; the rest of it (darker swirls, the light lines between the
-cells, foam, glow, the falls' colours) follows from its body colour in OKLCH: dark water is
-duller, its pattern fainter, its lines leaning towards green.
+name, the blue and teal waters from bright royal and lagoon down to the deep's navy and dark
+teal; acid only greens; lava orange to crimson). Water's hues (OKLCH 188–270) and acid's
+(118–146) stay over 40° apart, and acid is always bright and vivid, so the two are never
+mistaken for each other. A palette is picked between two of the family's anchors and
+jittered; the rest of it (darker swirls, the light lines between the cells, foam, glow, the
+falls' colours) follows from its body colour in OKLCH: dark water is duller, its pattern
+fainter, its lines leaning towards teal (never into the greens).
 
 - **One colour per fluid in a cube** (`stampFluidBodies`, from the map alone, in
   `World.cube`): what runs on into another cube (fluid at the cube's edge, a spout, a fall out

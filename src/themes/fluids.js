@@ -10,7 +10,8 @@
 // A palette is picked between two of the theme's anchors (FAMILY) and jittered a little; the
 // rest of its colours (the darker swirls, the light lines between the cells, foam, glow, the
 // falls' colours) follow from the body colour in OKLCH. Dark water is duller and its pattern
-// fainter, its lines lean towards green; acid stays green, lava orange to red.
+// fainter, its lines lean towards teal; water stays teal to blue and acid green, far enough
+// apart in hue that the two are never mistaken for each other (HUE), lava orange to red.
 import { WATER, LAVA, ACID } from '../core/constants.js';
 import { mulberry32, hash32 } from '../core/util.js';
 import { MAX_DEPTH, themeAt } from './depth.js';
@@ -30,13 +31,15 @@ export const rowSlot = row => row % PAL_SLOTS;
 export const ANCHORS = {
   [WATER]: {
     sky: '#2c9ad8', royal: '#2a60d6', cobalt: '#1f47a8', glacier: '#5ab4d8', lagoon: '#2fb6c9', turquoise: '#1fa3a8',
-    jade: '#2a8a74', moss: '#2e5446', slate: '#183651', navy: '#163254', greyteal: '#2a3939', deepteal: '#19292e',
+    teal: '#1f8a8a', murk: '#2f5452', slate: '#183651', navy: '#163254', greyteal: '#2a3939', deepteal: '#19292e',
   },
-  [ACID]: { lime: '#7dff3a', green: '#52e04a', chartreuse: '#b0f03c', emerald: '#34d27a', sickly: '#9ad84a', toxic: '#62f080' },
+  [ACID]: { lime: '#7dff3a', green: '#52e04a', chartreuse: '#b0f03c', emerald: '#4fd25a', sickly: '#9ad84a', toxic: '#78f05a' },
   [LAVA]: { magma: '#ff6a00', ember: '#ff4a14', crimson: '#e6301a', amber: '#ff8c1a', gold: '#ffa828' },
 };
-// how far a fluid's hue may go (OKLCH degrees): acid stays green, lava orange to red
-const HUE = { [WATER]: [160, 270], [ACID]: [118, 158], [LAVA]: [25, 72] };
+// how far a fluid's hue may go (OKLCH degrees): water stays teal to blue, acid green (well apart,
+// HUE_GAP, so the two never look alike), lava orange to red
+export const HUE = { [WATER]: [188, 270], [ACID]: [118, 146], [LAVA]: [25, 72] };
+export const HUE_GAP = HUE[WATER][0] - HUE[ACID][1];
 const JITTER = { [WATER]: [0.04, 0.15, 8], [ACID]: [0.04, 0.1, 6], [LAVA]: [0.03, 0.08, 5] };   // lightness, chroma (share), hue
 
 // each theme's anchors (by its prop set, themes/index.js `props`), and how far the fluid of a cube
@@ -45,19 +48,19 @@ const DEFAULT = { water: ['sky', 'royal', 'turquoise', 'slate'], acid: ['lime', 
 export const FAMILY = {
   meadow: { water: ['sky', 'royal', 'turquoise', 'cobalt'] },
   clouds: { water: ['glacier', 'sky', 'royal'] },
-  lagoon: { water: ['lagoon', 'turquoise', 'sky', 'jade'], spread: 0.7 },
-  karst: { water: ['turquoise', 'jade', 'sky', 'lagoon'] },
+  lagoon: { water: ['lagoon', 'turquoise', 'sky', 'teal'], spread: 0.7 },
+  karst: { water: ['turquoise', 'teal', 'sky', 'lagoon'] },
   peaks: { water: ['glacier', 'sky', 'slate'] },
   highlands: { water: ['sky', 'slate', 'royal', 'turquoise'] },
-  badlands: { water: ['jade', 'turquoise', 'greyteal'], lava: ['magma', 'ember', 'amber'] },
+  badlands: { water: ['teal', 'turquoise', 'greyteal'], lava: ['magma', 'ember', 'amber'] },
   saltflats: { water: ['turquoise', 'glacier', 'lagoon'] },
-  canyon: { water: ['jade', 'turquoise', 'lagoon', 'slate'] },
-  roots: { water: ['moss', 'deepteal', 'greyteal', 'jade'], acid: ['sickly', 'green'] },
+  canyon: { water: ['teal', 'turquoise', 'lagoon', 'slate'] },
+  roots: { water: ['murk', 'deepteal', 'greyteal', 'teal'], acid: ['sickly', 'green'] },
   frozen: { water: ['glacier', 'slate', 'navy'], spread: 0.35 },
-  grotto: { water: ['turquoise', 'deepteal', 'jade', 'navy'], spread: 0.7 },
-  swamp: { water: ['moss', 'deepteal', 'greyteal'], acid: ['sickly', 'green', 'lime'] },
-  hive: { water: ['jade', 'greyteal', 'moss'] },
-  cenote: { water: ['jade', 'turquoise', 'deepteal', 'lagoon'], spread: 0.6 },
+  grotto: { water: ['turquoise', 'deepteal', 'teal', 'navy'], spread: 0.7 },
+  swamp: { water: ['murk', 'deepteal', 'greyteal'], acid: ['sickly', 'green', 'lime'] },
+  hive: { water: ['teal', 'greyteal', 'murk'] },
+  cenote: { water: ['teal', 'turquoise', 'deepteal', 'lagoon'], spread: 0.6 },
   nests: { water: ['deepteal', 'navy', 'greyteal'], acid: ['lime', 'emerald', 'toxic'] },
   ossuary: { water: ['slate', 'greyteal', 'deepteal'], acid: ['sickly', 'chartreuse'] },
   mines: { water: ['navy', 'cobalt', 'slate'] },
@@ -129,6 +132,8 @@ function derive(fluid, [L, C, h]) {
     fallBase: lch(L, C, h - 3), fallLine: lch(Math.min(0.88, L + 0.14), C * 0.95, h + 34), fallLight: lch(L * 0.45, C * 0.4, h - 10),
     opacity: 1, glow: 1.1, lineOpacity: 1, fallOpacity: 1,
   };
+  // (acid stays vivid: too light and sRGB has no room left for its green)
+  if (fluid === ACID) L = Math.max(0.72, Math.min(0.86, L));
   if (fluid === ACID) return {
     body: lch(L, C, h), dark: lch(L - 0.14, C * 0.95, h + 6), line: lch(Math.min(0.97, L + 0.07), C * 0.6, h - 14),
     foam: lch(0.95, C * 0.53, h - 11), emissive: lch(L * 0.68, C * 0.73, h + 2), cap: lch(L * 0.69, C * 0.66, h),
@@ -137,12 +142,12 @@ function derive(fluid, [L, C, h]) {
   };
   // water: how much contrast its pattern has (1: the bright sky blue; dark water a lot less)
   const k = Math.max(0.2, Math.min(1.1, (L - 0.22) / 0.434)), kk = Math.min(1, k);
-  const lineL = Math.min(0.95, L + mix(0.1, 0.28, kk)), lineC = C * mix(1.05, 0.36, kk) + 0.008, lineH = h - mix(32, 20, kk);
+  const lineL = Math.min(0.95, L + mix(0.1, 0.28, kk)), lineC = C * mix(1.05, 0.36, kk) + 0.008, lineH = Math.max(176, h - mix(32, 20, kk));
   return {
     body: lch(L, C, h), dark: lch(L - mix(0.035, 0.09, kk), C * 1.04, h + 5), line: lch(lineL, lineC, lineH),
     foam: lch(mix(0.8, 0.99, kk), mix(0.03, 0.006, kk), h - 10), emissive: lch(L * 0.46, C * 0.52, h + 7),
     cap: lch(L * 0.72, C * 0.87, h + 12),
-    fallBase: lch(L + 0.02 * (1 - kk), C * 1.1, h + 8), fallLine: lch(Math.min(0.96, lineL + 0.02), lineC * 0.8, lineH - 8),
+    fallBase: lch(L + 0.02 * (1 - kk), C * 1.1, h + 8), fallLine: lch(Math.min(0.96, lineL + 0.02), lineC * 0.8, Math.max(176, lineH - 8)),
     fallLight: lch(L + mix(0.08, 0.136, kk), C * 0.74, h - 1),
     opacity: mix(0.86, 0.7, kk), glow: mix(0.12, 0.25, kk), lineOpacity: 0.92, fallOpacity: mix(0.88, 0.82, kk),
   };
