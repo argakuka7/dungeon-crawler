@@ -27,12 +27,14 @@ import { DISPLAY, BODY } from '../render/fonts.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
+// drawn in CSS pixels, its backing store in device pixels (sharp on high-DPI screens); the
+// stylesheet gives its width, the height follows the canvas's proportions
 const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 42 });
 document.body.appendChild(canvas);
 const g = canvas.getContext('2d');
 const BG = '#0b0d1266', OUTLINE = '#0b0d12', QUEST = '#ffd34a';
 const REFRESH = 4;
-let drawn = '', drawnAt = -Infinity;   // what the map showed last, and when (ms)
+let drawn = '', drawnAt = -Infinity, drawnScale = 0;   // what the map showed last, when (ms), at what pixel ratio
 
 // a point on edge d of the cell at (px, pz), t in [0,1] along it
 const edgePt = (px, pz, d, t) => [[px + CELL, pz + t * CELL], [px, pz + t * CELL], [px + t * CELL, pz + CELL], [px + t * CELL, pz]][d];
@@ -103,8 +105,9 @@ export function drawMinimap() {
   const seen = [state.cubeKey, px(me.x), px(me.z), Math.round(view.yaw * 200), Math.round(player.yaw * 20),
     ...online.buddies.map(b => `${b.cube} ${px(b.x)} ${px(b.z)} ${Math.round(b.yaw * 20)}`)].join('|');
   const now = performance.now();
-  if (seen === drawn && now - drawnAt < 1000 / REFRESH) return;
-  drawn = seen; drawnAt = now;
+  const scale = Math.min(Math.max(devicePixelRatio || 1, 1), 3);
+  if (seen === drawn && scale === drawnScale && now - drawnAt < 1000 / REFRESH) return;
+  drawn = seen; drawnAt = now; drawnScale = scale;
   const fx = inside ? (door ? door.x / N : 0.5) : me.x / N, fz = inside ? (door ? door.z / N : 0.5) : me.z / N;
   const cx = X0 + fx, cz = Z0 + fz;
   cos = Math.cos(view.yaw); sin = Math.sin(view.yaw);
@@ -117,10 +120,13 @@ export function drawMinimap() {
   if (tp) lines.push([`portal open: depth ${tp.depth}`, '#c9a8ff']);
   for (const b of away) lines.push([`${b.name}: ${whereabouts(b, Y)} (F: go)`, playerColor(b.slot)]);
   const height = SIZE + 14 * lines.length;
-  if (canvas.height !== height) canvas.height = height;
-  g.clearRect(0, 0, canvas.width, canvas.height);
+  const w = Math.round(SIZE * scale), h = Math.round(height * scale);
+  if (canvas.width !== w) canvas.width = w;
+  if (canvas.height !== h) canvas.height = h;
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  g.clearRect(0, 0, SIZE, height);
   g.fillStyle = BG; g.beginPath(); g.arc(C, C, R * CELL, 0, Math.PI * 2); g.fill();
-  g.fillRect(0, SIZE, canvas.width, canvas.height - SIZE);
+  g.fillRect(0, SIZE, SIZE, height - SIZE);
   // the cubes, turned with the camera and cut to the circle; the marks on them come after,
   // upright (marks: [x, y] in the turned frame, how to draw it)
   const marks = [];
