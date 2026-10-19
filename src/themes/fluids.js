@@ -41,7 +41,7 @@ const JITTER = { [WATER]: [0.04, 0.15, 8], [ACID]: [0.04, 0.1, 6], [LAVA]: [0.03
 
 // each theme's anchors (by its prop set, themes/index.js `props`), and how far the fluid of a cube
 // it stays in may stray from its running fluid (0..1)
-const DEFAULT = { water: ['sky', 'royal', 'turquoise', 'slate'], acid: ['lime', 'green', 'chartreuse', 'emerald'], lava: ['magma', 'ember', 'amber'], spread: 0.5 };
+const DEFAULT = { water: ['sky', 'royal', 'turquoise', 'slate'], acid: ['lime', 'green', 'chartreuse', 'emerald'], lava: ['magma', 'amber', 'gold'], spread: 0.5 };
 export const FAMILY = {
   meadow: { water: ['sky', 'royal', 'turquoise', 'cobalt'] },
   clouds: { water: ['glacier', 'sky', 'royal'] },
@@ -49,7 +49,7 @@ export const FAMILY = {
   karst: { water: ['turquoise', 'jade', 'sky', 'lagoon'] },
   peaks: { water: ['glacier', 'sky', 'slate'] },
   highlands: { water: ['sky', 'slate', 'royal', 'turquoise'] },
-  badlands: { water: ['jade', 'turquoise', 'greyteal'], lava: ['ember', 'magma', 'crimson'] },
+  badlands: { water: ['jade', 'turquoise', 'greyteal'], lava: ['magma', 'ember', 'amber'] },
   saltflats: { water: ['turquoise', 'glacier', 'lagoon'] },
   canyon: { water: ['jade', 'turquoise', 'lagoon', 'slate'] },
   roots: { water: ['moss', 'deepteal', 'greyteal', 'jade'], acid: ['sickly', 'green'] },
@@ -64,7 +64,7 @@ export const FAMILY = {
   forge: { water: ['slate', 'navy', 'greyteal'], lava: ['amber', 'gold', 'magma'] },
   ruins: { water: ['greyteal', 'deepteal', 'slate'], acid: ['emerald', 'green', 'toxic'] },
   volcanic: { water: ['greyteal', 'slate'], lava: ['magma', 'ember', 'amber'], spread: 0.35 },
-  abyss: { water: ['navy', 'deepteal'], lava: ['crimson', 'ember'], spread: 0.35 },
+  abyss: { water: ['navy', 'deepteal'], lava: ['ember', 'crimson', 'magma'], spread: 0.35 },
 };
 const KEY = { [WATER]: 'water', [ACID]: 'acid', [LAVA]: 'lava' };
 export const familyOf = (theme, fluid) => {
@@ -123,10 +123,10 @@ function blendLch(p, q, t) {
 // opacity, glow (how much the lines light themselves), lineOpacity, fallOpacity
 function derive(fluid, [L, C, h]) {
   const lch = (l, c, hh) => [clamp01(l), Math.max(0, c), (hh + 360) % 360];
-  if (fluid === LAVA) return {   // body: the molten rock, dark: the crust over it, line: the hot cracks
-    body: lch(L, C, h), dark: lch(L * 0.34, C * 0.3, h - 12), line: lch(Math.min(0.95, L + 0.2), C * 0.8, h + 28),
-    foam: lch(0.86, C * 0.65, h + 26), emissive: lch(L * 0.85, C, h - 6), cap: lch(L * 0.79, C * 0.87, h - 6),
-    fallBase: lch(L, C, h - 3), fallLine: lch(Math.min(0.95, L + 0.2), C * 0.8, h + 28), fallLight: lch(L * 0.45, C * 0.4, h - 10),
+  if (fluid === LAVA) return {   // body: the molten rock, dark: the crust on it, line: its hottest
+    body: lch(L, C, h), dark: lch(L * 0.34, C * 0.3, h - 12), line: lch(Math.min(0.88, L + 0.14), C * 0.95, h + 34),
+    foam: lch(0.9, C * 0.8, h + 36), emissive: lch(L * 0.8, C, h + 4), cap: lch(L * 0.79, C * 0.87, h - 6),
+    fallBase: lch(L, C, h - 3), fallLine: lch(Math.min(0.88, L + 0.14), C * 0.95, h + 34), fallLight: lch(L * 0.45, C * 0.4, h - 10),
     opacity: 1, glow: 1.1, lineOpacity: 1, fallOpacity: 1,
   };
   if (fluid === ACID) return {
@@ -160,8 +160,8 @@ function finish(fluid, p, name) {
 const CLASSIC = {
   [WATER]: { body: '#2c9ad8', dark: '#0c7cc0', line: '#c8f2ff', foam: '#f8fdff', emissive: '#08304e', cap: '#1f5d99',
     fallBase: '#3f8fe0', fallLine: '#d6f8ff', fallLight: '#7cc4f2', opacity: 0.7, glow: 0.25, lineOpacity: 0.92, fallOpacity: 0.82 },
-  [LAVA]: { body: '#ff6a00', dark: '#4a1a0c', line: '#ffd27a', foam: '#ffc06a', emissive: '#ff3a00', cap: '#c2410a',
-    fallBase: '#ff5a00', fallLine: '#ffd27a', fallLight: '#6a240e', opacity: 1, glow: 1.1, lineOpacity: 1, fallOpacity: 1 },
+  [LAVA]: { body: '#ff6a00', dark: '#4a1a0c', line: '#ffc030', foam: '#ffd870', emissive: '#ff4a00', cap: '#c2410a',
+    fallBase: '#ff5a00', fallLine: '#ffc030', fallLight: '#6a240e', opacity: 1, glow: 1.1, lineOpacity: 1, fallOpacity: 1 },
   [ACID]: { body: '#7dff3a', dark: '#4fd024', line: '#d8ff9a', foam: '#d8ff9a', emissive: '#3a9a10', cap: '#4f9a24',
     fallBase: '#66e030', fallLine: '#eaffc8', fallLight: '#a0ff70', opacity: 0.82, glow: 0.35, lineOpacity: 0.9, fallOpacity: 0.85 },
 };

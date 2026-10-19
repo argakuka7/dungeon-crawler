@@ -5,9 +5,10 @@
 //     swirls inside, broken up
 //     r: the gaps, as a distance field around 0.5 (over: in a gap; the shader thresholds it,
 //     sharp at any zoom), g: the swirls the same way, b: where the swirls are not broken up (0..1)
-//   crust (lava): big, slow plates of crust with glowing cracks between them
-//     r: the cracks like water's gaps, g: hot spots on the plates (0..1), b: how hot a crack
-//     burns there (0..1), a: how near a crack (1 at it, 0 well inside a plate)
+//   crust (lava): big, slow, soft cells of molten rock, and blotches of dark crust on it that
+//     grow, drift a little and melt away again
+//     r: how far into its cell (0 at the edge, 1 in the middle; the shader bands it), g: the
+//     crust as a distance field around 0.5, b: each cell's own tone (0..1)
 //   sludge (acid): water's cells, slower and thicker, with bubbles rising and popping
 //     r, g, b like water's, a: the bubbles' rings as a distance field around 0.5
 // Everything in them repeats every `tile` cells (the hashes and noises wrap at whole periods), so
@@ -77,16 +78,44 @@ const STYLES = {
       float T = 12.0;
       gl_FragColor = vec4(cells(vUv * T, T, uTime, 0.045), 1.0);
     }` },
-  crust: { tile: 8, perUnit: 1.25, main: `
+  crust: { tile: 8, perUnit: 0.9, main: `
+    // the cell a point is in: its hash (the same cells as border's)
+    float cellTone(vec2 x, float per, float t) {
+      vec2 n = floor(x), f = fract(x);
+      float md = 8.0, id = 0.0;
+      for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j)), o = 0.5 + 0.38 * sin(t + 6.2831 * hash2(mod(n + g, per))), r = g + o - f;
+        float d = dot(r, r);
+        if (d < md) { md = d; id = hash2(mod(n + g, per) + 5.3).x; }
+      }
+      return id;
+    }
+    // blotches of crust: some of the points of a lattice (P a tile) grow one, lumpy, drifting a
+    // little, and let it melt away again (radius r0..r1, the big ones rarer); a distance field
+    // round 0.5 (over: crust)
+    float blobs(vec2 q, float P, float t, float chance, float r0, float r1) {
+      vec2 n = floor(q), f = fract(q);
+      float v = -1.0;
+      for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j)), cell = mod(n + g, P), h = hash2(cell), h2 = hash2(cell + 9.1);
+        if (h.x > chance) continue;
+        float ph = fract(t * (0.035 + 0.05 * h.y) + h2.x * 7.0);
+        float life = smoothstep(0.0, 0.3, ph) * (1.0 - smoothstep(0.6, 1.0, ph));
+        vec2 at = g + 0.25 + 0.5 * h2 + 0.1 * vec2(sin(t * 0.3 + h.y * 6.28), cos(t * 0.27 + h.x * 6.28));
+        vec2 d = f - at;
+        float a = atan(d.y, d.x), wob = 0.2 * sin(a * 3.0 + h2.y * 6.28 + t * 0.2) + 0.1 * sin(a * 5.0 + h.x * 6.28 - t * 0.15);
+        v = max(v, mix(r0, r1, h2.y * h2.y) * life * (1.0 + wob) - length(d));
+      }
+      return clamp(0.5 + v * 4.0, 0.0, 1.0);
+    }
     void main() {
-      float T = 8.0, tm = uTime * 0.22;
+      float T = 8.0, tm = uTime * 0.18;
       vec2 p = vUv * T, s = p;
-      p += vec2(noise(s + tm * 0.13, 8.0), noise(s - tm * 0.11 + 7.0, 8.0)) * 0.45;
-      float b = border(p + vec2(tm * 0.05, tm * 0.03), T, tm * 0.55, 0.1);
-      float w = 0.03 + 0.045 * noise(p * (24.0 / T) + tm * 0.3, 24.0);
-      float hot = noise(p * (6.0 / T) + tm * 0.2, 6.0) * 0.6 + noise(p * (13.0 / T) - tm * 0.3 + 4.0, 13.0) * 0.4;
-      float burn = noise(p * (20.0 / T) + vec2(uTime * 0.5, -uTime * 0.3), 20.0);
-      gl_FragColor = vec4(clamp(0.5 - (b - w) * 2.5, 0.0, 1.0), smoothstep(0.5, 0.85, hot), burn, clamp(1.0 - (b - w) / 0.3, 0.0, 1.0));
+      p += vec2(noise(s + tm * 0.13, 8.0), noise(s - tm * 0.11 + 7.0, 8.0)) * 0.35;
+      vec2 q = p + vec2(tm * 0.05, tm * 0.03);
+      float b = border(q, T, tm * 0.55, 0.3);
+      float spots = max(blobs(vUv * 9.0, 9.0, uTime, 0.55, 0.14, 0.46), blobs(vUv * 23.0 + 0.37, 23.0, uTime * 1.3, 0.3, 0.1, 0.3));
+      gl_FragColor = vec4(clamp(b / 0.42, 0.0, 1.0), spots, cellTone(q, T, tm * 0.55), 1.0);
     }` },
   sludge: { tile: 12, perUnit: 1.3, main: `
     void main() {

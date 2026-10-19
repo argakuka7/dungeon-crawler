@@ -176,9 +176,9 @@ const TRIAL_SHORES = `
 // bank's wall is dark where the water has just been, a band (in front of it, in this mesh) drawn
 // from the water's surface up to the wet line (WET_LINE) only.
 // The styles: water as above; sludge (acid) the same, with bubbles blowing up and popping in the
-// cells and a green stain on the banks; crust (lava): big slow plates of dark crust, hotter
-// towards the glowing cracks between them and in spots, cooler at the shore where a bright seam
-// runs along the bank instead of the foam and the wet band.
+// cells and a green stain on the banks; crust (lava): molten rock lit by itself in flat bands of
+// heat over big slow cells, blotches of dark crust growing and melting away on it (more by the
+// banks, where it cools), a bright seam along the bank instead of the foam and the wet band.
 // trial: a trial's fluid (render/trials.js) instead, one box rising and sinking through the room:
 // { level, wet } uniforms (its surface's rest height; how far over it the room is wet), solid
 // (section.js WATER_SOLID, which cells are solid where): its shores are the cells round about
@@ -252,23 +252,32 @@ export function cellMaterial(mat, t, trial = null) {
         float shade = smoothstep(-0.3, 0.3, dot(g, vec2(-0.6, -0.8)));
         vec2 p = vCellP + g * 0.018;
         #if CELL_STYLE == 2
-          p += vec2(tm * 0.004, tm * 0.003);   // (the crust drifts)
+          p += vec2(tm * 0.004, tm * 0.003);   // (it drifts)
         #endif
         p += 0.012 * vec2(sin(p.y * 1.7 + tm * 0.21) + sin(p.y * 4.3 - p.x * 1.1), sin(p.x * 1.9 - tm * 0.17) + sin(p.x * 3.7 + p.y * 1.3));
         vec4 c = texture2D(uCellTex, p);
         float aa = fwidth(c.r) * 0.7 + 1e-3, aa2 = fwidth(c.g) * 0.7 + 1e-3;
-        // (the cells' gaps thin out and give way to the foam at the shore)
-        float thin = ${L.style === 'crust' ? '0.15' : '0.55'} * (1.0 - smoothstep(0.15, 0.55, sd));
-        cellLine = smoothstep(0.5 + thin - aa, 0.5 + thin + aa, c.r) * top;
         float wave = mix(1.0, mix(0.82, 1.06, shade) * (1.0 + 0.05 * vCellWave), top);
         vec3 col;
         #if CELL_STYLE == 2
-          // the crust: hot towards the cracks and in spots, cooler at the shore; the sides molten
-          float cool = smoothstep(0.08, 0.45, sd);
-          cellHeat = mix(0.85, clamp(c.a * c.a * c.a * 0.8 + c.g * 0.4, 0.0, 1.0) * mix(0.4, 1.0, cool), top);
-          cellLine *= mix(0.6, 1.0, c.b);
-          col = mix(mix(pDark * wave, pBody, cellHeat), pLine, cellLine);
+          // molten rock in flat bands of heat, hottest in the middle of its slow cells (each a
+          // shade of its own), and blotches of dark crust coming and going on it, ringed a deeper
+          // orange; more of them by the banks, where it cools. The sides: molten, plain.
+          float cool = (1.0 - smoothstep(0.05, 0.5, sd)) * top;
+          float t1 = smoothstep(0.3 - aa, 0.3 + aa, c.r), t2 = smoothstep(0.62 - aa, 0.62 + aa, c.r);
+          vec3 mid = mix(pBody, pLine, 0.55);
+          col = mix(mix(pBody, mid, t1), pLine, t2) * (0.93 + 0.12 * c.b);
+          float gc = c.g + cool * 0.14;
+          float crust = smoothstep(0.5 - aa2, 0.5 + aa2, gc) * top, rim = smoothstep(0.4 - aa2, 0.4 + aa2, gc) * (1.0 - crust) * top;
+          col = mix(col, pBody * 0.72, rim * 0.7);
+          col = mix(col, pDark * wave, crust);
+          col = mix(mix(pBody, mid, 0.35), col, top);
+          cellHeat = (1.0 - crust) * mix(0.8, 1.0, t2 * top);
+          col *= 0.6;   // (lit mostly by itself, below: the sun must not wash it out)
         #else
+          // (the cells' gaps thin out and give way to the foam at the shore)
+          float thin = 0.55 * (1.0 - smoothstep(0.15, 0.55, sd));
+          cellLine = smoothstep(0.5 + thin - aa, 0.5 + thin + aa, c.r) * top;
           // inside the cells only (well away from the gaps)
           float dark = smoothstep(0.5 - aa2, 0.5 + aa2, c.g) * c.b * smoothstep(0.44, 0.32, c.r) * top;
           col = mix(mix(pBody, pDark, dark) * wave, pLine, cellLine);
@@ -313,7 +322,8 @@ export function cellMaterial(mat, t, trial = null) {
         cellLine *= pNum.y;
       }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       #if CELL_STYLE == 2
-        totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (0.04 + cellHeat * 0.8) + diffuseColor.rgb * cellLine;
+        // (molten: lit by itself, its own colours; crust barely)
+        totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * 0.25 * cellHeat + diffuseColor.rgb * (0.75 * cellHeat + cellLine);
       #else
         totalEmissiveRadiance = totalEmissiveRadiance * cellEmissive * (1.0 - cellBand) + diffuseColor.rgb * cellLine;
       #endif`);
@@ -328,7 +338,7 @@ export function cellMaterial(mat, t, trial = null) {
 // edge ragged), and it fades in where it leaves the pool. The sheet ripples a little (along its
 // normal). By its uvs (render/parts.js fallSheets), so the proxies' falls flow alike. Its
 // colours are its palettes' (fluidpal.js), from the one at its top to the one at its foot (its
-// `pal` attribute). Lava's runs slowly, molten, its veins the hot cracks and its streaks crust.
+// `pal` attribute). Lava's runs slowly, molten, in bands of heat with blotches of crust on it.
 // A chained shader edit (after the cut's inject).
 export function fallCellMaterial(mat, t) {
   const L = FLUID_LOOK[t], F = L.fall, S = F.cells;
@@ -377,10 +387,11 @@ export function fallCellMaterial(mat, t) {
         float lip = smoothstep(0.18, 0.28, s) * (1.0 - smoothstep(lipEdge - al, lipEdge + al, s));
         fallWhite = max(max(vein, rim), lip);
         #if CELL_STYLE == 2
-          // molten rock with flakes of crust riding down it, the cracks glowing
+          // molten rock streaming down in bands of heat, blotches of crust riding on it
+          float hot = smoothstep(0.55 - a1, 0.55 + a1, c1.r);
           streak = smoothstep(0.5 - a2, 0.5 + a2, c2.g);
-          fallWhite = max(vein, rim * 0.6);
-          diffuseColor.rgb *= mix(mix(pBase, pLight, streak * 0.75), pLine, fallWhite);
+          fallWhite = rim * 0.5;
+          diffuseColor.rgb *= mix(mix(mix(pBase, pLine, hot * 0.8), pLine, fallWhite), pLight, streak * 0.85);
         #else
           diffuseColor.rgb *= mix(mix(pBase, pLight, streak * 0.7), pLine, fallWhite);
         #endif
