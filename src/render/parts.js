@@ -22,7 +22,8 @@ export const PARTS = [
 //   position Int16 x4 in units of `scale` (1/1024: +-32 world units, a cube spans -0.6..17)
 //   normal   Int8 x4, normalized
 //   color    Uint16 x4, normalized (solids only; alpha 1); linear colours keep their dark shades
-//   uv       Float32 x2 (falls and swaying solids only)
+//   uv       Float32 x2 (fluids, falls and swaying solids only; a fluid's say what each face is
+//            and where its shores are, render/floors.js fluidVolume)
 // 20 bytes a vertex for solids instead of 36, and shared corners are stored once.
 const SCALE = 1 / 1024, LIMIT = 32767;
 
@@ -57,7 +58,7 @@ export function partBuffers(geo) {
 
 // triangle soup -> indexed, quantized arrays; identical corners (after quantizing) are merged
 function pack(list, scale, { kind, sway }) {
-  const color = kind === 'solid', uvs = kind === 'fall' || !!sway;
+  const color = kind === 'solid', uvs = kind !== 'solid' || !!sway;
   let total = 0;
   for (const a of list) total += a.pos.length / 3;
   const pos = new Int16Array(total * 4), nor = new Int8Array(total * 4);
@@ -102,7 +103,7 @@ function fallSheets(m, type) {
   for (const f of (m.falls || []).filter(f => f.type === type).sort((a, b) => a.layer - b.layer)) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
     // (its foot well under the pool's surface: the water's swell dips, render/materials.js)
-    const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.25, h = yTop - y0;
+    const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.4, h = yTop - y0;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
     // the profile: [out from the edge, y, distance along the sheet]: flat over the pool, the
     // curl over the lip, the drop

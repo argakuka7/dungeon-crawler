@@ -43,19 +43,53 @@ function walls(m, f, b) {
   }
 }
 
-// fluid box from the bed up to the surface; faces hidden where a neighbour covers them
+// A fluid box from the bed up to the surface, faces hidden where a neighbour covers them. The
+// surface is SUB x SUB quads a cell (its waves, render/materials.js cellMaterial), and its uvs
+// say what each face is, for the shader (v: the surface's rest height, y in the cube):
+//   top: u = c * 256 + the cell's shores, a bit for each neighbour that is a bank (a solid
+//        reaching over the surface): 1 << d for the sides (DIRS order), 16 << i for the
+//        corners (DIAG order), so the foam can follow the shore
+//   side: u = -2
+//   wet band: u = -1, a strip on a bank's wall just inside the fluid, from under the lowest
+//        the surface sinks to over the highest it rises, darkened where the water has just been
+const SUB = 4, DIAG = [[1, 1], [-1, 1], [1, -1], [-1, -1]], BAND = 0.4;
 function fluidVolume(m, f, b) {
   const x = f.x, z = f.z, sy = f.surf * LH - 0.06, by = f.top * LH;
+  // a solid in the neighbouring column that covers the corners of it next to us up to the surface
+  const bank = (nx, nz, corners) => inb(nx, nz) && m.cols[idx(nx, nz)].find(g => !g.crust && !g.fluid
+    && g.bottom * LH <= by + 0.01 && Math.min(...corners.map(k => g.cs[k])) >= sy);
   const hidden = d => {
     const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
     if (!inb(nx, nz)) return false;
-    const [na, nb] = EDGE_CORNERS[OPP[d]];
-    return m.cols[idx(nx, nz)].some(g => g.crust ? false : g.fluid ? g.surf >= f.surf && g.top * LH <= sy
-      : g.bottom * LH <= by + 0.01 && Math.min(g.cs[na], g.cs[nb]) >= sy);
+    return !!bank(nx, nz, EDGE_CORNERS[OPP[d]]) || m.cols[idx(nx, nz)].some(g => !g.crust && g.fluid && g.surf >= f.surf && g.top * LH <= sy);
   };
-  b.box(x, by, z, x + 1, sy, z + 1, C('#ffffff'), C('#ffffff'), {
-    ny: true, px: hidden(0), nx: hidden(1), pz: hidden(2), nz: hidden(3),
-  });
+  let shores = 0;
+  for (let d = 0; d < 4; d++) if (bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]])) shores |= 1 << d;
+  DIAG.forEach(([dx, dz], i) => { if (bank(x + dx, z + dz, [(dx > 0 ? 0 : 1) + (dz > 0 ? 0 : 2)])) shores |= 16 << i; });
+  const white = C('#ffffff');
+  b.uvNow = [(z * N + x) * 256 + shores, sy];
+  for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
+    const x0 = x + i / SUB, x1 = x + (i + 1) / SUB, z0 = z + j / SUB, z1 = z + (j + 1) / SUB;
+    b.quad([x0, sy, z0], [x0, sy, z1], [x1, sy, z1], [x1, sy, z0], [0, 1, 0], white);
+  }
+  for (let d = 0; d < 4; d++) {
+    const [[ax, az], [bx, bz]] = edgePts(x, z, d);
+    const at = k => [ax + (bx - ax) * k / SUB, az + (bz - az) * k / SUB];
+    const g = bank(x + DIRS[d][0], z + DIRS[d][1], EDGE_CORNERS[OPP[d]]);
+    if (g) {
+      // the wet band, a little in front of the bank's wall, up to its top
+      const [ca, cb] = EDGE_CORNERS[OPP[d]], ix = -DIRS[d][0] * 0.005, iz = -DIRS[d][1] * 0.005, lo = Math.max(by, sy - BAND);
+      const ta = Math.min(g.cs[ca], sy + BAND), tb = Math.min(g.cs[cb], sy + BAND);
+      b.uvNow = [-1, sy];
+      b.quad([ax + ix, lo, az + iz], [bx + ix, lo, bz + iz], [bx + ix, tb, bz + iz], [ax + ix, ta, az + iz], [-DIRS[d][0], 0, -DIRS[d][1]], white);
+    } else if (!hidden(d)) {
+      b.uvNow = [-2, sy];
+      for (let k = 0; k < SUB; k++) {
+        const [px, pz] = at(k), [qx, qz] = at(k + 1);
+        b.quad([px, by, pz], [qx, by, qz], [qx, sy, qz], [px, sy, pz], DIRV[d], white);
+      }
+    }
+  }
 }
 
 export function buildFloors(m, layers) {

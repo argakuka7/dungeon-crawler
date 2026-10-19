@@ -1,12 +1,15 @@
 // Accumulates triangles with vertex colours into one BufferGeometry. A builder made with
 // { sway: true } also keeps a uv per vertex: u = how far it swings in the wind (0..1, from
-// `swayAt(y)`, set while drawing something that hangs), v unused (render/parts.js 'flags').
+// `swayAt(y)`, set while drawing something that hangs), v unused (render/parts.js 'flags'). One
+// made with { uvs: true } keeps the uv in `uvNow` for every vertex drawn (the fluids' surfaces,
+// render/floors.js fluidVolume).
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 
 export class GeoBuilder {
-  constructor({ sway = false } = {}) {
+  constructor({ sway = false, uvs = false } = {}) {
     this.pos = []; this.nor = []; this.col = []; this.smoothKeys = [];
     if (sway) { this.uv = []; this.swayAt = () => 0; }
+    else if (uvs) { this.uv = []; this.uvNow = [0, 0]; }
   }
 
   // triangle; `want` is the intended facing (winding gets flipped to match);
@@ -23,7 +26,8 @@ export class GeoBuilder {
       this.pos.push(v[0], v[1], v[2]);
       this.nor.push(nx / len, ny / len, nz / len);
       this.col.push(col.r, col.g, col.b);
-      if (this.uv) this.uv.push(this.swayAt(v[1]), 0);
+      if (this.swayAt) this.uv.push(this.swayAt(v[1]), 0);
+      else if (this.uv) this.uv.push(this.uvNow[0], this.uvNow[1]);
     }
     if (smooth) [a, b, c].forEach((v, k) =>
       this.smoothKeys.push([base + k, v[0].toFixed(3) + ',' + v[1].toFixed(3) + ',' + v[2].toFixed(3), nx, ny, nz]));

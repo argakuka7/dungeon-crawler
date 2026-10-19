@@ -15,7 +15,7 @@ export function buildCubeGeometry(m) {
   usePalette(themeOf(m));
   const layers = Array.from({ length: m.K }, () => ({
     terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder(), flags: new GeoBuilder({ sway: true }),
-    fluids: Object.fromEntries(FLUIDS.map(t => [t, new GeoBuilder()])),
+    fluids: Object.fromEntries(FLUIDS.map(t => [t, new GeoBuilder({ uvs: true })])),
   }));
   // bedrock under every column that is not open to the depth below
   // (inside houses the floors reach down themselves, render/interior.js)

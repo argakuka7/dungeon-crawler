@@ -50,6 +50,30 @@ test('packed parts keep every triangle, in place to a quantization step', () => 
   }
 });
 
+test('fluid surfaces say where their shores are, and banks get a wet band', () => {
+  let shores = 0, bands = 0;
+  for (const m of maps) {
+    const geo = buildCubeParts(m);
+    for (const part of PARTS.filter(p => p.kind === 'fluid')) {
+      const p = geo.parts[part.name];
+      if (!p) continue;
+      assert.equal(p.uv.length, p.pos.length / 2);
+      for (let v = 0; v < p.uv.length / 2; v++) {
+        const u = p.uv[v * 2], y = p.pos[v * 4 + 1] * geo.scale;
+        if (u >= 0) {
+          // a top: at its rest height, in its cell
+          const c = Math.floor(u / 256), x = p.pos[v * 4] * geo.scale, z = p.pos[v * 4 + 2] * geo.scale;
+          assert.ok(Math.abs(y - p.uv[v * 2 + 1]) <= geo.scale, 'tops at the rest height');
+          assert.ok(x >= c % 16 - 1e-3 && x <= c % 16 + 1 + 1e-3 && z >= Math.floor(c / 16) - 1e-3 && z <= Math.floor(c / 16) + 1 + 1e-3, 'tops in their cell');
+          if (u % 256) shores++;
+        } else if (u === -1) bands++;
+        else assert.equal(u, -2);
+      }
+    }
+  }
+  assert.ok(shores && bands, 'the sample has shores');
+});
+
 test('falls are parts of their own fluid, with streak uvs', () => {
   const withFalls = maps.filter(m => m.falls.length);
   assert.ok(withFalls.length, 'the sample has falls');
@@ -57,7 +81,8 @@ test('falls are parts of their own fluid, with streak uvs', () => {
     const geo = buildCubeParts(m);
     for (const t of new Set(m.falls.map(f => f.type))) {
       const p = geo.parts[PARTS.find(q => q.kind === 'fall' && q.fluid === t).name];
-      assert.equal(p.index.length / 3, m.falls.filter(f => f.type === t).length * 12, 'a box (12 triangles) per fall');
+      assert.ok(p.index.length / 3 >= m.falls.filter(f => f.type === t).length * 12 * 8, 'a sheet (rows of 12 triangles) per fall');
+      assert.equal(p.index.length / 3 % 12, 0);
       assert.equal(p.uv.length, p.pos.length / 2);
     }
   }
