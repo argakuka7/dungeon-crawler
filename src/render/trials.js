@@ -290,6 +290,21 @@ export function buildTrialView(m, group) {
   for (const p of m.portals) if (p.kind === 'side') { const b = barrier(p); group.add(b); view.barriers.set(p.dir, b); }
   for (const p of t.parts || []) {
     if (p.type === 'button') { const b = button(p, color); group.add(b.obj); view.parts.set(p.id, b); }
+    if (p.type === 'beacon') {   // the beacon: a great fire basket on a pillar; its ring marked on the ground
+      const b = brazierPart(p); b.obj.scale.setScalar(1.6); b.part = p; group.add(b.obj); view.grid.set(p.id, b);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(t.ring.r - 0.06, t.ring.r + 0.06, 48), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.set(t.ring.x, t.ring.y + 0.04, t.ring.z); group.add(ring);
+    }
+    if (p.type === 'waypad') {   // a waypad: a round slab with a rune, and a light over it while lit
+      const g = new THREE.Group(), slab = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.5, 0.08, 20), STONE());
+      slab.position.y = 0.04; slab.receiveShadow = true;
+      const rune = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.34, 6), new THREE.MeshBasicMaterial({ color: 0x504060, transparent: true, opacity: 0.35, depthWrite: false }));
+      rune.rotation.x = -Math.PI / 2; rune.position.y = 0.09;
+      const light = new THREE.PointLight(0xd080ff, 0, 4, 2); light.position.y = 0.8;
+      g.add(slab, rune, light); g.position.set(p.x, p.y, p.z); group.add(g);
+      (view.waypads ??= new Map()).set(p.id, { rune, light });
+    }
+    if (p.type === 'portcullis') { const b = portcullis({ ...p, side: p.side }); b.puzzle = -1; b.chase = true; group.add(b.obj); view.gates.set(p.id, b); }
     if (p.type === 'rod') {   // the lightning rod: an iron mast with a copper spike and a lever at its foot
       const b = button(p, color), mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 3, 6), IRON());
       mast.position.y = 1.5;
@@ -314,6 +329,15 @@ export function buildTrialView(m, group) {
     if (pz.kind === 'braziers') group.add(linkLines(pz));
     if (pz.kind === 'mirror') { const beam = new THREE.Group(); group.add(beam); view.beams.set(pz.index, { group: beam, key: '' }); }
   }
+  // the siege's mouths: dark arches the waves come out of
+  for (const mo of t.mouths || []) {
+    const g = new THREE.Group(), stone = STONE();
+    for (const x of [-0.55, 0.55]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.6, 0.3), stone); post.position.set(x, 0.8, 0); post.castShadow = true; g.add(post); }
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 0.35), stone); lintel.position.y = 1.7; g.add(lintel);
+    const dark = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.55), new THREE.MeshBasicMaterial({ color: 0x050308 })); dark.position.set(0, 0.78, -0.02); g.add(dark);
+    g.position.set(mo.x, mo.y, mo.z); g.rotation.y = mo.yaw; group.add(g);
+  }
+  if (t.kind === 'chase') { view.hunter = hunterMesh(); group.add(view.hunter); }
   // a vault (a puzzle in a branch room): a cage round its reward site's chest
   const site = t.role === 'branch' && (m.rewardSites || [])[0];
   if (site) { view.cage = cage(site.anchor); group.add(view.cage.obj); }
@@ -338,6 +362,46 @@ export function buildTrialView(m, group) {
     if (t.timeline) { view.tide = tideLines(t.timeline); group.add(view.tide); }
   }
   return view;
+}
+
+// the hunter (chase): a hulking shadow with burning eyes where the clock says (h: core/trials.js
+// hunterAt, null: not out); crushed (the trial resolved) it is gone
+export function setHunter(world, h, crushed) {
+  const v = world?.trialView;
+  if (!v?.hunter) return;
+  v.hunter.visible = !!h && !crushed;
+  if (!v.hunter.visible) return;
+  v.hunter.position.set(h.x, h.y, h.z);
+  v.hunter.rotation.y = h.yaw;
+  const t = performance.now() / 1000;
+  v.hunter.children[0].position.y = 1.05 + Math.abs(Math.sin(t * 7)) * 0.08;
+}
+function hunterMesh() {
+  const g = new THREE.Group(), dark = new THREE.MeshStandardMaterial({ color: 0x1a1218, roughness: 0.9 });
+  const body = new THREE.Group();
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.9, 4, 10), dark); torso.castShadow = true;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), dark); head.position.set(0, 0.8, 0.12);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff3020 });
+  for (const x of [-0.11, 0.11]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), eyeMat); e.position.set(x, 0.86, 0.38); body.add(e); }
+  for (const x of [-0.55, 0.55]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.8, 4, 8), dark); arm.position.set(x, -0.1, 0.15); arm.rotation.x = -0.5; body.add(arm); }
+  body.add(torso, head);
+  const light = new THREE.PointLight(0xff3020, 1.2, 3, 2); light.position.set(0, 1.9, 0.5);
+  g.add(body, light); g.scale.setScalar(1.6); g.visible = false;
+  return g;
+}
+// the drift's pads: the lit one bright, the next pulsing in its last seconds; all lit once resolved
+export function setWaypads(world, pads, d, resolved) {
+  const v = world?.trialView;
+  if (!v) return;
+  const t = performance.now() / 1000;
+  pads.forEach((p, i) => {
+    const pad = v.waypads?.get(p.id);
+    if (!pad) return;
+    const on = resolved || i === d.lit, pulse = !resolved && d.pulse && i === d.next;
+    pad.rune.material.color.set(on ? 0xffe8ff : pulse ? 0xd080ff : 0x504060);
+    pad.rune.material.opacity = on ? 0.95 : pulse ? 0.4 + Math.abs(Math.sin(t * 8)) * 0.5 : 0.35;
+    pad.light.intensity = on ? 2.5 : pulse ? 1 : 0;
+  });
 }
 
 // the storm's wind (phase: 'calm' | 'warning' | 'gust' | 'lull'; wind: the way it blows): streaks
@@ -426,8 +490,8 @@ export function setGridParts(world, m, s, shown) {
   for (const [id, g] of v.grid) {
     const p = g.part, bit = s.bits?.[id] ?? 0, info = shown.get(p.puzzle ?? 0);
     if (p.type === 'mirror') g.angle += (((bit ? -1 : 1) * Math.PI / 4) - g.angle) * 0.3, g.turn.rotation.y = g.angle;
-    else if (p.type === 'brazier' || p.type === 'warm' || p.type === 'fire') {   // (the cold's: lit for good once resolved)
-      const lit = p.type === 'brazier' ? !!bit : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
+    else if (p.type === 'brazier' || p.type === 'warm' || p.type === 'fire' || p.type === 'beacon') {   // (the cold's: lit for good once resolved; the beacon once lit)
+      const lit = p.type === 'brazier' ? !!bit : p.type === 'beacon' ? s.phase !== 'idle' : s.phase === 'resolved' || (p.type === 'warm' && !!bit);
       if (g.lit !== lit) { g.lit = lit; g.flame.visible = lit; g.light.visible = lit; }
     }
     else if (p.type === 'tile') {
@@ -486,7 +550,11 @@ export function setTrialParts(world, s, immediate = false) {
   if (!v || !s) return;
   const solved = s.phase === 'resolved', done = i => solved || (s.stage ?? 0) > i;   // (game/trials.js puzzleSolved)
   for (const [, pl] of v.plates) pl.rune.material.color.set(done(pl.puzzle) ? 0x6cff8a : pl.color);
-  for (const [, g] of v.gates) { g.want = done(g.puzzle) ? 1 : 0; if (immediate) g.open = g.want; }
+  for (const [, g] of v.gates) {
+    // (the chase's portcullis: up, but down on the hunter for a moment once the lever is pulled)
+    g.want = g.chase ? (solved && s.done < 1.5 ? 0 : 1) : done(g.puzzle) ? 1 : 0;
+    if (immediate) g.open = g.want;
+  }
   for (const [id, l] of v.levers) { l.want = s.bits?.[id] ? 0.6 : -0.6; if (immediate) l.angle = l.want; }
   if (v.cage) { v.cage.want = solved ? 1 : 0; if (immediate) v.cage.open = v.cage.want; }
   for (const [, b] of v.parts) {
@@ -506,7 +574,7 @@ export function tickTrialView(world, time) {
   for (const [, l] of v.levers) { l.angle += (l.want - l.angle) * 0.25; l.arm.rotation.z = l.angle; }
   for (const [, g] of v.grid) {
     if (g.part.type === 'wheel' && g.driven) g.wheel.rotation.z -= 0.04;
-    if ((g.part.type === 'brazier' || g.part.type === 'warm' || g.part.type === 'fire') && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + (g.part.i ?? 0)) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + (g.part.i ?? 0)) * 0.4; }
+    if ((g.part.type === 'brazier' || g.part.type === 'warm' || g.part.type === 'fire' || g.part.type === 'beacon') && g.lit) { g.flame.scale.y = 1 + Math.sin(time * 9 + (g.part.i ?? 0)) * 0.12; g.light.intensity = 2 + Math.sin(time * 7 + (g.part.i ?? 0)) * 0.4; }
     if (g.part.type === 'emitter') g.gem.rotation.y = time;
   }
   if (v.cage) { v.cage.open += (v.cage.want - v.cage.open) * 0.05; v.cage.bars.position.y = -v.cage.open * 1.35; v.cage.obj.visible = v.cage.open < 0.98; }

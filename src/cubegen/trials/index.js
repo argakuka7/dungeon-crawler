@@ -8,6 +8,7 @@
 //                 the entry and lead on to the exit, and the kind's own check must pass (the
 //                 timing of an event, cubegen/trials/timing.js); else the attempt is retried
 import { N, LH, RUN_SPEED, CHAR_H } from '../../core/constants.js';
+import { idx } from '../../core/util.js';
 import { floorY } from '../../core/surfaces.js';
 import { search, take } from '../route.js';
 import { reachFrom, reachTo, graph } from '../reach.js';
@@ -21,8 +22,11 @@ import { shapeTimed, timedGoal } from './timed.js';
 import { shapeMiasma, miasmaGoal } from './miasma.js';
 import { shapeCold, coldGoal } from './cold.js';
 import { shapeStorm, stormGoal } from './storm.js';
+import { shapeDrift, driftGoal } from './drift.js';
+import { shapeSiege, siegeGoal, RING } from './siege.js';
+import { shapeChase, chaseGoal } from './chase.js';
 import { arrivals, pathOf, checkDeadlines, floorLevel, USE_TIME } from './timing.js';
-import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM } from '../../core/trials.js';
+import { ARM_TIME, SLACK, fitFlood, floodTime, FLOOD, WAVE, crumbleTime, FOG, COLD, STORM, DRIFT, HUNTER } from '../../core/trials.js';
 
 const KINDS = {
   flood: { shape: shapeFlood, goal: floodGoal, costs: floodRoute, finish: finishFlood },
@@ -30,6 +34,9 @@ const KINDS = {
   miasma: { shape: shapeMiasma, goal: miasmaGoal, costs: null, finish: finishMiasma },
   cold: { shape: shapeCold, goal: coldGoal, costs: null, finish: finishCold },
   storm: { shape: shapeStorm, goal: stormGoal, costs: null, finish: finishStorm },
+  drift: { shape: shapeDrift, goal: driftGoal, costs: collapseRoute, finish: finishDrift },
+  siege: { shape: shapeSiege, goal: siegeGoal, costs: null, finish: finishSiege },
+  chase: { shape: shapeChase, goal: chaseGoal, costs: collapseRoute, finish: finishChase },
   slide: { shape: shapeSlide, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
   sunken: { shape: shapeSunken, goal: sunkenGoal, costs: slideRoute, finish: finishSunken },
   mirror: { shape: shapeGrid, goal: puzzleGoal, costs: slideRoute, finish: finishPuzzles },
@@ -240,6 +247,67 @@ function finishStorm(ctx, t, out) {
   for (const c of t.gorge) for (const f of ctx.cols[c]) f.noSpawn = true;
   return { wind: t.wind, shelter: t.shelter, gorge: t.gorge, rod: at, parts: [{ id: 'rod', type: 'rod', ...at }],
     check: { exposed: Math.round(worst * 100) / 100, path: checkPath(path, arr, () => null) } };
+}
+
+// --- drift ---------------------------------------------------------------------------------------------
+
+// The pads' cycle: an order (the first pad first) where from each pad the next cannot be reached in
+// time even running (travel > DRIFT.period) and the one after it can walking (travel x SLACK <= 2 x
+// period); every pad reached from the entry.
+function finishDrift(ctx, t, out) {
+  const pads = t.pads.map(c => ctx.layerFloor(c, 0));
+  if (pads.some(f => !f || f.fluid)) return null;
+  const reach = reachFrom(ctx, [t.entry], true);
+  if (pads.some(f => !reach.has(f.id))) return null;
+  const run = pads.map(f => arrivals(ctx, f, RUN_SPEED)), walk = pads.map(f => arrivals(ctx, f));
+  const tRun = (i, j) => run[i].time.get(pads[j].id) ?? Infinity, tWalk = (i, j) => walk[i].time.get(pads[j].id) ?? Infinity;
+  const orders = [[0, 1, 2, 3], [0, 1, 3, 2], [0, 2, 1, 3], [0, 2, 3, 1], [0, 3, 1, 2], [0, 3, 2, 1]];
+  const ok = o => o.every((p, i) => tRun(p, o[(i + 1) % 4]) > DRIFT.period && tWalk(p, o[(i + 2) % 4]) * SLACK <= 2 * DRIFT.period);
+  const order = orders.find(ok);
+  if (!order) return null;
+  const at = f => ({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 });
+  for (const f of pads) f.noSpawn = true;
+  const parts = order.map((k, i) => ({ id: `pad${i}`, type: 'waypad', ...at(pads[k]), i }));
+  return { parts, cycle: parts.map(p => p.id), check: { next: order.map((p, i) => Math.round(tRun(p, order[(i + 1) % 4]) * 100) / 100),
+    after: order.map((p, i) => Math.round(tWalk(p, order[(i + 2) % 4]) * 100) / 100) } };
+}
+
+// --- siege --------------------------------------------------------------------------------------------
+
+// The ring flat and dry; every mouth reaches it
+function finishSiege(ctx, t, out) {
+  const b = t.beacon, ring = t.ring.map(c => ctx.layerFloor(c, 0));
+  if (ring.some(f => !f || f.fluid || f.top !== b.level || Math.max(...f.cs) - Math.min(...f.cs) > 0.2)) return null;
+  const centre = ctx.layerFloor(b.c, 0), mouths = [];
+  for (const m of t.mouths) {
+    const f = ctx.layerFloor(idx(m.x, m.z), 0);
+    if (!f || f.fluid || !reachFrom(ctx, [f], true).has(centre.id)) return null;
+    mouths.push({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5, yaw: Math.atan2(b.x - m.x, b.z - m.z) });
+  }
+  for (const f of ring) f.noSpawn = true;
+  const at = { x: b.x + 0.5, y: b.level * LH, z: b.z + 0.5 };
+  return { beacon: at, ring: { x: at.x, z: at.z, r: RING, y: at.y }, mouths, parts: [{ id: 'beacon', type: 'beacon', ...at }] };
+}
+
+// --- chase --------------------------------------------------------------------------------------------
+
+// The race: a player running from the entry reaches the lever (x 1.2, + 1 s) before the hunter,
+// breaking out at the entry ARM_TIME after arming and walking the same way at HUNTER.speed, is at
+// the portcullis. The way it takes is the checked path (to the lever).
+function finishChase(ctx, t, out) {
+  const lever = t.goal, gate = ctx.layerFloor(t.gate.c, 0);
+  if (!gate) return null;
+  const run = arrivals(ctx, t.entry, RUN_SPEED), path = pathOf(run, lever);
+  if (!path || path.length < HUNTER.least) return null;
+  const hunter = arrivals(ctx, t.entry, HUNTER.speed), tGate = ARM_TIME + (hunter.time.get(gate.id) ?? 0);
+  const tLever = run.time.get(lever.id) * 1.2 + 1;
+  if (!(tLever < tGate)) return null;
+  const at = f => ({ x: f.x + 0.5, y: floorY(f, 0.5, 0.5), z: f.z + 0.5 });
+  const d = t.gate.dir, side = d;
+  return { parts: [{ id: 'lever', type: 'lever', ...at(lever), yaw: [Math.PI / 2, -Math.PI / 2, 0, Math.PI][d] },
+      { id: 'portcullis', type: 'portcullis', ...at(gate), side, w: 1 }],
+    hunterPath: checkPath(path, hunter, () => null).map(({ x, y, z }) => ({ x, y, z })),
+    check: { lever: Math.round(tLever * 100) / 100, hunter: Math.round(tGate * 100) / 100, cells: path.length, path: checkPath(path, run, () => null) } };
 }
 
 // --- collapse ----------------------------------------------------------------------------------------

@@ -328,6 +328,14 @@ export async function runTrialChecks(kind = 'flood') {
   // stepping off the pad arms it, and seals every portal
   const [ax, az] = DIRS[t.fromDir];
   player.autoDir = [ax, az];
+  if (kind === 'siege') {   // (armed by lighting the beacon, not by stepping off the pad)
+    await delay(1000);
+    player.autoDir = null;
+    const b = state.map.trial.parts.find(p => p.type === 'beacon');
+    Object.assign(player, { x: b.x + 0.8, y: b.y, z: b.z, vx: 0, vz: 0 });
+    await delay(150);
+    useAction();
+  }
   await until(() => state.trial.phase !== 'idle', 'armed by stepping off the pad', 4000);
   player.autoDir = null;
   check(sealedIn(), 'sealed while armed');
@@ -400,6 +408,70 @@ export async function runTrialChecks(kind = 'flood') {
     }
     results.push('the gusts');
     if (player.hp <= 0 || state.cubeKey !== t.key) return results;
+  }
+  // the drift: the lit pad caught three times (standing on it as it comes round)
+  if (kind === 'drift') {
+    const m = state.map.trial, pads = m.parts.filter(p => p.type === 'waypad');
+    const { driftLit } = await import('../../src/core/trials.js');
+    Object.assign(player, { x: m.check.next ? player.x : player.x });
+    player.autoDir = DIRS[t.fromDir];
+    await until(() => state.trial.phase === 'running', 'running', 6000);
+    player.autoDir = null;
+    for (let k = 0; k < 3; k++) {
+      const d = driftLit(state.trial.t, pads.length), p = pads[d.lit];
+      Object.assign(player, { x: p.x, y: p.y, z: p.z, vx: 0, vz: 0 });
+      await until(() => (state.trial.bits.catches ?? 0) === k + 1, `catch ${k + 1}`, 2000);
+      check((state.trial.bits.catches ?? 0) === k + 1 || state.trial.phase === 'resolved', 'one catch per pad');
+      if (k < 2) await until(() => driftLit(state.trial.t, pads.length).lit !== d.lit, 'the pad moves on', 8000);
+    }
+    await until(() => state.trial.phase === 'resolved', 'three catches', 2000);
+    check(!portalLocked(state.map, state.run, { dir: t.exit }) && !sealedIn(), 'the way on is open');
+    results.push('caught three times');
+  }
+  // the siege: idle until the beacon is lit; waves come; holding the ring fills it
+  if (kind === 'siege') {
+    const m = state.map.trial, b = m.parts.find(p => p.type === 'beacon');
+    player.autoDir = DIRS[t.fromDir];
+    await delay(1200);
+    player.autoDir = null;
+    check(state.trial.phase === 'idle', 'stepping off the pad does not start it');
+    Object.assign(player, { x: b.x + 0.8, y: b.y, z: b.z, vx: 0, vz: 0 });
+    await delay(150);
+    check(pendingAction()?.target?.id === 'beacon', 'the beacon in reach');
+    useAction();
+    await until(() => state.trial.phase === 'running', 'lit, running', 6000);
+    await delay(1500);
+    const { allEnemies } = await import('../../src/game/enemies.js');
+    check(allEnemies().some(e => e.id.startsWith(`trial:${t.key}:siege`)), 'the first wave');
+    check((state.trial.bits.hold ?? 0) > 0.5, 'the hold fills in the ring');
+    state.devPassive = true;
+    const { holdTime } = await import('../../src/core/trials.js');
+    state.trial.bits.hold = holdTime(state.map.depth) - 0.5;
+    await until(() => state.trial.phase === 'resolved', 'held', 3000);
+    await delay(200);
+    check(!allEnemies().some(e => e.id.startsWith(`trial:${t.key}:siege`) && e.mode !== 'dead'), 'the rest fled');
+    results.push('held');
+  }
+  // the chase: the hunter breaks out after ARM_TIME and comes along the way; the lever crushes it
+  if (kind === 'chase') {
+    const m = state.map.trial, lever = m.parts.find(p => p.type === 'lever'), path = m.check.path;
+    player.autoDir = DIRS[t.fromDir];
+    await until(() => state.trial.phase !== 'idle', 'armed', 4000);
+    player.autoDir = null;
+    // the run, at RUN_SPEED along the checked way: the hunter never catches it
+    const t0 = performance.now();
+    for (const p of path) {
+      await until(() => (performance.now() - t0) / 1000 >= p.t, 'the run', 60000);
+      check(state.trial.phase === 'armed' || state.trial.phase === 'running', `still running (${state.trial.phase})`);
+      Object.assign(player, { x: p.x, y: p.y, z: p.z, vx: 0, vz: 0 });
+    }
+    check(state.world.trialView.hunter.visible, 'the hunter is out');
+    Object.assign(player, { x: lever.x, y: lever.y, z: lever.z + 0.5, vx: 0, vz: 0 });
+    await delay(100);
+    check(pendingAction()?.target?.id === 'lever', 'the lever in reach');
+    useAction();
+    check(state.trial.phase === 'resolved', 'the portcullis dropped on it');
+    results.push('outran it');
   }
   if (kind === 'flood' || kind === 'miasma' || kind === 'cold' || kind === 'storm') {
     const b = state.map.trial.button ?? state.map.trial.valve ?? state.map.trial.fire ?? state.map.trial.rod;

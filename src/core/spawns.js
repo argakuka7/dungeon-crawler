@@ -90,6 +90,7 @@ export function population(map) {
     return new Map([[base.species, { count, pack: count, lead: true, kinds: { [kind]: 1 },
       swarm: true, rewardScale: Math.min(1, budget / (count * base.xp)) }]]);
   }
+  if (map.populationScale === 0) return new Map();   // (nobody: the hunter's room, docs/trials.md `chase`)
   const R = mulberry32(hash32(map.seed ^ SALT)), row = map.spawns ?? spawnsAt(map.depth || 0);
   const rolled = [];
   for (const e of row.roster) if (R() < e.chance) rolled.push({ e, key: e.chance >= 1 ? 1 + R() : R() ** (1 / e.chance) });

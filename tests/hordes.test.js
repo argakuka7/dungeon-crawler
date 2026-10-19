@@ -46,7 +46,8 @@ test('one stable main-route horde on every depth, outside safe/entry/guardian/re
         assert.ok(ENEMY_KINDS[horde.kind] && horde.count >= 6 && horde.count <= 24);
       }
       for (const [key, scale] of L.populationScale) {
-        assert.ok(scale > 0 && scale < 1 && !L.guardians.has(key) && !L.hordes.has(key));
+        // (0: nobody, the hunter's room, docs/trials.md `chase`)
+        assert.ok(scale >= 0 && scale < 1 && !L.guardians.has(key) && !L.hordes.has(key));
       }
     }
   }

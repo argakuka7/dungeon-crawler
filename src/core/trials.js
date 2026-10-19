@@ -21,9 +21,12 @@ export const TRIALS = {
   storm: { name: 'The storm', family: 'event', sealed: true, timed: true, depths: [1, 6],
     themes: ['meadow', 'clouds', 'lagoon', 'karst', 'peaks', 'highlands', 'badlands', 'saltflats', 'canyon'], weight: 1, color: '#b0b8ff', built: true,
     population: 0.3 },
-  siege: { name: 'Hold the beacon', family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a' },
-  chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060' },
-  drift: { name: 'The drifting gate', family: 'event', sealed: true, timed: true, depths: [3, 19], themes: null, weight: 1, color: '#d080ff' },
+  siege: { name: 'Hold the beacon', family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a', built: true,
+    population: 0.3, armByPart: true },
+  chase: { name: 'The hunter', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
+    population: 0 },
+  drift: { name: 'The drifting gate', family: 'event', sealed: true, timed: true, depths: [3, 19], themes: null, weight: 1, color: '#d080ff', built: true,
+    population: 0.5 },
   miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
     population: 0.5 },
   slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#bfe8ff', built: true,
@@ -181,6 +184,38 @@ export function stormPhase(t) {
     : { phase: 'lull', left: STORM.period - c };
 }
 
+// --- drift ---------------------------------------------------------------------------------------------
+// One pad of the cycle lit at a time for DRIFT.period s (from the clock running), the next pulsing
+// in its last DRIFT.warn s; DRIFT.catches catches (each on another pad than the one before) win.
+export const DRIFT = { period: 6, warn: 3, catches: 3 };
+export function driftLit(t, n = 4) {
+  if (t < ARM_TIME) return { lit: -1, next: 0, left: ARM_TIME - t };
+  const c = t - ARM_TIME, k = Math.floor(c / DRIFT.period), left = DRIFT.period - (c - k * DRIFT.period);
+  return { lit: k % n, next: (k + 1) % n, left, pulse: left <= DRIFT.warn };
+}
+
+// --- siege ---------------------------------------------------------------------------------------------
+// HOLD s in the ring (it fills only while a player is in it; it pauses, never drops) from depth 2's 45
+// to depth 19's 90; four waves come at even shares of it.
+export const SIEGE = { waves: 4 };
+export const holdTime = depth => Math.round(45 + 45 * Math.max(0, Math.min(1, (depth - 2) / 17)));
+
+// --- chase ---------------------------------------------------------------------------------------------
+// The hunter breaks out at the entry ARM_TIME after arming and walks the way at HUNTER.speed cells/s;
+// within HUNTER.grab of a player it grabs them.
+export const HUNTER = { speed: 2.3, grab: 0.9, least: 30 };
+// where it is t s into the trial along its path ([{ x, y, z }]): { x, y, z, yaw, at (the index past), done }
+export function hunterAt(path, t) {
+  let d = Math.max(0, t - ARM_TIME) * HUNTER.speed;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i], len = Math.hypot(b.x - a.x, b.z - a.z) || 0.001;
+    if (d <= len) { const k = d / len; return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k, yaw: Math.atan2(b.x - a.x, b.z - a.z), at: i, done: false }; }
+    d -= len;
+  }
+  const e = path.at(-1);
+  return { ...e, yaw: 0, at: path.length, done: true };
+}
+
 // --- states (docs/trials.md "States") ------------------------------------------------------------
 //   idle      the room as built; an event arms when a player steps off the arrival pad
 //   armed     ARM_TIME s of telegraph: the banner, the rumble; nothing hurts yet
@@ -199,7 +234,7 @@ export const newTrial = (trial, resolved = false) => ({ key: trial.key, kind: tr
 // 'armed', 'running' (the phase it came into), or nothing.
 export function stepTrial(s, dt, input = {}) {
   if (s.phase === 'idle') {
-    if (isEvent(s.kind) && TRIALS[s.kind].timed && input.away) { s.phase = 'armed'; s.t = 0; return 'armed'; }
+    if (isEvent(s.kind) && TRIALS[s.kind].timed && !TRIALS[s.kind].armByPart && input.away) { s.phase = 'armed'; s.t = 0; return 'armed'; }
     return null;
   }
   if (s.phase === 'resolved') { s.done += dt; return null; }
@@ -278,7 +313,8 @@ export function crustState(m, s, q) {
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
 export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
   mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', tile: 'Turn the channel', crate: null, sluice: 'Pull the sluice', valve: 'Open the vent valve',
-  warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod' };
+  warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod', beacon: 'Light the beacon',
+  portcullis: null, waypad: null };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------

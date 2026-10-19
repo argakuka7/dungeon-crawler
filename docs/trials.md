@@ -1,7 +1,7 @@
 # Trials: events and puzzles in a cube
 
-Status: steps 1 to 8 are done: the framework, `flood`, `collapse`, `miasma`, `cold`, `storm`, the
-puzzle parts, `slide`, `sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`,
+Status: steps 1 to 9 are done: the framework, `flood`, `collapse`, `miasma`, `cold`, `storm`,
+`siege`, `chase`, `drift`, the puzzle parts, `slide`, `sunken`, `mirror`, `braziers`, `channels`, `crates`, `plates`, `stones`,
 `sluices` and `timedgate` are planned, built, checked, playable (alone and
 together) and on in every world (an event on 45% of the depths from 1 to 19, a puzzle on 60%, a
 second on 25%). The rest is the list of what to build, kind by kind, until done (see
@@ -379,6 +379,14 @@ Light the beacon and hold its ring against waves from the room's edges.
   are gone, and the seals open.
 - **Fails by:** death.
 - **Check:** every mouth reaches the ring; the ring is flat and dry.
+- **As built** (`cubegen/trials/siege.js`, `index.js finishSiege`; `game/trialevents.js`): the
+  beacon in the room's middle (as far from the portals as it gets), flat a cell further out than
+  its ring so the smoothing leaves the ring flat. The mouths (dark arches) stand two cells in from
+  the edge, at least 6.5 cells from the beacon (8 fits only a 16-cell room's corners), 5 apart.
+  The waves come at each quarter of the hold, the horde's kinds (swarm stats, half rewards), the
+  heaviest close fighter of the roster once in the last; they hold posts in the ring and fight a
+  player who comes near (`e.defence`, like a raid). The trial's owner spawns them and counts the
+  hold (`bits.hold`, `bits.wave`).
 
 ### `chase`: The hunter
 
@@ -396,6 +404,16 @@ on it at the end.
 - **Check:** races: at `RUN_SPEED`, `arrival(lever) × 1.2 + 1 s` comes before the hunter's
   arrival at the portcullis. There is no shortcut for the hunter (it walks the same graph).
 - **Population:** none but the hunter.
+- **As built** (`cubegen/trials/chase.js`, `index.js finishChase`; `game/trialevents.js`): the
+  room is rock (six levels over the highest pad, its outer ring too) but for a corridor one cell
+  wide: a self-avoiding walk of 17-24 steps over the room's odd cells from the entry's pad to the
+  exit's (35-52 cells), its levels going evenly from the entry's to the exit's, and a straight
+  passage from any other portal. Walks, jumps and drops only (no structure over the rock). The
+  portcullis stands five cells before the exit's pad, the lever two past it. The hunter is not an
+  enemy but an actor of the trial: a hulking shadow with burning eyes that walks the checked way
+  (`hunterAt`, from the clock) at 2.3 cells/s; within 0.9 cells of a player it grabs them (the
+  owner's grab fails the trial, another's is their death). The lever works only while it runs.
+  `population: 0` now means no enemies at all (`core/spawns.js`).
 
 ### `drift`: The drifting gate
 
@@ -413,6 +431,13 @@ learn. Catch it three times.
   `RUN_SPEED` (`travel(i, i+1) > PERIOD`), but the one after it can be reached walking
   (`travel(i, i+2) × SLACK ≤ 2 × PERIOD`). Reading ahead is the puzzle.
 - **Population:** half, some near the pads.
+- **As built** (`cubegen/trials/drift.js`, `index.js finishDrift`; `game/trialevents.js`): a
+  ridge (rock, six levels up) across the middle, two cells thick, from one face to the other but
+  for a way round at one end, its closed end on a face with no portal by the middle; two pads on
+  each side, far from the way round. Walks, jumps and drops only. The cycle is the first order of
+  the four (pad 0 first) that passes the races; it goes to and fro across the ridge. The catches
+  are the trial's bits (`catches`, `last`), counted by its owner for anyone standing on the lit
+  pad; the HUD counts them (no runes by the exit yet).
 
 ### `miasma`: Sinking fog
 
@@ -661,7 +686,7 @@ Each step is done when its kind is planned, generated, checked, playable, reacha
 6. [x] **`crates`, `plates`** (crates, Sokoban solver).
 7. [x] **`stones`, `sluices`, `timedgate`.**
 8. [x] **`miasma`** (fog; deadlines again), **`cold`** (meter; gaps), **`storm`** (gusts; gaps).
-9. [ ] **`siege`, `chase`, `drift`.**
+9. [x] **`siege`, `chase`, `drift`.**
 10. [ ] **`runes`** (the clue room across cubes).
 11. [ ] Weights and numbers tuned in play; the balance simulation (`docs/balance.md`) counts
     trial time and rewards.

@@ -25,6 +25,7 @@ import { followTrial } from '../net/trials.js';
 import { solveMirror, solveBraziers, sluiceWay } from '../cubegen/trials/solve.js';
 import { refreshOpenFaces, spawnEntry, backBeforeTrial, besidePortal, rebuildWorld, hurt } from './flow.js';
 import { CHAR_H } from '../core/constants.js';
+import { stepSiege, stepChase, stepDrift, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 
 const $ = id => document.getElementById(id);
@@ -48,6 +49,7 @@ const HOW = {
   miasma: 'Poison fog sinks from above. Get down to the vent valve!',
   cold: 'The cold sets in. Light the braziers on your way to the great fire!',
   storm: 'Gusts sweep the room. Shelter behind the rocks, cross in the lulls, pull the lightning rod!',
+  ...EVENT_HOW,
 };
 const SEALED = 'The portals are sealed.';
 export const trialHere = () => state.trial;
@@ -58,7 +60,7 @@ const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial
 export function enterTrial(map) {
   state.trial = map?.trial ? newTrial(map.trial, resolvedIn(map, state.run)) : null;
   if (state.trial && map.trial.kind === 'sunken') state.trial.stage = state.run.trials.get(map.trial.key) ?? 0;   // (drained for the run)
-  gone.clear(); crust.clear(); ice = null; resetStones(); cold = 0; shelterOf = null;
+  gone.clear(); crust.clear(); ice = null; resetStones(); cold = 0; shelterOf = null; resetEvents();
   partBlockers(map?.trial);
   showTrial(true);
 }
@@ -166,7 +168,7 @@ export function beforeTrialSpot() {
 export function restartTrial() {
   if (!state.trial || state.trial.phase === 'resolved') return;
   resetTrial(state.trial, mapTrial()?.start);
-  resetStones();
+  resetStones(); resetEvents();
   showTrial();
 }
 
@@ -212,6 +214,9 @@ export function updateTrial(dt) {
   stepFog(m, s, dt);
   stepCold(m, s, dt);
   stepStorm(m, s, dt);
+  stepSiege(m, s, dt, resolve);
+  stepChase(m, s, dt, failTrial);
+  stepDrift(m, s, dt, resolve);
   keystone(m, s);
   stepCrates(m, s, dt);
   stepStones(m, s, dt);
@@ -285,7 +290,8 @@ export function partInReach() {
   const fx = player.x + Math.sin(player.yaw) * 0.8, fz = player.z + Math.cos(player.yaw) * 0.8;
   let best = null, bestD = PART_REACH;
   for (const p of m.parts) {
-    if (!PART_LABELS[p.type] || (p.puzzle != null && puzzleSolved(s, p.puzzle)) || (p.type === 'warm' && s.bits[p.id])) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
+    if (!PART_LABELS[p.type] || (p.puzzle != null && puzzleSolved(s, p.puzzle)) || (p.type === 'warm' && s.bits[p.id])) continue;
+    if ((p.type === 'beacon' && s.phase !== 'idle') || (m.kind === 'chase' && s.phase !== 'running')) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
     const reach = Math.hypot(p.x - player.x, p.z - player.z), d = p.type === 'tile' ? Math.hypot(p.x - fx, p.z - fz) + 0.01 : reach;
     if (reach < PART_REACH + 0.4 && d < bestD && Math.abs(p.y - player.y) < 1.2) { best = p; bestD = d; }
   }
@@ -309,6 +315,11 @@ export function usePart(p, fromOther = false) {
   if (p.type === 'valve') { if (!fromOther) sfx('door'); resolve(); return true; }
   if (p.type === 'fire') { if (!fromOther) sfx('fireball'); resolve(); return true; }
   if (p.type === 'rod') { if (!fromOther) sfx('unlock'); resolve(); return true; }
+  if (p.type === 'lever' && m.kind === 'chase') { if (!fromOther) sfx('door'); sfx('gate', { delay: 0.1 }); resolve(); return true; }
+  if (p.type === 'beacon') {
+    if (lightBeacon(s)) { if (!fromOther) sfx('fireball'); announce(s, 'armed'); showTrial(); }
+    return true;
+  }
   if (p.type === 'warm') { if (!fromOther) sfx('fireball'); s.bits[p.id] = 1; showTrial(); return true; }
   if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' || p.type === 'tile' ? 'door' : p.type === 'brazier' ? 'fireball' : 'clink');
   const pz = m.puzzles?.[p.puzzle ?? 0];
@@ -343,7 +354,7 @@ export function resolve(tell = true) {
   if (tell) relay.trialDone?.({ key: s.key, gate: m.gate, time: s.t });   // resolved for everyone (net/session.js)
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
   setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
-  banner(isPuzzle(m.kind) ? 'Solved!' : 'Well done!', { flood: 'The water drains away.', miasma: 'The vents open: the fog lifts.', cold: 'The great fire burns: the cold lifts.', storm: 'Lightning strikes the rod: the storm ends.', collapse: 'The keystone holds: the floor is whole again.',
+  banner(isPuzzle(m.kind) ? 'Solved!' : 'Well done!', { flood: 'The water drains away.', miasma: 'The vents open: the fog lifts.', cold: 'The great fire burns: the cold lifts.', storm: 'Lightning strikes the rod: the storm ends.', ...EVENT_DONE, collapse: 'The keystone holds: the floor is whole again.',
     sunken: 'The room is drained: the way on is clear.', timedgate: 'You made it through: the gate stays open.',
     slide: m.role === 'branch' ? 'The gate is open, and the vault with it.' : 'The gate is open: the way on too.' }[m.kind] ?? '');
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
@@ -367,7 +378,7 @@ function hud() {
   if (!el) return;
   if (bannerUntil && performance.now() > bannerUntil) { $('trial-banner').classList.add('out'); bannerUntil = 0; }
   // (an event while it runs; a puzzle, or the sunken room's, while it is not solved)
-  const show = !!s && !!m && (s.phase === 'armed' || s.phase === 'running' || (isPuzzle(s.kind) || s.kind === 'sunken') && s.phase !== 'resolved');
+  const show = !!s && !!m && (s.phase === 'armed' || s.phase === 'running' || (isPuzzle(s.kind) || s.kind === 'sunken' || s.kind === 'siege') && s.phase !== 'resolved');
   el.hidden = !show;
   if (!show) return;
   $('trial-name').textContent = TRIALS[s.kind].name;
@@ -384,6 +395,8 @@ function hud() {
     line = `Stage ${(s.stage ?? 0) + 1} of ${m.stages}: solve the dry platform's puzzle to drain the room`;
     fill = (s.stage ?? 0) / m.stages;
   }
+  const ev = m && eventHud(m, s);
+  if (ev) ({ line, fill } = ev);
   if (s.kind === 'storm') {
     const g = stormPhase(s.t);
     line = s.phase === 'armed' ? 'The wind rises…' : g.phase === 'warning' ? `A gust is coming! Take cover (${Math.ceil(g.left)})` : g.phase === 'gust' ? 'GUST! Stay behind the rocks' : `A lull: cross now (${Math.ceil(g.left)})`;

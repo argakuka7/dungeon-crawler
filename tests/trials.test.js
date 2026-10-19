@@ -8,7 +8,7 @@ import { voidAllowed, fallMask } from '../src/world/voids.js';
 import { MAX_DEPTH, worldThemes } from '../src/themes/depth.js';
 import { TRIALS, trialGate, floodLevel, floodTime, nextPulse, drainLevel, DRAIN_TIME, fitFlood, floodEnd, FLOOD, ARM_TIME, SLACK,
   newTrial, stepTrial, resolveTrial, resetTrial, trialFluidLevel, trialSealed, WAVE, crumbleTime, crustState, BASIN,
-  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase } from '../src/core/trials.js';
+  slideStop, fieldIn, isRock, useBit, plateHeld, sinkStage, SINK, traceBeam, pressBrazier, allLit, tileOpen, channelFlow, pushTarget, platesHeld, pourSluice, FOG, fogLevel, fogY, fogHurt, COLD, coldStep, STORM, stormPhase, DRIFT, driftLit, holdTime, HUNTER, hunterAt } from '../src/core/trials.js';
 import { solveSlide, slideBand, solveMirror, solveBraziers, brazierPattern, turnsTo, solveSokoban, solveSluices, sluiceWay } from '../src/cubegen/trials/solve.js';
 import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
@@ -886,4 +886,55 @@ test('every storm room: straight across, the gorge leeward, its way out in the w
     n++;
   }
   assert.ok(n > 10, `${n}`);
+});
+
+// --- drift, siege, chase -----------------------------------------------------------------------------
+
+test('the drift\'s cycle: a pad lit for its period, the next pulsing in its last seconds, round and round', () => {
+  assert.equal(driftLit(1).lit, -1);
+  const a = driftLit(ARM_TIME + 0.5), b = driftLit(ARM_TIME + DRIFT.period - 1), c = driftLit(ARM_TIME + DRIFT.period * 5 + 0.1);
+  assert.deepEqual([a.lit, a.next, a.pulse], [0, 1, false]);
+  assert.deepEqual([b.lit, b.pulse], [0, true]);
+  assert.equal(c.lit, 1);
+});
+
+test('every drift room: the next pad out of reach even running, the one after it in reach walking', () => {
+  let n = 0;
+  for (const { seed, d, m } of events('drift', [0, 1, 2])) {
+    const { next, after } = m.trial.check;
+    assert.equal(m.trial.parts.filter(p => p.type === 'waypad').length, 4);
+    assert.ok(next.every(t => t > DRIFT.period), `${seed}/${d}: next ${next}`);
+    assert.ok(after.every(t => t * SLACK <= 2 * DRIFT.period), `${seed}/${d}: after ${after}`);
+    n++;
+  }
+  assert.ok(n > 20, `${n}`);
+});
+
+test('every siege room: the ring flat round the beacon, 2-3 mouths far from it, each reaching it; the hold grows with depth', () => {
+  let n = 0;
+  for (const { seed, d, m } of events('siege', [0, 1, 2])) {
+    const tr = m.trial;
+    assert.ok(tr.mouths.length >= 2 && tr.mouths.length <= 3, `${seed}/${d}: ${tr.mouths.length} mouths`);
+    assert.ok(tr.mouths.every(o => Math.hypot(o.x - tr.ring.x, o.z - tr.ring.z) >= 6.5));
+    for (const f of m.floors) if (!f.fluid && f.layer === 0 && Math.hypot(f.x + 0.5 - tr.ring.x, f.z + 0.5 - tr.ring.z) <= tr.ring.r)
+      assert.ok(Math.max(...f.cs) - Math.min(...f.cs) <= 0.2 && Math.abs(f.top * LH - tr.ring.y) < 0.01, `${seed}/${d}: the ring is not flat`);
+    n++;
+  }
+  assert.ok(n > 20, `${n}`);
+  assert.equal(holdTime(2), 45); assert.equal(holdTime(19), 90);
+});
+
+test('the hunter walks its path at its speed from ARM_TIME; every chase room\'s race is won running', () => {
+  const path = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }];
+  assert.equal(hunterAt(path, 1).x, 0);
+  assert.ok(Math.abs(hunterAt(path, ARM_TIME + 2).x - 2 * HUNTER.speed) < 1e-9);
+  assert.ok(hunterAt(path, ARM_TIME + 100).done);
+  let n = 0;
+  for (const { seed, d, m } of events('chase', [0, 1, 2])) {
+    const c = m.trial.check;
+    assert.ok(c.lever < c.hunter && c.cells >= HUNTER.least, `${seed}/${d}: lever ${c.lever} s, hunter ${c.hunter} s, ${c.cells} cells`);
+    assert.equal(m.populationScale, 0);
+    n++;
+  }
+  assert.ok(n > 15, `${n}`);
 });
