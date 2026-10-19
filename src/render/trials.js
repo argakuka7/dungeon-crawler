@@ -338,7 +338,9 @@ export function buildTrialView(m, group) {
       new THREE.MeshBasicMaterial({ color: 0x9adf50, transparent: true, opacity: 0.22, depthWrite: false }));
     const sheet = new THREE.Mesh(new THREE.PlaneGeometry(N - 0.04, N - 0.04), new THREE.MeshBasicMaterial({ color: 0xb8f070, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }));
     sheet.rotation.x = -Math.PI / 2;
-    haze.renderOrder = 6; sheet.renderOrder = 6;
+    // after the bodies (render/character.js, partner.js: 1000), so it veils what of them is in it
+    // (it writes no depth: what of them is over it stays clear)
+    haze.renderOrder = 1001; sheet.renderOrder = 1001;
     fog.add(haze, sheet); fog.position.set(N / 2, 0, N / 2); fog.visible = false;
     haze.position.x = sheet.position.x = 0;
     group.add(fog);
@@ -384,10 +386,7 @@ function standingWater(m, fluid, view, group, [x0, z0, x1, z1]) {
   box.setAttribute('pal', palAttribute(box, pal));
   const tide = FLUID_LOOK[fluid].cells ? { level: { value: 0 }, wet: { value: 0 }, solid: WATER_SOLID } : null;
   const water = new THREE.Mesh(box, cellMaterial(surface, fluid, tide));
-  water.material.side = THREE.DoubleSide;
-  // it writes depth: the hero (and anything else see-through) is drawn after it, and what of a
-  // body wading in it is under its surface must stay hidden there
-  water.material.depthWrite = true;
+  water.material.side = THREE.DoubleSide;   // (it writes depth, like every fluid: materials.js fluidMaterial)
   water.userData.fluid = fluid; water.userData.pal = pal; water.visible = false; water.renderOrder = 5;
   group.add(water);
   view.water = water;

@@ -10,6 +10,7 @@ import { OVERVIEW_FOV, CLOSE_FOV, BLEND_TIME, ANCHOR, AHEAD, closeDistance, snap
 import { camera } from '../render/scene.js';
 import { character } from '../render/character.js';
 import { insideSolid, ceilingAt, cellAt } from '../physics/collide.js';
+import { standingAt } from '../physics/fluid.js';
 import { viewBlockedAt } from '../core/blockers.js';
 import { player, state, view } from './state.js';
 import { cameraMode } from './settings.js';
@@ -80,6 +81,9 @@ function overFluids(p) {
     const surf = f.surf * LH + 0.15;
     if (p.y < surf && p.y > f.top * LH - 1) p.y = surf;
   }
+  // and standing water (a rising trial's, a boss's tide: physics/fluid.js), over everything there
+  const s = standingAt(p.x, p.z);
+  if (s && p.y < s.y + 0.15) p.y = s.y + 0.15;
 }
 
 const dir = new THREE.Vector3();

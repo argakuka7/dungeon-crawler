@@ -54,8 +54,12 @@ export function solidMaterial(detail) {
 }
 
 // (white: the palette's colours as they are; the proxies' a share of them, PROXY.fluid)
+// Every fluid surface writes depth, see-through or not: the bodies (the hero, the other players,
+// render/character.js, partner.js) are drawn after every other see-through thing, so what of a
+// body wading in a fluid (or seen through one) is under its surface must be hidden by its depth.
+// The cube's fluids, its neighbours' and the standing ones (render/trials.js) alike.
 export function fluidMaterial(t, detail) {
-  const L = FLUID_LOOK[t], common = { transparent: L.clear, depthWrite: !L.clear };
+  const L = FLUID_LOOK[t], common = { transparent: L.clear, depthWrite: true };
   if (detail === 'full') return new THREE.MeshStandardMaterial({ ...common, color: 0xffffff, emissive: 0xffffff,
     emissiveIntensity: L.emissiveIntensity, roughness: L.roughness, metalness: L.metalness });
   return new THREE.MeshLambertMaterial({ ...common, color: dim(0xffffff, PROXY.fluid), emissive: dim(0xffffff, PROXY.fluid),

@@ -110,7 +110,7 @@
     "src/cubegen/tunnel.js#carveTunnel": "42497904",
     "src/game/camera.js#pitch": "bbab3d86",
     "src/game/cut.js#REVEAL": "95bfee72",
-    "src/game/cut.js#target": "a974796f",
+    "src/game/cut.js#target": "c8719c5d",
     "src/game/devcommands.js#header": "7ad869c3",
     "src/game/downed.js#goDown": "c86abd38",
     "src/game/downed.js#tickDown": "b8c9f64a",
