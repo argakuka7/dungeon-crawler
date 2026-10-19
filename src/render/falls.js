@@ -2,35 +2,37 @@
 // the cube's geometry (render/parts.js), drawn by the cube and its proxy alike.
 import * as THREE from 'three';
 import { N, LH, LAVA, DIRS } from '../core/constants.js';
-import { FLUID_LOOK, SWELL, WIND } from './materials.js';
+import { FLUID_LOOK, swellGLSL, WIND } from './materials.js';
+import { CELL_TEX, TILE, CELLS_PER_UNIT } from './watercells.js';
 import { cutMaterial } from './section.js';
 import { FALL_WIDTH } from './parts.js';
 
 // What rides on the water where a cartoon fall lands (FLUID_LOOK fall.cells): a crown of foam
 // round the foot of the sheet, its top edge in peaks that rise and fall, and on the pool a ragged
 // patch of foam with arcs of ripples spreading from it downstream, breaking up and fading as they
-// go. Both in the cube's coordinates, rising and falling with the pool's swell (materials.js).
+// go, and a trail of foam streaming off downstream, spreading and thinning out. In the cube's
+// coordinates, rising and falling with the pool's swell (materials.js).
 // (rides edits a cut material: the cut's inject replaces what was there before it)
 const TAU = Math.PI * 2;
-function rides(mat, name, swell, fragment) {
+function rides(mat, name, S, fragment) {
   const compile = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     compile?.call(mat, sh, r);
-    sh.uniforms.uCellTime = WIND;
-    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + SWELL + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.uniforms.uCellTime = WIND; sh.uniforms.uCellTex = CELL_TEX;
+    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vRideUv = uv; vRideP = position.xz;
-      transformed.y += swell(position.xz, uCellTime) * ${swell.toFixed(3)};`);
-    sh.fragmentShader = 'uniform float uCellTime;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      transformed.y += swellY(position.xz, uCellTime);`);
+    sh.fragmentShader = 'uniform float uCellTime;\nuniform sampler2D uCellTex;\nvarying vec2 vRideUv;\nvarying vec2 vRideP;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       { float tm = uCellTime; ${fragment} }`);
   };
   mat.customProgramCacheKey = () => key + '-' + name;   // (programs are shared by key)
   return mat;
 }
-function foamCrown(cx, y, cz, dx, foam, swell) {
+function foamCrown(cx, y, cz, dx, foam, S) {
   // an open ring, wide across the sheet, shallow out from the cliff; u round it, v up
   const g = new THREE.CylinderGeometry(1, 1, 0.42, 28, 1, true).translate(0, 0.21, 0);
   g.scale(dx ? 0.36 : FALL_WIDTH * 0.62, 1, dx ? FALL_WIDTH * 0.62 : 0.36).translate(cx, y - 0.06, cz);
-  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false, side: THREE.DoubleSide })), 'crown', swell, `
+  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false, side: THREE.DoubleSide })), 'crown', S, `
     float u = vRideUv.x * ${TAU.toFixed(4)}, v = vRideUv.y;
     float peak = 0.3 + 0.7 * (0.5 + 0.5 * sin(u * 9.0 + tm * 4.0)) * (0.6 + 0.4 * sin(u * 5.0 - tm * 2.7 + 1.0));
     float av = fwidth(v) + 1e-4;
@@ -39,14 +41,26 @@ function foamCrown(cx, y, cz, dx, foam, swell) {
     if (diffuseColor.a < 0.01) discard;`);
   return new THREE.Mesh(g, mat);
 }
-function ripples(cx, y, cz, dx, dz, foam, swell) {
-  const R = 1.45, g = new THREE.PlaneGeometry(R * 2, R * 2, 8, 8).rotateX(-Math.PI / 2).translate(cx, y, cz);
-  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false })), 'ripples', swell, `
-    vec2 d = vRideP - vec2(${cx.toFixed(3)}, ${cz.toFixed(3)});
-    float r = length(d), ang = atan(d.y, d.x), down = dot(d / max(r, 1e-3), vec2(${dx.toFixed(1)}, ${dz.toFixed(1)}));
+const TRAIL = 4.5;   // world units the foam streams off downstream
+function ripples(cx, y, cz, dx, dz, foam, S) {
+  // from R behind the foot to TRAIL downstream, R to either side
+  const R = 1.45, along = R + TRAIL, mid = (TRAIL - R) / 2;
+  const g = new THREE.PlaneGeometry(dx ? along : R * 2, dx ? R * 2 : along, dx ? 12 : 6, dx ? 6 : 12).rotateX(-Math.PI / 2)
+    .translate(cx + dx * mid, y, cz + dz * mid);
+  const T = (TILE / CELLS_PER_UNIT).toFixed(4);
+  const mat = rides(cutMaterial(new THREE.MeshBasicMaterial({ color: foam, transparent: true, depthWrite: false })), 'ripples', S, `
+    vec2 d = vRideP - vec2(${cx.toFixed(3)}, ${cz.toFixed(3)}), dir = vec2(${dx.toFixed(1)}, ${dz.toFixed(1)});
+    float r = length(d), ang = atan(d.y, d.x), down = dot(d / max(r, 1e-3), dir);
     float ar = fwidth(r) + 1e-4;
+    // the trail: the cells' gaps stretched along the stream, flowing off, spreading and thinning
+    float al = dot(d, dir), ac = dot(d, vec2(-dir.y, dir.x));
+    vec4 c = texture2D(uCellTex, vec2(ac * 0.9 / ${T}, (al - tm * 1.1) * 0.35 / ${T}) + 0.41);
+    float wide = 0.35 + al * 0.22, at = fwidth(c.r) * 0.7 + 1e-3;
+    float trail = smoothstep(0.5 - at, 0.5 + at, c.r + 0.12 * smoothstep(1.2, 0.3, al))
+      * smoothstep(0.2, 0.6, al) * smoothstep(${TRAIL.toFixed(1)}, 1.2, al) * smoothstep(wide, wide * 0.6, abs(ac));
     // the foam where it lands
-    float a = 1.0 - smoothstep(0.42 - ar, 0.42 + ar, r + 0.06 * sin(ang * 6.0 + tm * 3.0) + 0.03 * sin(ang * 13.0 - tm * 5.0));
+    float a = trail;
+    a = max(a, 1.0 - smoothstep(0.42 - ar, 0.42 + ar, r + 0.06 * sin(ang * 6.0 + tm * 3.0) + 0.03 * sin(ang * 13.0 - tm * 5.0)));
     // the arcs, downstream (and a little round the sides), broken up, thinning and fading as they spread
     for (int i = 0; i < 3; i++) {
       float fi = float(i), ph = fract(tm * 0.55 + fi / 3.0), rad = 0.45 + ph * 0.9, wid = 0.045 * (1.0 - ph) + 0.012;
@@ -72,7 +86,7 @@ export function buildFalls(m, group) {
     if (FLUID_LOOK[f.type].fall.cells && cells) {
       // the pool's surface (render/floors.js fluidVolume) and the foot of the sheet (parts.js)
       const surf = f.bot * LH - 0.06, cx = ex + dx * 0.32, cz = ez + dz * 0.32;
-      const crown = foamCrown(cx, surf, cz, dx, foam, cells.swell), rip = ripples(cx, surf + 0.015, cz, dx, dz, foam, cells.swell);
+      const crown = foamCrown(cx, surf, cz, dx, foam, cells), rip = ripples(cx, surf + 0.015, cz, dx, dz, foam, cells);
       crown.renderOrder = 10 * f.layer + 5; rip.renderOrder = 10 * f.layer + 4;
       group.add(crown, rip);
       continue;

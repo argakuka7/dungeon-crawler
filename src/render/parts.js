@@ -101,7 +101,8 @@ function fallSheets(m, type) {
   // falls of lower layers first: drawn back to front from above
   for (const f of (m.falls || []).filter(f => f.type === type).sort((a, b) => a.layer - b.layer)) {
     const [dx, dz] = DIRS[f.d], bx = f.c % N, bz = (f.c / N) | 0;
-    const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.08, h = yTop - y0;
+    // (its foot well under the pool's surface: the water's swell dips, render/materials.js)
+    const yTop = f.top * LH - 0.04, y0 = f.bot * LH - 0.25, h = yTop - y0;
     const ex = dx > 0 ? bx : dx < 0 ? bx + 1 : bx + 0.5, ez = dz > 0 ? bz : dz < 0 ? bz + 1 : bz + 0.5;
     // the profile: [out from the edge, y, distance along the sheet]: flat over the pool, the
     // curl over the lip, the drop

@@ -16,10 +16,10 @@ import { FALL_WIDTH } from './parts.js';
 // `line`, faster streaks in `light`, `flow` world units a second); cells: the surface
 // drawn as drifting cartoon cells (cellMaterial) in the colour, darker swirls in `dark`, the
 // gaps between them in `line`, glowing by `glow`, more opaque (lineOpacity), rising and falling
-// in long slow waves by up to `swell` (world units)
+// in slow waves `swell` high (world units, from crest to mean), crests `lift` over the level
 export const FLUID_LOOK = {
   [WATER]: { color: 0x2c9ad8, emissive: 0x08304e, emissiveIntensity: 1, opacity: 0.7, roughness: 0.55, metalness: 0,
-    cells: { dark: 0x0c7cc0, line: 0xc8f2ff, glow: 0.25, lineOpacity: 0.92, swell: 0.045 },
+    cells: { dark: 0x0c7cc0, line: 0xc8f2ff, glow: 0.25, lineOpacity: 0.92, swell: 0.075, lift: 0.03 },
     cap: '#1f5d99', foam: 0xeaf6ff, motion: { bob: 0.008, rate: 1.6, phase: 0 },
     fall: { base: '#3f8fe0', streak: '#eaf7ff', emissive: 0x0a2a4a, emissiveIntensity: 1, opacity: 0.82, glow: false, speed: 1.5,
       cells: { line: 0xd6f8ff, light: 0x7cc4f2, glow: 0.3, flow: 4.5 } } },
@@ -99,12 +99,20 @@ export function swayMaterial(mat, scale) {
 // of the part's scale), so it stays put when the cubes slide during travel and matches between
 // a cube and its proxy. A chained shader edit like swayMaterial (after the cut's inject). The
 // colours go in as ratios to the material's own, so the proxies' darker fluids stay as much darker.
-// the swell at p (the cube's coordinates, world units) at time tm: -1..1, times cells.swell
-// (also what rides on the water: render/falls.js)
-export const SWELL = `
-  float swell(vec2 p, float tm) {
-    return 0.5 * sin(dot(p, vec2(0.55, 0.3)) + tm * 1.1) + 0.3 * sin(dot(p, vec2(-0.25, 0.62)) + tm * 0.83 + 1.3)
-      + 0.2 * sin(dot(p, vec2(0.8, -0.45)) + tm * 1.47 + 2.1);
+// The swell of a fluid's surface (FLUID_LOOK cells) at p (the cube's coordinates, world units) at
+// time tm: swellW the waves (-1..1, about 6 units from crest to crest), swellY how far the surface
+// moves there (mostly down: a crest stands only `lift` over the level, so the water keeps under
+// its banks), swellG the slope, finer ripples too (the shading only: the surface has a vertex a
+// cell). Also what rides on the water uses it (render/falls.js).
+export const swellGLSL = S => `
+  const vec2 SW1 = vec2(0.95, 0.42), SW2 = vec2(-0.5, 0.9), SW3 = vec2(0.7, -0.8), SW4 = vec2(1.9, -1.1), SW5 = vec2(-1.3, -2.0);
+  float swellW(vec2 p, float tm) {
+    return 0.45 * sin(dot(p, SW1) + tm * 1.3) + 0.35 * sin(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * sin(dot(p, SW3) + tm * 1.7 + 2.1);
+  }
+  float swellY(vec2 p, float tm) { return ${S.swell.toFixed(3)} * (swellW(p, tm) - 1.0) + ${S.lift.toFixed(3)}; }
+  vec2 swellG(vec2 p, float tm) {
+    return 0.45 * SW1 * cos(dot(p, SW1) + tm * 1.3) + 0.35 * SW2 * cos(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * SW3 * cos(dot(p, SW3) + tm * 1.7 + 2.1)
+      + 0.12 * SW4 * cos(dot(p, SW4) + tm * 2.3 + 0.7) + 0.1 * SW5 * cos(dot(p, SW5) + tm * 2.0 + 4.0);
   }
 `;
 export function cellMaterial(mat, t) {
@@ -119,10 +127,9 @@ export function cellMaterial(mat, t) {
     Object.assign(sh.uniforms, uniforms);
     // the cube's own coordinates in texture tiles (the matrix's scale is the part's)
     const tile = (TILE / CELLS_PER_UNIT).toFixed(4);
-    // the swell: whole columns rise and fall together (a few long, slow sines over the cube), so
-    // the sides of the fluid's boxes keep meeting; the matrix's scale y undone (the trial's water
-    // is scaled to its depth)
-    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vCellP;\nvarying vec3 vCellN;\nvarying float vCellWave;\n' + SWELL + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    // the swell: whole columns rise and fall together, so the sides of the fluid's boxes keep
+    // meeting; the matrix's scale y undone (the trial's water is scaled to its depth)
+    sh.vertexShader = 'uniform float uCellTime;\nvarying vec2 vCellP, vCellW;\nvarying vec3 vCellN;\nvarying float vCellWave;\n' + swellGLSL(S) + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       {
         #if defined(USE_BATCHING)
           mat4 cellM = modelMatrix * batchingMatrix;
@@ -130,24 +137,29 @@ export function cellMaterial(mat, t) {
           mat4 cellM = modelMatrix;
         #endif
         vec2 cw = position.xz * length(cellM[0].xyz);
-        vCellWave = swell(cw, uCellTime);
-        transformed.y += vCellWave * ${S.swell.toFixed(3)} / length(cellM[1].xyz);
-        vCellP = cw / ${tile};
+        vCellWave = swellW(cw, uCellTime);
+        transformed.y += swellY(cw, uCellTime) / length(cellM[1].xyz);
+        vCellP = cw / ${tile}; vCellW = cw;
         vCellN = normal;
       }`);
-    sh.fragmentShader = 'varying vec2 vCellP;\nvarying vec3 vCellN;\nvarying float vCellWave;\nuniform float uCellTime, uCellGlow, uCellOpacity;\nuniform vec3 uCellDark, uCellLine;\nuniform sampler2D uCellTex;\n'
-      + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+    sh.fragmentShader = 'varying vec2 vCellP, vCellW;\nvarying vec3 vCellN;\nvarying float vCellWave;\nuniform float uCellTime, uCellGlow, uCellOpacity;\nuniform vec3 uCellDark, uCellLine;\nuniform sampler2D uCellTex;\n'
+      + swellGLSL(S) + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       float cellLine = 0.0;
       {
         float top = smoothstep(0.6, 0.9, abs(normalize(vCellN).y)), tm = uCellTime;
-        vec2 p = vCellP;
+        // the slope of the waves: the pattern rides over them, and the side of a wave away from
+        // the light is a shade darker (soft-edged, two tones)
+        vec2 g = swellG(vCellW, tm) * top;
+        float shade = smoothstep(-0.3, 0.3, dot(g, vec2(-0.6, -0.8)));
+        vec2 p = vCellP + g * 0.018;
         p += 0.012 * vec2(sin(p.y * 1.7 + tm * 0.21) + sin(p.y * 4.3 - p.x * 1.1), sin(p.x * 1.9 - tm * 0.17) + sin(p.x * 3.7 + p.y * 1.3));
         vec4 c = texture2D(uCellTex, p);
         float aa = fwidth(c.r) * 0.7 + 1e-3, aa2 = fwidth(c.g) * 0.7 + 1e-3;
         cellLine = smoothstep(0.5 - aa, 0.5 + aa, c.r) * top;
         // inside the cells only (well away from the gaps)
         float dark = smoothstep(0.5 - aa2, 0.5 + aa2, c.g) * c.b * smoothstep(0.44, 0.32, c.r) * top;
-        diffuseColor.rgb *= mix(mix(vec3(1.0), uCellDark, dark), uCellLine, cellLine) * (1.0 + 0.07 * vCellWave * top);
+        float wave = mix(1.0, mix(0.82, 1.06, shade) * (1.0 + 0.05 * vCellWave), top);
+        diffuseColor.rgb *= mix(mix(vec3(1.0), uCellDark, dark) * wave, uCellLine, cellLine);
         diffuseColor.a = mix(diffuseColor.a, uCellOpacity, cellLine);
       }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       totalEmissiveRadiance += diffuseColor.rgb * cellLine * uCellGlow;`);
