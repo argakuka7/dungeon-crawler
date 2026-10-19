@@ -284,23 +284,35 @@ function drown(m, s) {
 
 // --- parts (game/action.js 'part') ---------------------------------------------------------------
 
-// the part the player stands at, if any: { id, type, label, x, y, z }
-export function partInReach() {
+// the parts in this cube that can be used now, wherever the player is: a rune room's tablets (in a
+// room before it), then the trial's parts. The action key uses the one in reach, a click
+// (game/lootlabels.js, game/orders.js orderPart) walks up to the one under the cursor.
+const tablets = new WeakMap();   // clue -> its tablet (the same one every time)
+const tabletOf = c => tablets.get(c) ?? tablets.set(c, { id: 'tablet', type: 'tablet', key: c.key, x: c.x, y: c.y, z: c.z }).get(c);
+export function usableParts() {
   const m = mapTrial(), s = state.trial;
-  // a rune room's tablet (in a room before it)
-  const c = (state.map?.clues || []).find(q => Math.hypot(q.x - player.x, q.z - player.z) < PART_REACH + 0.3 && Math.abs(q.y - player.y) < 1.2);
-  if (c) return { id: 'tablet', type: 'tablet', key: c.key, x: c.x, y: c.y, z: c.z, label: PART_LABELS.tablet };
-  if (!m?.parts || !s || s.phase === 'resolved') return null;
-  let best = null, bestD = PART_REACH;
+  const out = (state.map?.clues || []).map(tabletOf);
+  if (!m?.parts || !s || s.phase === 'resolved') return out;
   for (const p of m.parts) {
     if (!PART_LABELS[p.type] || (p.puzzle != null && puzzleSolved(s, p.puzzle)) || (p.type === 'warm' && s.bits[p.id])) continue;
     if ((p.type === 'beacon' && s.phase !== 'idle') || (m.kind === 'chase' && s.phase !== 'running')) continue;   // (plates, gates: nothing to use; a solved puzzle: done)
-    const d = Math.hypot(p.x - player.x, p.z - player.z);
-    if (d < PART_REACH + 0.4 && d < bestD && Math.abs(p.y - player.y) < 1.2) { best = p; bestD = d; }
+    out.push(p);
   }
+  return out;
+}
+// is part p (from usableParts) still there to use?
+export const partUsable = p => usableParts().includes(p);
+const partDist = p => Math.hypot(p.x - player.x, p.z - player.z);
+// is the player close enough to use part p?
+export const canReachPart = p => partDist(p) < PART_REACH + (p.type === 'tablet' ? 0.3 : 0) && Math.abs(p.y - player.y) < 1.2;
+
+// the part the player stands at, if any (a tablet first, else the nearest): { id, type, label, x, y, z }
+export function partInReach() {
+  const near = usableParts().filter(canReachPart);
+  const best = near.find(p => p.type === 'tablet') ?? near.reduce((a, b) => !a || partDist(b) < partDist(a) ? b : a, null);
   return best && { ...best, label: partLabel(best) };
 }
-const partLabel = p => p.type === 'runestone' ? `Press the runestone ${p.glyph}` : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
+export const partLabel = p => p.type === 'runestone' ? `Press the runestone ${p.glyph}` : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
   : PART_LABELS[p.type] ?? 'Use it';
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's

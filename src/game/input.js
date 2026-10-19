@@ -23,8 +23,8 @@ import { toggleInventory, toggleQuests, setInventoryOpen } from './inventory.js'
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
-import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk } from './orders.js';
-import { hoveredPickup, hoveredChest, hoveredVillager, toggleLabels, updateLootLabels } from './lootlabels.js';
+import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart } from './orders.js';
+import { hoveredPickup, hoveredChest, hoveredVillager, hoveredPart, toggleLabels, updateLootLabels } from './lootlabels.js';
 import { queueAttack } from './sword.js';
 import { softTarget, combatStats, readiedFlask } from '../core/combat.js';
 import { throwTarget } from './throws.js';
@@ -179,7 +179,7 @@ export function tapGame(x, y) {
   pointer.inside = false;
 }
 // what a click on the game does: with a flask in hand, throw it there; else go for the enemy,
-// villager, item or chest under the cursor, or (walk) walk to the floor there
+// villager, item, chest or trial part under the cursor, or (walk) walk to the floor there
 function click(walk) {
   if (readiedFlask(player)) {
     pointer.mode = null; clearOrder();
@@ -195,6 +195,8 @@ function click(walk) {
   if (item) { pointer.mode = null; if (item.questItem) orderWalk(item.x, item.y, item.z); else orderPickup(item); return; }
   const chest = hoveredChest();
   if (chest) { pointer.mode = null; orderChest(chest); return; }
+  const part = hoveredPart();
+  if (part) { pointer.mode = null; orderPart(part); return; }
   if (!walk) { pointer.mode = null; return; }
   pointer.mode = 'move';
   const hit = pickFloor();

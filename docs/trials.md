@@ -171,7 +171,9 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
 | reset lever | at the puzzle's entrance, puts the puzzle back to its start |
 
 - The action key (`game/action.js`) gets a new kind, `part`, beside `chest`, `talk` and
-  `collect`.
+  `collect`. Every part the key uses (and a rune room's tablet) can also be clicked, like a chest:
+  hovered, labelled with what it does (`game/lootlabels.js`), walked up to and used
+  (`game/orders.js orderPart`).
 - As built: `core/trials.js` holds the parts' rules (`useBit`, `plateHeld`; a puzzle's bits in
   `state.trial.bits`, its start in `map.trial.start`), `game/trials.js` runs them (a kind's rule in
   `RULES` solving it: the crates' plates held by crates only), `render/trials.js` draws them

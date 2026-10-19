@@ -1,6 +1,7 @@
 // Mouse orders, Diablo style: click the floor to walk there, click an enemy to go and hit
 // it (with a bow, crossbow or staff: until it is in range and in sight, then shoot), click an item on the floor (or its label) to go and pick it up, click a treasure chest to
-// go and open it, click a villager to walk up and talk (their quests or wares: game/inventory.js talkTo). Holding the button
+// go and open it, click a villager to walk up and talk (their quests or wares: game/inventory.js talkTo), click a trial's
+// part (a lever, a runestone, a tablet ...) to walk up and use it, as the action key does (game/trials.js usePart). Holding the button
 // keeps walking towards the cursor / keeps attacking. WASD cancels.
 // Orders steer only; the speed (run, or walk with Ctrl) is up to update.js.
 // Walks follow the floor graph where there is one (floors, stairs, bridges and landings; to
@@ -20,12 +21,13 @@ import { canReachChest, openChest } from './chests.js';
 import { TRADE_REACH } from '../core/shops.js';
 import { talkTo } from './inventory.js';
 import { absent } from '../core/enemies.js';
+import { usePart, canReachPart, partUsable } from './trials.js';
 
 // kind: 'move' (to x, z) | 'attack' (enemy) | 'pickup' (a pickup) | 'chest' (a reward site) |
-// 'trade' (a villager); path: floors to follow, i: the next one
-export const order = { kind: null, x: 0, z: 0, floor: null, enemy: null, pickup: null, chest: null, villager: null, path: null, i: 1, repath: 0, stuck: 0, lx: 0, lz: 0, hold: 0 };
+// 'trade' (a villager) | 'part' (a trial's part); path: floors to follow, i: the next one
+export const order = { kind: null, x: 0, z: 0, floor: null, enemy: null, pickup: null, chest: null, villager: null, part: null, path: null, i: 1, repath: 0, stuck: 0, lx: 0, lz: 0, hold: 0 };
 
-export function clearOrder() { order.kind = null; order.enemy = null; order.pickup = null; order.chest = null; order.villager = null; order.path = null; }
+export function clearOrder() { order.kind = null; order.enemy = null; order.pickup = null; order.chest = null; order.villager = null; order.part = null; order.path = null; }
 // Teleports/travel invalidate cube-local targets; a held click must not recreate them.
 export function clearMouseInput() { clearOrder(); pointer.down = false; pointer.mode = null; }
 
@@ -126,6 +128,14 @@ export function orderTrade(v) {
   if (canTrade(v)) { clearOrder(); talkTo(v); }
 }
 
+// p: a part from game/trials.js usableParts; walk up to it and use it
+export function orderPart(p) {
+  begin('part');
+  Object.assign(order, { x: p.x, z: p.z, floor: floorOf(groundAt(p.x, p.z, p.y + 0.3, 0).s), enemy: null, pickup: null, chest: null, villager: null, part: p, repath: 1e9 });
+  plan(order.floor);
+  if (canReachPart(p)) { clearOrder(); usePart(p); }
+}
+
 // the held button: keep walking to the cursor, or pick the next enemy under it
 export function holdPointer(dt) {
   if (!pointer.down || state.transitioning || state.inventoryOpen) return;
@@ -164,6 +174,11 @@ export function followOrder(dt) {
   if (order.kind === 'chest') {
     if (state.run.chests.has(order.chest.id)) { clearOrder(); return null; }
     if (canReachChest(order.chest)) { openChest(order.chest); clearOrder(); return { dx: 0, dz: 0 }; }
+  }
+  if (order.kind === 'part') {
+    const p = order.part;
+    if (!partUsable(p)) { clearOrder(); return null; }   // solved meanwhile, or the trial is over
+    if (canReachPart(p)) { clearOrder(); usePart(p); return { dx: 0, dz: 0 }; }
   }
   if (order.kind === 'trade' && canTrade(order.villager)) { const v = order.villager; clearOrder(); talkTo(v); return { dx: 0, dz: 0 }; }
   // the next floor on the path (skipping those we already reached), the target at the end
