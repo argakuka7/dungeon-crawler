@@ -135,8 +135,13 @@ export async function runFoggeryChecks() {
       if (!b.guard && b.mode !== 'attack') damageEnemy(b, b.hp);
     });
     check(b.mode === 'dead', 'he dies (once his cats are dead)');
-    run(12, tough);
+    // the platforms float down with the lava, sink under the floor and are gone
+    const high = Math.max(...moversNow().map(m => m.y1));
+    run(3, tough);
+    check(moversNow().length && Math.max(...moversNow().map(m => m.y1)) < high - 2, 'the platforms float down');
+    run(9, tough);
     check(state.tide === null, 'the lava is gone: ' + state.tide);
+    check(!moversNow().length, 'the platforms are gone, under the floor');
     check(!gateLocked(map, state.run), 'the well is open');
     out.push('dead: lava drained, well open');
     return out;

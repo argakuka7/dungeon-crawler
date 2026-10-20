@@ -517,12 +517,12 @@ once. A little XP once, no coins and no weapons, a minor health potion 6% of the
 
 ![Foggery's clips](../blender/previews/foggery-preview.png)
 
-From the kids' whiteboard sketches (`blender/foggery.py`, `assets/foggery.glb`): a frog, light
-green, a little taller than the player (1.75 cells). Two big round yellow eyes sit on top of his
+From the kids' whiteboard sketches (`blender/foggery.py`, `assets/foggery.glb`): a frog, orange
+red, a little taller than the player (1.75 cells). Two big round yellow eyes sit on top of his
 head at the sides; a dark line runs across his face between them with a little round mouth under
 it; his body flares out like a bell below the head (pale belly in front); two long thin arms hang
 from the sides of his head down past his body, ending in three-fingered hands; two long straight
-legs with webbed feet carry him. His second form is a ball, light green, floating, his two eyes
+legs with webbed feet carry him. His second form is a ball, orange red, floating, his two eyes
 close together in the middle of its face, a shield of glowing segments turning round it while his
 cats guard him. One model holds both forms: each clip shows one and scales the other away (the
 bones `frog` and `ball`), and the game scales an eye he threw away and grows it back
@@ -583,8 +583,10 @@ there is none the next time you come).
 outer ring are 7 x 7 slots of two by two; less the middle three by three (the top) and any where the tower reaches up
 close under them (`clear`: the end of the ramp), about 35 of them hold 22 stone platforms
 (`slots`, `next`: the slots next to each). They are not there at first: once the lava has risen to
-its highest they rise up out of it (1.8 s) and stay for the rest of the visit (a death or leaving
-the cube puts them back under, `game/movers.js`). Their tops float a level over the top of the
+its highest they rise up out of it (1.8 s). Once he is beaten and the lava drains away they stop
+sliding and float down with it (1.5 cells/s; who stands on one rides it down), each down to the
+floor under it and on under it, and are gone (a death or leaving the cube puts them back under too,
+`game/movers.js`). Their tops float a level over the top of the
 tower (a jump up), 0.2 cells over the drowned top. Every 2 s up to three of them slide into an
 empty slot next to theirs (in 1.2 s), never back where they just came from (unless nothing else can
 move), and at least three of the slots touching the top of the tower stay filled (`touch`,
@@ -657,8 +659,8 @@ fireballs fanned out instead of one, makes **geysers** burst through the platfor
 **his cats**: they walk on the lava, over the drowned top and wherever the floors under it lead,
 and his shield holds while they live.
 
-His death drains the lava away for good (7 s), takes his minions along and opens the well on the
-caldera's floor; floating, he sinks onto the floor under him, his loot with him.
+His death drains the lava away for good (7 s), the platforms float down with it and sink under
+the floor, his minions go along and the well opens on the caldera's floor; floating, he sinks onto the floor under him, his loot with him.
 
 ## Playing together
 
