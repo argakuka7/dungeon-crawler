@@ -70,7 +70,7 @@ test('a steep but walkable slope is walked up to its top', () => {
   // corners rise 1.4 per cell from x = 3 to x = 7: the rim ahead lies more than a step above the feet
   stand();
   const h = X => 1.4 * Math.min(4, Math.max(0, X - 3));
-  for (const f of state.map.floors) { f.cs = [h(f.x), h(f.x + 1), h(f.x), h(f.x + 1)] }
+  for (const f of state.map.floors) { f.cs = [h(f.x), h(f.x + 1), h(f.x), h(f.x + 1)]; }
   for (let i = 0; i < 240; i++) movePlayer(DT, 1, 0, false, false);
   assert.ok(player.x > 7.5, 'walked over the top: ' + player.x);
   assert.ok(Math.abs(player.y - 5.6) < 1e-6);
