@@ -12,8 +12,8 @@ export const SIDE0 = -Math.PI / 4;
 export const snapYaw = yaw => SIDE0 + Math.round((yaw - SIDE0) / (Math.PI / 2)) * Math.PI / 2;
 
 // The close view: the camera on an arm from a point at the hero's shoulders, `pitch` over the
-// level (rad, looking down; less looks up), as long as the zoom says (the same five presets:
-// about 1.5 to 4 units) and shorter where something is in the way (game/camera.js). The middle
+// level (rad, looking down; less looks up), as long as the zoom says (the same six presets:
+// about 1.2 to 4.7 units) and shorter where something is in the way (game/camera.js). The middle
 // of the screen is the pivot, a little over the hero's head: the crosshair (game/mouselook.js).
 export const ANCHOR = 1.2;          // the arm's pivot over the feet
 export const AHEAD = 2;             // the camera looks at a point this far past the pivot

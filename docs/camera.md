@@ -31,8 +31,8 @@ Tab is taken anyway.
 - No pointer lock for the hold: the browser would show its banner on every hold, and Chrome
   refuses to lock again for a moment after Esc.
 
-Q / E still turn by a quarter in both views; the zoom keys and the wheel keep their five
-presets, which in the close view set the arm's length (`closeDistance`: about 1.5 to 4 units).
+Q / E still turn by a quarter in both views; the zoom keys and the wheel keep their six
+presets, which in the close view set the arm's length (`closeDistance`: about 1.2 to 4.7 units).
 WASD always moves relative to the camera, so in the close view W runs away from it.
 
 ## Mouse look (`game/mouselook.js`)

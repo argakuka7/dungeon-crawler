@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_ZOOM, ZOOM_INTERVAL, stepZoom } from '../src/core/zoom.js';
+import { DEFAULT_ZOOM, ZOOM_INTERVAL, CLOSEST_ZOOM, FARTHEST_ZOOM, ZOOM_LEVELS, stepZoom } from '../src/core/zoom.js';
 
 test('default camera magnification is 23% larger', () => {
   assert.equal(1 / DEFAULT_ZOOM, 1.23);
@@ -18,7 +18,7 @@ test('zoom uses reversible presets anchored at the default', () => {
   assert.equal(stepZoom(DEFAULT_ZOOM, 0), DEFAULT_ZOOM);
 });
 
-test('zoom has exactly five levels with the default in the middle', () => {
+test('zoom has exactly six levels with the default fourth from the closest', () => {
   let zoom = DEFAULT_ZOOM;
   for (let i = 0; i < 100; i++) zoom = stepZoom(zoom, -1);
   const levels = [zoom];
@@ -28,10 +28,10 @@ test('zoom has exactly five levels with the default in the middle', () => {
     levels.push(next);
     zoom = next;
   }
-  assert.equal(levels.length, 5);
-  assert.equal(levels[2], DEFAULT_ZOOM);
-  assert.deepEqual(levels, [-2, -1, 0, 1, 2].map(step =>
-    DEFAULT_ZOOM * ZOOM_INTERVAL ** step / (step === -2 ? 1.25 : 1)));
+  assert.equal(levels.length, 6);
+  assert.equal(levels[3], DEFAULT_ZOOM);
+  assert.deepEqual(levels, [...ZOOM_LEVELS]);
+  for (let i = 1; i < levels.length; i++) assert.ok(levels[i] > levels[i - 1]);
 });
 
 test('zoom stays bounded and steps away from either limit without drift', () => {
@@ -39,7 +39,7 @@ test('zoom stays bounded and steps away from either limit without drift', () => 
     let zoom = DEFAULT_ZOOM;
     for (let i = 0; i < 100; i++) {
       zoom = stepZoom(zoom, direction);
-      assert.ok(zoom >= DEFAULT_ZOOM * ZOOM_INTERVAL ** -2 / 1.25 && zoom <= DEFAULT_ZOOM * ZOOM_INTERVAL ** 2);
+      assert.ok(zoom >= CLOSEST_ZOOM && zoom <= FARTHEST_ZOOM);
     }
     assert.equal(stepZoom(zoom, direction), zoom);
     const away = stepZoom(zoom, -direction);
@@ -48,11 +48,13 @@ test('zoom stays bounded and steps away from either limit without drift', () => 
   }
 });
 
-test('closest preset has 25% more magnification than before', () => {
-  const previous = DEFAULT_ZOOM * ZOOM_INTERVAL ** -2;
-  const closest = stepZoom(stepZoom(DEFAULT_ZOOM, -1), -1);
-  assert.equal(previous / closest, 1.25);
-  assert.equal(stepZoom(closest, 1), DEFAULT_ZOOM / ZOOM_INTERVAL);
+test('closest preset magnifies 20% more and farthest reaches 10% further than before', () => {
+  const previousClosest = DEFAULT_ZOOM * ZOOM_INTERVAL ** -2 / 1.25;
+  const previousFarthest = DEFAULT_ZOOM * ZOOM_INTERVAL ** 2;
+  let closest = DEFAULT_ZOOM, farthest = DEFAULT_ZOOM;
+  for (let i = 0; i < 10; i++) { closest = stepZoom(closest, -1); farthest = stepZoom(farthest, 1); }
+  assert.ok(Math.abs(previousClosest / closest - 1.2) < 1e-12);
+  assert.ok(Math.abs(farthest / previousFarthest - 1.1) < 1e-12);
 });
 
 test('off-grid targets snap to the shared presets', () => {
