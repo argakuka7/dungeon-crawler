@@ -44,7 +44,7 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   Shraps and Fire-face, 1.2 s Triangle, 1.5 s Stunder, 1.4 s / 2 s side / descent guardians): lighter
   hits hurt it (it flashes, barely moves) but do not stagger it, so it can strike back. A
   blow of a quarter of its health or more (`HEAVY_HIT`) staggers it anyway.
-- Hit feedback (`game/juice.js`): a short hit pause, a camera nudge, sparks and
+- Hit feedback (`game/juice.js`): a short hit pause (critical hits only), a camera nudge, sparks and
   ichor, a knockback, a damage number and generated sounds (`audio/sfx.js`).
   Spider bites are a short flinch; a Stunder ram or a lethal bite knocks you over.
 - Knocked over, you ragdoll until the body settles, then get up from where it lies

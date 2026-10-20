@@ -1,4 +1,4 @@
-// Hit feedback: a brief hit pause, a camera nudge, sparks and ichor, damage numbers and
+// Hit feedback: a brief hit pause (critical hits only), a camera nudge, sparks and ichor, damage numbers and
 // sounds. Gameplay never depends on any of this.
 import { player } from './state.js';
 import { emit, glow, soft, rand } from '../render/particles.js';
@@ -26,13 +26,13 @@ export function cameraKick(dx, dz, amount, dy = 0) {
 
 // the player's blade hit enemy e for dmg (killed: that was the last of its health);
 // (dx, dz): the direction of the blow; crit: a critical hit (a bigger, golden number); felt:
-// our own hit (a friend's has no hit pause and does not nudge our camera)
+// our own hit (a friend's has no hit pause and does not nudge our camera). Only a crit pauses time.
 // learn: architecture.html#swing-journey, combat.html#juice, loop.html#pause (see learn/README.md)
 export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   const l = Math.hypot(dx, dz) || 1, nx = dx / l, nz = dz / l;
   if (e.proxy) {   // a boss's proxy: no blood, no number, it goes up in a cloud (render/enemies.js)
     floatText('Poof!', { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z }, { color: '#e8eef8', size: 0.3, life: 0.9, rise: 0.8, pop: 1 });
-    if (felt) { hitstop(0.07); cameraKick(nx, nz, 0.1); }
+    if (felt) { if (crit) hitstop(0.07); cameraKick(nx, nz, 0.1); }
     return;
   }
   const x = e.x - nx * e.profile.radius * 0.5, y = e.y + Math.min(e.profile.bodyHeight * 0.6, 0.7), z = e.z - nz * e.profile.radius * 0.5;
@@ -51,7 +51,7 @@ export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   const top = { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z };
   floatText(crit ? dmg + '!' : String(dmg), top, { color: crit ? '#ffd23a' : killed ? '#ffb347' : '#ffffff',
     size: crit ? 0.36 : killed ? 0.3 : 0.24, life: 0.8, rise: 0.9, drift: rand(-0.35, 0.35), pop: crit ? 1.1 : 0.7 });
-  if (felt) { hitstop(killed ? 0.09 : 0.055); cameraKick(nx, nz, killed ? 0.16 : 0.08); }
+  if (felt) { if (crit) hitstop(killed ? 0.09 : 0.055); cameraKick(nx, nz, killed ? 0.16 : 0.08); }
   sfx(killed ? 'kill' : 'hit', { at: e, pitch: e.profile.pitch ?? 1.1 });
 }
 
@@ -91,7 +91,6 @@ export function shotFx(shot, what) {
 // the player took dmg from something at (fx, fz)
 export function playerHurtFx(dmg, fx, fz) {
   floatText('-' + Math.ceil(dmg), q => q.set(player.x, player.visY + 1.3, player.z), { color: '#ff6a5a', size: 0.24, life: 0.9, rise: 0.7, pop: 0.6 });
-  hitstop(0.05);
   cameraKick(player.x - fx, player.z - fz, 0.12, -0.05);
   sfx('hurt', { at: player });
 }
@@ -320,7 +319,7 @@ function stompFx(b, what) {
   for (let i = 0; i < 24; i++)
     emit(soft, x + rand(-0.6, 0.6), y + 0.15, z + rand(-0.6, 0.6), { v: [rand(-2.5, 2.5), rand(2, 5), rand(-2.5, 2.5)], life: rand(0.5, 0.9),
       size: rand(0.06, 0.12), color: DROPS[i % 3], alpha: 0.9, gravity: 10, drag: 0.6 });
-  if (d < 10) { cameraKick(0, 0, 0, 0.16 * (1 - d / 10)); hitstop(0.04); }
+  if (d < 10) cameraKick(0, 0, 0, 0.16 * (1 - d / 10));
 }
 // Squarlo starts calling the tide (game/gusts.js): a deep swell of sound and water welling up
 // in a ring round him
@@ -477,7 +476,7 @@ export function statusHurtFx(e, dmg, status, killed) {
   if (e.proxy) return;
   const top = { x: e.x, y: e.y + e.profile.bodyHeight + 0.2, z: e.z };
   floatText(String(dmg), top, { color: STATUS_COLOR[status], size: killed ? 0.26 : 0.19, life: 0.7, rise: 0.8, drift: rand(-0.3, 0.3), pop: 0.4 });
-  if (killed) { sfx('kill', { at: e, pitch: e.profile.pitch ?? 1.1 }); hitstop(0.05); }
+  if (killed) sfx('kill', { at: e, pitch: e.profile.pitch ?? 1.1 });
 }
 
 // a flask (game/throws.js) leaving the hand ('launch') or bursting ('burst') at (x, y, z):
@@ -503,7 +502,6 @@ export function flaskFx(f, what) {
         life: rand(0.9, 1.4), size: rand(0.35, 0.55), grow: 1, color: '#3e3834', alpha: 0.45, drag: 0.8 });
     sfx('boom', { at: f });
     cameraKick(x - player.x, z - player.z, 0.1, -0.08);
-    hitstop(0.04);
   } else if (s.burn) {
     for (let i = 0; i < 26; i++) {
       const [dx, dz] = [rand(-1, 1) * r, rand(-1, 1) * r];
