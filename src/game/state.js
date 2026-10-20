@@ -55,6 +55,8 @@ export const state = {
   tide: null,        // the level (in levels) a boss's tide stands at in this cube, or null (game/tide.js)
   void: 0,           // 1 while Flip's fight goes on: the world round his box goes (game/flipworld.js)
   lookVoid: 0,       // how far it has gone, following `void` (main.js: render/look.js, render/neighbors.js)
+  dusk: 0,           // how far into the dusk Renew's fight has gone, 0 .. 1 (game/rewind.js)
+  lookDusk: 0,       // how dusky it looks, following `dusk` (main.js, render/look.js)
   cast: null,        // reading a portal scroll: { kind, t, duration, ... } (game/townportal.js startCast)
   visit: null,       // this cube as you came in: what a death restores (game/flow.js)
   fallFrom: null,    // falling through cubes: the cube the fall started in (game/fall.js)

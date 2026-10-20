@@ -44,7 +44,7 @@ silver cloud. The HP bar and the label keep the tier's colour.
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
 instead, the second (depth 1) by **Totnar**, the third (depth 2) by **Squarlo**, the fourth (depth 3)
-by **Flip**, the fifth (depth 4) by **Foggery**, each alone and
+by **Flip**, the fifth (depth 4) by **Foggery**, the sixth (depth 5) by **Renew**, each alone and
 with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names him and
 `bossPlaceholder` is false there.
 

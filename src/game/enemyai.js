@@ -327,7 +327,8 @@ function rollOn(e, a, t0, dt) {
 // Between blows, by style. Returns false where it should simply close in.
 //   skirmish: backs off after a blow, circles at `circle` cells (sidestepping if it `strafe`s,
 //     else walking round), then darts in when it can strike again
-//   ranged: backs away inside keep[0], sidesteps while its throw recovers
+//   ranged: backs away inside keep[0], sidesteps while its throw recovers (one that `backpedal`s
+//     backs away whenever it is too close)
 //   brute: holds its ground
 function manoeuvre(e, dt, d, strike) {
   const p = foe(e), cfg = e.profile, speed = cfg.chase;
@@ -353,8 +354,11 @@ function manoeuvre(e, dt, d, strike) {
     return true;
   }
   if (cfg.style === 'ranged') {
-    if (e.cool <= 0 && state.enemyGrace <= 0 && !e.held) return false;
     const ux = (e.x - p.x) / (d || 1), uz = (e.z - p.z) / (d || 1), s = e.side || 1;
+    // one that `backpedal`s (Renew with his staff or bow) runs backwards, facing the player,
+    // whenever they are too close, at that share of its speed, ready to shoot or not
+    if (cfg.backpedal && d < cfg.keep[0] && slide(e, ux, uz, speed * cfg.backpedal, dt) > 0.3) return true;
+    if (e.cool <= 0 && state.enemyGrace <= 0 && !e.held) return false;
     if (d < cfg.keep[0] && slide(e, ux, uz, speed * 0.9, dt) > 0.5) return true;
     if (!strike && d > cfg.keep[0]) return false;   // no shot from here: get one
     going(slide(e, uz * s, -ux * s, speed * 0.55, dt));

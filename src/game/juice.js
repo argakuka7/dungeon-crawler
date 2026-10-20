@@ -108,6 +108,8 @@ export function projectileFx(pr, what) {
   if (pr.kind === 'skull') { skullFx(pr, what); return; }
   if (pr.kind === 'water') { waterFx(pr, what); return; }
   if (pr.kind === 'eye') { eyeFx(pr, what); return; }
+  if (pr.kind === 'orb') { orbFx(pr, what); return; }
+  if (pr.kind === 'arrow') { arrowFx(pr, what); return; }
   const ball = pr.kind === 'ball';   // Flip's ball of light
   if (what === 'launch') { sfx(fire ? 'fireball' : ice || ball ? 'frost' : 'zap', { at: pr, pitch: ball ? 1.3 : 1 }); return; }
   const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice || ball ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
@@ -123,6 +125,28 @@ export function projectileFx(pr, what) {
     emit(soft, x, y, z, { v: [rand(-0.4, 0.4), rand(-0.1, 0.3), rand(-0.4, 0.4)], life: rand(0.6, 0.9), size: rand(0.2, 0.3),
       grow: 0.9, color: '#d8f2ff', alpha: 0.35, drag: 0.8 });
   if (what !== 'spent') sfx(fire ? 'whump' : ice ? 'icecrack' : 'shatter', { at: pr, volume: 0.8 });
+}
+
+// Renew's spell (or an echo's shot): a shimmer as it leaves, and where it ends a bright pop that
+// fizzes out in its colour
+function orbFx(pr, what) {
+  if (what === 'launch') { sfx('spell', { at: pr }); return; }
+  const { x, y, z } = pr, c = pr.spec.color ?? '#bdf3ff', n = what === 'spent' ? 6 : 16, s = what === 'spent' ? 1 : 2.4;
+  emit(glow, x, y, z, { life: 0.2, size: what === 'spent' ? 0.35 : 0.7, grow: 1, color: c, alpha: 0.9 });
+  for (let i = 0; i < n; i++)
+    emit(glow, x, y, z, { v: [rand(-s, s), rand(0.3, s), rand(-s, s)], life: rand(0.25, 0.5), size: rand(0.05, 0.1),
+      color: i % 2 ? '#ffffff' : c, gravity: 4, drag: 2 });
+  if (what !== 'spent') sfx('burst', { at: pr, volume: 0.8 });
+}
+
+// Renew's arrow: the twang as it leaves, and a knock where it strikes (a few splinters)
+function arrowFx(pr, what) {
+  if (what === 'launch') { sfx('twang', { at: pr }); return; }
+  if (what === 'spent') return;
+  for (let i = 0; i < 6; i++)
+    emit(soft, pr.x, pr.y, pr.z, { v: [rand(-1, 1), rand(0.3, 1.5), rand(-1, 1)], life: rand(0.3, 0.5), size: rand(0.03, 0.06),
+      color: i % 2 ? '#c8a878' : '#f2ead8', alpha: 0.9, gravity: 6, drag: 2 });
+  sfx(what === 'hit' ? 'hit' : 'thunk', { at: pr, volume: 0.7 });
 }
 
 // Totnar's skull: hurled with a whoosh and chattering teeth, and where it ends a bony knock and a
@@ -452,14 +476,15 @@ const SUMMONS = { triangles: { sound: 'summon', flash: '#9fdcff', colors: ['#e0f
   leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 },
   splash: { sound: 'splash', flash: '#c8f4ff', colors: DROPS, streak: 8 },
   rings: { sound: 'summon', flash: '#bfe8ff', colors: ['#f0faff', '#8fd8ff'], streak: 10 },
-  embers: { sound: 'fireball', flash: '#ffb050', colors: ['#ffd25a', '#ff8a2a', '#ff4a17'], streak: 10 } };
+  embers: { sound: 'fireball', flash: '#ffb050', colors: ['#ffd25a', '#ff8a2a', '#ff4a17'], streak: 10 },
+  time: { sound: 'summon', flash: '#e8fbff', colors: ['#ffffff', '#bdf3ff', '#ffe9a8'], streak: 12 } };
 export function summonFx(mouth, list, look = 'triangles') {
   const s = SUMMONS[look];
   sfx(s.sound, { at: mouth });
   emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: s.flash, alpha: 0.9 });
   for (const m of list) for (let i = 0; i < s.streak; i++) {
     const k = i / s.streak, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
-    emit(look === 'triangles' || look === 'embers' ? glow : soft, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
+    emit(look === 'triangles' || look === 'embers' || look === 'time' ? glow : soft, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
       size: rand(0.08, 0.13), color: s.colors[i % s.colors.length], drag: 2 });
   }
 }

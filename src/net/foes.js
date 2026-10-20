@@ -167,6 +167,15 @@ export class Viewer {
         e.guard = guard === 1 ? 1 : 0;
         followMovers(clock);
       }
+      // Renew's time (game/renew.js): our own hero lives it after him (game/rewind.js)
+      if (Array.isArray(b[21])) {
+        const [clock, rewinding, on] = b[21], before = Array.isArray(a[21]) && a[21][1] === rewinding ? a[21][0] : clock;
+        if (Number.isFinite(clock) && Number.isFinite(before)) e.clock = Math.max(0, before + (clock - before) * k);
+        e.rewinding = rewinding === 1; e.on = on === 1;
+        const risen = b[21][3];
+        e.ascended = risen === 2;
+        e.rising = Number.isFinite(risen) && risen > 0 && risen < 2 ? { u: Math.min(1, risen) } : null;
+      }
       if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.dark = 0; (e.beam || e.bolts) && mirrorBeam(e, null); return; }
       mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null, Array.isArray(b[16]) ? b[16] : null);
     });

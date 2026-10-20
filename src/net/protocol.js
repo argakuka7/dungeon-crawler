@@ -249,17 +249,23 @@ export function rosterOf(list, cube, seed) {
 // other bolts of a storm, like the beam, else 0; tide: how high Squarlo has the water, 0 to 1
 // (game/squarlo.js); under: 1 while a Squirtle is under the floor, game/enemyai.js), and for Flip
 // one more: [orient, turns, holes] (how his world is turned and how often he turned it, his black
-// holes: [n, x, y, z, t, life] each, game/flip.js), and for Foggery two more: 0 and foggeryRow
+// holes: [n, x, y, z, t, life] each, game/flip.js), and for Foggery two more: 0 and foggeryRow, and
+// for Renew three more: 0, 0 and renewRow
 const beamRow = b => [r2(b.t), r2(b.ex), r2(b.ey), r2(b.ez)];
 const flipRow = e => [e.orient ?? 0, e.turns ?? 0, (e.holes ?? []).map(h => [h.n, r2(h.x), r2(h.y), r2(h.z), r2(h.t), h.life])];
 // Foggery's: [eyes ([left, right]: 0 thrown .. 1 grown back), guard (1 while his shield holds), the
 // clock of his platforms] (game/foggery.js)
 const foggeryRow = e => [(e.eyes ?? [1, 1]).map(r2), e.guard ? 1 : 0, r2(e.clock ?? 0)];
+// Renew's: [clock (the room's time, s since his phase began), rewinding (1 while it runs back), on
+// (1 once the fight has started), risen (beaten, how far he has risen away, 0 .. 1; 2: gone)]
+// (game/renew.js; every game rewinds its own hero after it, game/rewind.js)
+const renewRow = e => [Math.round((e.clock ?? 0) * 1000) / 1000, e.rewinding ? 1 : 0, e.on ? 1 : 0, e.ascended ? 2 : e.rising ? r2(e.rising.u) : 0];
 export function rowOf(e, i, runner = 0) {
   const b = e.beam;
   return [i, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), Math.max(0, MODES.indexOf(e.mode)), r2(e.mode === 'dead' ? e.deadT : e.t),
     e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0),
     b ? beamRow(b) : 0, e.lastHit ?? runner, e.stage ?? 0, e.dark ? 1 : 0, e.bolts?.length ? e.bolts.map(beamRow) : 0,
-    e.tide ? r2(e.tide) : 0, e.under ? 1 : 0, ...e.turns !== undefined ? [flipRow(e)] : e.eyes !== undefined ? [0, foggeryRow(e)] : []];
+    e.tide ? r2(e.tide) : 0, e.under ? 1 : 0, ...e.turns !== undefined ? [flipRow(e)] : e.eyes !== undefined ? [0, foggeryRow(e)]
+      : e.boss === 'renew' && e.clock !== undefined ? [0, 0, renewRow(e)] : []];
 }
 

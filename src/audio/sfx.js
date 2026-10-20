@@ -436,6 +436,26 @@ const SOUNDS = {
     tone('sawtooth', 60 * p, 40 * p, t, 1.6, f);
     tone('sine', 220 * p, 55 * p, t + 0.05, 1.2, amp(t + 0.05, 0.1, 0.25, 1.1, out));
   },
+  clockwind(t, out, p) { // Renew gathering time: a clock ticking faster and faster under a rising shimmer
+    for (let i = 0, at = t; i < 10; i++, at += 0.16 * Math.pow(0.86, i)) {
+      noise(at, 0.02, filter('bandpass', (i % 2 ? 3200 : 2500) * p, 8, amp(at, 0.001, 0.35, 0.02, out)));
+      tone('sine', (i % 2 ? 1900 : 1500) * p, (i % 2 ? 1880 : 1480) * p, at, 0.05, amp(at, 0.001, 0.08, 0.05, out));
+    }
+    sweep(t, 1.4, 600 * p, 2400 * p, 5200 * p, 3, 0.18, out, 0.9);
+    tone('triangle', 440 * p, 880 * p, t + 0.2, 1.2, amp(t + 0.2, 0.8, 0.1, 0.4, out));
+  },
+  rewind(t, out, p) {    // time running back: a tape whirring backwards, warbling down and up, ticks racing the wrong way
+    sweep(t, 2.2, 2600 * p, 700 * p, 1900 * p, 2.5, 0.3, out, 0.15);
+    const g = amp(t, 0.2, 0.16, 1.9, out), f = filter('bandpass', 900 * p, 3, g), o = f.context.createOscillator();
+    o.type = 'sawtooth';
+    for (let i = 0; i <= 22; i++) o.frequency.setValueAtTime((i % 2 ? 330 : 250) * p * (1 - i * 0.012), t + i * 0.1);
+    o.connect(f); o.start(t); o.stop(t + 2.25);
+    for (let i = 0; i < 14; i++) { const at = t + 2 - i * 0.14; noise(at, 0.015, filter('bandpass', 2800 * p, 8, amp(at, 0.001, 0.22, 0.015, out))); }
+  },
+  rewound(t, out, p) {   // back at the start: a rush coming to a stop, and a bell's deep chime
+    sweep(t, 0.5, 3000 * p, 900 * p, 300 * p, 1.2, 0.35, out, 0.02, 'lowpass');
+    for (const [hz, l] of [[392, 0.3], [784, 0.12], [1175, 0.06]]) tone('sine', hz * p, hz * 0.995 * p, t + 0.12, 1.6, amp(t + 0.12, 0.005, l, 1.6, out));
+  },
   dig(t, out, p) {       // a Squirtle diving into the floor: a scrape and a soft plop
     sweep(t, 0.25, 900 * p, 400 * p, 200 * p, 0.8, 0.4, out, 0.01, 'lowpass');
     tone('sine', 260 * p, 110 * p, t + 0.12, 0.1, amp(t + 0.12, 0.003, 0.3, 0.1, out));

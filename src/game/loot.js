@@ -107,7 +107,8 @@ export function dropLoot(e, copper) {
   const source = dropSource(e);
   if (state.run.dropped.has(source)) return;
   const items = enemyDrops(e, state.map?.seed ?? 0, favoredKind(player));
-  if (copper || items.length) spill(source, e, copper, items);   // (nothing at all: a Custo triangle, mostly)
+  // (nothing at all: a Custo triangle, mostly; from where it went, if not its body: Renew's, out of the sky)
+  if (copper || items.length) spill(source, e, copper, items, {}, e.lootFrom ?? undefined);
 }
 // coins and items of drop `source` bursting out of a body (or a chest: `from`) and landing
 // around `at`; extra: what every pickup carries; delay: seconds before the first one comes out

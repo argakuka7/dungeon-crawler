@@ -188,6 +188,17 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   fireballs and makes fire geysers burst out of the floor. At a sixth the lava floods the top and
   only the platforms are safe. Falling into his lava costs a quarter of your health and magic pulls
   you out. See [bosses.md](bosses.md#foggery).
+- Renew, the sixth real boss, in place of the descent guardian of depth 5, in the arena his depth
+  would have anyway (with braziers lit round it): no monster but a hero like you, the same figure,
+  in a hood. He runs as fast as you, chains his blows, lunges, and rolls out of the way of your
+  swings. Each of his four phases is a whole health bar, with a weapon in his hands: a sword, a
+  broadsword, a staff and a bow; with the last two he runs backwards and leaps back to keep his
+  distance. At the end of every bar he turns back time: everything in the room runs backwards to when the phase began, you too (nothing
+  hurts anybody meanwhile), and then there are two of you: your echo does again what you did, and
+  its blows hurt you, while ghosts of him and his minions fight it again as they fought you. After
+  the last one he does not come back: he rises into the sky as a ghost, and his loot falls out of it. In phases 2 and 3 he casts
+  spiders, then Fire-faces, out of the sky, and the fight falls from dusk into night. See
+  [bosses.md](bosses.md#renew).
 - Squirtle (`blender/squirtle.py`): a little blue water serpent with a beak that runs about under
   the floor (nothing touches it there) and pokes out of it to spit balls of water with a tiny
   push; it lives in the lagoons, the sunken grotto and the cenote, and Squarlo summons them.

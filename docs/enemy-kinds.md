@@ -180,7 +180,8 @@ summons it) is a Triangle kind too, and Totnar's Twig spider (0.55×) and Brambl
 (0.72×), both `ochre.deep`, are a Spider and a Stunder kind; his snapping skull (`stone.pale`) is
 a species of its own that only he brings (`MINION_PROFILES`); see [bosses.md](bosses.md).
 Squarlo's Tide squirtle (`jade.mid`, ×0.7 health, ×0.6 damage) is a Squirtle minion, and Flip's Sky
-wolla (`frost.light`, ×0.6 health and damage) a Wolla minion. Foggery's Fire-faces and Fire-cats are
+wolla (`frost.light`, ×0.6 health and damage) a Wolla minion. Renew's spiders (×0.8 health, ×0.6 damage) and Fire-faces (×0.55) are `plain` minions too.
+Foggery's Fire-faces and Fire-cats are
 `plain` minions: they look like and are called what they are (×0.6 health and damage, the cats ×0.8
 health); both are `lavaproof`: they walk on his lava.
 

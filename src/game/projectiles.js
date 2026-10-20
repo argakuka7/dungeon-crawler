@@ -41,6 +41,14 @@ function launchOne(e, a) {
   relay.launch?.(pr, e);
   return pr;
 }
+// a projectile of no enemy's (an echo's shot, game/rewind.js): only this game sees it; one that
+// is `only` for a body hits nobody else
+export function addProjectile(pr) {
+  pr.n = ++serial;
+  projectiles.push(pr);
+  projectileFx(pr, 'launch');
+  return pr;
+}
 // the runner's projectile n, thrown by e (its view here), from (x, y, z) at (vx, vy, vz)
 export function mirrorProjectile(n, e, spec, x, y, z, vx, vy, vz) {
   const pr = { kind: spec.kind, spec, x, y, z, vx, vy, vz, travelled: 0, t: 0, profile: e?.profile, n, mirror: true };
@@ -58,13 +66,13 @@ export function endMirrored(n, end) {
 export function updateProjectiles(dt) {
   const targets = party().filter(b => alive(b) && !b.flipping);   // flies through a fallen player (or one in a black hole)
   projectiles = projectiles.filter(pr => {
-    const end = stepProjectile(pr, dt, pr.mirror ? null : targets, solid);
+    const end = stepProjectile(pr, dt, pr.mirror ? null : pr.only ? targets.filter(b => b === pr.only) : targets, solid);
     if (!end) return true;
     if (end === 'hit') {
       const l = Math.hypot(pr.vx, pr.vz) || 1;
       hitBody(pr.victim, pr.blow, pr.x - pr.vx / l, pr.z - pr.vz / l, pr.vx / l, pr.vz / l);
     }
-    if (!pr.mirror) relay.landed?.(pr, end);
+    if (!pr.mirror && !pr.only) relay.landed?.(pr, end);
     pr.thrower?.landed?.(pr, end);
     projectileFx(pr, end);
     removeProjectileViews([pr]);

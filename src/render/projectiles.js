@@ -1,9 +1,12 @@
 // Projectiles in flight: the fireball / Triangle punch / ice ball / Totnar's skull / water ball / Foggery's eye meshes exported
+// (Renew's spells and the echoes' shots: orbs of light, no model; his arrows: the game's arrow)
 // beside their thrower (enemymodel.js props), turned along the flight (a `tumble`ing one end over
 // end), each with a light and a particle trail.
 // A thrower's kind recolours the mesh and replaces the light and trail colours.
 import * as THREE from 'three';
 import { scene } from './scene.js';
+import { loadGLB } from './gltf.js';
+import { CHAR_SCALE } from '../core/constants.js';
 import { glow, emit, rand } from './particles.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { fireFaceModel } from './firefacemodel.js';
@@ -28,10 +31,42 @@ const LOOKS = {
   ball: { model: flipModel, prop: () => flipModel.props?.FlipBall, light: [0x8fdcff, 2.2, 3], trail: ['#ffffff', '#bfeaff', '#6fcbff'], rate: 55 },
   // one of Foggery's eyes, looking where it flies, burning like a fireball, its flames trailing
   eye: { model: foggeryModel, prop: () => foggeryModel.props?.FoggeryEye, light: [0xff8a3a, 2.4, 3], trail: ['#ffd25a', '#ff8a2a', '#ff4a17'], rate: 70 },
+  // a spell of Renew's staff, or an echo's shot (game/rewind.js): no model, a glowing orb in its
+  // `color` (the spec's), like the player's spells (render/shots.js)
+  orb: { orb: true, light: [0xbdf3ff, 2.2, 3], trail: ['#ffffff'], rate: 60 },
+  // an arrow of Renew's bow: the game's arrow (the player's, render/shots.js), head first, a faint trail
+  arrow: { arrow: true, light: [0xfff0d0, 0.4, 1.5], trail: ['#f2ead8'], rate: 12 },
 };
+const ARROW = { url: 'assets/items/weapon_arrow.glb', length: 0.86 };   // nock to head, rig units
+let arrowModel = null;
+loadGLB(ARROW.url).then(g => { g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.sharedGeo = true; } }); arrowModel = g.scene; })
+  .catch(e => console.error('arrow model failed to load', e));
+function arrowView(pr, look) {
+  const group = new THREE.Group();
+  if (arrowModel) {   // (its +Y, nock to head, along the flight; its head on the arrow)
+    const m = arrowModel.clone();
+    m.rotation.x = Math.PI / 2; m.scale.setScalar(CHAR_SCALE); m.position.z = -ARROW.length * CHAR_SCALE * 0.5;
+    group.add(m);
+  }
+  const light = new THREE.PointLight(look.light[0], look.light[1], look.light[2], 2);
+  scene.add(group); trackLight(light, group, group, 2);
+  return { group, light, look, trail: look.trail, owned: [], base: look.light[1] };
+}
+const orbGeometry = new THREE.IcosahedronGeometry(0.09, 1), haloGeometry = new THREE.IcosahedronGeometry(0.16, 1);
+function orbView(pr, look) {
+  const group = new THREE.Group(), color = new THREE.Color(pr.spec.color ?? '#bdf3ff');
+  const core = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff').lerp(color, 0.35) });
+  const halo = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+  group.add(new THREE.Mesh(orbGeometry, core), new THREE.Mesh(haloGeometry, halo));
+  const light = new THREE.PointLight(color, look.light[1], look.light[2], 2);
+  scene.add(group); trackLight(light, group, group, 2);
+  return { group, light, look, trail: [pr.spec.color ?? '#bdf3ff', ...look.trail], owned: [core, halo], base: look.light[1] };
+}
 const ahead = new THREE.Vector3();
 
 function makeView(pr) {
+  if (LOOKS[pr.kind].orb) return orbView(pr, LOOKS[pr.kind]);
+  if (LOOKS[pr.kind].arrow) return arrowView(pr, LOOKS[pr.kind]);
   const look = LOOKS[pr.kind], group = new THREE.Group(), src = look.prop();
   if (!src) look.model.load();   // (the thrower's model has it: loaded already, unless thrown by a friend's)
   const colors = kindColors(pr.profile, look.model), owned = [];
@@ -53,6 +88,7 @@ export function drawProjectiles(list, dt, off = { x: 0, y: 0, z: 0 }) {
     if (pr.spec.spin) g.rotateZ(pr.t * pr.spec.spin);
     if (pr.spec.tumble) g.rotateX(pr.t * pr.spec.tumble);
     if (pr.kind === 'fireball') g.scale.setScalar(1 + 0.08 * Math.sin(pr.t * 40));
+    if (pr.kind === 'orb') g.scale.setScalar(1 + 0.12 * Math.sin(pr.t * 37));
     if (pr.kind === 'water') g.scale.set(1 + 0.12 * Math.sin(pr.t * 31), 1 - 0.1 * Math.sin(pr.t * 31), 1 + 0.15 * Math.sin(pr.t * 17));
     v.light.intensity = v.base * (0.8 + 0.2 * Math.sin(pr.t * 31) * Math.sin(pr.t * 13));
     const colors = v.trail, n = Math.floor(v.look.rate * dt + Math.random());

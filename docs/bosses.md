@@ -4,9 +4,10 @@ A real boss takes the place of one depth's descent guardian; the other descent g
 boss placeholders ([guardians.md](guardians.md)): the game calls them **Temp Bosses**
 (`♛ Temp Boss Spider`), as they hold the place of bosses to come. `BOSSES` in `src/core/bosses.js` says which
 depth has which: so far the first descent, on the road out of town (depth 0), has **Gusto**, the
-second (depth 1) **Totnar**, the third (depth 2) **Squarlo**, the fourth (depth 3) **Flip** and the
-fifth (depth 4) **Foggery**. A boss may bring an arena of its own (`BOSS_ARENAS`: Squarlo's tidal
-hills, Flip's box, Foggery's caldera).
+second (depth 1) **Totnar**, the third (depth 2) **Squarlo**, the fourth (depth 3) **Flip**, the
+fifth (depth 4) **Foggery** and the sixth (depth 5) **Renew**. A boss may bring an arena of its own
+(`BOSS_ARENAS`: Squarlo's tidal hills, Flip's box, Foggery's caldera), or only braziers lit round
+the one his depth has (Totnar, Renew).
 
 The layout marks that arena's guardian with `boss` (`world/layout.js`, `cubegen/guardian.js`;
 `bossPlaceholder` is false there). The boss stands on the guardian's spot **alone**: no
@@ -21,8 +22,8 @@ Like every guardian's arena, leaving it while the boss lives asks first, and bei
 the entrance never takes you out ([guardians.md](guardians.md#encounter-and-persistence)).
 
 Each boss runs its own fight (`game/gusto.js`, `game/totnar.js`, `game/squarlo.js`, `game/flip.js`,
-`game/foggery.js`, its rules in `core/gusto.js`, `core/totnar.js`, `core/squarlo.js`, `core/flip.js`,
-`core/foggery.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
+`game/foggery.js`, `game/renew.js`, its rules in `core/gusto.js`, `core/totnar.js`, `core/squarlo.js`,
+`core/flip.js`, `core/foggery.js`, `core/renew.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
 body into it, the floors a body fits on, putting minions down round their boss and letting
 bodies go. A boss's minions (`minion` kinds, summoned) live in no roster: they pay a little XP
 once, no coins, no weapons, now and then a minor health potion, and go with their boss when it
@@ -679,6 +680,162 @@ the floor under him. His loot scatters round the floor under him (the top of the
 ramp or the caldera's floor under a platform), never on a platform: under the lava until it has
 drained, and nothing can be taken out of it meanwhile ([loot.md](loot.md)).
 
+## Renew
+
+No model of his own: Renew is a hero like the player, the very figure (`figure`, `model:
+'character'`: `render/renewview.js` draws him with the player's rig and the player's clips, Idle,
+Walk, Run, Slash, Cast, Shoot, Roll and Jump), tinted blue grey, in a hood (`wear_hood`), with his
+boss's bar, title and silhouette. In his hand is a weapon of the game's, one a phase: the **Medium
+Sword**, the **Broadsword**, the **Crystal Staff** and the **Hunting Bow** (`RENEW_FIGHT.weapons`,
+their item models, `mountWeapon`), the staff and the bow carried in the hero's own holds for them;
+the staff's stone glows as he casts, the bow's string is drawn with an arrow on it as he shoots
+(`render/held.js`). His legs go round by the way he moves along his
+heading, so when he is carried back in time he walks backwards. Beaten, he sinks down to sit and
+fades away in sparkles.
+
+Profiles: `RENEW`, `RENEW_BROAD`, `RENEW_STAFF` and `RENEW_BOW` (`STAGE_PROFILES.renew`, one per
+phase) in `src/core/enemies.js`; the fight's rules, the tapes and the echoes' events in
+`src/core/renew.js` (`RENEW_FIGHT`, `PHASES`); the fight in `src/game/renew.js`, the time as each
+game's own hero lives it (its tape, the rewind, the echoes and the ghosts of the fight, the dusk) in
+`src/game/rewind.js`.
+
+| | Level 7 |
+|---|---|
+| Health | 727 a phase (360 at level 1), four phases: every rewind gives it all back |
+| Damage | 38 (slash ×0.6, lunge ×0.75; broadsword ×0.95, its lunge ×1.1 and a knock-down; spell ×0.6, volley ×0.45 a spell; arrow ×0.8, three at once ×0.55 each; an echo's blow ×0.45) |
+| XP | 650 grown; coins 180–320 at level 1; two weapons and two potions like a descent guardian |
+| Speed | 2.5 cells/s (the player runs 2.8) |
+| Poise | 1.2 s |
+
+### His arena
+
+The descent arena his depth would have anyway (`cubegen/guardian.js`, any arena type), with four
+braziers lit round its edge (`BOSS_ARENAS.renew.braziers`): the fight goes into the night.
+
+### Like a player
+
+He fights as a player does, with the shared enemy AI (`game/enemyai.js`) and a few things the
+fight adds (`game/renew.js`):
+
+- **Blows** at a player's pace, a little slower so they can be read (the Medium Sword's: a slash
+  lands 0.3 s after he starts it, 1.1 cells; the player's lands at 0.16 s), and **chained**: as a
+  blow ends he starts the next at once (`chain`), up to three in a row with the sword and two with
+  the broadsword (`combo`), then recovers like any enemy.
+- A **lunge** (`dash`, from 1.4 to 2.8 cells): he steps in up to 1.9 cells as he swings
+  (`lunge`), as the player's swing steps in towards an enemy just out of reach.
+- A **roll** out of the way (`roll`, clip Roll, only ever as a dodge): when the player winds up a
+  swing within reach of him, two times in five (`dodge.chance`, at most every 2.2 s) he rolls 1.5
+  cells aside and back, or straight back, wherever there is room; nothing hurts him for the first
+  0.6 s of it.
+- Between blows he circles and darts in (`skirmish`).
+- With a weapon that reaches far (the staff, the bow: `ranged`) he keeps his distance, and
+  hard to catch: closer than he likes (`keep[0]`: 3 cells with the staff, 4 with the bow) he
+  **runs backwards**, facing you, at his full speed (`backpedal`, `game/enemyai.js`: ready to shoot
+  or not; his legs run backwards too), and once you are half a cell further in he **leaps back**
+  (`leap`, clip Jump: 2.6 cells, straight back or a little aside, wherever there is room, up 0.9
+  cells over the floor, at most every 2.4 s, `keepAway`). A swing wound up at him is leapt out of
+  the same way rather than rolled out of.
+
+### The rewind
+
+The room has a clock (`clock` on him): the seconds since the phase began. It starts when the fight
+does and runs on while they fight; two tapes record what the room is at each moment, every 1/20 s
+(`sample`, `core/renew.js record`): the fight's (`game/renew.js`: every body of it, him and his
+minions, where they are, what they do, their health) and the hero's own (`game/rewind.js`: where
+they are, their pose bone by bone, `render/partner.js capturePose`, their health, the attack in their
+hands and the shots in flight).
+
+No blow takes him past the end of any of his bars (`hpFloor` 1), the last one too. Brought there he stops (mode
+`split`, 1.4 s, `windup`): "Not yet." He holds his weapon up, two clock faces of light circle him,
+their hands racing back, a clock ticks faster and faster; nothing hurts him. Then **time runs
+back**: the clock goes back to 0 over `rewindTime` (the phase's length / 10, but 4 to 8 s), slowly
+at first, racing, slowing at the end, and everything is put where the tapes have it at the clock:
+
+- him and his minions, their health, their attacks (played backwards), those not yet cast going
+  back up into the sky and away, those that died getting up again;
+- the hero, carried along the way they went, posed as they were (`render/renewview.js poseHero`),
+  with the health they had (`player.flipping`: no steering, nothing hurts them);
+- the shots that were in flight, flying back (drawn, harmless).
+
+Every body is warded meanwhile; the view goes pale and blue, lines run down it, ◀◀ blinks
+(`body.rewinding`, `style.css`) and a tape whirrs backwards. At the start of the phase the hero
+stands where they stood then, with the health they had, and he is whole again, and takes up his
+next weapon. His minions are gone (none were there then).
+
+But the hero was there all along, so now there are two of them: the hero's tape becomes an
+**echo**, their past self (`render/renewview.js drawEchoes`: the figure in pale blue, see-through,
+with what they wore and the weapon they held), which does again what they did in that phase, at the
+room's clock: where its sword went through (`echoEvents` strikes) the hero is hurt if they are in
+its arc (×0.45 his damage, `inStrike`), and the shots it lets go (an arrow, a bolt, a spell: a pale gold orb
+for each) hurt the hero alone (`only`). Its tape over, it fades away. Every phase adds an echo (two in
+phase 3, the first doing phase 1 again; three in phase 4); the next rewind takes them back with
+everything else.
+
+And the fight the echo was in plays again with it: the hero's tape holds every body of the fight
+too (`bodyRow`), and each becomes a **ghost** (`game/rewind.js ghostsOf`): him with the weapon he had
+then and his minions as they were then (`bodiesAt` the room's clock; one not cast yet, or gone, is
+not there), fighting the echo again, drawn pale blue and see-through like it, without bars or names
+(`render/enemies.js ghostLook`, `render/renewview.js`). They only do what they did: harmless, nothing
+hits them; only the echo's blows count.
+
+### Phase 1: the sword
+
+- Slashes (three in a row), the lunge, the roll.
+
+### Phase 2: the broadsword
+
+- Slower, wider (about 190°) and harder blows, two in a row; the lunge knocks you down.
+- **Spiders cast out of the sky** (`summon`, a cast, clip Cast, 1.15 s): he raises the broadsword and
+  at 0.6 s spiders (`renspider`: plain Spiders, ×0.8 health, ×0.6 damage) fall out of the sky round
+  him and the player, onto free floors of the fight within 6.5 cells (`falling`, 6–7.5 cells up,
+  20 cells/s²), landing with a thump and dust: as many as fill up to **four**, every 10 s at most
+  (the first 3 s into the phase). While they fall nothing steps them.
+- One echo.
+
+### Phase 3: the staff
+
+- **Spells** (6.5 cells, an orb of pale blue light at 7 cells/s, `orb`: no model, drawn like the
+  player's spells), now and then a **volley** of three fanned out.
+- **Fire-faces cast out of the sky** (`renface`: plain Fire-faces, ×0.55), up to **two**, every 13 s.
+- He keeps away: running backwards, leaping back.
+- Two echoes, and the ghosts of phases 1 and 2.
+
+### Phase 4: the bow
+
+- **Arrows** (`shoot`, 8 cells, clip Shoot, 1 s): he draws (0.62 s, a player's bow 0.42) and looses
+  the game's arrow at 11 cells/s (a player's flies at 16): step aside as he draws. Now and then
+  **three at once**, fanned out (`arrows`).
+- No minions; he keeps further away than with the staff, running backwards and leaping back.
+- Three echoes, and the ghosts of phases 1, 2 and 3.
+
+### The end
+
+At the end of his last bar time runs back once more, as after every other (the hero carried back
+to where they stood when phase 4 began, the last phase's echo and ghosts made), but he does not come
+back (`ascend`, `game/renew.js`): "One more time..." is all he had. A ghost now, pale and
+see-through like his ghosts (`rising`), arms up, he rises 7 cells into the sky over 3.2 s
+(`RENEW_FIGHT.ascend`, `risenAt`), sparkling and fading as he goes; nothing hurts him. Then he is
+gone (`ascended`: no body is left), and what he had falls out of the sky where he went
+(`lootFrom`, `game/loot.js dropLoot`): his gate opens. Below him the echoes and the ghosts fight on
+meanwhile, all four phases of the fight at once, the room's clock running on; harmless now, they
+fight on for 3.5 s more once he is gone (`outro`) and fade, and the light comes back. His minions
+went with the last rewind.
+
+### The dusk
+
+The fight falls from day into night (`state.dusk`, `duskAt`, eased in `main.js`, `render/look.js`
+SUNSET and NIGHTFALL): a quarter a phase, the more the more of his bar is gone; while he rewinds, on
+to the next phase's. First a sunset over the arena, whatever the depth: the sky orange under violet,
+the light warm and low; then nightfall, the sky deep violet, the stars out, the far side sinking
+into the dark and the hero's own light at its brightest. It never gets lighter till he is beaten;
+then the light comes back, slowly.
+
+## Renew's minions
+
+`REN_SPIDER` and `REN_FACE` (`src/core/enemies.js`): `plain` kinds of the Spider and the Fire-face
+(they look like and are called what they are), minions in no roster, going for the player at once;
+a little XP once, now and then a minor health potion.
+
 ## Playing together
 
 The game that runs the cube's enemies runs the fight; the others are shown it (`net/foes.js`):
@@ -702,7 +859,11 @@ him turn the world). Foggery's stage swaps his profile like Squarlo's, his tide 
 under 0 (his lava), and his row carries two more slots (the first unused): his eyes, his shield and
 the clock of his platforms. Every game raises its own lava by his tide, raises its platforms once
 the lava is at its highest, follows his platforms' clock (`game/movers.js followMovers`) and pulls
-its own player out of the lava.
+its own player out of the lava. Renew's stage swaps his profile like Foggery's, and his row carries
+three more slots (the first two unused): the room's clock, whether time runs back and whether the
+fight is on, and a fourth: how far he has risen away at the end (2: gone). Every game records its own hero and rewinds them after his clock, and has its own
+echoes and ghosts (from what it was shown), the echoes hurting only it (`game/rewind.js`); the fight's bodies are rewound by the runner and shown
+to the others as it moves them.
 
 ## Dev
 
@@ -714,7 +875,9 @@ and `/spawn squarlo` (`addSquarlos`; without his tidal hills he calls no tide), 
 (`addFlips`; out of his box he turns nothing, and a black hole lets a swallowed player out
 elsewhere without a turn) and `/spawn skywolla`; `/arena flip` goes to his box. `/spawn foggery`
 (`addFoggerys`; out of his caldera there is no lava, no climb and no platforms), `/spawn fogface`
-and `/spawn fogcat`; `/arena tower` goes to his caldera, `/boss foggery` into it.
+and `/spawn fogcat`; `/arena tower` goes to his caldera, `/boss foggery` into it. `/spawn renew`
+(`addRenews`: his whole fight, rewinds and echoes, anywhere), `/spawn renspider`, `/spawn renface`;
+`/boss renew`.
 
 `/boss gusto` goes into the real arena (one beaten is up again). `/testroom boss gusto` (or
 `/testroom boss 0`: a boss, or the depth whose boss it is) goes into his **test room**
@@ -734,7 +897,7 @@ without a boss of its own has no boss room yet.
 ## Checks
 
 ```sh
-node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/flip.test.js tests/foggery.test.js tests/testrooms.test.js tests/assets.test.js
+node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/flip.test.js tests/foggery.test.js tests/renew.test.js tests/testrooms.test.js tests/assets.test.js
 ```
 
 ```js
@@ -742,6 +905,7 @@ await (await import('./tests/browser/gusto.js')).runGustoChecks()   // the whole
 await (await import('./tests/browser/totnar.js')).runTotnarChecks() // Totnar's, in his
 await (await import('./tests/browser/squarlo.js')).runSquarloChecks() // Squarlo's, in his tidal hills
 await (await import('./tests/browser/foggery.js')).runFoggeryChecks()  // Foggery's, in his caldera: the lava, the climb, his cats, the platforms
+await (await import('./tests/browser/renew.js')).runRenewChecks()      // Renew's, in his arena: the rewinds, the echoes and ghosts, his minions, keeping away, the bow, the end, the dusk
 await (await import('./tests/browser/bossroom.js')).runBossRoomChecks() // each boss's test room: idle until hit
 ```
 

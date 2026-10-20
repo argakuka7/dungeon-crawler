@@ -88,6 +88,7 @@ import { updateShowcase } from './game/showcase.js';
 import { drawMinimap } from './game/minimap.js';
 import { N } from './core/constants.js';
 import { character, followHero } from './render/character.js';
+import { applyHeroPose } from './render/renewview.js';
 import { drawPortrait, portraitShown } from './render/portrait.js';
 
 // seconds since the last frame (THREE.Clock is deprecated; Timer measures the same)
@@ -136,6 +137,7 @@ function frame(now = performance.now()) {
   player.visY += (player.y - player.visY) * Math.min(1, dt * 25);
   if (Math.abs(player.y - player.visY) > 1.5 || player.ragdoll) player.visY = player.y;
   animateCharacter(dt, state.time);
+  applyHeroPose();   // (while Renew's time runs back: the hero as the tape has them, game/rewind.js)
   updateFootsteps();   // on the cycle the animator just advanced
   updateSounds(dt); updateAmbience(dt);
   tickFluidDeath(dt);
@@ -173,7 +175,10 @@ function frame(now = performance.now()) {
   state.lookVoid += (state.void - state.lookVoid) * Math.min(1, dt * (state.void ? 1.5 : 1));
   if (state.lookVoid < 0.002) state.lookVoid = 0;
   setNeighborVeil(state.lookVoid);
-  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist, state.lookVoid);
+  // and the dusk of Renew's fight falls slowly, and lifts as slowly once he is beaten (game/rewind.js)
+  state.lookDusk += (state.dusk - state.lookDusk) * Math.min(1, dt * (state.dusk > state.lookDusk ? 0.8 : 0.4));
+  if (state.lookDusk < 0.002) state.lookDusk = 0;
+  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist, state.lookVoid, state.lookDusk);
   followHero(dt);   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)

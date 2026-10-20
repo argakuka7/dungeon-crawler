@@ -34,7 +34,7 @@ function enemies() {
   for (const e of allEnemies()) {
     const was = seen.get(e), now = e.mode, species = e.profile?.species;
     seen.set(e, now);
-    if (was === undefined || was === now || !species) continue;
+    if (was === undefined || was === now || !species || e.rewound) continue;   // (no voices while Renew's time runs back, game/renew.js)
     const voice = kind => sfx(`${species}_${kind}`, { at: e, pitch: e.profile.pitch ?? 1 });
     if (now === 'dead') { if (!e.proxy) voice('death'); }   // (a proxy goes up in a cloud, render/enemies.js)
     else if (now === 'attack') voice('windup');

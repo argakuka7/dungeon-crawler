@@ -18,7 +18,7 @@
 // Ranged species (Fire-face, Triangle, Shraps, Spicy, Wolla, Wolk, Squirtle) stay at a few per cube; the melee ones, the spiders
 // above all, come in larger and larger packs further down.
 import { mulberry32, hash32 } from './util.js';
-import { ENEMY_KINDS } from './enemies.js';
+import { ENEMY_KINDS, STAGE_PROFILES } from './enemies.js';
 
 export const D = (mix, ...roster) => ({ mix, roster: roster.map(([type, chance, lo, hi, pack = 1, kinds = { [type]: 1 }, where = null]) =>
   ({ type, chance, lo, hi, pack, kinds, where })) });
@@ -90,10 +90,11 @@ const SALT = 0x3e1a5c7;
 export function population(map) {
   if (map.enemyFree) return new Map();
   // a boss's arena (core/bosses.js): the boss alone; `also`: the kinds it brings along (its
-  // minions, summoned or come to life where its projectiles land)
+  // minions, summoned or come to life where its projectiles land, in any of its stages)
   const boss = map.guardian?.boss && ENEMY_KINDS[map.guardian.boss];
   if (boss) return new Map([[boss.species, { count: 1, pack: 1, lead: true, kinds: { [boss.type]: 1 },
-    also: [...new Set((boss.attacks ?? []).flatMap(a => [a.summon?.kind, a.projectile?.becomes].filter(Boolean)))] }]]);
+    also: [...new Set([boss, ...STAGE_PROFILES[boss.boss] ?? []].flatMap(p => p.attacks ?? [])
+      .flatMap(a => [a.summon?.kind, a.projectile?.becomes].filter(Boolean)))] }]]);
   if (map.horde) {
     const { kind, count } = map.horde, base = ENEMY_KINDS[kind];
     const ordinary = population({ ...map, horde: null, populationScale: 1 });

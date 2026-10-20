@@ -576,7 +576,98 @@ export const FOGGERY_BALL = {
   ...FOGGERY_SPIT, cooldown: 1, chase: 1.1, attacks: [FOGGERY_SPIT, FOGGERY_VOLLEY, FOGGERY_GEYSER, FOGGERY_CATS], phase: 2,
   style: 'ranged', keep: [2.6, 6],
 };
-export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP, FOGGERY];
+// Renew, the sixth real boss, in place of the descent guardian of depth 5 (core/bosses.js): no
+// monster but a hero like the player, the same figure (`figure`: render/renewview.js draws him
+// with the player's rig and clips, not a model of his own; `model` names its file), in a hood,
+// a weapon of the game's in his hands (`weapon`, phase by phase). He fights as a player does:
+// runs (as fast as one), chains his blows (game/renew.js `combo`), steps in with a lunging one
+// (`dash`), and rolls out of the way of a swing (`roll`, only ever as a dodge: the fight starts
+// it). game/renew.js runs his fight, core/renew.js holds its rules: four phases, each a whole
+// bar of health; at the end of the first three he rewinds time (game/rewind.js) and takes up the
+// next weapon. The blows' times are the player's weapons', a little slower, so they can be read.
+// Phase 1: a sword. Phase 2: a broadsword, slower, wider and harder; he casts spiders out of the
+// sky (`summon`, a cast). Phase 3: a staff: spells (`orb`s, a volley of three now and then), and
+// Fire-faces cast out of the sky. Phase 4: a bow, arrows from far off. With the ranged ones he
+// keeps his distance: running backwards, leaping back (`leap`).
+const RENEW_SLASH = {
+  name: 'slash', clip: 'slash', weight: 3, reach: 1, hitAt: 0.3, trackUntil: 0.24, attackTime: 0.72, hitReach: 1.1,
+  arc: Math.cos(Math.PI * 0.42), power: 0.6, knock: 4, knockDown: false, hop: 3, reason: 'Slashed by Renew!',
+};
+const RENEW_DASH = {
+  ...RENEW_SLASH, name: 'dash', weight: 2, reach: 2.8, minReach: 1.4, hitAt: 0.36, trackUntil: 0.3, attackTime: 0.82, power: 0.75,
+  lunge: { from: 0.06, to: 0.32, max: 1.9, stop: 0.55 }, reason: 'Renew lunged at you!',
+};
+// (a dodge: rolled `dodge.dist` cells along his heading between dodge.from and dodge.to; it
+// strikes nothing, its hit frame is past its end)
+const RENEW_ROLL = {
+  name: 'roll', clip: 'roll', weight: 0, reach: 0, hitAt: 9, trackUntil: 0, attackTime: 0.95, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', dodge: { dist: 1.5, from: 0.04, to: 0.72 },
+};
+const RENEW_CLEAVE = {
+  ...RENEW_SLASH, reach: 1.05, hitAt: 0.42, trackUntil: 0.32, attackTime: 0.98, hitReach: 1.18, arc: Math.cos(Math.PI * 0.525),
+  power: 0.95, knock: 6, reason: 'Cleaved by Renew!',
+};
+const RENEW_BROAD_DASH = {
+  ...RENEW_CLEAVE, name: 'dash', weight: 2, reach: 2.8, minReach: 1.4, hitAt: 0.46, trackUntil: 0.36, attackTime: 1.05, power: 1.1,
+  knockDown: true, hop: 3.5, lunge: { from: 0.08, to: 0.4, max: 1.9, stop: 0.6 }, reason: 'Renew\'s broadsword knocked you down!',
+};
+const RENEW_SPIDERS = {
+  name: 'summon', clip: 'cast', weight: 2, reach: 9, hitAt: 0.6, trackUntil: 0.45, attackTime: 1.15, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', cast: 'summon',
+  summon: { kind: 'renspider', muzzle: [0, 1.55, 0.3] },
+};
+const RENEW_FACES = { ...RENEW_SPIDERS, summon: { ...RENEW_SPIDERS.summon, kind: 'renface' } };
+const RENEW_SPELL = {
+  name: 'spell', clip: 'cast', weight: 3, reach: 6.5, hitAt: 0.5, trackUntil: 0.42, attackTime: 0.95, hitReach: 0,
+  arc: 0.5, power: 0.6, knock: 3, knockDown: false, hop: 3, reason: 'Hit by Renew\'s spell!',
+  projectile: { kind: 'orb', speed: 7, radius: 0.17, range: 9, color: '#bdf3ff', muzzle: [-0.171, 1.14, 0.821] },
+};
+// (a leap back, away from the player, facing them: `back`, along the way the fight picks; up
+// `hop` cells over the floor at its height, render/renewview.js)
+const RENEW_LEAP = {
+  name: 'leap', clip: 'leap', weight: 0, reach: 0, hitAt: 9, trackUntil: 0, attackTime: 0.75, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', dodge: { dist: 2.6, from: 0.08, to: 0.62, back: true, hop: 0.9 },
+};
+// The bow (phase 4): arrows from afar (an `arrow`: the game's arrow model, render/projectiles.js),
+// now and then three at once, fanned out. The draw is a player's bow's, a little slower.
+const RENEW_SHOT = {
+  name: 'shoot', clip: 'shoot', weight: 3, reach: 8, hitAt: 0.62, trackUntil: 0.55, attackTime: 1, hitReach: 0,
+  arc: 0.5, power: 0.8, knock: 3, knockDown: false, hop: 3, reason: 'Shot by Renew!',
+  projectile: { kind: 'arrow', speed: 11, radius: 0.1, range: 11, muzzle: [0.015, 0.744, 0.523] },
+};
+const RENEW_ARROWS = { ...RENEW_SHOT, name: 'arrows', weight: 2, hitAt: 0.75, trackUntil: 0.65, attackTime: 1.15, power: 0.55,
+  projectile: { ...RENEW_SHOT.projectile, volley: 3, fan: 0.22 } };
+const RENEW_VOLLEY = { ...RENEW_SPELL, name: 'volley', weight: 2, hitAt: 0.62, trackUntil: 0.5, attackTime: 1.1, power: 0.45,
+  projectile: { ...RENEW_SPELL.projectile, volley: 3, fan: 0.28 } };
+export const RENEW = {
+  type: 'renew', species: 'renew', label: 'Renew', hp: 360, damage: 24, knock: 4,
+  xp: 650, coins: [180, 320],
+  radius: 0.26, height: 1.1, bodyHeight: 1, mass: 2.2, figure: true, model: 'character', weapon: 'weapon_sword_medium',
+  aggro: 7, giveUp: 14, chase: 2.5, wander: 0.6, homeSpeed: 1.4,
+  ...RENEW_SLASH, cooldown: 0.9, ichor: ['#eef6ff', '#6a8ab8'], pitch: 1,
+  attacks: [RENEW_SLASH, RENEW_DASH, RENEW_ROLL], phase: 1,
+  poise: 1.2, hitStun: 0.2, deathTime: 2.6, corpseTime: 5,
+  parts: {}, light: '#bdf3ff', sparks: ['#ffffff', '#bdf3ff', '#ffe9a8'],
+  style: 'skirmish', circle: 1.7, strafe: true, guardian: true, guardianRole: 'descent', boss: 'renew',
+  seedSalt: 0x7e3e3a, spacing: 6,
+};
+// ... with the broadsword (phase 2): slower, wider and harder blows; he casts spiders
+export const RENEW_BROAD = {
+  ...RENEW, type: 'renewbroad', weapon: 'weapon_sword_broad', ...RENEW_CLEAVE, cooldown: 1.1, chase: 2.3,
+  attacks: [RENEW_CLEAVE, RENEW_BROAD_DASH, RENEW_ROLL, RENEW_SPIDERS], phase: 2, circle: 1.9,
+};
+// ... with the staff (phase 3): spells from afar, and Fire-faces; too close, he runs backwards (at
+// his full speed, `backpedal`, game/enemyai.js) and leaps back out of reach (game/renew.js)
+export const RENEW_STAFF = {
+  ...RENEW, type: 'renewstaff', weapon: 'weapon_staff_crystal', ...RENEW_SPELL, cooldown: 1, chase: 2.4,
+  attacks: [RENEW_SPELL, RENEW_VOLLEY, RENEW_LEAP, RENEW_FACES], phase: 3, style: 'ranged', keep: [3, 5.5], backpedal: 1,
+};
+// ... and with a bow (phase 4): arrows from far off, keeping further away still
+export const RENEW_BOW = {
+  ...RENEW, type: 'renewbow', weapon: 'weapon_bow_hunting', ...RENEW_SHOT, cooldown: 0.9, chase: 2.6,
+  attacks: [RENEW_SHOT, RENEW_ARROWS, RENEW_LEAP], phase: 4, style: 'ranged', keep: [4, 7], backpedal: 1,
+};
+export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP, FOGGERY, RENEW];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -798,7 +889,8 @@ export const SQUARLO_GIANT = enemyKind(SQUARLO, {
 });
 // a boss's profile for each of its stages (game/squarlo.js; a friend's game swaps it by the stage
 // the runner sends, net/foes.js)
-export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT], foggery: [FOGGERY, FOGGERY_BALL, FOGGERY_BALL] };
+export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT], foggery: [FOGGERY, FOGGERY_BALL, FOGGERY_BALL],
+  renew: [RENEW, RENEW_BROAD, RENEW_STAFF, RENEW_BOW] };
 // One full attack and recovery, averaged over a species' attacks (s), and what it deals per
 // second at level 1 (a projectile's burn included): how dangerous it is to stand next to.
 export function attackCycle(profile) {
@@ -913,6 +1005,16 @@ export const FOG_CAT = enemyKind(FIRECAT, {
   type: 'fogcat', minion: true, plain: true, lavaproof: true, aggro: 12, giveUp: 16, coins: [0, 0], drops: MINION_DROPS(0.08), puff: EMBER_PUFF,
   mods: { hp: 0.8, damage: 0.6, xp: 0.2 },
 });
+// Renew's minions, cast out of the sky onto the floor (game/renew.js): plain spiders (phase 2) and
+// Fire-faces (phase 3), weaker, going for the player at once
+export const REN_SPIDER = enemyKind(SPIDER, {
+  type: 'renspider', minion: true, plain: true, aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05),
+  puff: { colors: ['#ffffff', '#d8f4ff', '#bdf3ff'], size: 0.5 }, mods: { hp: 0.8, damage: 0.6, xp: 0.15 },
+});
+export const REN_FACE = enemyKind(FIREFACE, {
+  type: 'renface', minion: true, plain: true, aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.06), puff: EMBER_PUFF,
+  mods: { hp: 0.55, damage: 0.55, xp: 0.15 },
+});
 // small spiders of twigs, poured out of his ball by the dozen
 export const TOT_SPIDER = enemyKind(SPIDER, {
   type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
@@ -931,7 +1033,7 @@ export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.valu
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
   BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
   NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
-  TIDE_SQUIRTLE, SKY_WOLLA, FOG_FACE, FOG_CAT].map(k => [k.type, k]));
+  TIDE_SQUIRTLE, SKY_WOLLA, FOG_FACE, FOG_CAT, REN_SPIDER, REN_FACE].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,
 // like the dead

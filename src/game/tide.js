@@ -35,7 +35,8 @@ export function updateTide(list, dt) {
   setTide({ y: shown * LH, fluid: t.fluid, box: t.box });
   setTrialWater(state.world, shown * LH, 'running');
 }
-export const resetTide = () => { shown = null; };
+// (and a boss's water or lava still standing from the cube before goes: it would drown what is here)
+export const resetTide = () => { if (shown !== null || state.tide != null) dry(); shown = null; };
 
 // enemies a standing fluid goes over drown (no reward: the water took them)
 export function drownEnemies(list) {

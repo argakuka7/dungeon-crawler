@@ -177,6 +177,14 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         gloops(t + 0.8, 6, 180 * p, 2 * 180 * p, 0.07, 0.3, out, false);
       },
     },
+    renew: {   // the time boss, a hero like you: a sharp "hah!", a grunt as he strikes, a long falling sigh
+      alert: (t, out, p) => { bend(t, 0.22, 180 * p, 260 * p, 150 * p, 900 * p, 0.4, out); noise(t, 0.12, filter('bandpass', 1400 * p, 2, amp(t, 0.01, 0.15, 0.1, out))); },
+      windup: (t, out, p) => { bend(t, 0.13, 150 * p, 190 * p, 120 * p, 800 * p, 0.3, out); noise(t, 0.1, filter('bandpass', 900 * p, 1.5, amp(t, 0.01, 0.12, 0.08, out))); },
+      death: (t, out, p) => {
+        bend(t, 1.3, 220 * p, 160 * p, 70 * p, 700 * p, 0.4, out);
+        for (let i = 0; i < 6; i++) { const at = t + 0.6 + i * 0.13, hz = (1760 - i * 180) * p; tone('sine', hz, hz * 0.98, at, 0.25, amp(at, 0.003, 0.1, 0.22, out)); }
+      },
+    },
     flip: {   // the ring boss: glassy chimes ringing round, a rising shimmer, rings clattering down
       alert: (t, out, p) => {
         for (const [i, hz] of [880, 1175, 988, 1319].entries()) { const at = t + i * 0.08; tone('triangle', hz * p, hz * 1.02 * p, at, 0.35, amp(at, 0.005, 0.12, 0.35, out)); }

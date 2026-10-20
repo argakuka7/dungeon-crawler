@@ -55,6 +55,7 @@ import { squirtleModel } from './squirtlemodel.js';
 import { flipModel } from './flipmodel.js';
 import { foggeryModel } from './foggerymodel.js';
 import { makeFoggeryLook, foggeryLook, disposeFoggeryLook } from './foggeryview.js';
+import { isFigure, animateFigures, removeFigureViews } from './renewview.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { SQUARLO_FIGHT } from '../core/squarlo.js';
 import { standingAt } from '../physics/fluid.js';
@@ -444,6 +445,20 @@ function lightTurns(v, e, dt) {
   }
 }
 
+// A ghost of the past (game/rewind.js: Renew's minions as they were in a phase gone by, fighting
+// the hero's echo): pale blue and see-through (`ghostAlpha` fading it in and out), no bar, no
+// name, no silhouette, its glow dimmed
+const GHOST_TINT = new THREE.Color('#cfe6ff');
+function ghostLook(v, e) {
+  const a = 0.45 * (e.ghostAlpha ?? 1);
+  v.material.opacity = (e.mode === 'dead' ? v.material.opacity : 1) * a;
+  v.material.depthWrite = false;
+  for (const c of v.colors) c.lerp(GHOST_TINT, 0.55);
+  v.ghost.opacity = 0;
+  v.bar.visible = v.label.visible = v.mark.visible = false;
+  if (v.light) v.light.intensity *= 0.4 * (e.ghostAlpha ?? 1);
+  if (a < 0.01) v.group.visible = false;
+}
 function makeView(e, prefab) {
   const group = new THREE.Group(), { model, mesh, material, parts } = dressEnemy(prefab, e.profile), size = e.profile.size ?? 1;
   model.scale.multiplyScalar(size);
@@ -566,6 +581,7 @@ function dying(v, e, dt, off) {
 export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
   clock += dt;
   for (const e of list) {
+    if (isFigure(e)) { animateFigures([e], dt, off); continue; }   // (Renew: a figure, render/renewview.js)
     const prefab = prefabs[e.profile.species];
     if (!prefab?.ready) { prefab?.load(); continue; }   // not loaded before (a friend's, a dev spawn): shown once it is
     const v = e.view || (e.view = makeView(e, prefab)), A = v.actions;
@@ -574,8 +590,8 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.yaw = e.mode === 'attack' ? e.yaw : angleTo(v.yaw, e.yaw, Math.min(1, dt * 14));
     v.group.position.set(e.x + off.x, e.y + off.y, e.z + off.z);
     v.group.rotation.y = v.yaw;
-    if (e.mode === 'dead') { dying(v, e, dt, off); continue; }
-    clouds(v, e);
+    if (e.mode === 'dead') { dying(v, e, dt, off); if (e.ghost) ghostLook(v, e); continue; }
+    if (!e.ghost) clouds(v, e);
     v.group.visible = e.mode !== 'gone';
     if (e.mode === 'gone') { if (v.light) v.light.intensity = 0; continue; }
     if (e.mode === 'split' && !STAGE_PROFILES[e.boss]) shudder(v, e, dt);
@@ -622,6 +638,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     burrowLook(v, e, dt); ripples(v, e, dt); wardLook(v, e, dt);
     if (v.fog) foggeryLook(v, e, dt);
     glowFx(v, e, dt, 1); glints(v, e, dt);
+    if (e.ghost) ghostLook(v, e);
   }
 }
 // An enemy of each of these kinds made once off-screen, for the shaders it is drawn with
@@ -648,6 +665,7 @@ export function enemyWarmup(kinds) {
 }
 
 export function removeEnemyViews(list) {
+  removeFigureViews(list);
   for (const e of list) if (e.view) {
     const v = e.view;
     scene.remove(v.group);
