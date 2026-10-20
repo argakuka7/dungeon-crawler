@@ -57,6 +57,7 @@ function fightHolds(d, steer) {
 // steer: where we steer ourselves (game/update.js: the keys or a mouse order, not a lunge)
 export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge, steer = [dx, dz]) {
   state.portalCharge = null;
+  if (state.map.flipKey) return false;   // Flip's box turned: its portals are in the walls (game/flipworld.js)
   if (state.boundaryLock >= 0 && faceDistance(player, state.boundaryLock) > player.r + 0.25) state.boundaryLock = -1;
   const sealed = sealedIn();   // a trial room while its event runs (game/trials.js): nothing takes you out
   // open side faces take you across anywhere along them, whether they ever had a gate or not

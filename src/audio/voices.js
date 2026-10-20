@@ -162,6 +162,20 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         gloops(t + 0.4, 10, 300 * p, 2 * 300 * p, 0.05, 0.3, out);
       },
     },
+    flip: {   // the ring boss: glassy chimes ringing round, a rising shimmer, rings clattering down
+      alert: (t, out, p) => {
+        for (const [i, hz] of [880, 1175, 988, 1319].entries()) { const at = t + i * 0.08; tone('triangle', hz * p, hz * 1.02 * p, at, 0.35, amp(at, 0.005, 0.12, 0.35, out)); }
+        bend(t, 0.4, 330 * p, 440 * p, 300 * p, 1400 * p, 0.2, out);
+      },
+      windup: (t, out, p) => { tone('sine', 660 * p, 1320 * p, t, 0.35, amp(t, 0.05, 0.15, 0.3, out)); clicks(t, 4, 0.06, 3200 * p, 0.15, out); },
+      death: (t, out, p) => {
+        bend(t, 1.2, 520 * p, 400 * p, 110 * p, 1500 * p, 0.35, out);
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) {
+          const at = t + 0.5 + i * 0.25 + j * 0.05, hz = (1400 + 300 * j - 200 * i) * p;
+          tone('triangle', hz, hz, at, 0.15, amp(at, 0.002, 0.12, 0.15, out));   // the rings landing, one after the other
+        }
+      },
+    },
     squirtle: {   // a Squirtle: a wet chirp, a hiss, a gurgle
       alert: (t, out, p) => { bend(t, 0.14, 1200 * p, 1700 * p, 1300 * p, 3500 * p, 0.25, out); gloops(t + 0.1, 3, 800 * p, 2 * 800 * p, 0.05, 0.15, out); },
       windup: (t, out, p) => noise(t, 0.18, filter('highpass', 3000 * p, 0.8, amp(t, 0.03, 0.18, 0.15, out))),

@@ -204,7 +204,7 @@ function lie(e) {
 function decide(e) {
   e.target = chooseTarget(e);
   const p = foe(e), cfg = e.profile, target = playerFloor(cfg.height, p);
-  const alive = !p.ragdoll && p.hp > 0 && !state.transitioning, dist = Math.hypot(p.x - e.x, p.z - e.z);
+  const alive = !p.ragdoll && !p.flipping && p.hp > 0 && !state.transitioning, dist = Math.hypot(p.x - e.x, p.z - e.z);
   // a boss, once hurt or once it has struck, fights on wherever the player goes: in his arena
   // his room says so (game/defence.js), anywhere else (a dev spawn, the boss test room) he does
   const relentless = !e.defence && e.boss && !e.proxy && (e.hp < cfg.hp || e.attacks > 0);
@@ -252,7 +252,7 @@ const clearShot = (e, a, p = foe(e)) => shotOf(a).clear === false || clearLine(e
 // (game/gusto.js)
 function ready(e, d) {
   const p = foe(e), list = e.profile.attacks ?? [e.profile];
-  if (p.ragdoll || p.held || e.under) return [];
+  if (p.ragdoll || p.held || p.flipping || e.under) return [];   // (flipping: turned with Flip's world, or in a black hole)
   return attacksInReach(e.profile, d, Math.abs(p.y - e.y))
     .filter(i => !e.barred?.has(list[i].name) && (!shotOf(list[i]) || clearShot(e, list[i])));
 }

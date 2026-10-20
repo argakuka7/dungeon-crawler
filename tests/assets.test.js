@@ -8,7 +8,7 @@ import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } f
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
 import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL,
-  SQUARLO, SQUARLO_GIANT, SQUIRTLE, fireAt } from '../src/core/enemies.js';
+  SQUARLO, SQUARLO_GIANT, SQUIRTLE, FLIP, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -34,7 +34,7 @@ const BUDGETS = {
   octonaut: { Octonaut: 6000 }, fireface: { FireFace: 6000, FireFaceBall: 1500 }, triangle: { Triangle: 6000, TrianglePunch: 1500 },
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
   gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
-  squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 },
+  squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 }, flip: { Flip: 10000, FlipBall: 1200 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -423,6 +423,27 @@ test('Squarlo: his clips match his attacks in both his sizes, the jet, the summo
   assert.ok(body[1] > body[0] * 2 && body[2] > body[0] * 2, 'teal');
   // smaller than the player, a giant of six cells
   assert.ok(SQUARLO.height < 0.85 && Math.abs(SQUARLO_GIANT.height - 6) < 1e-9);
+});
+test('Flip: his clips match his attacks, the ball and the Sky wollas come from his rings, the rings turn', () => {
+  const { json: j, duration } = glb('flip'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['FlipDeath', 'FlipFlip', 'FlipHole', 'FlipHover', 'FlipSummon', 'FlipThrow']);
+  assert.equal(a.FlipHover.extras.loop, true);
+  assert.ok(Math.abs(duration(a.FlipDeath) - FLIP.deathTime) < 1e-5); assert.equal(a.FlipDeath.extras.hold_last_frame, true);
+  const clip = { throw: 'FlipThrow', flip: 'FlipFlip', hole: 'FlipHole', summon: 'FlipSummon' };
+  for (const at of FLIP.attacks) {
+    const c = a[clip[at.clip]];
+    assert.equal(c.extras.hit_frame / 30, at.hitAt, at.name);
+    assert.ok(Math.abs(duration(c) - at.attackTime) < 1e-5, at.name);
+  }
+  for (const at of FLIP.attacks.filter(t => t.projectile)) assert.deepEqual(a.FlipThrow.extras.muzzle, at.projectile.muzzle);
+  assert.deepEqual(a.FlipSummon.extras.muzzle, FLIP.attacks.find(t => t.summon).summon.muzzle);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(FLIP.parts).flat()) assert.ok(names.has(m), m);
+  const rings = j.materials.find(m => m.name === 'FlipRings_glow').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(rings[2] > rings[0] * 2 && rings[1] > rings[0], 'light blue');
+  // three rings, each a bone the game turns (render/enemies.js spinRings), and the ball he throws
+  for (const k of [0, 1, 2]) assert.ok(j.nodes.some(n => n.name === `ring${k}`), `ring${k}`);
+  assert.ok(j.nodes.some(n => n.name === 'FlipBall'));
 });
 test('the Squirtle sways, spits from its beak at its hit frame and wilts', () => {
   const { json: j, duration } = glb('squirtle'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));

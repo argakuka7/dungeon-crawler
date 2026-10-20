@@ -44,7 +44,8 @@ export function partMeshes(geo, group, shadowless = [], water = null) {
     const mesh = new THREE.Mesh(partGeometry(arrays), sway(material));
     mesh.scale.setScalar(geo.scale);
     mesh.renderOrder = PART_ORDER[part.kind];
-    if (part.cap) group.add(capTwin(mesh, part.cap, sway));
+    mesh.userData.part = part.name;   // (Flip's box hides its floor upside down, render/flipview.js)
+    if (part.cap) { const twin = capTwin(mesh, part.cap, sway); Object.assign(twin.userData, { part: part.name, cap: true }); group.add(twin); }
     if (part.kind === 'solid') { mesh.castShadow = !shadowless.includes(part.name); mesh.receiveShadow = true; }
     if (part.kind === 'fluid') {
       mesh.receiveShadow = part.fluid !== LAVA;

@@ -4,11 +4,12 @@
 // tentacles, Totnar's rolling ball and the skulls and sticks he loses). The numbers (health,
 // level, size) come from the game's profiles (src/core/enemies.js). Drag to turn him.
 import * as THREE from 'three';
-import { GUSTO, TOTNAR, SQUARLO, SQUARLO_GIANT, enemyProfile, guardianLevel } from '../../src/core/enemies.js';
+import { GUSTO, TOTNAR, SQUARLO, SQUARLO_GIANT, FLIP, enemyProfile, guardianLevel } from '../../src/core/enemies.js';
 import { BOSSES } from '../../src/core/bosses.js';
 import { gustoModel } from '../../src/render/gustomodel.js';
 import { totnarModel } from '../../src/render/totnarmodel.js';
 import { squarloModel } from '../../src/render/squarlomodel.js';
+import { flipModel } from '../../src/render/flipmodel.js';
 import { dressEnemy } from '../../src/render/enemymodel.js';
 import { findTentacles, shakeTentacles, findShed, hideShed, findBall, turnBall } from '../../src/render/bossbones.js';
 import { html, loop, t as tr, lang } from '../deck.js';
@@ -45,10 +46,19 @@ const BOSS = {
     stomp: ['Stomp (as a giant): his foot\'s shadow follows you. Get out from under it! Then his foot is stuck: hit it.', 'Stampfen (als Riese): Der Schatten seines Fußes folgt dir. Raus da! Danach steckt sein Fuß fest: Schlag drauf.'],
     death: ['Beaten! His water drains away.', 'Besiegt! Sein Wasser läuft ab.'],
   } },
+  flip: { kind: FLIP, model: flipModel, clips: {
+    walk: ['Three rings of little rings. He floats, and now and then his rings start to turn.', 'Drei Ringe aus kleinen Ringen. Er schwebt, und ab und zu fangen seine Ringe an, sich zu drehen.'],
+    throw: ['Ball: he leans back and throws a ball of light out of his top ring. At half his health he throws three at once.', 'Ball: Er lehnt sich zurück und wirft einen Lichtball aus seinem oberen Ring. Bei halber Gesundheit wirft er drei auf einmal.'],
+    flip: ['Flip! He cartwheels, and the whole world turns over: a wall becomes the floor, and his tractor beam sets you down on it. Upside down, on the floating island; sometimes up on a balcony. Then the walls round you break open.', 'Flip! Er schlägt ein Rad, und die ganze Welt kippt um: Eine Wand wird zum Boden, und sein Traktorstrahl setzt dich darauf ab. Kopfüber auf der schwebenden Insel, manchmal oben auf einem Balkon. Dann brechen die Wände um dich herum auf.'],
+    hole: ['Black holes (at half his health): it goes dark, and they pull you in. Run away! Swallowed, you come out of another one after the world has flipped.', 'Schwarze Löcher (bei halber Gesundheit): Es wird dunkel, und sie ziehen dich hinein. Lauf weg! Verschluckt, kommst du aus einem anderen wieder heraus, nachdem die Welt gekippt ist.'],
+    summon: ['He bows and light blue Sky wollas come out of his rings.', 'Er verbeugt sich, und hellblaue Himmels-Wollas kommen aus seinen Ringen.'],
+    death: ['Beaten! His rings fall apart, and the world turns the right way up again.', 'Besiegt! Seine Ringe fallen auseinander, und die Welt dreht sich wieder richtig herum.'],
+  } },
 };
 const NAMES = { walk: ['move', 'laufen'], death: ['death', 'Tod'], grab: ['grab', 'Griff'], stuck: ['fallen', 'hingefallen'], inhale: ['breathe in', 'einatmen'],
   summon: ['summon', 'rufen'], blow: ['blow', 'blasen'], throw: ['throw', 'werfen'], gloom: ['dark', 'dunkel'], roll: ['roll', 'rollen'],
-  storm: ['storm', 'Sturm'], swim: ['swim', 'schwimmen'], cast: ['tide', 'Flut'], rest: ['rest', 'ausruhen'], stride: ['stride', 'stapfen'], stomp: ['stomp', 'stampfen'] };
+  storm: ['storm', 'Sturm'], swim: ['swim', 'schwimmen'], cast: ['tide', 'Flut'], rest: ['rest', 'ausruhen'], stride: ['stride', 'stapfen'], stomp: ['stomp', 'stampfen'],
+  flip: ['flip', 'kippen'], hole: ['black hole', 'schwarzes Loch'] };
 const LOOPS = new Set(['walk', 'swim', 'stride']);
 
 export default function mount(el) {

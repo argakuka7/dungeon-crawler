@@ -11,6 +11,7 @@ import { triangleModel } from './trianglemodel.js';
 import { shrapsModel } from './shrapsmodel.js';
 import { totnarModel } from './totnarmodel.js';
 import { squirtleModel } from './squirtlemodel.js';
+import { flipModel } from './flipmodel.js';
 import { kindColors, recolor } from './recolor.js';
 
 const LOOKS = {
@@ -22,6 +23,8 @@ const LOOKS = {
   skull: { model: totnarModel, prop: () => totnarModel.props?.TotnarSkull, light: [0xff5a1e, 1.4, 2.5], trail: ['#efe6cf', '#ff8a3a', '#bfb49a'], rate: 30, gravity: 1.5 },
   // a Squirtle's ball of water, wobbling, dripping as it flies
   water: { model: squirtleModel, prop: () => squirtleModel.props?.SquirtleDrop, light: [0x8fdcff, 0.8, 2], trail: ['#ffffff', '#c8f0ff', '#7fcaf0'], rate: 40, gravity: 6 },
+  // Flip's ball of light, its little ring spinning, sparkles streaming off it
+  ball: { model: flipModel, prop: () => flipModel.props?.FlipBall, light: [0x8fdcff, 2.2, 3], trail: ['#ffffff', '#bfeaff', '#6fcbff'], rate: 55 },
 };
 const ahead = new THREE.Vector3();
 

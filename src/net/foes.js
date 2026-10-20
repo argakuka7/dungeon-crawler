@@ -152,6 +152,13 @@ export class Viewer {
       if (want && e.profile.type !== want.type) e.profile = enemyProfile(want, e.level);
       e.tide = Number.isFinite(b[17]) ? Math.max(0, Math.min(1, b[17])) : 0;
       e.under = b[18] === 1 ? 1 : 0;
+      // Flip's world and black holes (game/flipworld.js turns ours after them)
+      if (Array.isArray(b[19])) {
+        const [orient, turns, holes] = b[19];
+        if (Number.isInteger(orient) && Number.isInteger(turns)) { e.orient = orient; e.turns = turns; }
+        e.holes = (Array.isArray(holes) ? holes : []).filter(Array.isArray).map(([n, x, y, z, t, life]) =>
+          Object.assign((e.holes ?? []).find(h => h.n === n) ?? { n }, { x, y, z, t, life }));
+      }
       if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.dark = 0; (e.beam || e.bolts) && mirrorBeam(e, null); return; }
       mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null, Array.isArray(b[16]) ? b[16] : null);
     });

@@ -20,7 +20,7 @@ import { updateDefense } from './game/defense.js';
 import { skinEditorOpen } from './game/skineditor.js';
 import { devSwapWeapon, devDropWeapon, devWear } from './game/equipment.js';
 import { updateLightPool, focusPoint } from './render/lightpool.js';
-import { tickNeighbors, cullNeighbors } from './render/neighbors.js';
+import { tickNeighbors, cullNeighbors, setNeighborVeil } from './render/neighbors.js';
 import { tickProps } from './render/props.js';
 import { tickFluidDeath } from './render/fluiddeath.js';
 import { applyLook } from './render/look.js';
@@ -118,7 +118,7 @@ function frame(now = performance.now()) {
   updateLeave();   // "Leave the fight?" goes away once it cannot be answered (game/leavefight.js)
   updateMouseLook();   // the close view captures the mouse, what needs the cursor gives it back (game/mouselook.js)
   if (state.mode === 'menu') { menuFrame(elapsed, start); return; }
-  if (character.ready) character.group.visible = true;
+  if (character.ready) character.group.visible = !player.vanished;   // (inside one of Flip's black holes: game/flipworld.js)
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
   updatePointer();   // the enemy under the cursor (with last frame's camera)
   state.time += dt;
@@ -166,7 +166,12 @@ function frame(now = performance.now()) {
   state.lookDark += (state.dark - state.lookDark) * Math.min(1, dt * (state.dark ? 1.6 : 2.2));
   // and so does a boss's fog (Squarlo growing, game/squarlo.js)
   state.lookMist += (state.mist - state.lookMist) * Math.min(1, dt * (state.mist ? 1.2 : 0.8));
-  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist);
+  // and the world round Flip's box goes while his fight is on (game/flipworld.js): the sky black,
+  // the neighbours gone
+  state.lookVoid += (state.void - state.lookVoid) * Math.min(1, dt * (state.void ? 1.5 : 1));
+  if (state.lookVoid < 0.002) state.lookVoid = 0;
+  setNeighborVeil(state.lookVoid);
+  applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist, state.lookVoid);
   followHero(dt);   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)

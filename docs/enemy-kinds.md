@@ -179,7 +179,8 @@ Gusto's Custo triangle (half size, `frost.light@-6`, 1.9× as fast, `minion`: in
 summons it) is a Triangle kind too, and Totnar's Twig spider (0.55×) and Bramble stunder
 (0.72×), both `ochre.deep`, are a Spider and a Stunder kind; his snapping skull (`stone.pale`) is
 a species of its own that only he brings (`MINION_PROFILES`); see [bosses.md](bosses.md).
-Squarlo's Tide squirtle (`jade.mid`, ×0.7 health, ×0.6 damage) is a Squirtle minion.
+Squarlo's Tide squirtle (`jade.mid`, ×0.7 health, ×0.6 damage) is a Squirtle minion, and Flip's Sky
+wolla (`frost.light`, ×0.6 health and damage) a Wolla minion.
 
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red

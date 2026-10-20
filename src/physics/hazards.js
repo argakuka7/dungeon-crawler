@@ -9,6 +9,8 @@ import { inFluid, fluidSurface, wading } from './fluid.js';
 import { startFall, landFall } from '../game/fall.js';
 import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
+import { holeFallDamage } from '../game/flipworld.js';
+import { allEnemies } from '../game/enemies.js';
 
 // returns false when the player got respawned. Lava and acid are fatal, and water over the
 // head (physics/fluid.js); walking is kept off such edges (and holes into the void) by canMove,
@@ -45,7 +47,13 @@ function falls(dt, ci) {
 export function applyHazards(dt, gr) {
   // below the cube: through the void into the cube below, or out of the world
   if (player.y < -1.5 && startFall()) return false;
-  if (player.y < -3) { if (state.fallFrom) landFall(); else hurt(25, 'Fell out of the cube'); return false; }
+  if (player.y < -3) {
+    if (state.fallFrom) landFall();
+    // out through a hole in Flip's box (game/flipworld.js): back where we last stood
+    else if (state.map.flip) hurt(holeFallDamage(allEnemies()), 'Fell out of the world!');
+    else hurt(25, 'Fell out of the cube');
+    return false;
+  }
   if (state.time > state.statusUntil) state.statusMsg = '';
   if (!fluids(gr) || !falls(dt, gr.i)) return false;
   if (!player.swimming && player.grounded) regenerate(player, dt, state.time);

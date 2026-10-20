@@ -20,7 +20,7 @@ function columnClear(map, c, lo, hi, self) {
 // only the floor and its headroom count, props are checked there. Stair, bridge and landing
 // pieces are walkable too (see navNeighbor), pillars never.
 export function floorWalkable(map, f, height = 0.9, player = false) {
-  if (!f || f.kind === 'pillar' || f.fluid || f.covered || (!player && (f.landing || map.blockers?.[f.c]?.length))) return false;
+  if (!f || f.open || f.kind === 'pillar' || f.fluid || f.covered || (!player && (f.landing || map.blockers?.[f.c]?.length))) return false;
   let byHeight = free.get(f);
   if (!byHeight) { byHeight = new Map(); free.set(f, byHeight); }
   if (!byHeight.has(height)) {

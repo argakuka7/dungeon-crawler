@@ -185,7 +185,8 @@ function wallFloors(map) {
   floorsOf = map;
   a.fill(0);
   if (!map?.walled || map.interior) return;
-  const tops = map.cols.map(col => Math.max(0, ...col.map(f => f.fluid ? f.surf * LH : Math.min(...f.cs))));
+  // (in Flip's box only the fight's floors: what stands out of its walls overhead is wall)
+  const tops = map.cols.map(col => Math.max(0, ...col.filter(f => !map.flip || f.encounter).map(f => f.fluid ? f.surf * LH : Math.min(...f.cs))));
   for (const r of map.runs) for (const p of r.pieces) tops[p.z * N + p.x] = Math.max(tops[p.z * N + p.x], Math.min(p.y0, p.y1));
   const top = (x, z) => tops[Math.min(N - 3, Math.max(2, z)) * N + Math.min(N - 3, Math.max(2, x))] + OVER_LAND;
   for (let t = 0; t < N; t++) { a[t] = top(N - 3, t); a[N + t] = top(2, t); a[2 * N + t] = top(t, N - 3); a[3 * N + t] = top(t, 2); }
@@ -203,7 +204,8 @@ export function setCut(y, map, px, py, pz, walls = true) {
   const inside = map?.interior, room = inside?.room, t = inside?.wall ?? 0;
   // (only the walls' own mesh there: not the floors, the stair or the railing beside them)
   if (room) { U.uWallBox.value.set(room.x0 - t, room.x1 + t, room.z0 - t, room.z1 + t); U.uWallBand.value = t + WALL_CUT; U.uFrontKinds.value.set(0, 1, 0, 0); U.uFrontCorners.value = 0; }
-  else { U.uWallBox.value.set(0, N, 0, N); U.uWallBand.value = 2.2; U.uFrontKinds.value.set(1, 1, 1, 1); U.uFrontCorners.value = 1; }
+  // (Flip's box: what stands out of its walls comes down with them, cubegen/fliparena.js)
+  else { U.uWallBox.value.set(0, N, 0, N); U.uWallBand.value = map?.flip ? 3.6 : 2.2; U.uFrontKinds.value.set(1, 1, 1, 1); U.uFrontCorners.value = 1; }
   const box = U.uWallBox.value, walled = walls && (!!map?.walled || !!room);
   const cx = camera.position.x - (box.x + box.y) / 2, cz = camera.position.z - (box.z + box.w) / 2;
   wallFloors(map);

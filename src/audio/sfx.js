@@ -422,6 +422,20 @@ const SOUNDS = {
     tone('sine', 90 * p, 30 * p, t + 2.4, 0.8, amp(t + 2.4, 0.01, 0.9, 0.8, out));
     sweep(t, 3, 200 * p, 600 * p, 150 * p, 0.8, 0.3, out, 0.8, 'lowpass');
   },
+  flip(t, out, p) {      // Flip turning the world: a deep grinding rumble rising and falling, stone groaning, a swish
+    tone('sine', 45 * p, 70 * p, t, 1.6, amp(t, 0.3, 0.8, 1.3, out));
+    tone('sawtooth', 55 * p, 38 * p, t + 0.1, 1.5, filter('lowpass', 300 * p, 3, amp(t + 0.1, 0.4, 0.3, 1.1, out)));
+    noise(t, 1.6, filter('lowpass', 500 * p, 0.8, amp(t, 0.5, 0.6, 1.1, out)));
+    sweep(t + 0.2, 1.3, 300 * p, 1400 * p, 400 * p, 1.5, 0.3, out, 0.6);
+    for (let i = 0; i < 6; i++) { const at = t + 0.2 + Math.random() * 1.2; noise(at, 0.05, filter('bandpass', (600 + Math.random() * 600) * p, 4, amp(at, 0.005, 0.25, 0.05, out))); }
+  },
+  blackhole(t, out, p) { // a black hole opening: a deep falling suck and a hollow hum that swirls
+    sweep(t, 1.4, 2200 * p, 500 * p, 90 * p, 2, 0.45, out, 0.2, 'lowpass');
+    const g = amp(t, 0.4, 0.4, 1.2, out), f = filter('bandpass', 140 * p, 6, g);
+    for (let i = 0; i < 8; i++) f.frequency.setValueAtTime((i % 2 ? 110 : 190) * p, t + i * 0.18);
+    tone('sawtooth', 60 * p, 40 * p, t, 1.6, f);
+    tone('sine', 220 * p, 55 * p, t + 0.05, 1.2, amp(t + 0.05, 0.1, 0.25, 1.1, out));
+  },
   dig(t, out, p) {       // a Squirtle diving into the floor: a scrape and a soft plop
     sweep(t, 0.25, 900 * p, 400 * p, 200 * p, 0.8, 0.4, out, 0.01, 'lowpass');
     tone('sine', 260 * p, 110 * p, t + 0.12, 0.1, amp(t + 0.12, 0.003, 0.3, 0.1, out));

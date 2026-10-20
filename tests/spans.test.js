@@ -86,6 +86,7 @@ test('a span\'s cubes meet at every face and carry one long bridge from pad to p
         const n = step(k, d4);
         if (!w.layout(d).exists.has(n)) continue;
         const m = w.cube(k).map, o = w.cube(n).map;
+        if (o.flip) continue;   // (Flip's box: its walls are the cube's sides, cubegen/fliparena.js)
         for (let t = 0; t < N; t++) {
           const f = ground(m, edge(d4, t, 0)), g = ground(o, edge(d4 ^ 1, t, 0));
           assert.equal(!!f, !!g);

@@ -305,6 +305,10 @@ export const liveNeighbors = () => [...live];   // every proxy drawn, travel's t
 export function detachNeighbors() { const c = current; current = []; return c; }
 export function adoptNeighbors(list) { clearNeighbors(); current = list; }
 
+// How far the neighbours are veiled (0..1: Flip's fight, game/flipworld.js state.void): gone
+// altogether at 1, on top of every other fade
+let veil = 0;
+export function setNeighborVeil(k) { veil = Math.max(0, Math.min(1, k)); }
 export function tickNeighbors(dt) {
   time += dt;
   for (const { group } of current) if (group.userData.fade < 1) setFade(group, Math.min(1, group.userData.fade + dt * 2.5));
@@ -327,7 +331,7 @@ export function cullNeighbors(x, z, revealPlayer = true, enabled = true, floor =
     bounds.copy(g.geometry.bounds).translate(position);
     const dx = Math.max(bounds.min.x - x, 0, x - bounds.max.x);
     const dz = Math.max(bounds.min.z - z, 0, z - bounds.max.z);
-    const range = distanceFade(Math.hypot(dx, dz));
+    const range = distanceFade(Math.hypot(dx, dz)) * (1 - veil);
     userData.rangeFadeU.value = range;
     // Fog is shader-only in Three.js. Skip boxes wholly beyond its opaque distance.
     bounds.getCenter(center); point.copy(center).applyMatrix4(camera.matrixWorldInverse);

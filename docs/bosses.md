@@ -4,8 +4,8 @@ A real boss takes the place of one depth's descent guardian; the other descent g
 boss placeholders ([guardians.md](guardians.md)): the game calls them **Temp Bosses**
 (`♛ Temp Boss Spider`), as they hold the place of bosses to come. `BOSSES` in `src/core/bosses.js` says which
 depth has which: so far the first descent, on the road out of town (depth 0), has **Gusto**, the
-second (depth 1) **Totnar** and the third (depth 2) **Squarlo**. A boss may bring an arena of its
-own (`BOSS_ARENAS`: Squarlo's tidal hills).
+second (depth 1) **Totnar**, the third (depth 2) **Squarlo** and the fourth (depth 3) **Flip**. A
+boss may bring an arena of its own (`BOSS_ARENAS`: Squarlo's tidal hills, Flip's box).
 
 The layout marks that arena's guardian with `boss` (`world/layout.js`, `cubegen/guardian.js`;
 `bossPlaceholder` is false there). The boss stands on the guardian's spot **alone**: no
@@ -19,8 +19,8 @@ out of his arena (a dev spawn, the boss test room) he fights on the same (`relen
 Like every guardian's arena, leaving it while the boss lives asks first, and being pushed against
 the entrance never takes you out ([guardians.md](guardians.md#encounter-and-persistence)).
 
-Each boss runs its own fight (`game/gusto.js`, `game/totnar.js`, `game/squarlo.js`, its rules in
-`core/gusto.js`, `core/totnar.js`, `core/squarlo.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
+Each boss runs its own fight (`game/gusto.js`, `game/totnar.js`, `game/squarlo.js`, `game/flip.js`, its
+rules in `core/gusto.js`, `core/totnar.js`, `core/squarlo.js`, `core/flip.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
 body into it, the floors a body fits on, putting minions down round their boss and letting
 bodies go. A boss's minions (`minion` kinds, summoned) live in no roster: they pay a little XP
 once, no coins, no weapons, now and then a minor health potion, and go with their boss when it
@@ -365,6 +365,152 @@ body is under its surface stays hidden (the hero is drawn after it); and the cut
 lower than its surface where the hero stands in it (`game/cut.js`), or it would drop the water
 round their legs.
 
+## Flip
+
+![Flip's clips](../blender/previews/flip-preview.png)
+
+From the kids' sketch (`blender/flip.py`, `assets/flip.glb`): three rings of smaller rings. Each
+big ring is a wreath of little oval loops lying in its plane, long side outward; the rings overlap
+like the sketch, a big one on top, one to the left and lower, a smaller one to the right and
+lowest. All light blue, glowing a little; about 2.2 cells tall, floating (`hover`). The rings turn
+now and then, each about its own axis, every other one the other way (`rings`,
+`render/enemies.js spinRings`): still for a while, then turning; fast while he winds up, wildly
+while he spins up at half his health.
+
+Profile: `FLIP` in `src/core/enemies.js` (all his attacks on one profile, the fight bars those not
+of his phase); the fight's rules and his box in `src/core/flip.js` (`FLIP_FIGHT`); the fight in
+`src/game/flip.js`, the world he turns in `src/game/flipworld.js`, drawn by `render/flipview.js`.
+
+| | Level 5 |
+|---|---|
+| Health | 1680 (the descent tier's floor, grown four levels) |
+| Damage | 34 (ball ×0.7, volley ×0.55 a ball; a fall out through a hole ×0.6, a black hole's swallow ×0.55; a flip: none) |
+| XP | 650 grown; coins 160–280 at level 1; two weapons and two potions like a descent guardian |
+| Poise | 2 s |
+
+### His arena: the box
+
+His descent arena is always a box (`BOSS_ARENAS.flip.type`, `cubegen/fliparena.js`): solid cells,
+a unit each way, 16 × 16 × 16 of them (`map.flip.solid`, each marked with the side it belongs
+to). A floor as thick as the doorways' level, four walls a cell thick round the whole cube (they
+are the cube's sides), open at the top, and a floating island in the middle (a disc 4 cells round,
+2 thick, 5 over the floor). Each wall has three or four holes up high, out of reach from the floor
+(the entrance's doorway is a hole too, low in its wall).
+
+Every side that can be the floor has things to climb and fight round (`FEATURES`): daises a cell
+high with a stair up the front, towers two high with a flight of two stairs, low ledges with a
+stair up each end, little stepped pyramids, humps two high with a flight up each end, and pillars;
+the island's underside (its floor upside down) has a pyramid in the middle. A stair cell
+(`map.flip.stairs`, `stairUp`: the way it rises and the way its treads face) is a slope a cell up
+for the physics, like the game's own stairs, drawn as four steps; turned any other way it is a
+whole cell. On a wall these things stand out of it overhead. And every side has a **balcony**
+(`shelves`): a platform 5 by 4 cells, a cell thick, four cells up, jutting out of one of the walls
+beside it (`host`), with a staircase of four stairs straight out from its front, floating free of
+the floor. Turned so that its side is down the fight may go on up there; on other sides it is a fin
+or a ledge like the rest. Each balcony and each thing to climb is only kept if, whatever side is
+down, the floor stays one walkable piece and every balcony is climbed from its own side (the
+generator turns the box every way to check). They all keep clear of each other, the holes, the
+middle of each side, and on the floor of the box of the doorway, the well, his spot and the way
+between them.
+
+Clutter is glued to every side (`map.flip.clutter`: the theme's small things and frost crystals,
+none of them blocking), its up the side's, so it is right whichever side is down and turns with the
+box; it goes with a wall that breaks open.
+
+Any side of it can be the floor: an orientation (a rotation of the box about its middle, one of
+24, `ORIENTS`) says which way it is turned, and `orientedFloors` builds the floors of the box
+turned that way for the physics, which stays the game's own: every run of solid cells up a column
+is a floor, stacked where the cells are (the walls, the island). The side overhead is left out (and
+not drawn: it would hide everything from the camera). The holes in the side that is down are thin
+floors over the gap (`hole`) until they open (`open`: then nothing stands on them,
+`physics/collide.js`, `physics/floornav.js`). Unturned, the box is the cube's own map; turned,
+`state.map` is the turned one (`game/flipworld.js orientedMap`; no portals while turned). The
+active cube draws each side and the island as meshes of their own in a pivot at the middle of the
+box (`render/flipview.js`), which the turn turns; the island is see-through while it is not the
+floor (it would hide the floor under it). The neighbours see the box as it was built (its cube
+parts, `render/flipgeo.js`). The cutaway takes down what stands out of the walls too (a wider band
+than for canyon walls, `render/section.js`).
+
+**The walls break open.** When the fight starts, and every time the holes of the side down burst
+after a turn, the walls round the floor break open (`brokenWalls`): all of them but a parapet two
+cells high over the floor, a frame a cell wide round their edges and the wall round the foot of the
+side down's balcony, in big pieces flying off, spinning and fading, with dust and a boom. So little
+hides the fight and the cutaway has little to do. The physics goes without those cells (`removed`)
+till the walls are put back: when he winds up his next flip (or a black hole has the player) the
+pieces fly back together, before the world turns. Once he is dead they fly back together and stay.
+
+**The world round the box goes** while the fight is on (from when he first engages till he dies):
+the neighbouring cubes fade out and the sky turns as dark as it goes, only the stars
+(`state.void`, eased in `main.js`; `render/look.js` VOID, `render/neighbors.js setNeighborVeil`),
+so the box turning hangs in nothing. The box itself stays lit as before. Beaten (or the fight
+put back after a death), the regular backdrop comes back.
+
+Its walls are the cube's sides, so the shared ring of border cells does not match the neighbours'
+ground there (only the doorway does): the one place in the world where it does not.
+
+### Phase 1 (full health to half)
+
+- **Ball** (within 8 cells, clip `FlipThrow`, 1.2 s): he leans back, his rings drawing together,
+  and at 0.6 s thrusts forward and throws a ball of light out of his top ring (a projectile, 8.5
+  cells/s, 24 at level 5).
+- **Sky wollas** (within 9 cells, clip `FlipSummon`, 1.4 s): he bows and flicks his rings up at
+  0.8 s, and Sky wollas come out of them: as many as fill up to **three**, every 11 s at most (the
+  first after 5 s of fighting).
+- **The flip** (from anywhere, clip `FlipFlip`, 2.2 s): once it is due (7 s into the fight, then
+  every 13–18 s) he starts nothing else. His rings rise and spread and he cartwheels right round;
+  **nothing hurts him while he casts** (`ward`). At 1.33 s the world turns: the box turns a quarter
+  round about its middle in 1.5 s (half round, between the floor and the open top, in 2.1 s), so a
+  wall next to the one down, the floor or the top comes down (`nextDown`: never the opposite wall),
+  and everything in it turns with it: the player (carried, no steering), the enemies (frozen), the
+  loot; projectiles in flight go. Then the enemies drop onto clear spots of the new floor, ones
+  their bodies fit on (`bossfight.js fitting`: not in a wall, not under a ledge, not a hole or a
+  stair; a minion with none is lost, without a reward), he first, and **his tractor beam** (a shaft
+  of light blue light from his rings) carries the player to a clear spot near where the turn took
+  them, at least 2.5 cells from him, in 0.6 to 1.8 s: nothing hurts them meanwhile, and nobody
+  strikes for a second after (`grace`). Turned upside down the spot is on the island. Two times in
+  five (`balcony`) the fight goes on up on the side down's balcony: he and the player are put up
+  there.
+- **The holes**: the holes in the side that comes down are shut (panes of ice over them) while
+  the beam carries the player; 1.1 s after they are down the holes crack (the panes flicker) and
+  0.9 s later burst open (and the walls break open): whoever stands on one falls out of the world,
+  and so does a minion. Falling out hurts (20 at level 5) and puts the player back where they last
+  stood. Unturned, the floor has no holes; the walls' holes are windows.
+- No blow takes him below half his health (`hpFloor`).
+
+### Spinning up
+
+At half his health he stops (mode `split`), his rings spin wildly and nothing hurts him for
+2.4 s. Then he turns the world upside down (or, upside down already, the right way up) and fights
+on in phase 2.
+
+### Phase 2 (half health to death)
+
+- **Volley** instead of the ball: three balls at once, fanned out 0.3 rad apart (`volley`, `fan`,
+  `game/projectiles.js`), 19 a ball.
+- **Black holes** (within 9 cells, clip `FlipHole`, 1.8 s): his rings crowd into a knot, shaking,
+  and burst apart at 1.07 s: two black holes open on the floor, one 1.6–2.8 cells from the player,
+  one 3.5–6 cells away; they last 6.5 s (one at a time, 9–13 s apart, the first 3 s into the
+  phase). While one is open (or has the player) the scene darkens like Totnar's dark
+  (`state.dark`). Each grows over 0.6 s, then the nearest pulls the player in from up to 5.5 cells,
+  harder the closer (1.3 to 3.1 cells/s; the player runs 2.8), keeping 30% of their steering away
+  from it (`player.pull`, `physics/move.js`). One that gets them to its middle swallows them (19 at
+  level 5): they are gone (`player.vanished`, nothing hits them), the world turns for it (a flip
+  like his own), and a moment after it they come out of another black hole on the new floor, away
+  from him, with a little hop.
+- **The flip** as before, but the beam becomes a black hole: as the world starts to turn one
+  swallows the player (no harm), and when it has turned they come out of another at the spot the
+  beam would have taken them to.
+- The Sky wollas (up to **three**, every 10 s) and the holes, as before.
+
+His death takes his Sky wollas along and turns the world the right way up again: the well is in
+the floor.
+
+## Sky wolla
+
+`SKY_WOLLA` (`src/core/enemies.js`): a kind of the Wolla, light blue (`frost.light`), ×0.6 health
+and damage, that lives in no roster (`minion`): only Flip brings them, and they go for the player at
+once. A little XP once, no coins and no weapons, a minor health potion 6% of the time.
+
 ## Playing together
 
 The game that runs the cube's enemies runs the fight; the others are shown it (`net/foes.js`):
@@ -379,7 +525,12 @@ over running his cube (`adoptEnemies`) starts him at the stage his health gives:
 skulls he has lost again at once. Squarlo's stage (2: a giant), how high he has the water
 (`tide`, 0 to 1) and whether a Squirtle is under the floor (`under`) go along with their rows
 (`net/protocol.js rowOf`): a friend's game swaps his profile by his stage (`STAGE_PROFILES`,
-`net/foes.js`) and raises its own water by his tide (`game/tide.js`).
+`net/foes.js`) and raises its own water by his tide (`game/tide.js`). Flip's row carries one more
+slot: the way his box is turned (an index into `ORIENTS`), how often he turned it and his black
+holes. Every game turns its own world after them (`game/flipworld.js`: its own player carried and
+falling, the enemies shown as the runner moves them) and is pulled by the holes; a friend a black
+hole swallows comes out of another after a moment, without a turn (only the runner's player makes
+him turn the world).
 
 ## Dev
 
@@ -387,13 +538,16 @@ skulls he has lost again at once. Squarlo's stage (2: a giant), how high he has 
 kills it whatever its phase. `/spawn custotriangle` spawns its minions on their own. Likewise
 `/spawn totnar` (`addTotnars`), `/spawn snapskull`, `/spawn totspider` and `/spawn totstunder`,
 and `/spawn squarlo` (`addSquarlos`; without his tidal hills he calls no tide), `/spawn squirtle`,
-`/spawn coralsquirtle` and `/spawn tidesquirtle`. `/arena tidal` goes to his arena.
+`/spawn coralsquirtle` and `/spawn tidesquirtle`. `/arena tidal` goes to his arena. `/spawn flip`
+(`addFlips`; out of his box he turns nothing, and a black hole lets a swallowed player out
+elsewhere without a turn) and `/spawn skywolla`; `/arena flip` goes to his box.
 
 `/boss gusto` goes into the real arena (one beaten is up again). `/testroom boss gusto` (or
 `/testroom boss 0`: a boss, or the depth whose boss it is) goes into his **test room**
 (`cubegen/testrooms.js bossRoom`): the very descent arena of his depth in this world, built by
 the generator from the world's spec of it (`world/world.js descentSpec`, `cubegen/guardian.js`),
-so with the arena type he brings (Squarlo's tidal hills and their water), Totnar's braziers
+so with the arena type he brings (Squarlo's tidal hills and their water, Flip's box, which he turns
+there too), Totnar's braziers
 and the fight zone his minions are put down on (`game/bossfight.js fitting`: any map with an
 `arena`). It is made a test room: no portals (the entrance and the well are plain ground), no
 gate, no guardian of the map's own, nobody but him. He stands in the room's lineup on the
@@ -406,7 +560,7 @@ without a boss of its own has no boss room yet.
 ## Checks
 
 ```sh
-node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/testrooms.test.js tests/assets.test.js
+node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/flip.test.js tests/testrooms.test.js tests/assets.test.js
 ```
 
 ```js
@@ -431,3 +585,7 @@ blender/previews/squarlo-preview.png`, the Squirtle: `Blender -b --python blende
 assets/squirtle.glb blender/squirtle.blend blender/previews/squirtle-preview.png`, then
 `npm run compress-assets`. The jet, summon and spit points and where the stomping foot comes down
 that they print must match `SQUARLO`, `SQUARLO_GIANT` and `SQUIRTLE` (`tests/assets.test.js`).
+
+Flip: `Blender -b --python blender/flip.py -- assets/flip.glb blender/flip.blend
+blender/previews/flip-preview.png`, then `npm run compress-assets`. The throw and summon points it
+prints must match `FLIP` (`tests/assets.test.js`).

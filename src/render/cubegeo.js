@@ -11,6 +11,7 @@ import { buildFloors } from './floors.js';
 import { buildStructures } from './structures.js';
 import { buildInteriorWalls } from './interior.js';
 import { lowWaterLines } from './surface.js';
+import { buildFlipGeometry } from './flipgeo.js';
 
 // The solids are split along the low-water line of the clear fluids in the cells a triangle
 // touches (render/surface.js lowWaterLines): what stands out of the water (a bank, a bridge's
@@ -40,6 +41,9 @@ export function buildCubeGeometry(m) {
   }));
   // bedrock under every column that is not open to the depth below
   // (inside houses the floors reach down themselves, render/interior.js)
+  // Flip's box: its cells, nothing else (render/flipgeo.js)
+  if (m.flip) { buildFlipGeometry(m, layers); return layers.map(L => ({ terrain: L.terrain.pos.length ? L.terrain.arrays() : null,
+    stone: L.stone.pos.length ? L.stone.arrays() : null, wood: L.wood.pos.length ? L.wood.arrays() : null, flags: null, fluids: Object.fromEntries(FLUIDS.map(t => [t, null])) })); }
   const solid = (x, z) => !m.interior && x >= 0 && z >= 0 && x < N && z < N && m.cols[z * N + x].some(f => f.layer === 0 || f.merged && f.bottom === 0);
   for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) if (solid(x, z))
     layers[0].terrain.box(x, -BASE, z, x + 1, 0, z + 1, BEDROCK[0], BEDROCK[1],

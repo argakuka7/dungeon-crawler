@@ -52,6 +52,7 @@ import { totnarModel } from './totnarmodel.js';
 import { snapSkullModel } from './snapskullmodel.js';
 import { squarloModel } from './squarlomodel.js';
 import { squirtleModel } from './squirtlemodel.js';
+import { flipModel } from './flipmodel.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { SQUARLO_FIGHT } from '../core/squarlo.js';
 import { standingAt } from '../physics/fluid.js';
@@ -73,7 +74,7 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
-  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel };
+  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, flip: flipModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -88,6 +89,7 @@ const GLOW = {
   totnar: { light: [0xff4018, 2.6, 5, 0.95], flare: 1.2, grow: [1, 1.45, 2] },
   snapskull: { light: [0xff5a1e, 0.8, 1.8, 0.4] },
   squarlo: { light: [0x7fe8ff, 1.2, 2.6, 0.5], flare: 0.8 },
+  flip: { light: [0x8fdcff, 2.2, 4.5, 1.2], flare: 0.9 },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -133,6 +135,37 @@ function whirl(e) {
   const blow = a.hitAt, end = blow + a.gust.time;
   if (e.t < blow) return 1 + 2 * Math.min(1, e.t / blow);
   return e.t < end ? 5 : 1 + 4 * Math.exp(-(e.t - end) * 4);
+}
+// Rings (bones named ring0, ring1, ..., a species with `rings`: Flip's) turn now and then about
+// their own axes (the model's forward, at rest), every other one the other way: still for a
+// while, then turning for a while; fast while he winds up or casts, wildly while he spins up,
+// and slowing to a stop once he is dead.
+function findRings(model) {
+  const bones = [];
+  for (let b; (b = model.getObjectByName('ring' + bones.length));) bones.push(b);
+  if (!bones.length) return null;
+  model.updateMatrixWorld(true);
+  const fwd = new THREE.Vector3(0, 0, 1);
+  return bones.map((bone, i) => ({ bone, angle: 0, dir: i % 2 ? -1 : 1, rate: 1 + 0.25 * i,
+    axis: fwd.clone().applyQuaternion(bone.getWorldQuaternion(new THREE.Quaternion()).invert()).normalize() }));
+}
+function spinRings(v, e, dt) {
+  if (!v.rings) return;
+  const a = e.mode === 'attack' ? attackOf(e) : null;
+  v.ringClock = (v.ringClock ?? 0) + dt;
+  // turning for 2.5 s out of every 6 (each its own phase), more while attacking
+  const idle = Math.sin(v.ringClock * Math.PI / 3 + v.seed) > 0.2 ? 1.6 : 0;
+  const want = e.mode === 'dead' ? 0 : e.mode === 'split' ? 9 : a ? (a.cast ? 6 : 3.5) : idle;
+  v.ringSpeed += (want - v.ringSpeed) * Math.min(1, dt * (e.mode === 'dead' ? 1.2 : 3));
+  for (const r of v.rings) {
+    r.angle = (r.angle + r.dir * r.rate * v.ringSpeed * (e.profile.rings ?? 1) * dt) % (2 * Math.PI);
+    // the mixer only writes a bone whose pose changed (not a held clip): the spin goes on the
+    // clip's pose, not on last frame's spun one
+    const q = r.bone.quaternion;
+    if (r.written && q.equals(r.written)) q.copy(r.clip); else (r.clip ??= new THREE.Quaternion()).copy(q);
+    q.multiply(spin.setFromAxisAngle(r.axis, r.angle));
+    (r.written ??= new THREE.Quaternion()).copy(q);
+  }
 }
 function turnWaves(v, e, dt) {
   if (!v.waves) return;
@@ -457,7 +490,7 @@ function makeView(e, prefab) {
   const tentacles = e.profile.flail ? findTentacles(model) : [];
   if (e.proxy || e.summoned) poof(e, puffOf(e));   // it turns up
   return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
-    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
+    attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, rings: findRings(model), ringSpeed: 0, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0,
     shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0,
     sink: e.under ? 1 : 0, underWas: e.under ? 1 : 0, height: e.profile.height / size, morphing: false, swim: false };
@@ -519,7 +552,7 @@ function dying(v, e, dt, off) {
   v.bar.visible = false; v.label.visible = false; v.mark.visible = false;
   v.group.visible = fade > 0;
   v.mixer.update(0);
-  spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
+  spinWheels(v, e, dt); turnWaves(v, e, dt); spinRings(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
   shedParts(v, e); tumble(v, e, dt);
   flail(v, e, Math.max(0, 1 - e.deadT / (e.profile.deathTime * 0.5)));
   glowFx(v, e, 0, Math.max(0, 1 - e.deadT / e.profile.deathTime) * fade);   // the glow dies with it
@@ -578,7 +611,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.mark.visible = v.markT > 0;
     v.mark.scale.setScalar(0.5 * (e.mode === 'alert' ? 1 + 0.35 * Math.sin(Math.PI * v.markT) : v.markT));
     v.mixer.update(0);
-    spinWheels(v, e, dt); turnWaves(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
+    spinWheels(v, e, dt); turnWaves(v, e, dt); spinRings(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
     shedParts(v, e); tumble(v, e, dt); lightTurns(v, e, dt);
     burrowLook(v, e, dt); ripples(v, e, dt); wardLook(v, e, dt);
     glowFx(v, e, dt, 1); glints(v, e, dt);

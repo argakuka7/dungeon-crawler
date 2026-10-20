@@ -247,13 +247,16 @@ export function rosterOf(list, cube, seed) {
 // `runner` when nobody else did; stage and dark: a boss's (Totnar: how many skulls he lost,
 // whether he keeps it dark, game/totnar.js; Squarlo: 2 once he is a giant), else 0; bolts: the
 // other bolts of a storm, like the beam, else 0; tide: how high Squarlo has the water, 0 to 1
-// (game/squarlo.js); under: 1 while a Squirtle is under the floor, game/enemyai.js)
+// (game/squarlo.js); under: 1 while a Squirtle is under the floor, game/enemyai.js), and for Flip
+// one more: [orient, turns, holes] (how his world is turned and how often he turned it, his black
+// holes: [n, x, y, z, t, life] each, game/flip.js)
 const beamRow = b => [r2(b.t), r2(b.ex), r2(b.ey), r2(b.ez)];
+const flipRow = e => [e.orient ?? 0, e.turns ?? 0, (e.holes ?? []).map(h => [h.n, r2(h.x), r2(h.y), r2(h.z), r2(h.t), h.life])];
 export function rowOf(e, i, runner = 0) {
   const b = e.beam;
   return [i, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), Math.max(0, MODES.indexOf(e.mode)), r2(e.mode === 'dead' ? e.deadT : e.t),
     e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0),
     b ? beamRow(b) : 0, e.lastHit ?? runner, e.stage ?? 0, e.dark ? 1 : 0, e.bolts?.length ? e.bolts.map(beamRow) : 0,
-    e.tide ? r2(e.tide) : 0, e.under ? 1 : 0];
+    e.tide ? r2(e.tide) : 0, e.under ? 1 : 0, ...e.turns !== undefined ? [flipRow(e)] : []];
 }
 

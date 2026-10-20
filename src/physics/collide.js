@@ -12,10 +12,11 @@ export function cellAt(x, z) {
 const pieceBottom = (p, top) => p.kind === 'bridge' ? top - 0.2 : p.base;
 
 // A trial's crumbling crust (game/trials.js): floors that are gone for now (gone(floor) -> true)
-// are not there for anything here, in the active cube
+// are not there for anything here, in the active cube; nor is a hole in Flip's box once it opened
+// (`open`, game/flipworld.js)
 let gone = null;
 export const setGoneFloors = fn => { gone = fn; };
-const here = (f, map = state.map) => !(gone && f.crust && map === state.map && gone(f));
+const here = (f, map = state.map) => !f.open && !(gone && f.crust && map === state.map && gone(f));
 // ... and its parts that stand in the way (a gate while shut, a crate): per cell, like map.blockers
 let parts = null;
 export const setPartBlockers = cells => { parts = cells; };

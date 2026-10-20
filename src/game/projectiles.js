@@ -19,7 +19,18 @@ export let projectiles = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
 let serial = 0;
 
+// a volley (Flip's) throws `volley` of them at once, fanned out `fan` rad apart
 export function launchProjectile(e, a) {
+  const n = a.projectile.volley ?? 1, yaw = e.yaw;
+  let pr = null;
+  for (let i = 0; i < n; i++) {
+    e.yaw = yaw + (i - (n - 1) / 2) * (a.projectile.fan ?? 0);
+    pr = launchOne(e, a);
+  }
+  e.yaw = yaw;
+  return pr;
+}
+function launchOne(e, a) {
   const p = e.target?.here ? e.target : player, pr = launch(e, a.projectile, { x: p.x, y: p.y + p.h * 0.55, z: p.z });
   pr.blow = { ...blowOf(e.profile, a), by: attacker(e) };
   pr.profile = e.profile;   // the thrower's kind colours it
@@ -45,7 +56,7 @@ export function endMirrored(n, end) {
   projectiles = projectiles.filter(p => p !== pr);
 }
 export function updateProjectiles(dt) {
-  const targets = party().filter(alive);   // flies through a fallen player
+  const targets = party().filter(b => alive(b) && !b.flipping);   // flies through a fallen player (or one in a black hole)
   projectiles = projectiles.filter(pr => {
     const end = stepProjectile(pr, dt, pr.mirror ? null : targets, solid);
     if (!end) return true;

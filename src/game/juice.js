@@ -108,8 +108,9 @@ export function projectileFx(pr, what) {
   const fire = pr.kind === 'fireball', ice = pr.kind === 'iceball', { x, y, z } = pr;
   if (pr.kind === 'skull') { skullFx(pr, what); return; }
   if (pr.kind === 'water') { waterFx(pr, what); return; }
-  if (what === 'launch') { sfx(fire ? 'fireball' : ice ? 'frost' : 'zap', { at: pr }); return; }
-  const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
+  const ball = pr.kind === 'ball';   // Flip's ball of light
+  if (what === 'launch') { sfx(fire ? 'fireball' : ice || ball ? 'frost' : 'zap', { at: pr, pitch: ball ? 1.3 : 1 }); return; }
+  const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice || ball ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
   const n = what === 'spent' ? 6 : 18, s = what === 'spent' ? 1 : 2.6;
   emit(glow, x, y, z, { life: 0.18, size: what === 'spent' ? 0.35 : 0.7, grow: 1, color: colors[1], alpha: 0.9 });
   for (let i = 0; i < n; i++)
@@ -412,7 +413,8 @@ function jetFx(e, g, what, dt) {
 // Squirtle popping out of it.
 const SUMMONS = { triangles: { sound: 'summon', flash: '#9fdcff', colors: ['#e0f6ff', '#7fd0ff'], streak: 10 },
   leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 },
-  splash: { sound: 'splash', flash: '#c8f4ff', colors: DROPS, streak: 8 } };
+  splash: { sound: 'splash', flash: '#c8f4ff', colors: DROPS, streak: 8 },
+  rings: { sound: 'summon', flash: '#bfe8ff', colors: ['#f0faff', '#8fd8ff'], streak: 10 } };
 export function summonFx(mouth, list, look = 'triangles') {
   const s = SUMMONS[look];
   sfx(s.sound, { at: mouth });

@@ -52,6 +52,8 @@ export const state = {
   mist: 0,           // 1 while a boss's fog rolls in (Squarlo growing, game/squarlo.js)
   lookMist: 0,       // how misty it looks, following `mist` (main.js, render/look.js)
   tide: null,        // the level (in levels) a boss's tide stands at in this cube, or null (game/tide.js)
+  void: 0,           // 1 while Flip's fight goes on: the world round his box goes (game/flipworld.js)
+  lookVoid: 0,       // how far it has gone, following `void` (main.js: render/look.js, render/neighbors.js)
   cast: null,        // reading a portal scroll: { kind, t, duration, ... } (game/townportal.js startCast)
   visit: null,       // this cube as you came in: what a death restores (game/flow.js)
   fallFrom: null,    // falling through cubes: the cube the fall started in (game/fall.js)

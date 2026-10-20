@@ -43,7 +43,8 @@ silver cloud. The HP bar and the label keep the tier's colour.
 `map.guardian.role` and `.bossPlaceholder`, spawn/enemy fields, kind profiles, and
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
-instead, the second (depth 1) by **Totnar**, the third (depth 2) by **Squarlo**, each alone and
+instead, the second (depth 1) by **Totnar**, the third (depth 2) by **Squarlo**, the fourth (depth 3)
+by **Flip**, each alone and
 with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names him and
 `bossPlaceholder` is false there.
 
@@ -127,6 +128,9 @@ A boss may have an arena type of its own instead (`BOSS_ARENAS` in `core/bosses.
 `BOSS_SHAPES` in `cubegen/arenashapes.js`), never planned for other guardians: Squarlo's
 **tidal** hills, a basin of low flats with at least four steep little hills in it (each with a
 ramp up) where his tide comes and goes, and a bank round the cube's edge holding the water in (`map.tide`; [bosses.md](bosses.md#squarlo)).
+Flip's **box** (`cubegen/fliparena.js`) is not a heightmap at all: a floor and four walls of solid
+cells round the whole cube, open at the top, with a floating island in the middle, any side of
+which can be the floor ([bosses.md](bosses.md#his-arena-the-box)).
 
 The fight zone (`encounter` floors) links only by slopes of one level and by flat
 edges. Terraces and lips are crisp steps that ramps join. Scenery next to the zone

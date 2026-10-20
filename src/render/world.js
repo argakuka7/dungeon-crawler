@@ -21,6 +21,7 @@ import { NPC_R, NPC_H } from '../core/npcs.js';
 import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
 import { buildTrialView, tickTrialView } from './trials.js';
+import { flipPivot, tickFlipView } from './flipview.js';
 
 export function disposeWorld(world) {
   if (!world) return;
@@ -34,15 +35,19 @@ export function disposeWorld(world) {
 // of the reward sites whose chests are open (run.chests)
 export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = [], locked = !!m.guardian, townPad = null, opened = null) {
   const group = new THREE.Group();
+  // Flip's box turns about its middle: its meshes and markers hang in a pivot (render/flipview.js)
+  const flip = m.flip ? flipPivot(group, m) : null, host = flip ? flip.inner : group;
   // what its fluids meet (render/wet.js)
   const water = waterUniforms(m);
-  const fluidMeshes = partMeshes(geo, group, m.interior ? ['stone'] : [], water);
+  // (Flip's box draws its sides itself, render/flipview.js: the cube's parts are its proxy's)
+  const fluidMeshes = flip ? [] : partMeshes(geo, host, m.interior ? ['stone'] : [], water);
   const { splashes, lights } = buildFalls(m, group);
   lavaLights(m, group, lights);
-  const markers = buildMarkers(m, group, showPath, seen, open, locked);
+  const markers = buildMarkers(m, host, showPath, seen, open, locked);
   // decoration (also sets the colliders of blocking props on the map); missingSets: the prop
   // sets not loaded yet, whose props are not drawn (game/flow.js builds the cube again for them)
-  const placed = placeProps(m, themeOf(m)), missingSets = propSetsOf(m, themeOf(m)).filter(s => !propSetLoaded(s));
+  // (Flip's box: its clutter is glued to its sides and turns with them, render/flipview.js)
+  const placed = m.flip ? { out: [], blockers: m.staticBlockers.map(() => []) } : placeProps(m, themeOf(m)), missingSets = propSetsOf(m, themeOf(m)).filter(s => !propSetLoaded(s));
   // the people out in the world (m.npcs, game/npcs.js) are colliders where they stand, like the villagers
   const people = indexBlockers((m.npcs || []).map(n => ({ x: n.x, z: n.z, r: NPC_R, bottom: n.y, top: n.y + NPC_H, npc: n.id })));
   m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list, ...people[i]]);
@@ -57,7 +62,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   makeFadable(group);
   ownShadowDepth(group);   // the props' instanced meshes
   scene.add(group);
-  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, trialView, ...markers };
+  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, trialView, flip, ...markers };
   setTownPortal(world, townPad);
   return world;
 }
@@ -117,6 +122,7 @@ export function animateWorld(world, dt, time) {
   for (const l of world.lights) l.intensity = 5 + Math.sin(time * 4 + l.position.x) * 1.5;
   for (const p of world.portalFx) p.tick(time);
   tickTrialView(world, time);
+  tickFlipView(world, time);
   tickChests(dt);
   tickVillagers(world.villagers, dt, time);
 }

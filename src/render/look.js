@@ -26,19 +26,25 @@ const NIGHT = { sky: ['#04060c', '#010204', '#0b0f1c', '#08091a'], stars: 1, hem
   sun: ['#6878a8', 0.05], fog: 0.45, lamp: 1.15 };
 const night = { sky: NIGHT.sky.map(c => new THREE.Color(c)), hemi: NIGHT.hemi.slice(0, 2).map(c => new THREE.Color(c)), sun: new THREE.Color(NIGHT.sun[0]) };
 
+// Flip's fight (game/flipworld.js): the sky as dark as it goes, only the stars, round his box
+// floating in nothing (the box itself lit as before: only the sky and the fog go)
+const VOID = ['#000000', '#000000', '#020207', '#010104'].map(c => new THREE.Color(c)), VOID_STARS = 0.7;
+
 // camDist: distance from the camera to what it looks at (fog is placed around that); themes: the
 // world's theme picks (themes/depth.js worldThemes); dark: how far into a boss's darkness (0..1)
-// mist: 0..1, a boss's fog rolling in (Squarlo growing): the far side fades into pale grey
+// mist: 0..1, a boss's fog rolling in (Squarlo growing): the far side fades into pale grey;
+// gone: 0..1, how far the world round Flip's box has gone (VOID)
 const MIST = new THREE.Color('#d6dfe4');
-export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0, mist = 0) {
+export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0, mist = 0, gone = 0) {
   const { a, b, t } = lightAt(depth, themes), k = dark * dark * (3 - 2 * dark);
   hemi.color.copy(mix(a.hemi[0], b.hemi[0], t)).lerp(night.hemi[0], k);
   hemi.groundColor.copy(mix(a.hemi[1], b.hemi[1], t)).lerp(night.hemi[1], k);
   hemi.intensity = lerp(lerp(a.hemi[2], b.hemi[2], t), NIGHT.hemi[2], k);
   sun.color.copy(mix(a.sun[0], b.sun[0], t)).lerp(night.sun, k);
   sun.intensity = lerp(lerp(a.sun[1], b.sun[1], t), NIGHT.sun[1], k);
-  for (let i = 0; i < 4; i++) sky[i].copy(mix(skyStop(a.sky, i), skyStop(b.sky, i), t)).lerp(night.sky[i], k);
-  setSkyLook(sky[0], sky[1], sky[2], sky[3], lerp(lerp(a.stars ?? 0, b.stars ?? 0, t), NIGHT.stars, k));
+  const v = gone * gone * (3 - 2 * gone);
+  for (let i = 0; i < 4; i++) sky[i].copy(mix(skyStop(a.sky, i), skyStop(b.sky, i), t)).lerp(night.sky[i], k).lerp(VOID[i], v);
+  setSkyLook(sky[0], sky[1], sky[2], sky[3], lerp(lerp(lerp(a.stars ?? 0, b.stars ?? 0, t), NIGHT.stars, k), VOID_STARS, v));
   // fog: nothing at 0, at 1 the far half of the cube disappears into the dark
   const m = mist * mist * (3 - 2 * mist), f = Math.max(lerp(lerp(a.fog, b.fog, t), NIGHT.fog, k), 0.85 * m);
   scene.fog.color.copy(sky[1]).lerp(MIST, m);

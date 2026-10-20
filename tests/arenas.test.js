@@ -44,7 +44,7 @@ test('each depth plans distinct arena types, and every type turns up', () => {
 
 test('every arena type keeps a connected zone, flat doorways, out-of-reach scenery and room for its roster', () => {
   const kept = new Map(ARENA_TYPES.map(t => [t, 0])), total = new Map(ARENA_TYPES.map(t => [t, 0]));
-  for (const { type, map: m } of forced([0, 7], [0, 3, 6, 9, 12, 16, 19])) {
+  for (const { type, map: m } of forced([0, 7], [0, 4, 6, 9, 12, 16, 19])) {   // (not Squarlo's or Flip's: their own arenas)
     state.map = m;
     total.set(type, total.get(type) + 1);
     if (m.arena.type === type) kept.set(type, kept.get(type) + 1);

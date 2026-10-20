@@ -39,6 +39,8 @@ export function updatePlayer(dt) {
   if (player.ragdoll) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); stepRagdoll(dt); return; }
   // in a boss's hands (game/grab.js): carried, then thrown
   if (player.held) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); tickHeld(dt); return; }
+  // carried round as Flip turns the world, in his tractor beam or inside a black hole (game/flipworld.js moves us)
+  if (player.flipping) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); return; }
   if (player.getUp) tickGetUp(dt);
   // keys win over mouse orders
   const keys = inputDir();

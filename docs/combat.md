@@ -166,6 +166,16 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   drown and only the hills stay safe; now and then he has to rest. At half his health he grows
   into a giant six cells tall in a fog and stomps (his foot's shadow shows where). See
   [bosses.md](bosses.md).
+- Flip (`blender/flip.py`), the fourth real boss, in place of the descent guardian of depth 3, in a
+  box of his own: three overlapping rings of little rings, light blue, floating, the rings now
+  and then turning. He throws balls of light (three at once from half his health on), summons
+  Sky wollas and flips the world: the box turns a quarter round (or upside down) with everything
+  in it, and his tractor beam sets you down on the new floor (upside down: on the floating island
+  in the middle; now and then up on a balcony jutting out of a wall); the holes in the new floor
+  open once you are down, and the walls round it break open. Every side has stairs, towers, ledges
+  and a balcony to fight on. From half his health on he opens black holes that darken the scene
+  and pull you in; swallowed, you come out of another one after the world has flipped, and a black
+  hole takes you through his flips too. See [bosses.md](bosses.md#flip).
 - Squirtle (`blender/squirtle.py`): a little blue water serpent with a beak that runs about under
   the floor (nothing touches it there) and pokes out of it to spit balls of water with a tiny
   push; it lives in the lagoons, the sunken grotto and the cenote, and Squarlo summons them.

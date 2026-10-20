@@ -475,7 +475,48 @@ export const SQUARLO = {
   style: 'skirmish', circle: 2.6, strafe: true, guardian: true, guardianRole: 'descent', boss: 'squarlo',
   seedSalt: 0x5a1a20, spacing: 6,
 };
-export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO];
+// Flip, the fourth real boss (blender/flip.py), in place of the descent guardian of depth 3
+// (core/bosses.js): three rings of little rings, light blue, floating; the game spins the rings now
+// and then (`rings`, render/enemies.js). He fights in his box (cubegen/fliparena.js), game/flip.js
+// runs his fight, core/flip.js holds its rules.
+// Phase 1: he throws balls of light out of his top ring and summons Sky wollas. The flip (a `cast`,
+// while it lasts nothing hurts him, `ward`) turns the world: the box turns a quarter round (or
+// upside down), everything falls onto the new floor and the landing hurts (game/flipworld.js).
+// Phase 2 (at half his health): a volley of three balls instead of one, fanned out (`volley`,
+// `fan`: rad between them, game/projectiles.js), and black holes (a cast, game/flip.js).
+const FLIP_THROW = {
+  name: 'throw', clip: 'throw', weight: 3, reach: 8, hitAt: 18 / 30, trackUntil: 0.5, attackTime: 36 / 30, hitReach: 0,
+  arc: 0.5, power: 0.7, knock: 3, knockDown: false, hop: 3, reason: 'Hit by a ball of light!',
+  projectile: { kind: 'ball', speed: 8.5, radius: 0.2, range: 12, spin: 6, muzzle: [0.139, 1.548, 0.535] },
+};
+const FLIP_VOLLEY = { ...FLIP_THROW, name: 'volley', power: 0.55, projectile: { ...FLIP_THROW.projectile, volley: 3, fan: 0.3 } };
+const FLIP_FLIP = {
+  name: 'flip', clip: 'flip', weight: 1, reach: 40, hitAt: 40 / 30, trackUntil: 0.4, attackTime: 66 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Flip', cast: 'flip', ward: true,
+};
+const FLIP_SUMMON = {
+  name: 'summon', clip: 'summon', weight: 2, reach: 9, hitAt: 24 / 30, trackUntil: 0.5, attackTime: 42 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Flip',
+  summon: { kind: 'skywolla', muzzle: [0.409, 0.782, 0.39] },
+};
+const FLIP_HOLE = {
+  name: 'hole', clip: 'hole', weight: 3, reach: 9, hitAt: 32 / 30, trackUntil: 0.6, attackTime: 54 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Swallowed by a black hole!', cast: 'hole',
+};
+export const FLIP = {
+  type: 'flip', species: 'flip', label: 'Flip', hp: 1000, damage: 24, knock: 3,
+  xp: 650, coins: [160, 280],
+  radius: 0.62, height: 2.2, bodyHeight: 2, mass: 5, hover: true, rings: 1,
+  aggro: 7, giveUp: 14, chase: 1.5, wander: 0.4, homeSpeed: 0.9,
+  ...FLIP_THROW, cooldown: 1, ichor: ['#d8f4ff', '#5fb0e0'], pitch: 0.9,
+  attacks: [FLIP_THROW, FLIP_VOLLEY, FLIP_FLIP, FLIP_SUMMON, FLIP_HOLE], phase: 1,
+  poise: 2, hitStun: 0.25, deathTime: 2.4, corpseTime: 5,
+  parts: { rings: ['FlipRings_glow', 'FlipRingsPale_glow'] },
+  light: '#8fdcff', sparks: ['#e8f8ff', '#8fdcff', '#4fb8f0'],
+  style: 'ranged', keep: [2.6, 5.5], guardian: true, guardianRole: 'descent', boss: 'flip',
+  seedSalt: 0xf11b0, spacing: 6,
+};
+export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -792,6 +833,13 @@ export const TIDE_SQUIRTLE = enemyKind(SQUIRTLE, {
   aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: SPLASH_PUFF,
   mods: { hp: 0.7, damage: 0.6, xp: 0.15 },
 });
+// Flip's Sky wollas: light blue, weaker, and they go for the player at once
+export const SKY_WOLLA = enemyKind(WOLLA, {
+  type: 'skywolla', label: 'Sky wolla', reason: 'Blown away by a Sky wolla!', minion: true,
+  colors: paints({ waves: 'frost.light', eyes: 'eyes.bone' }), ichor: ['#e0f6ff', '#6ab8e8'], trail: '#7fb4d4',
+  aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.06), puff: { colors: ['#f0faff', '#bfe8ff', '#8fd0f8'], size: 0.6 },
+  mods: { hp: 0.6, damage: 0.6, xp: 0.15 },
+});
 // small spiders of twigs, poured out of his ball by the dozen
 export const TOT_SPIDER = enemyKind(SPIDER, {
   type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
@@ -810,7 +858,7 @@ export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.valu
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
   BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
   NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
-  TIDE_SQUIRTLE].map(k => [k.type, k]));
+  TIDE_SQUIRTLE, SKY_WOLLA].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,
 // like the dead

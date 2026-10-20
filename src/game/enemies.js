@@ -18,6 +18,9 @@ import { totnars, resetTotnars, updateTotnars, detachTotnars } from './totnar.js
 import { squarlos, resetSquarlos, updateSquarlos, detachSquarlos } from './squarlo.js';
 import { squirtles, resetSquirtles, updateSquirtles, detachSquirtles } from './squirtles.js';
 import { updateTide, resetTide, drownEnemies, floatSwimmers } from './tide.js';
+import { flips, resetFlips, updateFlips, detachFlips } from './flip.js';
+import { updateFlipWorld, updateBlackHoles, resetFlipWorld, turning } from './flipworld.js';
+import { clearBlackHoles } from '../render/flipview.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
@@ -84,14 +87,15 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...gustos, ...totnars, ...squarlos, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...gustos, ...totnars, ...squarlos, ...flips, ...spawned];
 export function resetEnemies() {
+  resetFlipWorld(); clearBlackHoles();   // (Flip's box the right way up again: game/flipworld.js)
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
   state.dark = 0; state.mist = 0; resetTide();
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetGustos(); resetTotnars(); resetSquarlos();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetGustos(); resetTotnars(); resetSquarlos(); resetFlips();
   spawnLineup();   // a dev test room's every kind (game/devspawn.js)
   for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
@@ -194,15 +198,17 @@ export function updateEnemies(dt) {
   const horde = hordeGroups[0], bodies = party();
   if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
   stepCalls(dt);
+  // Flip's world turning (game/flipworld.js): everything in it turns with it
+  updateFlipWorld(list, dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateSquirtles(dt); updateGustos(dt); updateTotnars(dt); updateSquarlos(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateSquirtles(dt); updateGustos(dt); updateTotnars(dt); updateSquarlos(dt); updateFlips(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
   // a boss's tide (game/tide.js): it drowns, but those that swim float
   updateTide(allEnemies(), dt);
   if (state.tide != null) { drownEnemies(allEnemies()); floatSwimmers(allEnemies()); }
-  updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
-  contactEnemies(allEnemies(), dt);
+  updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBlackHoles(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  if (!turning()) contactEnemies(allEnemies(), dt);   // (all frozen while Flip's world turns)
   state.dark = darkness(allEnemies()); state.mist = misty(allEnemies());
 }
 // a boss keeping the cube dark (Totnar, game/totnar.js; shown one, its `dark` comes with it)
@@ -214,10 +220,11 @@ const misty = list => list.some(e => e.mode === 'split' && STAGE_PROFILES[e.boss
 function followEnemies(dt) {
   mirror.apply(dt);
   const list = mirror.list;
+  updateFlipWorld(list, dt, false);
   hitWithSword(list); updateShots(dt, list); updateThrows(dt, list);
   awardKills(list);
-  updateProjectiles(dt); updateGusts(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
-  contactEnemies(list, dt, false);
+  updateProjectiles(dt); updateGusts(list, dt, false); updateBlackHoles(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  if (!turning()) contactEnemies(list, dt, false);
   updateTide(list, dt);
   state.dark = darkness(list); state.mist = misty(list);
 }
@@ -228,5 +235,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachFlips(), ...detachSpawned()];
 }

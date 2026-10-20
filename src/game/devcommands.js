@@ -13,7 +13,7 @@ import { player, state } from './state.js';
 import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
 import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, goTrial, goBoss, goTestRoom, leaveTestRoom, FEATURES } from './dev.js';
-import { BOSSES } from '../core/bosses.js';
+import { BOSSES, BOSS_ARENAS } from '../core/bosses.js';
 import { TEST_ROOMS, isTestRoom, testRoomDepth } from '../world/testrooms.js';
 import { TRIALS, TRIAL_KINDS } from '../core/trials.js';
 import { devTrial } from './trials.js';
@@ -130,7 +130,8 @@ dev({
     return devTrial(kind);
   },
 });
-addType(commands, { name: 'arena', values: () => [...Object.keys(ARENA_WEIGHTS.descent), ...Object.keys(BOSS_SHAPES)].map(t => ({ value: t, label: t })) });
+addType(commands, { name: 'arena', values: () => [...new Set([...Object.keys(ARENA_WEIGHTS.descent), ...Object.keys(BOSS_SHAPES),
+  ...Object.values(BOSS_ARENAS).map(a => a.type).filter(Boolean)])].map(t => ({ value: t, label: t })) });
 dev({
   name: 'arena', help: 'a guardian arena of this kind (nearest depth first)',
   args: [{ name: 'kind', type: 'arena', optional: true }, { name: 'depth', type: 'depth', optional: true }],

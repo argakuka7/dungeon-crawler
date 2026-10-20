@@ -25,7 +25,7 @@ export function propSetsOf(m, theme) {
   trialSets(m, of);
   if (m.authoredProps) { m.authoredProps.forEach(of); return [...sets]; }
   if (theme.props) ambientSets(theme).forEach(s => sets.add(s));
-  [...(m.sitePlacements || []), ...(m.arenaPlacements || [])].forEach(of);
+  [...(m.sitePlacements || []), ...(m.arenaPlacements || []), ...(m.flip?.clutter || [])].forEach(of);   // (Flip's box's clutter)
   return [...sets];
 }
 

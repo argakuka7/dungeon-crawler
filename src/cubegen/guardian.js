@@ -15,6 +15,7 @@ import { placePortals } from './portals.js';
 import { SHAPES, BOSS_SHAPES, TIDAL } from './arenashapes.js';
 import { dressArena } from './arenaprops.js';
 import { BOSS_ARENAS } from '../core/bosses.js';
+import { flipArena } from './fliparena.js';
 
 const inner = (x, z) => x > 0 && z > 0 && x < N - 1 && z < N - 1;
 const FLAT = { rel: new Int8Array(N * N), zone: new Uint8Array(N * N).fill(1),
@@ -118,6 +119,8 @@ export function generateGuardian(spec) {
 
   // a boss may have an arena of its own (core/bosses.js BOSS_ARENAS: Squarlo's tidal hills)
   const own = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss] : null;
+  // Flip's box, any side of which can be the floor (cubegen/fliparena.js)
+  if (own?.type === 'flip') return flipArena({ spec, ctx, level, U, approach: [dx, dz], exit, role, R });
   const requested = own?.type ?? (spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills');
   const theme = themeOf(spec), tint = theme.side[1][1];
   // a boss who makes it dark has braziers lit round its arena (core/bosses.js)
