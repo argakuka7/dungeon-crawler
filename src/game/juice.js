@@ -138,16 +138,19 @@ function skullFx(pr, what) {
   if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.08, 0.02);
 }
 
-// Foggery's eye: plucked out with a pop and thrown, and where it ends a splat of yellow slime
-const SLIME = ['#fff6b0', '#ffd23a', '#c8f080'];
+// Foggery's eye: plucked out with a pop and thrown, burning, and where it ends a splat of burning slime
+const SLIME = ['#fff6b0', '#ffd23a', '#ff8a2a'];
 function eyeFx(pr, what) {
   if (what === 'launch') { sfx('pop', { at: pr, pitch: 0.8 }); sfx('skullthrow', { at: pr, pitch: 1.4, volume: 0.6 }); return; }
   const { x, y, z } = pr, n = what === 'spent' ? 8 : 18;
   for (let i = 0; i < n; i++)
     emit(soft, x, y, z, { v: [rand(-1.8, 1.8) - pr.vx * 0.08, rand(0.4, 2.2), rand(-1.8, 1.8) - pr.vz * 0.08], life: rand(0.35, 0.65),
       size: rand(0.05, 0.11), color: SLIME[i % 3], alpha: 0.95, gravity: 9, drag: 1 });
-  emit(glow, x, y, z, { life: 0.2, size: 0.5, grow: 1.2, color: '#ffe060', alpha: 0.7 });
-  sfx('drip', { at: pr, pitch: 0.7 }); sfx('bonk', { at: pr, pitch: 1.6, volume: 0.6 });
+  emit(glow, x, y, z, { life: 0.25, size: 0.7, grow: 1.2, color: '#ff8a2a', alpha: 0.8 });
+  for (let i = 0; i < 10; i++)
+    emit(glow, x, y, z, { v: [rand(-1.5, 1.5), rand(0.5, 2.5), rand(-1.5, 1.5)], life: rand(0.25, 0.5), size: rand(0.06, 0.12),
+      color: ['#ffd25a', '#ff8a2a', '#ff4a17'][i % 3], gravity: 3, drag: 2 });
+  sfx('drip', { at: pr, pitch: 0.7 }); sfx('whump', { at: pr, pitch: 1.3, volume: 0.6 });
   if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.06, 0.02);
 }
 

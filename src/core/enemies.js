@@ -517,11 +517,11 @@ export const FLIP = {
   seedSalt: 0xf11b0, spacing: 6,
 };
 // Foggery, the fifth real boss (blender/foggery.py), in place of the descent guardian of depth 4
-// (core/bosses.js): a light green frog a little taller than the player, with two big yellow eyes on
+// (core/bosses.js): an orange red frog a little taller than the player, with two big yellow eyes on fire on
 // top of his head, long thin arms and long legs. He fights in his caldera of lava, round and up his
 // tower (cubegen/towerarena.js); game/foggery.js runs his fight, core/foggery.js holds its rules.
 // Lava does not burn him (`lavaproof`, physics/fluid.js).
-// Phase 1: he plucks out one of his eyes and throws it (`eye`: which, 0 left, 1 right; it grows
+// Phase 1: he plucks out one of his burning eyes and throws it (it sets you on fire; `eye`: which, 0 left, 1 right; it grows
 // back, game/foggery.js) and croaks up Fire-faces. Phases 2 and 3 (FOGGERY_BALL): a ball with his
 // eyes in the middle, floating, a shield round him while his Fire-cats live (a summon, `ward`ed:
 // nothing hurts him while he calls them). He spits fireballs (phase 3: a volley of three) and
@@ -531,9 +531,10 @@ export const FLIP = {
 const FOGGERY_EYE = {
   name: 'eyeL', clip: 'eyeL', weight: 3, reach: 8, hitAt: 24 / 30, trackUntil: 0.65, attackTime: 42 / 30, hitReach: 0,
   arc: 0.5, power: 0.75, knock: 3, knockDown: false, hop: 2.5, reason: 'Hit by Foggery\'s eye!',
-  projectile: { kind: 'eye', speed: 8, radius: 0.2, range: 11, spin: 8, eye: 0, push: 4, pushTime: 0.25, muzzle: [0.401, 1.178, 0.802] },
+  projectile: { kind: 'eye', speed: 8, radius: 0.2, range: 11, spin: 8, eye: 0, push: 4, pushTime: 0.25, burn: { time: 0.5, damage: 5, ticks: 2 },
+    muzzle: [0.401, 1.18, 0.802] },
 };
-const FOGGERY_EYE_R = { ...FOGGERY_EYE, name: 'eyeR', clip: 'eyeR', projectile: { ...FOGGERY_EYE.projectile, eye: 1, muzzle: [-0.401, 1.178, 0.802] } };
+const FOGGERY_EYE_R = { ...FOGGERY_EYE, name: 'eyeR', clip: 'eyeR', projectile: { ...FOGGERY_EYE.projectile, eye: 1, muzzle: [-0.401, 1.179, 0.802] } };
 const FOGGERY_SUMMON = {
   name: 'summon', clip: 'summon', weight: 2, reach: 9, hitAt: 27 / 30, trackUntil: 0.5, attackTime: 45 / 30, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Foggery', cast: 'summon',
@@ -561,11 +562,11 @@ export const FOGGERY = {
   xp: 650, coins: [170, 300],
   radius: 0.45, height: 1.75, bodyHeight: 1.6, mass: 5, lavaproof: true,
   aggro: 7, giveUp: 14, chase: 1.6, wander: 0.4, homeSpeed: 0.8,
-  ...FOGGERY_EYE, cooldown: 2, ichor: ['#d8f8b0', '#5aa83a'], pitch: 0.8,
+  ...FOGGERY_EYE, cooldown: 2, ichor: ['#ffb27e', '#b8341a'], pitch: 0.8,
   attacks: [FOGGERY_EYE, FOGGERY_EYE_R, FOGGERY_SUMMON], phase: 1,
   poise: 2, hitStun: 0.25, deathTime: 2.4, corpseTime: 5,
-  parts: { body: ['FoggeryBody', 'FoggeryBelly'], eyes: ['FoggeryEyes_glow'] },
-  light: '#ffe060', sparks: ['#ffd25a', '#ff8a2a', '#c8f080'],
+  parts: { body: ['FoggeryBody', 'FoggeryBelly'], eyes: ['FoggeryEyes_glow'], flame: ['FoggeryFlame_glow', 'FoggeryFlameCore_glow'] },
+  light: '#ff8a3a', sparks: ['#ffd25a', '#ff8a2a', '#c8f080'],
   style: 'ranged', keep: [2.4, 6], guardian: true, guardianRole: 'descent', boss: 'foggery',
   seedSalt: 0xf0663e, spacing: 6,
 };

@@ -26,8 +26,8 @@ const LOOKS = {
   water: { model: squirtleModel, prop: () => squirtleModel.props?.SquirtleDrop, light: [0x8fdcff, 0.8, 2], trail: ['#ffffff', '#c8f0ff', '#7fcaf0'], rate: 40, gravity: 6 },
   // Flip's ball of light, its little ring spinning, sparkles streaming off it
   ball: { model: flipModel, prop: () => flipModel.props?.FlipBall, light: [0x8fdcff, 2.2, 3], trail: ['#ffffff', '#bfeaff', '#6fcbff'], rate: 55 },
-  // one of Foggery's eyes, looking where it flies, a glimmer and slime dripping off it
-  eye: { model: foggeryModel, prop: () => foggeryModel.props?.FoggeryEye, light: [0xffd84a, 1.2, 2.4], trail: ['#fff6b0', '#ffd23a', '#c8f080'], rate: 35, gravity: 3 },
+  // one of Foggery's eyes, looking where it flies, burning like a fireball, its flames trailing
+  eye: { model: foggeryModel, prop: () => foggeryModel.props?.FoggeryEye, light: [0xff8a3a, 2.4, 3], trail: ['#ffd25a', '#ff8a2a', '#ff4a17'], rate: 70 },
 };
 const ahead = new THREE.Vector3();
 

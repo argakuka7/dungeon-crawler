@@ -35,7 +35,7 @@ const BUDGETS = {
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
   gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
   squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 }, flip: { Flip: 10000, FlipBall: 1200 },
-  foggery: { Foggery: 9000, FoggeryEye: 1000 },
+  foggery: { Foggery: 12000, FoggeryEye: 1500 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -464,9 +464,11 @@ test('Foggery: a frog and his ball, his clips match his attacks, his eyes thrown
   for (const m of Object.values(FOGGERY.parts).flat()) assert.ok(names.has(m), m);
   const body = j.materials.find(m => m.name === 'FoggeryBody').pbrMetallicRoughness.baseColorFactor;
   const eyes = j.materials.find(m => m.name === 'FoggeryEyes_glow').pbrMetallicRoughness.baseColorFactor;
-  assert.ok(body[1] > body[0] && body[1] > body[2], 'light green'); assert.ok(eyes[0] > eyes[2] * 3 && eyes[1] > eyes[2] * 2, 'yellow eyes');
+  assert.ok(body[0] > 0.6 && body[0] > body[1] * 2 && body[1] > body[2], 'orange red'); assert.ok(eyes[0] > eyes[2] * 3 && eyes[1] > eyes[2] * 2, 'yellow eyes');
   // his forms and his eyes are bones the game scales (render/foggeryview.js), and the eye he throws
   for (const n of ['frog', 'ball', 'eye.L', 'eye.R', 'FoggeryEye']) assert.ok(j.nodes.some(o => o.name === n), n);
+  // on fire: flames on bones of their own off his eyes (and round his ball), which the game flickers
+  assert.ok(['L', 'R'].every(s => j.nodes.some(o => o.name === `flame_eye${s}`)) && j.nodes.filter(o => /^flame_ball/.test(o.name)).length >= 6);
   // a little taller than the player
   assert.ok(FOGGERY.height > CHAR_SCALE * 2 && FOGGERY.height < 2);
 });

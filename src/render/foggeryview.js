@@ -15,7 +15,7 @@ import { player } from '../game/state.js';
 const HIDDEN = 0.001, BALL_Y = 0.86, SHIELD_R = 0.9;
 const ease = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
 const geometry = new THREE.SphereGeometry(SHIELD_R, 40, 20);
-const SHARDS = ['#fff3c0', '#ffc84a', '#ff9a3a'], STEAM = ['#eef6e4', '#d8eccb', '#f6faf0'];
+const SHARDS = ['#fff3c0', '#ffc84a', '#ff9a3a'], STEAM = ['#f6ece4', '#ecd6cb', '#faf3f0'];
 
 function shieldMaterial() {
   return new THREE.ShaderMaterial({
@@ -70,7 +70,7 @@ export function foggeryLook(v, e, dt) {
     f.morph = false;
     if (f.frog) { f.frog.scale.setScalar(HIDDEN); f.frog.rotation.set(0, 0, 0); }
     if (f.ball) f.ball.scale.setScalar(1);
-    emit(glow, e.x, e.y + BALL_Y, e.z, { life: 0.35, size: 2, grow: 1.2, color: '#d8ffb0', alpha: 0.7 });
+    emit(glow, e.x, e.y + BALL_Y, e.z, { life: 0.35, size: 2, grow: 1.2, color: '#ffc8a0', alpha: 0.7 });
   }
   // his eyes: a thrown one grows back
   if (stage === 1) f.eyes.forEach((b, i) => b?.scale.setScalar(Math.max(HIDDEN, ease(e.eyes?.[i] ?? 1))));

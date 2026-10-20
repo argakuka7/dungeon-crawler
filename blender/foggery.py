@@ -1,21 +1,23 @@
 """
 Foggery: the boss of the fifth descent (depth 4), from the kids' whiteboard sketches.
 
-A frog, light green, a little taller than the player (about 1.75 cells): two big round yellow eyes
+A frog, orange red, a little taller than the player (about 1.75 cells): two big round yellow eyes
 sit on top of his head at the sides, a dark line runs across his face between them with a little
 round mouth under it, his body flares out like a bell below the head (pale belly in front), two
 long thin arms hang from the sides of his head down past his body, ending in three-fingered
 hands, and two long straight legs with webbed feet carry him. Faces -Y in Blender, +Z up; one
-unit = one game cell.
+unit = one game cell. His eyes are on fire: little flames lick up off each of them.
 
 His second form is a ball (the game shows one form or the other: render/enemies.js scales the
-`frog` or the `ball` bone away): a light green ball floating off the floor with his two eyes close
-together in the middle of its face. The shield round it is the game's (render/enemies.js).
+`frog` or the `ball` bone away): an orange red ball floating off the floor with his two eyes close
+together in the middle of its face, burning like a Fire-face: a crown of flame tongues rises off
+it, and little flames off its eyes. The shield round it is the game's (render/enemies.js).
 
 Rig: root; frog (all of the frog rides it: scaled away in ball form), body (torso and head, from
 the hips), eye.L / eye.R (each eye on its own: he plucks them out and throws them; the game scales
 a thrown one away and grows it back), per side thigh / shin (IK) and arm_upper / arm_lower / hand
-(IK); ball (the ball form, its eyes on it).
+(IK); ball (the ball form, its eyes on it); flame_* (each flame on its own bone, from the eye or
+the ball it burns on: they flicker in the clips, and the game flickers them more).
 
 Clips, 30 fps, in place (the game supplies root motion):
     FoggeryWalk    32-frame loop: a waddle, swaying, arms swinging (extras.speed).
@@ -28,7 +30,7 @@ Clips, 30 fps, in place (the game supplies root motion):
     FoggeryGeyser  2.1 s: the ball rises, shudders and slams down at frame 48: geysers burst.
     FoggeryCats    1.6 s: the ball spins right round, rising, and flares at frame 30: Fire-cats.
     FoggeryDeath   2.4 s: the ball shudders, sinks and squashes flat, rolling over. Held.
-    FoggeryEye     (a prop, not a clip): the eye he throws.
+    FoggeryEye     (a prop, not a clip): the eye he throws, its flames trailing behind it.
 
 Headless:
     Blender -b --python blender/foggery.py -- assets/foggery.glb blender/foggery.blend \
@@ -55,12 +57,15 @@ SIDES = (("L", 1), ("R", -1))
 CLIPS = ("FoggeryWalk", "FoggeryEyeL", "FoggeryEyeR", "FoggerySummon", "FoggeryFloat", "FoggerySpit",
          "FoggeryGeyser", "FoggeryCats", "FoggeryDeath")
 
-BODY_HEX, BELLY_HEX, EYE_HEX, PUPIL_HEX, MOUTH_HEX = "#9fe07c", "#e2f5b8", "#ffd23a", "#1d1a0c", "#2f5a24"
+BODY_HEX, BELLY_HEX, EYE_HEX, PUPIL_HEX, MOUTH_HEX = "#e2552b", "#ffb27e", "#ffd23a", "#1d120c", "#5a1c12"
 # (name, colour, emission); indices are the parts' `mat`
+FLAME_HEX, FLAME_CORE_HEX = "#ff5a14", "#ffb22a"
 MATERIALS = (("FoggeryBody", BODY_HEX, 0), ("FoggeryBelly", BELLY_HEX, 0), ("FoggeryEyes_glow", EYE_HEX, 0.9),
-             ("FoggeryPupil", PUPIL_HEX, 0), ("FoggeryMouth", MOUTH_HEX, 0))
-BODY_M, BELLY_M, EYE_M, PUPIL_M, MOUTH_M = range(len(MATERIALS))
-PROP_MATERIALS = (("FoggeryEyeBall_glow", EYE_HEX, 1.4), ("FoggeryEyePupil", PUPIL_HEX, 0))
+             ("FoggeryPupil", PUPIL_HEX, 0), ("FoggeryMouth", MOUTH_HEX, 0),
+             ("FoggeryFlame_glow", FLAME_HEX, 1.8), ("FoggeryFlameCore_glow", FLAME_CORE_HEX, 1.6))
+BODY_M, BELLY_M, EYE_M, PUPIL_M, MOUTH_M, FLAME_M, CORE_M = range(len(MATERIALS))
+PROP_MATERIALS = (("FoggeryEyeBall_glow", EYE_HEX, 1.4), ("FoggeryEyePupil", PUPIL_HEX, 0),
+                  ("FoggeryEyeFlame_glow", FLAME_HEX, 1.8), ("FoggeryEyeFlameCore_glow", FLAME_CORE_HEX, 1.6))
 
 VOXEL, DETAIL, FINE = 0.009, 0.0065, 0.004
 WALK_FRAMES, WALK_SPEED = 32, 1.0
@@ -96,6 +101,50 @@ BALL_C, BALL_R = V((0, 0, 0.86)), 0.55
 BALL_EYES = {s: V((sign * 0.125, -0.49, 0.93)) for s, sign in SIDES}
 BALL_EYE_R = 0.12
 HIDDEN = 0.001                     # the scale of the form not shown
+
+# --- his flames: name -> (the bone it burns on, base, up, length, base radius, curl) ------------
+FLAMES = {}
+for _s, _sign in SIDES:   # off each of the frog's eyes
+    FLAMES[f"flame_eye{_s}"] = (f"eye.{_s}", EYES[_s] + V((_sign * 0.02, 0.03, EYE_R * 0.7)), V((_sign * 0.3, 0.25, 1)), 0.26, 0.065, 0.035 * _sign)
+for _i, (_az, _el, _len) in enumerate(((50, 38, 0.5), (115, 34, 0.55), (180, 40, 0.6), (245, 34, 0.55), (310, 38, 0.5),
+                                       (0, 88, 0.62), (28, 62, 0.45), (-28, 62, 0.45))):   # a crown round the ball
+    _a, _e = math.radians(_az), math.radians(_el)
+    _d = V((math.sin(_a) * math.cos(_e), -math.cos(_a) * math.cos(_e), math.sin(_e)))
+    FLAMES[f"flame_ball{_i}"] = ("ball", BALL_C + _d * (BALL_R * 0.9), (_d + V((0, 0, 1.4))).normalized(), _len, 0.13, 0.07 * (-1) ** _i)
+for _s, _sign in SIDES:   # off the ball's eyes
+    FLAMES[f"flame_beye{_s}"] = ("ball", BALL_EYES[_s] + V((_sign * 0.02, 0.03, BALL_EYE_R * 0.7)), V((_sign * 0.3, 0.2, 1)), 0.22, 0.055, 0.03 * _sign)
+
+
+def flame_shape(name, flames=None):
+    """A main tongue with two smaller ones curling off its sides: [(points, radii)]."""
+    _, base, up, length, r0, curl = (flames or FLAMES)[name]
+    up = up.normalized()
+    side = (V((1, 0, 0)) if abs(up.x) < 0.7 else V((0, 1, 0)))
+    side = (side - up * side.dot(up)).normalized()
+    tongues = [K.flame_tongue(base, up, side, length, r0, curl, waves=1.5, tip=0.005, n=10)]
+    for k in (1, -1):
+        tilt = (up + side * (0.55 * k)).normalized()
+        tongues.append(K.flame_tongue(base + side * (0.45 * r0 * k) + up * (0.15 * r0), tilt, side, 0.55 * length,
+                                      0.62 * r0, -0.6 * curl * k, waves=1.4, tip=0.004, n=8))
+    return tongues
+
+
+def flame_sdf(P, name, flames=None):
+    d = None
+    for pts, radii in flame_shape(name, flames):
+        t = K.tapered_tube(P, pts, radii)
+        d = t if d is None else K.smin(d, t, 0.018)
+    return d
+
+
+def flame_bands(name, flame=FLAME_M, core=CORE_M, flames=None):
+    """Its hot core low down, the flame above (a wavy border)."""
+    _, base, up, length, _, _ = (flames or FLAMES)[name]
+
+    def mats(centers):
+        u = (centers - np.asarray(base, np.float32)) @ np.asarray(up.normalized(), np.float32) / length
+        return np.where(u < 0.3 + 0.08 * np.sin(60 * centers[:, 0] + 40 * centers[:, 1]), core, flame)
+    return mats
 
 
 def head_front(x, z):
@@ -196,6 +245,9 @@ def build_mesh(coll):
         e = BALL_EYES[s]
         parts.add("ball", lambda P, c=e: eye_sdf(P, c, BALL_EYE_R), e - V((0.14,) * 3), e + V((0.14,) * 3), DETAIL, mat=EYE_M)
         parts.add("ball", lambda P, c=e, o=sign: pupil_sdf(P, c, BALL_EYE_R, o), e - V((0.14,) * 3), e + V((0.14,) * 3), FINE, mat=PUPIL_M)
+    for name in FLAMES:
+        lo, hi = K.bounds([p for pts, _ in flame_shape(name) for p in pts], 0.08)
+        parts.add(name, lambda P, n=name: flame_sdf(P, n), lo, hi, DETAIL, mat=flame_bands(name))
     obj = parts.mesh(NAME, coll, MATERIALS)
     obj["enemy"] = "foggery"
     obj["body_color"] = BODY_HEX
@@ -204,13 +256,19 @@ def build_mesh(coll):
 
 
 def build_prop(coll):
-    """The eye he throws: a yellow ball with its pupil (a plain mesh, pupil towards -Y)."""
+    """The eye he throws: a yellow ball with its pupil (a plain mesh, pupil towards -Y, the way it
+    flies), burning, its flames trailing behind it (+Y)."""
     parts = K.Parts()
     c = V((0, 0, 0))
     parts.add("eye", lambda P: eye_sdf(P, c, EYE_R), (-0.15,) * 3, (0.15,) * 3, 0.008, mat=0)
     parts.add("eye", lambda P: pupil_sdf(P, c, EYE_R, 0), (-0.15,) * 3, (0.15,) * 3, 0.006, mat=1)
+    trail = {f"t{i}": (None, V((x, EYE_R * 0.4, z)), V((x * 2, 1, z * 2 + 0.25)), 0.26, 0.07, 0.03 * (-1) ** i)
+             for i, (x, z) in enumerate(((0, 0.05), (0.06, -0.03), (-0.06, -0.03)))}
+    for name in trail:
+        lo, hi = K.bounds([p for pts, _ in flame_shape(name, trail) for p in pts], 0.08)
+        parts.add("eye", lambda P, n=name: flame_sdf(P, n, trail), lo, hi, 0.006, mat=flame_bands(name, 2, 3, trail))
     obj = parts.mesh(PROP, coll, PROP_MATERIALS)
-    F.decimate(obj, 1000)
+    F.decimate(obj, 1500)
     return obj
 
 
@@ -228,6 +286,8 @@ def build_rig(coll):
                   (f"arm_upper.{s}", SHOULDER[s], ELBOW[s], "frog", True, fwd),
                   (f"arm_lower.{s}", ELBOW[s], WRIST[s], f"arm_upper.{s}", True, fwd),
                   (f"hand.{s}", WRIST[s], WRIST[s] + hand_frame(s) * 0.08, f"arm_lower.{s}", True, fwd)]
+    for name, (parent, base, up_dir, length, _, _) in FLAMES.items():
+        bones.append((name, base, base + up_dir.normalized() * length, parent, True, fwd))
     return K.armature(RIG_NAME, coll, bones, {
         "enemy": "foggery", "forward": "-Y", "attack_style": "boss", "normal_speed": WALK_SPEED, "root_motion": False})
 
@@ -252,7 +312,7 @@ def compute_weights(obj, owners):
         if part in ("body", "ball"):
             W[lo:hi, names.index(part)] = 1
             continue
-        if part == "eye":
+        if part == "eye" or kind in FLAMES:
             W[lo:hi, names.index(kind)] = 1
             continue
         WB = np.zeros((hi - lo, len(names)), np.float32)
@@ -301,7 +361,8 @@ def params(**kw):
          "knees": V((0, -1, 0.05)),
          "eyes": {s: None for s, _ in SIDES},                          # None: in its socket; else armature space
          "ball": {"pos": V(), "pitch": 0.0, "yaw": 0.0, "roll": 0.0, "squash": (1.0, 1.0)},
-         "form": "frog"}                                               # the form shown: the other is scaled away
+         "form": "frog",
+         "period": FLOAT_FRAMES / FPS, "flare": 1.0}                   # the flames' flicker: its loop, how big they burn                                               # the form shown: the other is scaled away
     p.update(kw)
     return p
 
@@ -349,6 +410,12 @@ def solver(rig, fn):
             eye = p["eyes"][s]
             at = squashed @ EYES[s] if eye is None else wrist + hd.normalized() * 0.1
             bases[f"eye.{s}"] = K.aim_at(skel, f"eye.{s}", poses, at, r3 @ V((0, -1, 0)))
+        # the flames flicker on their bones
+        for i, name in enumerate(FLAMES):
+            a, b, sc = K.flicker(i, p["t"], p["period"], 1.0)
+            g = max(0.02, p["flare"])
+            rot = Matrix.Rotation(a, 4, "X") @ Matrix.Rotation(b, 4, "Z")
+            bases[name] = K.pose_local(skel, name, poses, rot @ Matrix.Diagonal((g, g * sc, g, 1)))
         # the form not shown, scaled away about its bone (its children solved unscaled, they follow)
         gone = Matrix.Diagonal((HIDDEN,) * 3).to_4x4()
         if p["form"] == "ball":
@@ -416,7 +483,7 @@ def walk(f):
         swing = math.sin(w + (0 if s == "R" else math.pi))
         hands[s] = WRIST[s] + V((0, -0.12 * swing, 0.03 * abs(swing)))
         dirs[s] = (REST_DIR[s] + V((0, -0.4 * swing, 0))).normalized()
-    return params(t=f / FPS, pos=V((0.025 * math.sin(w), 0, -0.02 + 0.025 * abs(math.cos(w)))),
+    return params(t=f / FPS, period=WALK_FRAMES / FPS, pos=V((0.025 * math.sin(w), 0, -0.02 + 0.025 * abs(math.cos(w)))),
                   pitch=D(4), roll=D(7) * math.sin(w), yaw=D(5) * math.sin(w), squash=(1 + 0.015 * math.cos(2 * w), 1 - 0.02 * math.cos(2 * w)),
                   feet=feet, hands=hands, dirs=dirs)
 
@@ -526,8 +593,11 @@ def death(f):
     sz = 1 - 0.55 * flat
     # (squashed, its bottom on the floor)
     z = -(BALL_C.z - BALL_R) * sink - BALL_R * (1 - sz) * 1.0
-    return ball(t, pos=V((0.02 * shudder, 0.05 * sink, z)), roll=D(30) * C.smoothstep(0.9, 1.9, t) + D(5) * shudder,
-                squash=(1 + 0.3 * flat, sz))
+    p = ball(t, pos=V((0.02 * shudder, 0.05 * sink, z)), roll=D(30) * C.smoothstep(0.9, 1.9, t) + D(5) * shudder,
+             squash=(1 + 0.3 * flat, sz))
+    p["flare"] = (1 + 0.4 * (1 - C.smoothstep(0.0, 0.4, t))) * (1 - C.smoothstep(0.5, 1.6, t))   # (they flare up, then die down)
+    p["t"] = min(t, 1.6)   # (and are still once out: the held end)
+    return p
 
 
 def hand_point(rig, action, frame, s):

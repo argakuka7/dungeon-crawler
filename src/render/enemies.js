@@ -92,7 +92,7 @@ const GLOW = {
   snapskull: { light: [0xff5a1e, 0.8, 1.8, 0.4] },
   squarlo: { light: [0x7fe8ff, 1.2, 2.6, 0.5], flare: 0.8 },
   flip: { light: [0x8fdcff, 2.2, 4.5, 1.2], flare: 0.9 },
-  foggery: { light: [0xffd84a, 1.4, 3.2, 1.4], flare: 0.8 },
+  foggery: { light: [0xff7a2a, 2.4, 3.8, 1.4], flare: 0.8, flicker: 1, embers: { rate: 8, from: 1.45, spread: 0.35 } },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;

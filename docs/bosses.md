@@ -524,7 +524,11 @@ it; his body flares out like a bell below the head (pale belly in front); two lo
 from the sides of his head down past his body, ending in three-fingered hands; two long straight
 legs with webbed feet carry him. His second form is a ball, orange red, floating, his two eyes
 close together in the middle of its face, a shield of glowing segments turning round it while his
-cats guard him. One model holds both forms: each clip shows one and scales the other away (the
+cats guard him. He is on fire like the Fire-faces: little flames lick up off his eyes (the eye he
+throws burns like a fireball, its flames trailing, and sets you on fire for a moment), and his
+ball burns with a crown of flame tongues and little flames off its eyes; each flame is on a bone
+of its own (`flame_*`), flickering in the clips and in the game (`GLOW.foggery.flicker`, embers
+rising off him). One model holds both forms: each clip shows one and scales the other away (the
 bones `frog` and `ball`), and the game scales an eye he threw away and grows it back
 (`render/foggeryview.js`).
 
@@ -660,7 +664,8 @@ fireballs fanned out instead of one, makes **geysers** burst through the platfor
 and his shield holds while they live.
 
 His death drains the lava away for good (7 s), the platforms float down with it and sink under
-the floor, his minions go along and the well opens on the caldera's floor; floating, he sinks onto the floor under him, his loot with him.
+the floor, his minions go along and the well opens on the caldera's floor; floating, he sinks onto
+the floor under him, his loot with him.
 
 ## Playing together
 

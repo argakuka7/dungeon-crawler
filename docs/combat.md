@@ -177,7 +177,7 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   and pull you in; swallowed, you come out of another one after the world has flipped, and a black
   hole takes you through his flips too. See [bosses.md](bosses.md#flip).
 - Foggery (`blender/foggery.py`), the fifth real boss, in place of the descent guardian of depth 4,
-  in a caldera of lava with a great round tower in the middle: a light green frog a little taller
+  in a caldera of lava with a great round tower in the middle: an orange red frog a little taller
   than you, with big yellow eyes on top of his head. You come in on a bridge over the lava, and he
   waits at the foot of the tower; once you set foot on the ramp the lava rises for a minute, three
   Fire-faces wait for you up the ramp, and he comes up after you, throwing his eyes at you (one at
