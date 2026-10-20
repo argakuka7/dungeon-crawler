@@ -1091,6 +1091,22 @@ exactly the pixels the other drops. Every cube, full or proxy, sits in its own g
 (`render/glass.js`) that moves and fades with it (`game/travelfx.js`), with panes omitted
 on opened side connections.
 
+The player always looks through that box, so it is drawn to be read without being in the way:
+
+- **Edges** are thin strips widened on screen in the vertex shader (WebGL lines are always one
+  pixel wide and alias), a world width held between 1 and 1.5 CSS pixels, with a soft falloff on
+  either side. They are a little stronger near the corners of the box's outline and fainter along
+  their middles. Edges and corners inside the outline (seen from above: the top corner nearest the
+  camera and its three edges, right over the play area) are fainter still and get no stronger
+  corner. The full cube's edges sit a few depth steps ahead of its cut caps
+  (`render/section.js CAP_AHEAD`), or the bottom of the box breaks up into dashes.
+- **Panes** (only the side panes, from the inside, so only the far ones show, behind the
+  terrain) are a touch denser along their rims and nearly clear in the middle: an edge reads as
+  the rim of a pane of glass, not as a line drawn over the world.
+- The numbers are `GLASS` in `render/glass.js`, the same for the full cube's box and the
+  proxies' (at 0.6 strength). With `?dev=1`, `/glass old` and `/glass new` switch between about
+  the old look (1px lines, flat panes) and this one, `/glass <knob> <value>` tunes one live.
+
 The minimap and the low-detail surroundings only show cubes you have visited; prefetching
 never discovers a cube. There are no exceptions ("Only where you have been"). Surroundings include diagonals and distant cubes on the active
 stratum, within 48 world units (three cube widths) of the player's horizontal position.
