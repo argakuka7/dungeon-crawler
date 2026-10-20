@@ -100,7 +100,6 @@ Developer (`?dev=1`):
 | `/wear <thing\|off>` | headwear on or off |
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |
-| `/glass [old\|new\|knob] [value]` | the glass box around a cube: `old` / `new` switch between about the old look and the current one; a knob of `GLASS` (`render/glass.js`) alone says it, with a value sets it live; none: all of them (docs/world.md) |
 | `/saves` | the saved heroes and worlds, and what is being saved now |
 | `/save <hero>` | save as this hero (overwritten, or a new one) in this world (a new saved world unless it is saved already, now the hero's world); from then on it saves itself |
 | `/load <hero> [world\|new]` | play a saved hero in a saved world (no world: the hero's own one, else a new one) |

@@ -32,7 +32,6 @@ import { store, play, saveAs, newSavedWorld, savedHero, savedWorld, forget } fro
 import { quitToMenu } from './menu.js';
 import { setFluidPalettes, paletteOf } from '../render/fluidpal.js';
 import { rowSlot } from '../themes/fluids.js';
-import { GLASS_KNOBS, glassKnob, setGlassKnob, setGlassLook } from '../render/glass.js';
 
 const dev = cmd => addCommand(commands, { ...cmd, dev: true });
 const ahead = (d = 2.5) => ({ x: player.x + Math.sin(player.yaw) * d, y: player.y, z: player.z + Math.cos(player.yaw) * d });
@@ -177,21 +176,6 @@ dev({
     // (what the fluids here are now; *: what runs on from cube to cube)
     const rows = Object.values(state.map?.fluidRows || {});
     return `Fluid palettes: ${seed}` + (rows.length ? ' (here: ' + rows.map(r => paletteOf(r).name + (rowSlot(r) ? '' : '*')).join(', ') + ')' : '');
-  },
-});
-addType(commands, { name: 'glassknob', values: () => ['old', 'new', ...GLASS_KNOBS].map(v => ({ value: v, label: v })) });
-dev({
-  name: 'glass', help: 'the glass box (render/glass.js): old or new to compare the looks, or one of its numbers (and a value: set it)',
-  args: [{ name: 'knob', type: 'glassknob', optional: true }, { name: 'value', type: 'text', optional: true }],
-  run({ knob, value }) {
-    const all = () => GLASS_KNOBS.map(k => `${k} ${+glassKnob(k).toFixed(3)}`).join(', ');
-    if (knob === 'old' || knob === 'new') { setGlassLook(knob === 'old'); return `Glass: the ${knob} look (${all()})`; }
-    if (!knob) return `Glass: ${all()}`;
-    if (value !== undefined) {
-      if (!Number.isFinite(+value)) return `${knob} is a number, not "${value}"`;
-      setGlassKnob(knob, +value);
-    }
-    return `Glass: ${knob} ${glassKnob(knob)}`;
   },
 });
 

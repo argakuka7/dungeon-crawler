@@ -1104,8 +1104,7 @@ The player always looks through that box, so it is drawn to be read without bein
   terrain) are a touch denser along their rims and nearly clear in the middle: an edge reads as
   the rim of a pane of glass, not as a line drawn over the world.
 - The numbers are `GLASS` in `render/glass.js`, the same for the full cube's box and the
-  proxies' (at 0.6 strength). With `?dev=1`, `/glass old` and `/glass new` switch between about
-  the old look (1px lines, flat panes) and this one, `/glass <knob> <value>` tunes one live.
+  proxies' (at 0.6 strength).
 
 The minimap and the low-detail surroundings only show cubes you have visited; prefetching
 never discovers a cube. There are no exceptions ("Only where you have been"). Surroundings include diagonals and distant cubes on the active
