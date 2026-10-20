@@ -17,7 +17,7 @@ import { gustos, resetGustos, updateGustos, detachGustos } from './gusto.js';
 import { totnars, resetTotnars, updateTotnars, detachTotnars } from './totnar.js';
 import { squarlos, resetSquarlos, updateSquarlos, detachSquarlos } from './squarlo.js';
 import { squirtles, resetSquirtles, updateSquirtles, detachSquirtles } from './squirtles.js';
-import { updateTide, resetTide, drownEnemies, floatSwimmers } from './tide.js';
+import { updateTide, resetTide, drownEnemies, floatSwimmers, walkOnLava } from './tide.js';
 import { flips, resetFlips, updateFlips, detachFlips } from './flip.js';
 import { foggerys, resetFoggerys, updateFoggerys, detachFoggerys } from './foggery.js';
 import { resetMovers } from './movers.js';
@@ -211,6 +211,8 @@ export function updateEnemies(dt) {
   if (state.tide != null) { drownEnemies(allEnemies()); floatSwimmers(allEnemies()); }
   updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBlackHoles(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   if (!turning()) contactEnemies(allEnemies(), dt);   // (all frozen while Flip's world turns)
+  // (last: whatever moved them, those lava does not burn stand on it, game/tide.js)
+  if (state.tide != null) walkOnLava(allEnemies());
   state.dark = darkness(allEnemies()); state.mist = misty(allEnemies());
 }
 // a boss keeping the cube dark (Totnar, game/totnar.js; shown one, its `dark` comes with it)

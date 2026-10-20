@@ -1,16 +1,21 @@
 // Foggery's arena (core/bosses.js BOSS_ARENAS.foggery, docs/bosses.md): a caldera full of lava
-// with a great round tower in the middle (core/foggery.js TOWER). A rim of rock all round holds the
-// lava in; the doorway is a gap in it, and a stone bridge leads from it over the lava to the
-// tower. A ramp winds round the tower's core from the caldera's floor to its top, flat where the
-// bridge joins it and for a stretch at the top (the landing: with the core, the top of the
-// tower). The ramp and the bridge have low stone parapets; the top has none (the platforms float
-// round it, core/foggery.js PLATFORMS). The well lies on the caldera's floor in a far corner,
-// under the lava until he is beaten (game/tide.js drains it).
-import { N, LH, DIRS, OPP, EDGE_CORNERS, HEAD, LAVA } from '../core/constants.js';
+// with a great round tower in the middle (core/foggery.js TOWER). The rim of rock that holds the
+// lava in is the cube's own outer ring of cells (like Flip's box, it does not match the
+// neighbours' ground: only the doorway does); the doorway is a gap in it, and a stone bridge leads
+// from it over the lava to the tower. The tower is a stepped cone, wide at its foot and half as
+// wide at its top, a ramp winding round it from the caldera's floor up to the top, inward as it
+// climbs: flat where the bridge joins it, a wall on its inner side up to the turn above. One floor
+// to a column (but the bridge over the caldera's floor). The ramp and the bridge have low stone
+// parapets; the top has none (the platforms float round it, core/foggery.js PLATFORMS). The well
+// lies on the caldera's floor in a far corner, under the lava until he is beaten (game/tide.js
+// drains it). Loose stones, rubble and volcanic rocks lie about the tower and the caldera's floor.
+import { N, LH, DIRS, OPP, EDGE_CORNERS, LAVA } from '../core/constants.js';
 import { idx, edgeKey, hash32, mulberry32, makeNoise } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
 import { indexBlockers } from '../core/blockers.js';
-import { TOWER, PLATFORMS, SLOTS, rampTurns, rampHeight, rampMarks, puzzleStart } from '../core/foggery.js';
+import { propMetadata } from '../core/propcatalog.js';
+import { TOWER, PLATFORMS, slotGrid, slotNext, rampAt, rampHeight, rampMarks, puzzleStart } from '../core/foggery.js';
+import { themeOf } from '../themes/depth.js';
 import { placePortals, edgeCell } from './portals.js';
 
 const TAU = Math.PI * 2;
@@ -18,71 +23,76 @@ const wrapTurn = a => a - Math.floor(a + 0.5);
 const flat = top => Array(4).fill(top * LH);
 // how closely two floors' edges must meet to be one walkable surface (units)
 const MEET = 0.26;
+// the clutter (non-blocking, small): what lies on the tower, on the bridge, on the caldera's floor
+const STONES = ['any_rock_a', 'any_rock_b', 'any_rock_c', 'any_pebbles_a', 'any_pebbles_b', 'any_stone_chips_a', 'any_stone_chips_b',
+  'ruins_rubble_a', 'ruins_rubble_b', 'any_gravel_patch_a', 'any_gravel_patch_b'];
+const VOLCANIC = ['volcanic_magma_rock_a', 'volcanic_magma_rock_b', 'volcanic_pumice_chips_a', 'volcanic_pumice_chips_b',
+  'volcanic_obsidian_shard_a', 'volcanic_obsidian_shard_b', 'any_rock_slab_a', 'any_rock_slab_b'];
 
-export function towerArena({ spec, ctx, entry, role, base }) {
+export function towerArena({ spec, ctx, entry, role }) {
   const T = TOWER, door = entry.level, R = mulberry32(hash32(spec.seed ^ 0x70e4a));
   ctx.spec = { ...spec, portals: [entry] };
   placePortals(ctx);
   const pad = ctx.portals[0], d = pad.dir;
   // local (j steps in from the doorway's side, t along it) -> the cell
-  const at = (j, t) => edgeCell(d, t, j), xz = c => [c % N, (c / N) | 0];
+  const at = (j, t) => edgeCell(d, t, j);
   // the bridge joins the ramp on the doorway's side; the ramp turns one way or the other
   const [ox, oz] = DIRS[d], junction = Math.atan2(oz, ox), spin = R() < 0.5 ? 1 : -1;
-  const radius = (x, z) => Math.hypot(x + 0.5 - T.mid, z + 0.5 - T.mid);
+  const radius = (x, z) => Math.hypot(x - T.mid, z - T.mid);
   const inPit = (x, z) => x >= T.pit[0] && z >= T.pit[0] && x < T.pit[1] && z < T.pit[1];
-  const isRim = (x, z) => x >= 1 && z >= 1 && x <= N - 2 && z <= N - 2 && !inPit(x, z);
   const portalCells = new Set(pad.cells);
-  // the bridge: two cells wide from the doorway to the ramp (over its rows, and along the rim to
-  // the middle rows if the doorway is off to a side)
+  // the bridge: from the doorway to the ramp (over the doorway's rows, and along the rim to the
+  // middle rows if the doorway is off to a side), wherever the tower does not stand yet
   const bridge = new Set();
-  for (let t = Math.min(pad.pos - 1, 6); t <= Math.max(pad.pos + 1, 8); t++) for (let j = 2; j <= 3; j++) bridge.add(at(j, t));
-  // the well: a 3 x 3 pad on the caldera's floor in a far corner
-  const wt = R() < 0.5 ? 3 : 12, wellC = at(12, wt), well = [];
-  for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) well.push(at(12 + a, wt + b));
+  for (let t = Math.min(pad.pos - 1, 6); t <= Math.max(pad.pos + 1, 8); t++) for (let j = 1; j <= 4; j++) bridge.add(at(j, t));
+  // the well: a 3 x 3 pad on the caldera's floor in a far corner, clear of the tower's foot
+  const wt = R() < 0.5 ? 2 : 13, wellC = at(13, wt), well = [];
+  for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) well.push(at(13 + a, wt + b));
   const wellId = pad.id + 1;
   const noise = makeNoise(R);
 
-  const cols = Array.from({ length: N * N }, () => []), floors = [];
+  // the tower's surface at the point (x, z) for the ramp's turn at u (the cell's own turn,
+  // followed round, so a cell's corners lie on one smooth ramp)
+  const towerAt = (x, z) => {
+    const r = radius(x, z);
+    if (r < T.crown) return { u: Infinity };
+    if (r >= T.base) return { u: -Infinity };
+    return { u: rampAt(r, Math.atan2(z - T.mid, x - T.mid), junction, spin, door) };
+  };
+  const cols = Array.from({ length: N * N }, () => []);
   const add = (c, top, bottom, cs, extra = {}) => {
     const f = ctx.mk(c, top, bottom, 0);
     Object.assign(f, { cs, split: Math.abs(cs[0] - cs[3]) <= Math.abs(cs[1] - cs[2]) ? 0 : 1, arenaCell: true, encounter: false }, extra);
     cols[c].push(f);
     return f;
   };
+  const m = rampMarks(door);
   for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
-    const c = idx(x, z), r = radius(x, z);
-    if (portalCells.has(c)) { add(c, door, 0, flat(door), { prot: pad.id, arenaCell: false }); continue; }
-    if (!inPit(x, z) && !isRim(x, z)) { add(c, base[c], 0, flat(base[c]), { arenaCell: false }); continue; }
-    if (isRim(x, z)) {   // the rim: rough rock, higher than the lava ever rises
-      const top = T.rim[0] + Math.round(noise(x * 0.45, z * 0.45) * (T.rim[1] - T.rim[0]));
-      add(c, top, 0, flat(top), { rim: true });
+    const c = idx(x, z);
+    if (!inPit(x, z)) {   // the rim (the doorway its gap): rough rock, higher than the lava ever rises
+      const top = portalCells.has(c) ? door : T.rim[0] + Math.round(noise(x * 0.45, z * 0.45) * (T.rim[1] - T.rim[0]));
+      add(c, top, 0, flat(top), portalCells.has(c) ? { prot: pad.id, arenaCell: false } : { rim: true });
       continue;
     }
+    const { u } = towerAt(x + 0.5, z + 0.5);
     const ground = () => add(c, T.ground, 0, flat(T.ground), { paint: 'ash', ground: true, prot: well.includes(c) ? wellId : 0 });
-    if (r < T.core) { add(c, T.top, 0, flat(T.top), { paint: 'basalt', encounter: true, tower: 'top' }); continue; }
-    if (r < T.ring) {   // the ramp: once each turn it passes over the cell
-      const mid = Math.atan2(z + 0.5 - T.mid, x + 0.5 - T.mid);
-      let below = null;
-      for (const u of rampTurns(mid, junction, spin, door)) {
-        const cs = [0, 1, 2, 3].map(k => {
-          const a = Math.atan2(z + (k >> 1) - T.mid, x + (k & 1) - T.mid);
-          return rampHeight(u + wrapTurn(spin * (a - mid) / TAU), door) * LH;
-        });
-        const lo = Math.min(...cs) / LH, hi = Math.max(...cs) / LH;
-        let bottom = Math.max(0, Math.floor(lo) - T.slab);
-        if (!below && bottom < T.ground + HEAD) bottom = 0;   // (low down: solid to the floor)
-        else if (!below) ground();
-        const top = Math.round(hi), landing = cs.every(v => Math.abs(v - T.top * LH) < 1e-6);
-        below = add(c, top, bottom, cs, { paint: 'basalt', encounter: true, ramp: u, tower: landing ? 'top' : 'ramp' });
-      }
-      if (!below) ground();
+    if (u === -Infinity || u <= 0) {   // the caldera's floor (and the bridge over it)
+      ground();
+      if (bridge.has(c)) add(c, door, door - T.slab, flat(door), { paint: 'basalt', encounter: true, tower: 'bridge', prot: portalCells.has(c) ? pad.id : 0 });
       continue;
     }
-    ground();
-    if (bridge.has(c)) add(c, door, door - T.slab, flat(door), { paint: 'basalt', encounter: true, tower: 'bridge' });
+    if (u >= m.t) { add(c, T.top, 0, flat(T.top), { paint: 'basalt', encounter: true, tower: 'top' }); continue; }
+    // the ramp: the cell's corners follow its turn round
+    const mid = Math.atan2(z + 0.5 - T.mid, x + 0.5 - T.mid);
+    const cs = [0, 1, 2, 3].map(k => {
+      const a = Math.atan2(z + (k >> 1) - T.mid, x + (k & 1) - T.mid);
+      return rampHeight(u + wrapTurn(spin * (a - mid) / TAU), door) * LH;
+    });
+    const top = Math.round(Math.max(...cs) / LH), level = cs.every(v => Math.abs(v - T.top * LH) < 1e-6);
+    add(c, top, 0, cs, { paint: 'basalt', encounter: true, ramp: u, tower: level ? 'top' : 'ramp' });
   }
   for (const col of cols) col.sort((a, b) => a.top - b.top);
-  for (const col of cols) floors.push(...col);
+  const floors = cols.flat();
   floors.forEach((f, i) => { f.id = i; });
 
   // links: neighbouring floors whose edges meet
@@ -104,7 +114,8 @@ export function towerArena({ spec, ctx, entry, role, base }) {
   for (const f of floors) if (f.tower === 'ramp' || f.tower === 'bridge') DIRS.forEach(([dx, dz], dd) => {
     if (f.link[dd]) return;
     const x = f.x + dx, z = f.z + dz, mine = edge(f, dd), lo = Math.min(...mine);
-    // a wall there (the core, a turn of the ramp above): none needed
+    if (x < 0 || z < 0 || x >= N || z >= N) return;
+    // a wall there (the turn above, the rim): none needed
     if (cols[idx(x, z)].some(g => g.bottom * LH < lo + 0.5 && Math.max(...edge(g, OPP[dd])) > lo + 0.3)) return;
     const pts = [0.07, 0.5, 0.93].map(t => {
       const fx = dd === 0 ? 0.93 : dd === 1 ? 0.07 : t, fz = dd === 2 ? 0.93 : dd === 3 ? 0.07 : t;
@@ -116,13 +127,16 @@ export function towerArena({ spec, ctx, entry, role, base }) {
     fences.set(k, [...fences.get(k) ?? [], rail]);
   });
 
-  const top = c => cols[c].at(-1);
-  const entrance = { id: pad.id, kind: 'side', dir: d, layer: 0, cells: pad.cells, x: pad.c % N, z: Math.floor(pad.c / N), y: door * LH, floor: cols[pad.c][0] };
+  const entrance = { id: pad.id, kind: 'side', dir: d, layer: 0, cells: pad.cells, x: pad.c % N, z: Math.floor(pad.c / N), y: door * LH, floor: cols[pad.c].at(-1) };
   const wellFloor = cols[wellC].find(f => f.ground);
   const down = { id: wellId, kind: 'down', dir: 4, layer: 0, cells: well, x: wellC % N, z: Math.floor(wellC / N), y: T.ground * LH, floor: wellFloor };
   const portals = [entrance, down];
   // he stands on the bridge by the tower, facing the doorway
-  const guardFloor = top(at(3, Math.max(6, Math.min(8, pad.pos)))), goal = cols[idx(T.mid, T.mid)].at(-1);
+  const bridgeFloors = floors.filter(f => f.tower === 'bridge' && !f.prot);
+  const guardFloor = bridgeFloors.filter(f => f.link.some(g => g?.tower === 'ramp'))
+    .sort((a, b) => Math.hypot(a.x - entrance.x, a.z - entrance.z) - Math.hypot(b.x - entrance.x, b.z - entrance.z)
+      || Math.abs(a.x + a.z - entrance.x - entrance.z) - Math.abs(b.x + b.z - entrance.x - entrance.z))[0] ?? bridgeFloors.at(-1);
+  const goal = cols[idx(T.mid, T.mid)].at(-1);
   const boss = role === 'descent' ? spec.guardian.boss ?? null : null;
   const guardian = { role, bossPlaceholder: !boss, boss, exit: 4, floor: guardFloor, x: guardFloor.x + .5, z: guardFloor.z + .5,
     y: floorY(guardFloor, .5, .5), yaw: Math.atan2(ox, oz), approach: [-ox, -oz], portalId: wellId };
@@ -135,18 +149,42 @@ export function towerArena({ spec, ctx, entry, role, base }) {
   const moves = path.slice(1).map((to, i) => ({ kind: 'walk', from: path[i], to, cells: [], cost: 1,
     d: DIRS.findIndex(([x, z]) => path[i].x + x === to.x && path[i].z + z === to.z) }));
 
-  // the platforms: their slots, the ones touching the top, where they start
-  const isTop = g => g.tower === 'top';
-  const touch = SLOTS.flatMap((s, k) => {
+  // the platforms: their slots (none where the tower reaches up close under them), the ones
+  // touching the top, where they start
+  const under = PLATFORMS.top - PLATFORMS.clear;
+  const slots = slotGrid().filter(s => {
+    for (let b = 0; b < PLATFORMS.size; b++) for (let a = 0; a < PLATFORMS.size; a++)
+      if (cols[idx(s.x + a, s.z + b)].some(f => Math.max(...f.cs) / LH > under)) return false;
+    return true;
+  });
+  const next = slotNext(slots);
+  const touch = slots.flatMap((s, k) => {
     for (let b = 0; b < PLATFORMS.size; b++) for (let a = 0; a < PLATFORMS.size; a++) for (const [dx, dz] of DIRS) {
       const x = s.x + a + dx, z = s.z + b + dz;
-      if (x >= 0 && z >= 0 && x < N && z < N && cols[idx(x, z)].some(isTop)) return [k];
+      if (x >= 0 && z >= 0 && x < N && z < N && cols[idx(x, z)].some(f => f.tower === 'top')) return [k];
     }
     return [];
   });
-  const movers = { seed: hash32(spec.seed ^ 0x9a7f0), start: puzzleStart(touch, R), touch, top: PLATFORMS.top * LH, thick: PLATFORMS.thick };
+  const movers = { seed: hash32(spec.seed ^ 0x9a7f0), slots, next, start: puzzleStart(slots, touch, R), touch, top: PLATFORMS.top * LH, thick: PLATFORMS.thick };
   const L = T.lava;
-  const tower = { door, junction, spin, top: T.top, goal: { x: goal.x, z: goal.z }, marks: rampMarks(door) };
+  const tower = { door, junction, spin, top: T.top, goal: { x: goal.x, z: goal.z }, marks: m };
+
+  // clutter: loose stones about the tower, the bridge and the floor of the caldera (under the lava
+  // till he is beaten), never in the doorway or on the well
+  const tint = themeOf(spec).side[1][1], placements = [];
+  const put = (f, names, chance) => {
+    if (f.prot || R() >= chance) return;
+    const name = names[Math.floor(R() * names.length)], p = propMetadata.get(name);
+    if (!p || p.blocking) return;
+    const s = 0.75 + R() * 0.4, room = Math.max(0, 0.8 - 2 * p.radius * s), fx = 0.5 + (R() - 0.5) * room, fz = 0.5 + (R() - 0.5) * room;
+    placements.push({ name, x: f.x + fx, y: floorY(f, fx, fz) - 0.02, z: f.z + fz, yaw: R() * TAU, s, tint: name.startsWith('any_') ? tint : null });
+  };
+  for (const f of floors) {
+    if (f.tower === 'top') put(f, STONES, f.x === goal.x && f.z === goal.z ? 0 : 0.22);
+    else if (f.tower === 'ramp') put(f, STONES, 0.3);
+    else if (f.tower === 'bridge') put(f, STONES, 0.15);
+    else if (f.ground && !cols[f.c].some(g => g.tower === 'bridge')) put(f, VOLCANIC, 0.35);
+  }
 
   ctx.stats.layers = 1; ctx.stats.mode = 'guardian arena (tower)';
   const staticBlockers = indexBlockers([]);
@@ -163,7 +201,7 @@ export function towerArena({ spec, ctx, entry, role, base }) {
     kind: spec.kind, archetype: 'arena', roomRole: `${role}-guardian`, biome: spec.biome,
     key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: true, enemyFree: false,
     rewardSites: [], siteFailures: [], sitePlacements: [], siteReservations: [], spots: [],
-    arenaPlacements: [], staticBlockers, blockers: staticBlockers,
+    arenaPlacements: placements, staticBlockers, blockers: staticBlockers,
     routes: [path, [...path].reverse()].map(p => p.map(f => ({ x: f.x + .5, y: floorY(f, .5, .5) + .12, z: f.z + .5 }))),
   };
 }

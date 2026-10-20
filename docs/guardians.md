@@ -131,9 +131,10 @@ ramp up) where his tide comes and goes, and a bank round the cube's edge holding
 Flip's **box** (`cubegen/fliparena.js`) is not a heightmap at all: a floor and four walls of solid
 cells round the whole cube, open at the top, with a floating island in the middle, any side of
 which can be the floor ([bosses.md](bosses.md#his-arena-the-box)). Foggery's **tower**
-(`cubegen/towerarena.js`) has floors stacked in its columns too: a caldera of lava, a ramp winding
-round a great tower in the middle, a bridge from the doorway to it; its doorway is higher up than
-other arenas' and in the middle of its face (`door`, `centre`, `world/faces.js`)
+(`cubegen/towerarena.js`) is a caldera of lava walled in by the cube's own sides, a stepped cone
+of a tower in the middle with a ramp winding up round it, and a bridge from the doorway to it over
+the caldera's floor; its doorway is higher up than other arenas' and in the middle of its face
+(`door`, `centre`, `world/faces.js`)
 ([bosses.md](bosses.md#his-arena-the-caldera)).
 
 The fight zone (`encounter` floors) links only by slopes of one level and by flat

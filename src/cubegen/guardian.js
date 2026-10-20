@@ -95,9 +95,8 @@ export function generateGuardian(spec) {
   const own = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss] : null;
   // Foggery's caldera and tower, its well on the caldera's floor (cubegen/towerarena.js)
   if (own?.type === 'tower') {
-    const base = Int16Array.from(ctx.lvl0);
     for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) { ctx.lvl0[idx(x, z)] = level; ctx.void0[idx(x, z)] = 0; }
-    return towerArena({ spec, ctx, entry, role, base });
+    return towerArena({ spec, ctx, entry, role });
   }
   // Wells sit opposite the entrance; side exits retain their shared face position.
   const gx = dx ? dx > 0 ? 4 : N - 5 : N / 2;

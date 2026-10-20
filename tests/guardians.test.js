@@ -83,7 +83,7 @@ test('guardian arenas have dry, connected floors, shared ground entrances and no
       assert.equal(m.guardian.boss, g.boss ?? null);
       assert.equal(voidAllowed(w, m.key), false);
       // (Flip's box has floors stacked in its columns: its walls, its island, core/flip.js; so has
-      // Foggery's tower, its ramp winding round it, cubegen/towerarena.js)
+      // Foggery's caldera, its bridge over the floor, cubegen/towerarena.js)
       const stacked = !!m.flip || !!m.tower;
       if (!stacked) assert.equal(m.floors.length, 256);
       assert.ok(m.floors.every(f => !f.fluid && !f.covered));

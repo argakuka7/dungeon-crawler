@@ -4,9 +4,9 @@
 //
 // His arena is a caldera full of lava with a great round tower in the middle. You come in on a
 // stone bridge over the lava; a ramp winds up round the tower from the ground to its top, and
-// the bridge joins it on a flat stretch. Once the lava has risen to its highest, stone platforms
-// rise out of it round the top, in a ring of slots two by two cells each, and slide from slot to
-// slot like a sliding puzzle (game/movers.js).
+// the bridge joins it on a flat stretch; the tower narrows as it rises, to half at the top. Once
+// the lava has risen to its highest, stone platforms rise out of it round the top, in slots two by
+// two cells each, and slide from slot to slot like a sliding puzzle (game/movers.js).
 //
 // Phase 1 (full health to two thirds): when the fight starts the lava rises from its rest to just
 // under the top of the tower over `lava.rise` s, and he walks up the ramp (`climb`) to the top,
@@ -36,7 +36,7 @@ export const FOGGERY_FIGHT = Object.freeze({
   firstSummon: 4,             // s into the fight before his first summon
   catsAgain: 8,               // s after both cats are dead before he calls new ones
   geyser: { first: 2, every: [7, 10] },   // s into phase 2 before the first geysers, then between them
-  orbit: { r: 3.6, speed: 0.22, lift: 0.4 },   // phase 3: how far from the middle he circles (cells), how fast (rad/s), how high over the platforms
+  orbit: { r: 2.3, speed: 0.22, lift: 0.4 },   // phase 3: how far from the middle he circles (cells), how fast (rad/s), how high over the platforms
   rescue: 0.25,               // what falling into his lava costs, of one's most health
   leave: 0.5,                 // s a minion he takes along lingers, gone, before it is let go
 });
@@ -56,63 +56,69 @@ export function barred({ phase, eyes = [1, 1], summonDue = false, catsDue = fals
 }
 
 // --- his tower ------------------------------------------------------------------------------
-// Heights are in levels (half a cell). The tower stands in the middle of the cube (MID, MID).
-// The rim round the caldera holds the lava in; the platforms float a level over the top.
+// Heights are in levels (half a cell). The tower stands in the middle of the cube (MID, MID): a
+// stepped cone, `base` cells round at the bottom and half that (`crown`) at the top, and a ramp
+// `path` cells wide winding up round it, inward as it climbs. At a point r cells from the middle
+// the ramp passes once: each turn lies `path` further in than the one below, a wall between them.
+// The rim round the caldera (the cube's own sides) holds the lava in; the platforms float a level
+// over the top.
 export const TOWER = Object.freeze({
   mid: 8,
   ground: 1,                // the caldera's floor
   top: 20,                  // the top of the tower
-  rim: [22, 24],            // the rim round the caldera (cells 1 and 14 in from each side)
-  core: 2.2,                // cells: the solid core round the middle
-  ring: 4.31,               // cells: the ramp round it, out to here
-  pitch: 10,                // levels the ramp climbs in a turn
+  rim: [22, 24],            // the rim round the caldera: the cube's outer ring of cells
+  base: 6.2,                // cells: how far the tower reaches out at its foot
+  crown: 2.6,               // cells: its top, round the middle (with the last of the ramp about half the foot)
+  path: 1.5,                // cells: how wide the ramp is
   junction: 0.12,           // turns of the ramp kept flat where the bridge joins it
-  landing: 0.4,             // turns of the ramp at the top, flat (the top of the tower with the core)
-  slab: 2,                  // levels thick: the ramp and the bridge
-  pit: [2, 14],             // the caldera's cells (each way: from, past the last)
+  slab: 2,                  // levels thick: the bridge
+  pit: [1, 15],             // the caldera's cells (each way: from, past the last)
   lava: { rest: 2, high: 19, flood: 20.6, gone: -1 },   // levels: the lava at rest, under the top, over it, drained
 });
 export const PLATFORMS = Object.freeze({
   top: 21,                  // levels: where their tops float
   thick: 0.32,              // cells
   size: 2,                  // cells each way: a slot
-  count: 13,                // platforms in the ring of 20 slots
+  count: 22,                // platforms in the slots round the top
   every: 2,                 // s between steps of the puzzle
   move: 1.2,                // s a step's slides take
-  moves: 2,                 // platforms that may slide at once
-  near: 2,                  // the least that touch the top of the tower
+  moves: 3,                 // platforms that may slide at once
+  near: 3,                  // the least that touch the top of the tower
+  clear: 2.5,               // levels under the platforms' tops nothing of the tower may reach where they float
 });
 
 const TAU = Math.PI * 2;
 export const wrap = a => a - Math.floor(a + 0.5);   // turns into -0.5 .. 0.5
-// where along the ramp (turns from its foot) things are: the foot (0), the flat at the bridge
-// (j0 .. j1), the top (t) and the end of the landing there (end); door: the bridge's level
+// where along the ramp (turns from its foot) things are: the flat at the bridge (j0 .. j1), the
+// top (t); door: the bridge's level. Its middle is r(u) cells from the middle of the tower.
 export function rampMarks(door) {
-  const T = TOWER, j0 = (door - T.ground) / T.pitch, j1 = j0 + T.junction, t = j1 + (T.top - door) / T.pitch;
-  return { j0, j1, jc: (j0 + j1) / 2, t, end: t + T.landing };
+  const T = TOWER, t = (T.base - T.crown - T.path) / T.path, pitch = (T.top - T.ground) / (t - T.junction);
+  const j0 = (door - T.ground) / pitch, j1 = j0 + T.junction;
+  return { j0, j1, jc: (j0 + j1) / 2, t, pitch };
 }
-// the ramp's height (levels) u turns from its foot
+export const rampRadius = u => TOWER.base - TOWER.path / 2 - TOWER.path * u;
+// the ramp's height (levels) u turns from its foot (under 0: the caldera's floor; over t: the top)
 export function rampHeight(u, door) {
   const T = TOWER, m = rampMarks(door);
   if (u <= 0) return T.ground;
-  if (u < m.j0) return T.ground + u * T.pitch;
+  if (u < m.j0) return T.ground + u * m.pitch;
   if (u < m.j1) return door;
-  if (u < m.t) return door + (u - m.j1) * T.pitch;
+  if (u < m.t) return door + (u - m.j1) * m.pitch;
   return T.top;
 }
 // The ramp turns round the middle the way `spin` says (1 or -1) and the bridge joins it on the
-// side of the doorway (angle `at`, radians: atan2(dz, dx)). angle -> the turns u (from the foot)
-// the ramp passes over it: one u each turn, within the ramp
-export function rampTurns(angle, at, spin, door) {
-  const m = rampMarks(door), d = wrap(spin * (angle - at) / TAU), out = [];
-  for (let k = Math.ceil(-m.jc - d - 1e-9); m.jc + d + k <= m.end; k++) if (m.jc + d + k >= 0) out.push(m.jc + d + k);
-  return out;
+// side of the doorway (angle `at`, radians: atan2(dz, dx)). The turns u the ramp is at where it
+// passes the point r cells from the middle at angle `angle` (null: the ramp never passes there)
+export function rampAt(r, angle, at, spin, door) {
+  const m = rampMarks(door), d = wrap(spin * (angle - at) / TAU);
+  const k = Math.round((TOWER.base - TOWER.path / 2 - r) / TOWER.path - (m.jc + d));
+  return m.jc + d + k;
 }
 // the angle (radians) the ramp is at u turns from its foot
 export const rampAngle = (u, at, spin, door) => at + spin * (u - rampMarks(door).jc) * TAU;
 // the point on the middle of the ramp u turns from its foot: { x, z } (cells), y in levels
 export function rampPoint(u, at, spin, door) {
-  const a = rampAngle(u, at, spin, door), r = (TOWER.core + TOWER.ring) / 2;
+  const a = rampAngle(u, at, spin, door), r = rampRadius(u);
   return { x: TOWER.mid + Math.cos(a) * r, z: TOWER.mid + Math.sin(a) * r, y: rampHeight(u, door) };
 }
 
@@ -132,42 +138,91 @@ export function stepLava(w, dt) {
 }
 
 // --- the platforms -------------------------------------------------------------------------
-// The slots: a ring of 2 x 2 cells round the tower's block (the caldera's 12 x 12 cells cut into
-// 6 x 6 slots; the middle 4 x 4 is the tower's). slot -> { i, j (slot grid), x, z (its first cell) }
-export const SLOTS = (() => {
+// The slots (map.movers.slots, cubegen/towerarena.js): the caldera's 14 x 14 cells cut into 7 x 7
+// slots of 2 x 2, less the middle 3 x 3 (the top of the tower) and any where the tower reaches up
+// too close under them; `next`: the slots next to each (along the grid). Slot -> { i, j (slot
+// grid), x, z (its first cell) }.
+export function slotGrid() {
   const out = [];
-  for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) if (i === 0 || j === 0 || i === 5 || j === 5)
+  for (let j = 0; j < 7; j++) for (let i = 0; i < 7; i++) if (i < 2 || j < 2 || i > 4 || j > 4)
     out.push({ i, j, x: TOWER.pit[0] + i * PLATFORMS.size, z: TOWER.pit[0] + j * PLATFORMS.size });
   return out;
-})();
-// the slots next to each (along the grid)
-export const SLOT_NEXT = SLOTS.map(a => SLOTS.flatMap((b, k) => Math.abs(a.i - b.i) + Math.abs(a.j - b.j) === 1 ? [k] : []));
+}
+export const slotNext = slots => slots.map(a => slots.flatMap((b, k) => Math.abs(a.i - b.i) + Math.abs(a.j - b.j) === 1 ? [k] : []));
 
 // One step of the puzzle: up to `moves` platforms slide into an empty slot next to theirs (not
-// back where they just came from), and the platforms touching the top of the tower stay at least
-// `near`. occ: slot -> platform (or -1); last: platform -> the slot it left on its last slide;
-// touch: the slots touching the top; R: random numbers. -> [{ p, from, to }]
-// (when no platform can slide but back where it came from, one may: the puzzle never stops)
-export function puzzleMoves(occ, last, touch, R, back = false) {
-  const P = PLATFORMS, cand = [];
-  for (let a = 0; a < SLOTS.length; a++) if (occ[a] >= 0) for (const b of SLOT_NEXT[a]) if (occ[b] < 0 && (back || last[occ[a]] !== b)) cand.push([a, b]);
-  const moves = [], used = new Set();
-  let near = touch.filter(s => occ[s] >= 0).length;
-  while (cand.length && moves.length < P.moves) {
-    const [a, b] = cand.splice(Math.floor(R() * cand.length), 1)[0];
-    if (used.has(a) || used.has(b)) continue;
-    const change = (touch.includes(b) ? 1 : 0) - (touch.includes(a) ? 1 : 0);
-    if (near + change < P.near) continue;
-    near += change; used.add(a); used.add(b);
-    moves.push({ p: occ[a], from: a, to: b });
+// back where they just came from, unless nothing else can move: the puzzle never stops), and the
+// platforms touching the top of the tower stay at least `near`. It leans towards slides that
+// leave nobody alone: a platform with none next to it slides to one, or one slides next to it, so
+// whoever stands on one can always (soon) jump on to another. occ: slot -> platform (or -1);
+// last: platform -> the slot it left on its last slide; touch: the slots touching the top;
+// next: the slots next to each; R: random numbers. -> [{ p, from, to }]
+export function puzzleMoves(occ, last, touch, next, R, back = false) {
+  const P = PLATFORMS, held = s => occ[s] >= 0;
+  const alone = (s, but = -1) => next[s].every(c => c === but || !held(c));
+  const cand = [];
+  for (let a = 0; a < occ.length; a++) if (held(a)) for (const b of next[a]) if (!held(b) && (back || last[occ[a]] !== b)) {
+    const after = next[b].filter(c => c !== a && held(c));
+    let score = 1;
+    if (after.length) score += alone(a) ? 6 : 1;                                       // (it was alone: now it is not)
+    score += 4 * after.filter(c => alone(c, a)).length;                               // (it joins one that was alone)
+    score -= 3 * next[a].filter(c => c !== b && held(c) && alone(c, a) && !next[b].includes(c)).length;   // (it leaves one alone)
+    cand.push({ a, b, w: Math.max(0.2, score) });
   }
-  return moves.length || back ? moves : puzzleMoves(occ, last, touch, R, true);
+  const moves = [], used = new Set(), all = [...cand];
+  let near = touch.filter(s => held(s)).length;
+  const take = c => {
+    if (moves.length >= P.moves || used.has(c.a) || used.has(c.b)) return false;
+    const change = (touch.includes(c.b) ? 1 : 0) - (touch.includes(c.a) ? 1 : 0);
+    if (near + change < P.near) return false;
+    near += change; used.add(c.a); used.add(c.b);
+    moves.push({ p: occ[c.a], from: c.a, to: c.b });
+    return true;
+  };
+  // first, one for each platform that is alone: it slides next to another, or another next to it
+  for (let s = 0; s < occ.length && moves.length < P.moves; s++) if (held(s) && alone(s)) {
+    const fix = cand.filter(c => (c.a === s && next[c.b].some(x => x !== s && held(x) && !used.has(x))) || (c.a !== s && !used.has(s) && next[c.b].includes(s)));
+    let done = false;
+    while (fix.length && !done) {
+      const c = fix.splice(Math.floor(R() * fix.length), 1)[0];
+      if (!take(c)) continue;
+      // (and whom it is next to now stays where it is this step)
+      for (const x of next[c.b]) if (x !== c.a && held(x)) used.add(x);
+      done = true;
+    }
+    if (done) continue;
+    // none slides next to it at once: the nearest one (over empty slots) comes a slot closer
+    const from = new Map([[s, -1]]), queue = [s];
+    let found = -1;
+    for (let i = 0; i < queue.length && found < 0; i++) for (const c of next[queue[i]]) {
+      if (from.has(c)) continue;
+      from.set(c, queue[i]);
+      if (held(c)) { if (!used.has(c)) { found = c; break; } } else queue.push(c);
+    }
+    if (found >= 0 && !used.has(s)) {
+      const path = [found];
+      while (path[0] !== s) path.unshift(from.get(path[0]));
+      // (both come a slot closer while there are two empty ones between them, else only the other)
+      if (path.length > 3 && !(last[occ[s]] === path[1] && R() < 0.5)) take({ a: s, b: path[1] });
+      if (take({ a: found, b: path.at(-2) })) used.add(s);
+    }
+  }
+  while (cand.length && moves.length < P.moves) {
+    let r = R() * cand.reduce((n, c) => n + c.w, 0), i = 0;
+    while (i < cand.length - 1 && (r -= cand[i].w) > 0) i++;
+    take(cand.splice(i, 1)[0]);
+  }
+  if (moves.length) return moves;
+  if (!back) return puzzleMoves(occ, last, touch, next, R, true);
+  // (and should nothing else move at all, one leaves the top: they must not stop)
+  const any = all[0] ?? null;
+  return any ? [{ p: occ[any.a], from: any.a, to: any.b }] : [];
 }
 // the platforms' first slots (count of them, at least `near` touching the top)
-export function puzzleStart(touch, R) {
-  const order = SLOTS.map((_, k) => [k, R()]).sort((a, b) => a[1] - b[1]).map(([k]) => k);
+export function puzzleStart(slots, touch, R) {
+  const order = slots.map((_, k) => [k, R()]).sort((a, b) => a[1] - b[1]).map(([k]) => k);
   const near = order.filter(k => touch.includes(k)).slice(0, PLATFORMS.near), rest = order.filter(k => !near.includes(k));
-  return [...near, ...rest].slice(0, PLATFORMS.count).sort((a, b) => a - b);
+  return [...near, ...rest].slice(0, Math.min(PLATFORMS.count, slots.length - 4)).sort((a, b) => a - b);
 }
 const ease = u => u * u * (3 - 2 * u);
 // The puzzle at time t (s): { occ, moves (this step's), u (how far they are) }, replayed from the
@@ -177,12 +232,12 @@ export function puzzleAt(movers, t, cache) {
   const P = PLATFORMS, n = Math.max(0, Math.floor(t / P.every));
   if (!cache.occ || cache.n > n || cache.movers !== movers) {
     cache.movers = movers; cache.n = 0;
-    cache.occ = new Int8Array(SLOTS.length).fill(-1);
+    cache.occ = new Int8Array(movers.slots.length).fill(-1);
     movers.start.forEach((s, p) => { cache.occ[s] = p; });
     cache.last = new Array(movers.start.length).fill(-1);
     cache.moves = null;
   }
-  const stepMoves = k => puzzleMoves(cache.occ, cache.last, movers.touch, mulberry32(movers.seed ^ Math.imul(k + 1, 0x9e3779b1)));
+  const stepMoves = k => puzzleMoves(cache.occ, cache.last, movers.touch, movers.next, mulberry32(movers.seed ^ Math.imul(k + 1, 0x9e3779b1)));
   if (!cache.moves) cache.moves = stepMoves(cache.n);
   while (cache.n < n) {
     for (const m of cache.moves) { cache.occ[m.from] = -1; cache.occ[m.to] = m.p; cache.last[m.p] = m.from; }
@@ -193,9 +248,9 @@ export function puzzleAt(movers, t, cache) {
 }
 // Where each platform is at time t: [{ p, x, z }] (its first corner, cells)
 export function platformsAt(movers, t, cache) {
-  const { occ, moves, u } = puzzleAt(movers, t, cache), out = [];
-  for (let s = 0; s < SLOTS.length; s++) if (occ[s] >= 0) {
-    const m = moves.find(m => m.from === s), a = SLOTS[s], b = m ? SLOTS[m.to] : a;
+  const { occ, moves, u } = puzzleAt(movers, t, cache), out = [], S = movers.slots;
+  for (let s = 0; s < S.length; s++) if (occ[s] >= 0) {
+    const m = moves.find(m => m.from === s), a = S[s], b = m ? S[m.to] : a;
     out.push({ p: occ[s], x: a.x + (b.x - a.x) * (m ? u : 0), z: a.z + (b.z - a.z) * (m ? u : 0) });
   }
   return out.sort((a, b) => a.p - b.p);

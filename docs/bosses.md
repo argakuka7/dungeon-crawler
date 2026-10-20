@@ -541,31 +541,36 @@ the platforms in `src/game/movers.js` (drawn by `render/movers.js`), the lava's 
 | XP | 650 grown; coins 170–300 at level 1; two weapons and two potions like a descent guardian |
 | Poise | 2 s |
 
-Lava does not burn him (`lavaproof`, `physics/fluid.js enemyUnder`), nor his Fire-cats.
+Lava does not burn him (`lavaproof`, `physics/fluid.js enemyUnder`), nor his Fire-faces and
+Fire-cats: where it stands over the floor under them they walk on its surface (`game/tide.js
+walkOnLava`), wherever the floors lead them.
 
 ### His arena: the caldera
 
 His descent arena is always a caldera (`BOSS_ARENAS.foggery.type`, `cubegen/towerarena.js`): a rim
-of rock round the cube a cell in from its edge, 22 to 24 levels high, holds in the lava that fills
-the floor of the caldera (`map.tide`, its levels below). The doorway is a gap in the rim, eight
-levels up and in the middle of its face (`BOSS_ARENAS.foggery.door`, `centre`: `world/faces.js`
-gives the face between his arena and the room before it that level and position, so the room
-before has its doorway there too). From it a stone bridge two cells wide leads over the lava to
-the tower in the middle.
+of rock 22 to 24 levels high holds in the lava that fills the floor of the caldera (`map.tide`, its
+levels below). The rim is the cube's own outer ring of cells, so like Flip's box it does not match
+the neighbours' ground (only the doorway does). The doorway is a gap in it, eight levels up and in
+the middle of its face (`BOSS_ARENAS.foggery.door`, `centre`: `world/faces.js` gives the face
+between his arena and the room before it that level and position, so the room before has its
+doorway there too). From it a stone bridge three cells wide leads over the lava to the tower.
 
-The tower (`TOWER`): a solid core (2.2 cells round the middle) as high as its top (level 20), and
-round it, out to 4.3 cells, a ramp winding up from the caldera's floor (level 1) to the top, ten
-levels a turn, the way it turns (`spin`) drawn from the seed. It is flat where the bridge joins it
-(the junction, on the doorway's side, at the bridge's level) and for 0.4 of a turn at the top (the
-landing): the core and the landing are the top of the tower. Each turn is a slab two levels thick
-over the one below, with room enough to walk under (three levels at least); low down, near the
-floor, the ramp is solid to the ground. The ramp's corners follow its height round the middle, so
-it is a smooth spiral for the physics and the eye; floors meeting edge to edge are linked. Low
-stone parapets run along the ramp and the bridge where they drop away (`fences`, `style: 'stone'`),
-none round the top. The tower, the ramp and the bridge are dark basalt (`paint: 'basalt'`, drawn
-with the structures' stone, `render/floors.js`), the caldera's floor a crust of ash (`'ash'`). The
-well lies on the caldera's floor in a far corner, under the lava until he is beaten; the way to
-it from the doorway goes over the bridge, down the ramp and across the floor.
+The tower (`TOWER`) is a stepped cone in the middle, 6.2 cells round at its foot and half that at
+its top (level 20), clear of the rim all round. A ramp 1.5 cells wide winds up round it from the
+caldera's floor (level 1) to the top, a cell and a half further in each turn, about 1.4 turns, the
+way it turns (`spin`) drawn from the seed; on its inner side a wall goes up to the turn above. It is
+flat where the bridge joins it (the junction, on the doorway's side, at the bridge's level). Every
+point of the tower is on one turn of the ramp (`rampAt`) or on the top, so there is one floor to a
+column (but the bridge over the caldera's floor). The ramp's corners follow its height round the
+middle, so it is a smooth spiral for the physics and the eye; floors meeting edge to edge are
+linked. Low stone parapets run along the ramp and the bridge where they drop away (`fences`,
+`style: 'stone'`), none round the top. The tower, the ramp and the bridge are dark basalt
+(`paint: 'basalt'`, drawn with the structures' stone, `render/floors.js`), the caldera's floor a
+crust of ash (`'ash'`). Loose stones, rubble and gravel lie about the tower and the bridge, volcanic
+rocks, pumice and obsidian on the caldera's floor (`arenaPlacements`; under the lava till he is
+beaten), none in the doorway or on the well. The well lies on the caldera's floor in a far corner,
+under the lava until he is beaten; the way to it from the doorway goes over the bridge, down the
+ramp and across the floor.
 
 **The lava** is a standing fluid like Squarlo's tide (`physics/fluid.js setTide`, drawn like a
 trial's rising fluid, `render/trials.js`), in the box of the caldera's cells. His `tide` says where
@@ -574,19 +579,23 @@ under the top), more over the top (`LAVA.flood`, level 20.6: the top is drowned)
 drained (`LAVA.gone`). Beaten, it is gone for good (`map.tide.gone`: `game/tide.js` drains it, and
 there is none the next time you come).
 
-**The platforms** (`PLATFORMS`, `map.movers`): the caldera's twelve by twelve cells are 36 slots of
-two by two; the ring of 20 slots round the tower's block holds 13 stone platforms. They are not
-there at first: once the lava has risen to its highest they rise up out of it (1.8 s) and stay for
-the rest of the visit (a death or leaving the cube puts them back under, `game/movers.js`). Their
-tops float a level over the top of the tower (a jump up), 0.2 cells over the drowned top. Every
-2 s up to two of them slide into an empty slot next to theirs (in 1.2 s), never back where they just
-came from (unless nothing else can move), and at least two of the slots touching the top of the
-tower stay filled (`touch`, `puzzleMoves`). Nobody can steer them; what stands on one is carried
-along (`physics/move.js`). The puzzle is a function of its clock alone (`puzzleAt`): every game
-that knows the clock sees the same. They are surfaces like floors for the physics
-(`physics/collide.js setMovers`: ground, walls, ceilings, solids). Walking off one stops at its
-edge like at any edge over lava; a jump goes across to a platform next to it (an empty slot
-between two is too far).
+**The platforms** (`PLATFORMS`, `map.movers`): the caldera's fourteen by fourteen cells are 7 x 7
+slots of two by two; less the middle three by three (the top) and any where the tower reaches up
+close under them (`clear`: the end of the ramp), about 35 of them hold 22 stone platforms
+(`slots`, `next`: the slots next to each). They are not there at first: once the lava has risen to
+its highest they rise up out of it (1.8 s) and stay for the rest of the visit (a death or leaving
+the cube puts them back under, `game/movers.js`). Their tops float a level over the top of the
+tower (a jump up), 0.2 cells over the drowned top. Every 2 s up to three of them slide into an
+empty slot next to theirs (in 1.2 s), never back where they just came from (unless nothing else can
+move), and at least three of the slots touching the top of the tower stay filled (`touch`,
+`puzzleMoves`). They never stop. They lean towards leaving nobody alone: a platform with none next
+to it slides next to another (or another next to it), else the nearest comes a slot closer, so
+whoever stands on one can soon jump on to another (none stays alone for more than about ten
+steps, `tests/foggery.test.js`). Nobody can steer them; what stands on one is carried along
+(`physics/move.js`). The puzzle is a function of its clock alone (`puzzleAt`): every game that knows
+the clock sees the same. They are surfaces like floors for the physics (`physics/collide.js
+setMovers`: ground, walls, ceilings, solids). Walking off one stops at its edge like at any edge
+over lava; a jump goes across to a platform next to it (an empty slot between two is too far).
 
 **Falling into the lava** (`game/lavarescue.js`, `game/ragdoll.js dieInFluid`) costs a quarter of
 your most health (`FOGGERY_FIGHT.rescue`), and magic pulls you out to safe ground: where you last
@@ -608,7 +617,7 @@ all you have left does it kill you, like any lava.
   time, but the other while the first grows back.
 - **Fire-faces** (`FoggerySummon`, 1.5 s): he crouches, puffs up and croaks at 0.9 s: plain
   Fire-faces come out of his mouth onto the floors round him, as many as fill up to **three**,
-  every 10 s at most (the first after 4 s). The lava burns them (no reward).
+  every 10 s at most (the first after 4 s). They walk on the lava as it rises.
 - No blow takes him below two thirds before he is on top; there, he curls up. Brought there on the
   way, he hurries up (2.2× as fast) attacking no more.
 
@@ -642,7 +651,8 @@ tower over 6 s: "The lava swallows the tower! Jump onto the platforms!". From th
 over the drowned top at about the platforms' height, circling round it (`anchored`,
 `FOGGERY_FIGHT.orbit`), so that the platforms pass by him. He throws a **volley** of three
 fireballs fanned out instead of one, makes **geysers** burst through the platforms and still calls
-**his cats**: they wade through the lava on the drowned top, and his shield holds while they live.
+**his cats**: they walk on the lava, over the drowned top and wherever the floors under it lead,
+and his shield holds while they live.
 
 His death drains the lava away for good (7 s), takes his minions along and opens the well on the
 caldera's floor; floating, he sinks onto the floor under him, his loot with him.

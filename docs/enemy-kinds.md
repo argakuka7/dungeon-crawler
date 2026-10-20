@@ -182,7 +182,7 @@ a species of its own that only he brings (`MINION_PROFILES`); see [bosses.md](bo
 Squarlo's Tide squirtle (`jade.mid`, ×0.7 health, ×0.6 damage) is a Squirtle minion, and Flip's Sky
 wolla (`frost.light`, ×0.6 health and damage) a Wolla minion. Foggery's Fire-faces and Fire-cats are
 `plain` minions: they look like and are called what they are (×0.6 health and damage, the cats ×0.8
-health and `lavaproof`: they wade through his lava).
+health); both are `lavaproof`: they walk on his lava.
 
 The Crimson triangle also throws 20% more often (`cooldown` × 0.8). Grass snake, Sand viper,
 Blood viper and Shadow mamba are strength tiers: green, ochre, red, then near-black. The red

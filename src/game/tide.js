@@ -4,7 +4,7 @@
 // physics (physics/fluid.js setTide: what drowns, what is waded through) and is drawn
 // (render/trials.js: the trial's rising water, in the tide's box). Enemies it goes over drown,
 // but those that swim float in it.
-import { LH, WATER } from '../core/constants.js';
+import { LH, WATER, LAVA } from '../core/constants.js';
 import { tideLevel } from '../core/squarlo.js';
 import { setTide, standingAt, enemyUnder } from '../physics/fluid.js';
 import { setTrialWater } from '../render/trials.js';
@@ -42,6 +42,15 @@ export function drownEnemies(list) {
   for (const e of list) {
     if (e.mode === 'dead' || e.hp <= 0 || !enemyUnder(e)) continue;
     e.noReward = true; e.hp = 0; e.mode = 'dead'; e.deadT = 0; e.path = null; e.speed = 0;
+  }
+}
+// those lava does not burn (Foggery, his Fire-faces and Fire-cats: `lavaproof`) walk on it: where it
+// stands over the floor under them, they stand on its surface, wherever they move
+export function walkOnLava(list) {
+  for (const e of list) {
+    if (!e.profile.lavaproof || e.mode === 'dead' || e.anchored) continue;
+    const s = standingAt(e.x, e.z);
+    if (s?.fluid === LAVA && s.y > e.y) e.y = s.y;
   }
 }
 // those that swim float in deep water (their body half under; `swimming`), wherever they move

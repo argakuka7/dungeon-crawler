@@ -4,7 +4,7 @@ import { state } from './fixtures.js';
 import { World } from '../src/world/world.js';
 import { BOSSES, bossAt, BOSS_ARENAS } from '../src/core/bosses.js';
 import { FOGGERY, FOGGERY_BALL, FOG_FACE, FOG_CAT, FIREFACE, FIRECAT, ENEMY_KINDS, STAGE_PROFILES, wardedNow } from '../src/core/enemies.js';
-import { FOGGERY_FIGHT, TOWER, PLATFORMS, SLOTS, SLOT_NEXT, LAVA, splitHp, summonCount, barred, rampHeight, rampMarks,
+import { FOGGERY_FIGHT, TOWER, PLATFORMS, LAVA, splitHp, summonCount, barred, rampHeight, rampMarks, slotGrid, slotNext,
   newLava, moveLava, stepLava, puzzleMoves, puzzleStart, puzzleAt, platformsAt } from '../src/core/foggery.js';
 import { guardianLockMessage } from '../src/core/guardians.js';
 import { tideLevel } from '../src/core/squarlo.js';
@@ -33,7 +33,7 @@ test('Foggery takes the place of the descent guardian of depth 4, and only that 
   assert.deepEqual(STAGE_PROFILES.foggery, [FOGGERY, FOGGERY_BALL, FOGGERY_BALL]);
   // his minions: plain Fire-faces and Fire-cats, weaker, minions; the cats wade through lava
   assert.equal(FOG_FACE.label, FIREFACE.label); assert.equal(FOG_CAT.label, FIRECAT.label);
-  assert.ok(FOG_FACE.minion && FOG_CAT.minion && FOG_CAT.lavaproof && FOGGERY.lavaproof && !FOG_FACE.lavaproof);
+  assert.ok(FOG_FACE.minion && FOG_CAT.minion && FOG_CAT.lavaproof && FOGGERY.lavaproof && FOG_FACE.lavaproof);
   assert.ok(FOG_FACE.hp < FIREFACE.hp && FOG_CAT.hp < FIRECAT.hp);
 });
 
@@ -67,68 +67,98 @@ test('the lava: under the top in phases 1 and 2, over it in phase 3, under the p
   moveLava(w, LAVA.flood, 6); stepLava(w, 6); assert.equal(w.k, LAVA.flood);
 });
 
-test('the ramp winds up round the tower, with room to walk under each turn, and leads from the bridge to the top and down to the well', () => {
-  for (const seed of [0, 1, 2, 3, 4, 7, 11]) {
+test('the tower narrows as it rises, half as wide at the top, a ramp winding up round it from the floor to the top', () => {
+  const N = 16;
+  for (const seed of [0, 1, 2, 3, 4, 7, 11, 23]) {
     const { map } = fifthDescent(seed), t = map.tower;
-    // stacked floors leave room for him (and his ball) to walk under
-    for (const col of map.cols) for (let i = 1; i < col.length; i++) {
-      const lo = col[i - 1], hi = col[i];
-      assert.ok(hi.bottom - Math.max(...lo.cs) / LH >= HEAD, `${lo.x},${lo.z}: ${lo.top} under ${hi.bottom}`);
+    // the rim: the cube's own sides, all of them high (but the doorway)
+    for (let i = 0; i < N * N; i++) {
+      const x = i % N, z = (i / N) | 0;
+      if (x && z && x < N - 1 && z < N - 1) continue;
+      if (map.portals[0].cells.includes(i)) continue;
+      assert.ok(map.cols[i].every(f => f.top >= TOWER.rim[0]), `rim at ${x},${z}`);
     }
-    // the ramp: from the floor to the bridge to the top
+    // wide at the foot, half as wide at the top (and clear of the rim all round)
+    const reach = test => Math.max(...map.floors.filter(test).map(f => Math.hypot(f.x + 0.5 - TOWER.mid, f.z + 0.5 - TOWER.mid)));
+    const foot = reach(f => f.tower === 'ramp'), crown = reach(f => f.tower === 'top');
+    assert.ok(foot > 5 && foot < 6.6, 'foot ' + foot); assert.ok(crown < foot * 0.65, `crown ${crown} vs foot ${foot}`);
+    for (const f of map.floors) if (f.tower) assert.ok(f.x > 1 && f.z > 1 && f.x < N - 2 && f.z < N - 2 || f.tower === 'bridge', `${f.x},${f.z} by the rim`);
+    // the higher up the ramp, the nearer the middle
+    const ramp = map.floors.filter(f => f.tower === 'ramp'), r = f => Math.hypot(f.x + 0.5 - TOWER.mid, f.z + 0.5 - TOWER.mid);
+    const low = ramp.filter(f => f.top < 6), high = ramp.filter(f => f.top > 14);
+    assert.ok(low.reduce((n, f) => n + r(f), 0) / low.length > high.reduce((n, f) => n + r(f), 0) / high.length + 1);
+    // one floor to a column, but the bridge over the caldera's floor
+    for (const col of map.cols) assert.ok(col.length === 1 || col.length === 2 && col[1].tower === 'bridge');
     const m = rampMarks(t.door);
-    assert.equal(rampHeight(0, t.door), TOWER.ground); assert.equal(rampHeight(m.jc, t.door), t.door); assert.equal(rampHeight(m.end, t.door), TOWER.top);
+    assert.equal(rampHeight(0, t.door), TOWER.ground); assert.equal(rampHeight(m.jc, t.door), t.door); assert.equal(rampHeight(m.t, t.door), TOWER.top);
     const goal = map.cols[t.goal.z * 16 + t.goal.x].at(-1);
     assert.equal(goal.tower, 'top');
     for (const h of [FOGGERY.height, FOGGERY_BALL.height]) assert.ok(findPath(map.guardian.floor, goal, 200, h), `${seed}: he climbs to the top`);
     assert.ok(findPath(goal, map.portals[1].floor, 200, CHAR_H), `${seed}: the way down to the well`);
     // a slow walker up the ramp keeps ahead of the rising lava (half again as slow as walking)
     const path = findPath(map.portals[0].floor, goal, 200, CHAR_H);
-    let s = 0;
     path.forEach((f, i) => {
-      if (i) s += 1;
-      const at = s / WALK_SPEED * 1.5, lava = tideLevel(map.tide, Math.min(1, at / FOGGERY_FIGHT.lava.rise));
+      const at = i / WALK_SPEED * 1.5, lava = tideLevel(map.tide, Math.min(1, at / FOGGERY_FIGHT.lava.rise));
       assert.ok(floorY(f, 0.5, 0.5) / LH > lava, `${seed}: overtaken at ${f.x},${f.z} (${at.toFixed(1)} s)`);
     });
-    // his top: the core and the landing, all at the top's height, and some of it touches the platforms' slots
+    // the top: flat, a good few cells; some of the platforms' slots touch it
     const top = map.floors.filter(f => f.tower === 'top');
     assert.ok(top.length >= 28 && top.every(f => f.cs.every(y => y === TOWER.top * LH)));
     assert.ok(map.movers.touch.length >= PLATFORMS.near + 2);
-    // nothing of the arena stands where the platforms float
-    for (const s of SLOTS) for (let b = 0; b < 2; b++) for (let a = 0; a < 2; a++)
-      for (const f of map.cols[(s.z + b) * 16 + s.x + a]) assert.ok(Math.max(...f.cs) < map.movers.top - map.movers.thick - 1, `${f.x},${f.z}`);
+    // nothing of the tower reaches up close under where the platforms float
+    for (const s of map.movers.slots) for (let b = 0; b < 2; b++) for (let a = 0; a < 2; a++)
+      for (const f of map.cols[(s.z + b) * 16 + s.x + a]) assert.ok(Math.max(...f.cs) / LH <= PLATFORMS.top - PLATFORMS.clear, `${f.x},${f.z}`);
+    // stones and rocks lie about, none in the doorway
+    assert.ok(map.arenaPlacements.length > 20);
+    for (const q of map.arenaPlacements) assert.ok(!map.portals[0].cells.includes(Math.floor(q.z) * 16 + Math.floor(q.x)), q.name);
   }
 });
 
-test('the platforms slide like a sliding puzzle: into empty slots next to theirs, never overlapping, some always at the top', () => {
-  const { map } = fifthDescent(1), mv = map.movers, cache = {};
-  assert.equal(SLOTS.length, 20);
-  assert.equal(mv.start.length, PLATFORMS.count);
-  assert.ok(mv.start.filter(s => mv.touch.includes(s)).length >= PLATFORMS.near);
-  let prev = null;
-  for (let n = 0; n < 300; n++) {
-    const { occ, moves } = puzzleAt(mv, n * PLATFORMS.every, cache);
-    const held = [...occ].filter(p => p >= 0);
-    assert.equal(held.length, PLATFORMS.count); assert.equal(new Set(held).size, PLATFORMS.count);
-    assert.ok(mv.touch.filter(s => occ[s] >= 0).length >= PLATFORMS.near, `step ${n}`);
-    assert.ok(moves.length >= 1 && moves.length <= PLATFORMS.moves);
-    for (const m of moves) { assert.equal(occ[m.from], m.p); assert.equal(occ[m.to], -1); assert.ok(SLOT_NEXT[m.from].includes(m.to)); }
-    assert.equal(new Set(moves.map(m => m.to)).size, moves.length);
-    if (prev) for (let s = 0; s < 20; s++) assert.ok(occ[s] === prev.occ[s] || prev.moves.some(m => m.from === s || m.to === s));
-    prev = { occ: Int8Array.from(occ), moves };
+test('the platforms slide like a sliding puzzle: into empty slots next to theirs, never stopping, never overlapping, nobody left alone for long', () => {
+  for (const seed of [1, 4, 9]) {
+    const { map } = fifthDescent(seed), mv = map.movers, cache = {}, S = mv.slots;
+    assert.ok(S.length >= 30 && S.length <= slotGrid().length);
+    assert.deepEqual(mv.next, slotNext(S));
+    assert.equal(mv.start.length, PLATFORMS.count);
+    assert.ok(mv.start.filter(s => mv.touch.includes(s)).length >= PLATFORMS.near);
+    let prev = null;
+    const lonely = new Array(PLATFORMS.count).fill(0);
+    for (let n = 0; n < 2000; n++) {
+      const { occ, moves } = puzzleAt(mv, n * PLATFORMS.every, cache);
+      const held = [...occ].filter(p => p >= 0);
+      assert.equal(held.length, PLATFORMS.count); assert.equal(new Set(held).size, PLATFORMS.count);
+      assert.ok(mv.touch.filter(s => occ[s] >= 0).length >= PLATFORMS.near, `step ${n}`);
+      // they never stop
+      assert.ok(moves.length >= 1 && moves.length <= PLATFORMS.moves, `step ${n}: ${moves.length} moves`);
+      for (const m of moves) { assert.equal(occ[m.from], m.p); assert.equal(occ[m.to], -1); assert.ok(mv.next[m.from].includes(m.to)); }
+      assert.equal(new Set(moves.map(m => m.to)).size, moves.length);
+      if (prev) for (let s = 0; s < S.length; s++) assert.ok(occ[s] === prev.occ[s] || prev.moves.some(m => m.from === s || m.to === s));
+      prev = { occ: Int8Array.from(occ), moves };
+      // whoever stands on one can soon jump on to another: none stays alone long
+      for (let s = 0; s < S.length; s++) if (occ[s] >= 0) {
+        const p = occ[s], alone = mv.next[s].every(c => occ[c] < 0);
+        lonely[p] = alone ? lonely[p] + 1 : 0;
+        assert.ok(lonely[p] <= 10, `${seed}: platform ${p} alone for ${lonely[p]} steps at step ${n}`);
+      }
+    }
+    // every game that knows the time sees the same, whatever it asked before
+    assert.deepEqual(platformsAt(mv, 123.4, {}), platformsAt(mv, 123.4, cache));
+    // half way through a slide: between its slots
+    const t = 7 * PLATFORMS.every + PLATFORMS.move / 2, { moves } = puzzleAt(mv, t, {}), at = platformsAt(mv, t, {});
+    const m = moves[0], p = at.find(o => o.p === m.p);
+    assert.ok(Math.abs(p.x - (S[m.from].x + S[m.to].x) / 2) < 1e-9 && Math.abs(p.z - (S[m.from].z + S[m.to].z) / 2) < 1e-9);
   }
-  // every game that knows the time sees the same, whatever it asked before
-  const a = platformsAt(mv, 123.4, {}), b = platformsAt(mv, 123.4, cache);
-  assert.deepEqual(a, b);
-  // half way through a slide: between its slots
-  const t = 7 * PLATFORMS.every + PLATFORMS.move / 2, { moves } = puzzleAt(mv, t, {}), at = platformsAt(mv, t, {});
-  const m = moves[0], p = at.find(o => o.p === m.p);
-  assert.ok(Math.abs(p.x - (SLOTS[m.from].x + SLOTS[m.to].x) / 2) < 1e-9 && Math.abs(p.z - (SLOTS[m.from].z + SLOTS[m.to].z) / 2) < 1e-9);
-  // no move that would leave the top too few
-  const occ = new Int8Array(20).fill(-1), touch = [0, 1];
-  occ[0] = 0; occ[1] = 1;
-  for (let i = 0; i < 20; i++) assert.ok(puzzleMoves(occ, [-1, -1], touch, mulberry32(i)).every(m => touch.includes(m.to)));
-  assert.equal(puzzleStart(touch, mulberry32(3)).filter(s => touch.includes(s)).length, 2);
+  // no move that would leave the top too few, while another can move; and when none other can,
+  // they still do not stop
+  const slots = slotGrid(), next = slotNext(slots), occ = new Int8Array(slots.length).fill(-1), touch = [0, 1, 2];
+  occ[0] = 0; occ[1] = 1; occ[2] = 2; occ[20] = 3;
+  for (let i = 0; i < 20; i++) {
+    const moves = puzzleMoves(occ, [-1, -1, -1, -1], touch, next, mulberry32(i));
+    assert.ok(moves.length && moves.every(m => m.p === 3), JSON.stringify(moves));
+  }
+  occ[20] = -1;
+  assert.equal(puzzleMoves(occ, [-1, -1, -1], touch, next, mulberry32(1)).length, 1);
+  assert.equal(puzzleStart(slots, touch, mulberry32(3)).filter(s => touch.includes(s)).length, 3);
 });
 
 test('his fight: eyes thrown one at a time, Fire-faces, then the ball, his cats, fireballs and geysers', () => {

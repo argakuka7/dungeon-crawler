@@ -98,6 +98,14 @@ export async function runFoggeryChecks() {
     until(4, () => b.stage === 3, tough);
     run(8, tough);
     check(b.stage === 3 && b.anchored, 'phase 3: he floats over the drowned tower');
+    // his minions walk on the lava, never under it
+    let under = null;
+    run(6, () => { tough(); for (const e of allEnemies()) if (e !== b && e.mode !== 'dead' && e.y < lava() - 0.05) under = `${e.type} at ${e.y.toFixed(2)}`; });
+    check(!under, 'his minions walk on the lava: ' + under);
+    // the platforms keep moving
+    const was = moversNow().map(m => m.x0 + ',' + m.z0).join(' ');
+    run(PLATFORMS.every * 2, tough);
+    check(moversNow().map(m => m.x0 + ',' + m.z0).join(' ') !== was, 'the platforms keep moving');
     check(lava() > TOWER.top * LH, 'the lava over the top: ' + lava());
     check(player.y > lava(), 'the player safe on a platform');
     // into the lava: a quarter of one's health, and back onto safe ground

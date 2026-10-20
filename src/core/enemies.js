@@ -899,12 +899,13 @@ export const SKY_WOLLA = enemyKind(WOLLA, {
   aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.06), puff: { colors: ['#f0faff', '#bfe8ff', '#8fd0f8'], size: 0.6 },
   mods: { hp: 0.6, damage: 0.6, xp: 0.15 },
 });
-// Foggery's minions: plain Fire-faces (phase 1) and Fire-cats (phases 2 and 3: they guard him, and
-// lava does not burn them, `lavaproof`), weaker, going for the player at once. `plain`: they look
+// Foggery's minions: plain Fire-faces (phase 1) and Fire-cats (phases 2 and 3: they guard him); lava
+// does not burn them, they walk on it (`lavaproof`, game/tide.js walkOnLava); weaker, going for the
+// player at once. `plain`: they look
 // like and are called what they are, no kind of their own to tell apart.
 const EMBER_PUFF = { colors: ['#ffd25a', '#ff8a2a', '#5a4038'], size: 0.55 };
 export const FOG_FACE = enemyKind(FIREFACE, {
-  type: 'fogface', minion: true, plain: true, aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: EMBER_PUFF,
+  type: 'fogface', minion: true, plain: true, lavaproof: true, aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: EMBER_PUFF,
   mods: { hp: 0.6, damage: 0.6, xp: 0.15 },
 });
 export const FOG_CAT = enemyKind(FIRECAT, {
