@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { DISPLAY } from './fonts.js';
 
 const INDICATOR_SCALE = 1.15;
+const LABEL_SCALE = INDICATOR_SCALE * 1.15;   // level / name labels a touch larger than the bars
 const barGeo = new THREE.PlaneGeometry(1, 1);
 const mats = new Map();
 const mat = (color, onTop) => {
@@ -29,7 +30,7 @@ export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title 
   const canvas = document.createElement('canvas'); canvas.width = title ? 640 : 256; canvas.height = 64;
   const ctx = canvas.getContext('2d'), texture = new THREE.CanvasTexture(canvas);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false, depthTest: !onTop }));
-  sprite.scale.set((title ? 1.75 : .7) * INDICATOR_SCALE, .175 * INDICATOR_SCALE, 1);
+  sprite.scale.set((title ? 1.75 : .7) * LABEL_SCALE, .175 * LABEL_SCALE, 1);
   if (onTop) sprite.renderOrder = 1202;
   let shown = null;
   sprite.setLevel = n => {
@@ -39,7 +40,7 @@ export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title 
     ctx.font = `bold 48px ${DISPLAY}`;
     // Long encounter titles must not clip at the old fixed Guardian label width.
     canvas.width = Math.ceil(Math.max(title ? 640 : 256, ctx.measureText(text).width + 24));
-    sprite.scale.x = canvas.width / 256 * .7 * INDICATOR_SCALE;
+    sprite.scale.x = canvas.width / 256 * .7 * LABEL_SCALE;
     ctx.font = `bold 48px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const x = canvas.width / 2;
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, x, 32);
