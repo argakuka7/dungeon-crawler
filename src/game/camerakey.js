@@ -1,12 +1,14 @@
 // The camera key (Tab, or C: core/keybinds.js `camera`; docs/camera.md). A tap switches
 // between the overview and the close view and keeps it (game/settings.js). Held, the mouse
-// turns the view while it moves (the close view also up and down); the cursor hides meanwhile
-// and what it points at stays as it was (game/pointer.js). The overview settles on the nearest
-// of its four sides when the key is let go. No pointer lock: the browser would show its banner
-// on every hold.
+// turns the overview while it moves; the cursor hides meanwhile and what it points at stays as
+// it was (game/pointer.js). The overview settles on the nearest of its four sides when the key
+// is let go. No pointer lock for that: the browser would show its banner on every hold. The
+// close view has the mouse captured anyway (game/mouselook.js), it turns without the key; there
+// a hold and a move only keep the tap from switching.
 import { keyPress, keyMove, keyRelease, snapYaw, clampPitch, YAW_PER_PX, PITCH_PER_PX } from '../core/view.js';
 import { view, state, setStatus } from './state.js';
 import { cameraMode, setCameraMode } from './settings.js';
+import { looking } from './mouselook.js';
 
 let key = null;   // the press going on: { code, t0, moved, orbiting }
 
@@ -42,7 +44,7 @@ function stop() {
 
 addEventListener('pointermove', e => {
   if (!key || e.pointerType === 'touch' || !canTurn()) return;
-  if (!keyMove(key, e.movementX, e.movementY)) return;
+  if (!keyMove(key, e.movementX, e.movementY) || looking()) return;
   view.orbiting = true;
   document.body.classList.add('orbiting');
   // right turns the view to the right (the yaw is where the camera stands, seen from the hero)

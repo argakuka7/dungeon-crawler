@@ -44,6 +44,8 @@ import { timeScale } from './game/juice.js';
 import { gameTime, pace } from './game/pace.js';
 import { teach, tickTeach } from './game/teach.js';
 import { updatePointer } from './game/pointer.js';
+import { updateMouseLook } from './game/mouselook.js';
+import { updateLockOn, updateLockMarker } from './game/lockon.js';
 import { depthOf } from './themes/depth.js';
 import { goHorde, goSpan, goFeature } from './game/dev.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './game/devspawn.js';
@@ -114,6 +116,7 @@ function frame(now = performance.now()) {
   const start = performance.now();
   const elapsed = Math.min(clock.getDelta(), MAX_STEP);
   updateLeave();   // "Leave the fight?" goes away once it cannot be answered (game/leavefight.js)
+  updateMouseLook();   // the close view captures the mouse, what needs the cursor gives it back (game/mouselook.js)
   if (state.mode === 'menu') { menuFrame(elapsed, start); return; }
   if (character.ready) character.group.visible = true;
   const dt = worldPaused() ? 0 : gameTime(elapsed) * timeScale(elapsed);
@@ -148,9 +151,11 @@ function frame(now = performance.now()) {
   updateConsole();   // the chat box: the chronicle and the game's last word (game/console.js)
   updateInventory();
   updateQuickbar(); updateTeleportMenu(); updateEffects(); updateTouch();
+  updateLockOn(pace.paused ? elapsed : dt);   // a lock-on swings the close view round (game/lockon.js)
   updateCamera(pace.paused ? elapsed : dt);   // paused by the Teacher (game/pace.js): the view still turns
   if (!state.transitioning) updateCut(dt);   // after the camera: the cut depends on what the camera can see
   updateLootLabels();   // after the camera too: labels sit over their items
+  updateLockMarker();   // and the lock-on's ring over its enemy
   updateTrialTip();   // after the camera too: the name of a trial over its portal (game/trials.js)
   drawMinimap();   // after the camera too: the map turns with it
   updateAim(allEnemies());   // the arc a flask in hand would fly (game/throws.js)

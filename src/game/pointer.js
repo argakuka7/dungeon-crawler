@@ -1,6 +1,8 @@
 // The mouse: where the cursor points in the world. Picks the floor under the cursor (by
 // marching the view ray through the collision data, skipping what the cutaway hides), a
-// point at the player's height for aiming, and the enemy under the cursor (hover).
+// point at the player's height for aiming, and the enemy under the cursor (hover). With mouse
+// look (the close view, game/mouselook.js) the cursor is the crosshair in the middle of the
+// screen, and an enemy locked on to (game/lockon.js) is the hovered one.
 import * as THREE from 'three';
 import { N, BASE } from '../core/constants.js';
 import { camera, renderer } from '../render/scene.js';
@@ -10,6 +12,8 @@ import { mapInfo } from './cutinfo.js';
 import { player, state, view } from './state.js';
 import { allEnemies } from './enemies.js';
 import { absent } from '../core/enemies.js';
+import { mouseLook } from './mouselook.js';
+import { lockTarget } from './lockon.js';
 
 const canvas = renderer.domElement;
 // mode: what the held button does ('move' | 'attack')
@@ -23,7 +27,7 @@ export function pointAt(x, y) {
   pointer.inside = true;
 }
 // (not while the mouse turns the view, game/camerakey.js: what it points at stays)
-canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && !view.orbiting) pointAt(e.clientX, e.clientY); });
+canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && !view.orbiting && !mouseLook()) pointAt(e.clientX, e.clientY); });
 canvas.addEventListener('pointerleave', () => { pointer.inside = false; });
 addEventListener('pointerup', e => { if (e.button === 0) pointer.down = false; });
 addEventListener('blur', () => { pointer.down = false; });
@@ -84,7 +88,8 @@ function pickEnemy() {
 export const hoveredEnemy = () => hovered;
 // once per frame, after the camera moved
 export function updatePointer() {
-  const e = pickEnemy();
+  if (mouseLook()) { pointer.ndc.set(0, 0); pointer.inside = true; }   // the crosshair
+  const e = (mouseLook() && lockTarget()) || pickEnemy();
   if (e === hovered) return;
   if (hovered) hovered.hovered = false;
   hovered = e;

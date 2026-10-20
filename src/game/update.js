@@ -2,7 +2,7 @@
 import { SIT_IMPACT, RAGDOLL_IMPACT, FALL_DAMAGE } from '../core/constants.js';
 import { player, state, worldPaused } from './state.js';
 import { sfx } from '../audio/sfx.js';
-import { inputDir, wantsWalk, takeJump, autoAttackHeld, autoAttack } from './input.js';
+import { inputDir, wantsWalk, takeJump, autoAttackHeld, autoAttack, lookHeld, lookAttack } from './input.js';
 import { updateSword, cancelSword } from './sword.js';
 import { holdPointer, followOrder, clearOrder } from './orders.js';
 import { canMoveCancel, cancelSwing, LUNGE_REACH } from '../core/combat.js';
@@ -45,6 +45,8 @@ export function updatePlayer(dt) {
   if (keys[0] || keys[1] || state.inventoryOpen) clearOrder(); else holdPointer(dt);   // (the inventory open: playing together)
   // held Shift: swing whenever an enemy is in reach, re-picking the target each time
   if (autoAttackHeld()) autoAttack();
+  // the button held with mouse look (the close view): keep attacking where the crosshair is
+  if (lookHeld()) lookAttack();
   const order = followOrder(dt);   // may queue an attack on its target
   updateSword(dt);
   let [dx, dz] = order ? [order.dx, order.dz] : keys;

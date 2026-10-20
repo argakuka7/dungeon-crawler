@@ -100,6 +100,11 @@
       <span id="settings-msaa-label">Anti-aliasing</span><div id="settings-msaa" class="settings-choice" role="group" aria-labelledby="settings-msaa-label"></div>
       <span id="settings-camera-label">Camera</span><div id="settings-camera" class="settings-choice" role="group" aria-labelledby="settings-camera-label"></div>
     </div>
+    <h2>Mouse</h2>
+    <div class="settings-sound">
+      <label for="settings-look-speed">Look speed</label><input id="settings-look-speed" type="range" min="20" max="300" step="10"><output id="settings-look-level" for="settings-look-speed"></output>
+      <span>Invert up / down</span><button id="settings-invert" aria-pressed="false">Off</button><span></span>
+    </div>
     <h2>Sound</h2>
     <div class="settings-sound">
       <span>Music</span><button id="settings-music" aria-pressed="false">Off</button><span></span>
@@ -121,6 +126,9 @@
   </div>
 </div>
 <div id="loot-labels"></div>
+<div id="crosshair" hidden></div>
+<div id="lock-marker" hidden></div>
+<div id="look-hint" hidden>Click to look around</div>
 <div id="inventory-overlay" hidden>
   <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title" tabindex="-1">
     <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><div id="inventory-tabs" role="tablist" aria-label="Bag or quests"><button role="tab" data-tab="bag" aria-selected="true">Bag</button><button role="tab" data-tab="quests" aria-selected="false">Quests</button></div><div id="inventory-currency" aria-label="Currency"></div><button id="inventory-close" aria-label="Close inventory">Close · Esc</button></header>

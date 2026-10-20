@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { snapYaw, SIDE0, closeDistance, clampPitch, PITCH, PITCH_MIN, PITCH_MAX, keyPress, keyMove, keyRelease, TAP_MS, ORBIT_PX } from '../src/core/view.js';
+import { snapYaw, SIDE0, closeDistance, clampPitch, PITCH, PITCH_MIN, PITCH_MAX, keyPress, keyMove, keyRelease, TAP_MS, ORBIT_PX,
+  look, forwardYaw, clampLookSpeed, LOOK_PER_PX, LOOK_SPEED_MIN, LOOK_SPEED_MAX } from '../src/core/view.js';
 import { DEFAULT_ZOOM, stepZoom } from '../src/core/zoom.js';
 import { ACTION, defaultBindings, resolveBindings } from '../src/core/keybinds.js';
 
@@ -31,6 +32,22 @@ test('the close view pitch stays within its limits', () => {
   assert.equal(clampPitch(PITCH), PITCH);
   assert.equal(clampPitch(-5), PITCH_MIN);
   assert.equal(clampPitch(5), PITCH_MAX);
+});
+
+test('mouse look: right turns right, down looks down, within the pitch limits', () => {
+  const r = look(1, PITCH, 100, 0);
+  assert.ok(close(r.yaw, 1 - 100 * LOOK_PER_PX) && r.pitch === PITCH);
+  // the view looks the other way from where the camera stands; turning right turns where it looks right
+  assert.ok(close(forwardYaw(0), Math.PI));
+  assert.ok(look(0, PITCH, 0, 20).pitch > PITCH);
+  assert.ok(look(0, PITCH, 0, 20, 1, true).pitch < PITCH);
+  assert.ok(close(look(0, PITCH, 100, 0, 2).yaw, 2 * look(0, PITCH, 100, 0).yaw));
+  assert.equal(look(0, PITCH, 0, 1e6).pitch, PITCH_MAX);
+  assert.equal(look(0, PITCH, 0, -1e6).pitch, PITCH_MIN);
+  assert.ok(PITCH_MIN < 0 && PITCH_MAX > 1, 'room to look up and down');
+  assert.equal(clampLookSpeed(undefined), 1);
+  assert.equal(clampLookSpeed(10), LOOK_SPEED_MAX);
+  assert.equal(clampLookSpeed(0), LOOK_SPEED_MIN);
 });
 
 test('the camera key: a quick tap switches, a hold or moving the mouse does not', () => {

@@ -13,12 +13,30 @@ export const snapYaw = yaw => SIDE0 + Math.round((yaw - SIDE0) / (Math.PI / 2)) 
 
 // The close view: the camera on an arm from a point at the hero's shoulders, `pitch` over the
 // level (rad, looking down; less looks up), as long as the zoom says (the same five presets:
-// about 1.5 to 4 units) and shorter where something is in the way (game/camera.js).
+// about 1.5 to 4 units) and shorter where something is in the way (game/camera.js). The middle
+// of the screen is the pivot, a little over the hero's head: the crosshair (game/mouselook.js).
 export const ANCHOR = 1.2;          // the arm's pivot over the feet
 export const AHEAD = 2;             // the camera looks at a point this far past the pivot
-export const PITCH = 0.24, PITCH_MIN = -0.1, PITCH_MAX = 0.85;
+export const PITCH = 0.24, PITCH_MIN = -0.45, PITCH_MAX = 1.1;
 export const clampPitch = p => Math.min(PITCH_MAX, Math.max(PITCH_MIN, p));
 export const closeDistance = zoom => 3 * (zoom / DEFAULT_ZOOM) ** 1.6;
+// where the close camera looks (seen from above): its yaw is where it stands, seen from the hero
+export const forwardYaw = yaw => yaw + Math.PI;
+
+// Mouse look (the close view, game/mouselook.js): rad the view turns per pixel the mouse moves,
+// at look speed 1 (the settings: a slider in percent, LOOK_SPEED_MIN to LOOK_SPEED_MAX)
+export const LOOK_PER_PX = 0.0035;
+export const LOOK_SPEED_MIN = 0.2, LOOK_SPEED_MAX = 3;
+export const clampLookSpeed = s => (Number.isFinite(s) ? Math.min(LOOK_SPEED_MAX, Math.max(LOOK_SPEED_MIN, s)) : 1);
+// what one mouse movement does to the view: { yaw, pitch } turned by (dx, dy) px; right turns
+// right (the yaw goes down), down looks down (the pitch goes up), unless `invert`
+export function look(yaw, pitch, dx, dy, speed = 1, invert = false) {
+  const k = LOOK_PER_PX * speed;
+  return { yaw: yaw - dx * k, pitch: clampPitch(pitch + dy * k * (invert ? -1 : 1)) };
+}
+// a mouse movement this big in one event is the browser's glitch (Chrome jumps right after
+// locking now and then), not the hand
+export const LOOK_SPIKE = 300;
 
 // The camera key: a tap switches the view, holding it while the mouse moves turns the view.
 // A press is a tap when it is let go within TAP_MS and the mouse did not turn the view; the

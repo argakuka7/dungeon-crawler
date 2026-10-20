@@ -2,9 +2,10 @@
 
 The game has two views. The **overview** (the default) looks down at 44° from far away with a
 narrow lens (28°), so the whole cube shows like a model on a table; zoomed in it follows the
-hero. The **close view** sits behind the hero with a wide lens (60°). It is meant for finding
-the way through tunnels, caves and the deep, where the overview's cutaway gets busy, and it
-works everywhere: cubes, tunnels, house interiors, while travelling.
+hero. The **close view** sits behind the hero with a wide lens (60°), the mouse looking around
+(captured, as in other third-person games). It is meant for finding the way through tunnels,
+caves and the deep, where the overview's cutaway gets busy, and it works everywhere: cubes,
+tunnels, house interiors, while travelling.
 
 ## The camera key (`game/camerakey.js`, `core/view.js`)
 
@@ -16,22 +17,78 @@ Tab is taken anyway.
 - **Tap** (let go within `TAP_MS`, 250 ms, without turning the view): switches between the
   overview and the close view. The choice sticks: it is a setting (`crawler.settings`
   `camera`, also in the settings menu under Graphics) and nothing switches it back on its own.
-- **Hold and move the mouse:** turns the view while the key is down. Turning starts once the
-  mouse moved `ORBIT_PX` (4 px), without waiting for the hold. Right turns the view to the
-  right; in the close view up and down tilt it (`PITCH_MIN` to `PITCH_MAX`). The cursor hides
-  and what it pointed at stays (game/pointer.js), so hovering and clicking do not drift.
-  Letting go after turning never switches the view.
+- **Hold and move the mouse:** turns the overview while the key is down. Turning starts once
+  the mouse moved `ORBIT_PX` (4 px), without waiting for the hold. Right turns the view to the
+  right. The cursor hides and what it pointed at stays (game/pointer.js), so hovering and
+  clicking do not drift. Letting go after turning never switches the view. (In the close view
+  the captured mouse turns it anyway, see below, and a hold and a move only keep the tap from
+  switching; while it is not captured the hold turns the close view, also up and down.)
 - **The overview settles on a side:** it keeps looking diagonally from one of four sides (the
   ones Q / E turn between); after the mouse turned it, letting go eases it to the nearest one
   (`snapYaw`). Switching from the close view to the overview does the same.
 - Key repeats are ignored; losing the window (blur) ends the turning without switching; the
   mouse does not turn the view with the inventory, the menu or "Leave the fight?" open.
-- No pointer lock: the browser would show its banner on every hold, and Chrome refuses to lock
-  again for a moment after Esc.
+- No pointer lock for the hold: the browser would show its banner on every hold, and Chrome
+  refuses to lock again for a moment after Esc.
 
 Q / E still turn by a quarter in both views; the zoom keys and the wheel keep their five
 presets, which in the close view set the arm's length (`closeDistance`: about 1.5 to 4 units).
 WASD always moves relative to the camera, so in the close view W runs away from it.
+
+## Mouse look (`game/mouselook.js`)
+
+The close view plays like other third-person games: the mouse is captured (pointer lock) and
+turns the view, there is no cursor and no walking by mouse.
+
+- **Turning:** right turns right, down looks down (`look`, `LOOK_PER_PX` 0.0035 rad a pixel),
+  at once, no easing. Up and down go from `PITCH_MIN` (-0.45, looking up) to `PITCH_MAX` (1.1,
+  steeply down); looking up, the arm meets the floor and comes in. The settings (Mouse) have
+  the look speed (20% to 300%) and invert up / down. One movement over `LOOK_SPIKE` (300 px)
+  is a browser glitch and is dropped, so is the first one after capturing.
+- **The crosshair** is the middle of the screen: the arm's pivot, a little over the hero's
+  head. It is the cursor now (game/pointer.js): the enemy on it is hovered (tinted, its health
+  shown), so are items, chests, villagers and a trial's parts (their labels show; they are not
+  clicked: `body.look`).
+- **Facing:** the hero turns to where it runs, as before; an attack turns it to its target
+  (the animator snaps into the swing), so it faces that way until the swing is over.
+- **Left click** (game/input.js `lookAttack`), held: again and again (game/update.js).
+  - What is hovered and in reach (a villager, an item, a closed chest, a trial's part): used,
+    as the action key would. Out of reach nothing walks there.
+  - A blade: the hovered enemy if the swing's step-in reaches it, else the best enemy in reach
+    within a radian either side of where the view looks (`softTarget`), else a swing that way
+    (towards the hovered enemy, or straight on). Unlike Shift it swings into the air.
+  - A bow, crossbow or staff: the hovered enemy (the shot aims at its body), else the best one
+    in sight within 0.35 rad of the view, else straight on, level.
+  - A flask in hand: thrown where the crosshair is (the arc shows it), else straight on; once
+    a click.
+- **Right click:** lock-on (below).
+- **Capturing:** whenever the close view is played and nothing needs the cursor: the Esc menu
+  and the settings, the inventory and trading, the chat, "Leave the fight?", the teleport
+  scroll's menu give it back while they are open; the overview and the main menu do too.
+  Browsers only capture right after a click or a key (`navigator.userActivation`; Esc does not
+  count), so switching to the close view with Tab, closing the inventory with I or the menu
+  with Resume captures again at once. Closed with Esc, or a page loaded straight into the close
+  view, a hint over the crosshair says "Click to look around"; that click only captures.
+- **Esc** while captured is the browser's: it gives the mouse back, and the page may never see
+  the key. So losing the capture on its own (Esc, another window) opens the Esc menu, and an
+  Esc arriving just after (`ESC_MS`) does not close it again. Chrome refuses to capture again
+  for about a second after that: a refused capture is tried again after `RETRY_MS`, or with the
+  next click.
+- Touch has no mouse look (the touch controls work as before in the close view).
+
+## Lock-on (`game/lockon.js`, `core/lockon.js`)
+
+- **Right click** locks on to the enemy under the crosshair, else the one nearest the middle of
+  the view (within `LOCK_CONE`, 1 rad either side; how far away counts a little), within
+  `LOCK_RANGE` (14 units) and in sight. The camera swings round (`LOCK_TURN`) to look past the
+  hero at it, a ring marks it, and it is the hovered enemy: clicks, Shift and flasks go for it,
+  its health shows. WASD runs relative to the camera, so A / D circle round it.
+- **A flick** of the mouse sideways (`FLICK_PX`, 90 px, quickly) moves the lock to the next
+  enemy on that side (within a quarter turn); slower movement does nothing sideways. Up and
+  down still tilt the view.
+- **Let go:** right click again; the enemy dead or gone; farther than `LOCK_DROP` (20 units);
+  out of sight for `LOCK_BLIND` (1.5 s); the overview; travelling.
+- **Nothing to lock on to:** the camera turns round behind the hero (where it faces).
 
 ## The close view (`game/camera.js`)
 
@@ -63,12 +120,21 @@ WASD always moves relative to the camera, so in the close view W runs away from 
 - Sounds pan by where they are on the screen; one behind the camera pans to the wrong side.
 - Enemies' silhouettes through walls show as in the overview, larger up close.
 - Touch has no camera key yet (its turn buttons and pinch work in both views).
+- The lock-on leaves the pitch to the mouse: an enemy far above or below can end up near the
+  edge of the screen.
+- The crosshair is over the hero's head, not over a shoulder: a bow aims level, the hovered
+  enemy is what aims it up or down.
 
 ## Checks
 
 - `tests/view.test.js`: the sides the overview settles on, the arm's lengths, the pitch limits,
-  the tap / hold decision and the default keys.
+  mouse look's turning (speed, invert, limits), the tap / hold decision and the default keys.
+- `tests/lockon.test.js`: which enemy the lock goes to, where a flick moves it, the locked
+  camera's yaw.
 - `tests/browser/camera.js` (`runCameraChecks()`): the keys, turning, settling, losing the
   window, the close view's cut and walls and lens, the arm out of the solids all around the
-  hero in a cave, the player's bar. The other browser checks run in the overview
+  hero in a cave, the player's bar; mouse look (capturing on a click, turning, speed and
+  invert, the crosshair as the cursor, what gives the mouse back, Esc opening the menu once, a
+  click attacking instead of walking) and the lock-on, with a stand-in for pointer lock
+  (headless Chrome has none). The other browser checks run in the overview
   (`paused()` in tests/browser/combat.js sets it and puts the setting back).

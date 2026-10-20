@@ -9,6 +9,10 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   attacking. WASD
   still moves and cancels any mouse order. The character only turns when you click
   (or move), never just from hovering. **Space:** movement-only jump.
+- **Mouse in the close view (third-person style, [camera.md](camera.md#mouse-look-gamemouselookjs)):**
+  the mouse looks around, a click attacks where the crosshair is (held: again and again; the
+  enemy on it, else the best one in reach ahead, else into the air), no walking by mouse; the
+  right button locks on to an enemy.
 - **Movement speed:** the player always runs, by keyboard and by mouse order; holding
   **left Ctrl** walks (right Ctrl is the action key, `game/action.js`). On the ground speed ramps up linearly, standing to a full run in
   `RUN_RAMP` (0.25 s, walking pace after about 0.17 s, so taps stay precise), and brakes

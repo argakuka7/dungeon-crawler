@@ -172,7 +172,7 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #settings-panel .settings-choice button.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }
 .settings-sound { display: grid; grid-template-columns: 9em 1fr 3.5em; align-items: center; gap: 8px 12px; color: #e6e9ef; }
 .settings-sound button { justify-self: start; min-width: 5em; }
-#settings-music.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }
+#settings-music.on, #settings-invert.on { color: #ffe4ae; border-color: #8a7a52; background: #2f3020; }
 .settings-sound input[type=range] { width: 100%; margin: 0; accent-color: #ffcf7a; }
 .settings-sound output { color: #aab3c2; text-align: right; }
 .settings-note { margin: 0 0 4px; color: #6f7a8c; font-size: 14px; }
@@ -265,6 +265,16 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 .compare-grid .arrow { color: #5f6b7b; }
 #inventory-item-compare .up { color: #7fd87a; } #inventory-item-compare .down { color: #ff7a6a; }
 #loot-labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+/* mouse look (the close view, game/mouselook.js): no cursor, labels are not clicked; the
+   crosshair in the middle, the hint while the mouse is not captured, the lock-on ring (game/lockon.js) */
+body.look #loot-labels .loot-label { pointer-events: none; }
+#crosshair { position: fixed; left: 50%; top: 50%; z-index: 5; width: 6px; height: 6px; margin: -4px 0 0 -4px; pointer-events: none;
+  border: 1px solid #000a; border-radius: 50%; background: #f4ead8e0; box-shadow: 0 0 0 1px #0004; }
+#look-hint { position: fixed; left: 50%; top: calc(50% - 24px); z-index: 5; transform: translate(-50%, -100%); pointer-events: none; padding: 6px 12px;
+  font: 15px/1.2 var(--font-body); color: #f4ead8; background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 4px; text-shadow: 0 1px 2px #000; }
+#lock-marker { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none;
+  border: 2px solid #ffcf7a; border-radius: 50%; box-shadow: 0 0 6px #000a, inset 0 0 4px #000a; box-sizing: border-box; }
+#lock-marker::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #ffcf7a; }
 .loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 15px/1.2 var(--font-body); padding: 2px 6px; white-space: nowrap;
   background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 3px; cursor: pointer; text-shadow: 0 1px 2px #000; }
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }

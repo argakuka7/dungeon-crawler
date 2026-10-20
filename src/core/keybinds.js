@@ -29,7 +29,7 @@ export const ACTIONS = [
   ...[1, 2, 3, 4, 5, 6].map(n => ({ id: `bar${n}`, label: `Quick bar ${n}`, group: 'Items', keys: [`Digit${n}`, null] })),
   { id: 'turnLeft', label: 'Turn the view left', group: 'View', keys: ['KeyQ', null] },
   { id: 'turnRight', label: 'Turn the view right', group: 'View', keys: ['KeyE', null] },
-  { id: 'camera', label: 'Camera: tap for the close view, hold to turn it with the mouse', group: 'View', keys: ['Tab', 'KeyC'] },
+  { id: 'camera', label: 'Camera: tap for the close view (mouse look), hold to turn the overview', group: 'View', keys: ['Tab', 'KeyC'] },
   { id: 'zoomIn', label: 'Zoom in', group: 'View', keys: ['KeyK', null] },
   { id: 'zoomOut', label: 'Zoom out', group: 'View', keys: ['KeyL', null] },
   { id: 'path', label: 'Show the generator path', group: 'View', keys: ['KeyP', null] },

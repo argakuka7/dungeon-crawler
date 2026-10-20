@@ -1,12 +1,14 @@
 // The settings (the settings menu, game/settingsmenu.js, changes them): the frame rate cap
 // (main.js) and the anti-aliasing (render/msaa.js), the camera (the overview or the close view,
-// game/camera.js; the camera key switches it too, game/camerakey.js), the music on or off, the music's and the sounds' volume, and the keys
+// game/camera.js; the camera key switches it too, game/camerakey.js), the mouse look's speed and
+// whether up and down are inverted (game/mouselook.js), the music on or off, the music's and the sounds' volume, and the keys
 // (core/keybinds.js). Kept in localStorage
 // (crawler.settings) as soon as they change, for every hero alike; the keys only as far as they
 // differ from the defaults. The music setting of before (crawler.music) is taken over once.
 import { resolveBindings, overrides, assignKey, clearKey, actionsFor, defaultBindings, keyName, BAR_ACTIONS } from '../core/keybinds.js';
 import { setMusicEnabled } from '../audio/music.js';
 import { setVolume } from '../audio/context.js';
+import { clampLookSpeed } from '../core/view.js';
 
 const KEY = 'crawler.settings', OLD_MUSIC = 'crawler.music';
 const listeners = new Set();
@@ -30,6 +32,7 @@ const stored = read();
 const settings = {
   fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS), msaa: oneOf(ANTIALIAS, stored.msaa, DEFAULT_MSAA),
   camera: oneOf(CAMERAS, stored.camera, CAMERAS[0]),
+  lookSpeed: clampLookSpeed(stored.lookSpeed), invertLook: stored.invertLook === true,
   music: stored.music === true,
   musicVolume: volume(stored.musicVolume), soundVolume: volume(stored.soundVolume),
   keys: resolveBindings(stored.keys),
@@ -40,7 +43,8 @@ function changed() {
   setVolume('music', settings.musicVolume);
   setVolume('sounds', settings.soundVolume);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, camera: settings.camera, music: settings.music, musicVolume: settings.musicVolume,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, camera: settings.camera,
+      lookSpeed: settings.lookSpeed, invertLook: settings.invertLook, music: settings.music, musicVolume: settings.musicVolume,
       soundVolume: settings.soundVolume, keys: overrides(settings.keys) }));
   } catch { /* private mode: for this page only */ }
   for (const fn of listeners) fn();
@@ -59,6 +63,13 @@ export const antialias = () => settings.msaa;
 export function setAntialias(samples) { settings.msaa = oneOf(ANTIALIAS, samples, DEFAULT_MSAA); changed(); }
 export const cameraMode = () => settings.camera;
 export function setCameraMode(mode) { settings.camera = oneOf(CAMERAS, mode, CAMERAS[0]); changed(); }
+
+// --- mouse --------------------------------------------------------------------------------------
+
+export const lookSpeed = () => settings.lookSpeed;
+export function setLookSpeed(s) { settings.lookSpeed = clampLookSpeed(s); changed(); }
+export const invertLook = () => settings.invertLook;
+export function setInvertLook(on) { settings.invertLook = !!on; changed(); }
 
 // --- sound --------------------------------------------------------------------------------------
 

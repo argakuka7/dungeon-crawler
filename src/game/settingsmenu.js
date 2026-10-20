@@ -1,5 +1,6 @@
 // The settings menu, from the Esc menu (game/escmenu.js) and the main menu (game/menu.js): the
-// frame rate cap and the anti-aliasing, the camera (overview or close view), the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
+// frame rate cap and the anti-aliasing, the camera (overview or close view), the mouse look's speed
+// and inverting it up and down, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
 // The keys come in tabs, one per kind of control (core/keybinds.js GROUPS; Left and Right go
@@ -9,6 +10,7 @@
 import { ACTIONS, ACTION, GROUPS, UNBINDABLE } from '../core/keybinds.js';
 import {
   FRAME_RATES, frameRate, setFrameRate, antialias, setAntialias, cameraMode, setCameraMode,
+  lookSpeed, setLookSpeed, invertLook, setInvertLook,
   musicOn, setMusic, musicVolume, setMusicVolume, soundVolume, setSoundVolume,
   keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange,
 } from './settings.js';
@@ -55,6 +57,14 @@ function renderGraphics() {
   choice($('settings-msaa'), MSAA_LEVELS.map(n => [n, n ? `${n}x` : 'Off']), msaaLevel(antialias()));
   choice($('settings-camera'), [['overview', 'Overview'], ['close', 'Close']], cameraMode());
 }
+function renderMouse() {
+  const inverted = invertLook(), speed = Math.round(lookSpeed() * 100);
+  $('settings-look-speed').value = String(speed);
+  $('settings-look-level').textContent = `${speed}%`;
+  $('settings-invert').textContent = inverted ? 'On' : 'Off';
+  $('settings-invert').setAttribute('aria-pressed', String(inverted));
+  $('settings-invert').classList.toggle('on', inverted);
+}
 function renderSound() {
   const on = musicOn();
   $('settings-music').textContent = on ? 'On' : 'Off';
@@ -90,7 +100,7 @@ function render() {
   const onTab = document.activeElement?.closest?.('#settings-tabs');
   const pressed = document.activeElement?.closest?.('.settings-choice [data-value]');
   const chosen = pressed && { box: pressed.parentElement.id, value: pressed.dataset.value };
-  renderGraphics(); renderSound(); renderKeys();
+  renderGraphics(); renderMouse(); renderSound(); renderKeys();
   // the focus stays on the key place, the tab or the choice it was on (they were drawn anew)
   if (chosen) $(chosen.box).querySelector(`[data-value="${chosen.value}"]`)?.focus();
   else if (place) keysBox.querySelector(`[data-id="${place.id}"][data-slot="${place.slot}"]`)?.focus();
@@ -164,6 +174,8 @@ $('settings-msaa').addEventListener('click', e => {
   const b = e.target.closest('[data-value]');
   if (b) setAntialias(Number(b.dataset.value));
 });
+$('settings-look-speed').addEventListener('input', e => setLookSpeed(e.target.value / 100));
+$('settings-invert').onclick = () => setInvertLook(!invertLook());
 $('settings-music').onclick = () => setMusic(!musicOn());
 $('settings-music-volume').addEventListener('input', e => setMusicVolume(e.target.value / 100));
 $('settings-sound-volume').addEventListener('input', e => setSoundVolume(e.target.value / 100));

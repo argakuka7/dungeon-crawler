@@ -11,7 +11,10 @@
 // (Enter is the chat, game/console.js). I (or V): the inventory, with the floor in reach beside the bag
 // when something lies there (game/inventory.js); U: the inventory's quests tab; X: item labels.
 // Tab or C: the camera key (game/camerakey.js): a tap switches the overview and the close view,
-// held it lets the mouse turn the view. 1-6: the quick bar (game/
+// held it lets the mouse turn the overview. In the close view the mouse looks around (captured,
+// game/mouselook.js) and there is no walking by mouse: a click attacks where the crosshair is
+// (hold for more; a flask is thrown there; what is under it and in reach is used instead), the
+// right button locks on to an enemy (game/lockon.js). 1-6: the quick bar (game/
 // quickbar.js; while the teleport scroll asks where to, they pick there: game/teleportmenu.js). Touch (game/touch.js) feeds the same paths: its stick moves like the keys, its
 // action button holds like Shift, its use button is the action key, and a tap on the game
 // clicks there without walking.
@@ -19,14 +22,14 @@ import { stepZoom } from '../core/zoom.js';
 import { player, state, view, setStatus } from './state.js';
 import { spawnEntry, nextCube } from './flow.js';
 import { knockDown } from './ragdoll.js';
-import { toggleInventory, toggleQuests, setInventoryOpen } from './inventory.js';
+import { toggleInventory, toggleQuests, setInventoryOpen, talkTo } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
 import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
-import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart } from './orders.js';
+import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart, canTrade } from './orders.js';
 import { hoveredPickup, hoveredChest, hoveredVillager, hoveredPart, toggleLabels, updateLootLabels } from './lootlabels.js';
 import { queueAttack } from './sword.js';
-import { softTarget, combatStats, readiedFlask } from '../core/combat.js';
+import { softTarget, combatStats, readiedFlask, LUNGE_REACH } from '../core/combat.js';
 import { throwTarget } from './throws.js';
 import { lineOfFire } from './shots.js';
 import { clearLine } from '../physics/enemynav.js';
@@ -41,6 +44,12 @@ import { answerLeave } from './leavefight.js';
 import { useAction } from './action.js';
 import { cameraKeyDown, cameraKeyUp, cancelCameraKey } from './camerakey.js';
 import { screenToWorld, WALK_BELOW } from '../core/stick.js';
+import { mouseLook, looking, capture, escJustReleased } from './mouselook.js';
+import { toggleLock } from './lockon.js';
+import { forwardYaw } from '../core/view.js';
+import { canReachPickup, takePickup } from './loot.js';
+import { canReachChest, openChest } from './chests.js';
+import { canReachPart, usePart } from './trials.js';
 export { clearInput };
 
 const { keys } = controls;
@@ -86,7 +95,8 @@ addEventListener('keydown', e => {
   const is = id => acts.includes(id);
   // the Esc menu is open: Esc and the menu key close it, the game gets no keys
   if (state.menuOpen) {
-    if ((e.code === 'Escape' || is('menu')) && !e.repeat) setMenuOpen(false);
+    // (not the Esc that just gave the captured mouse back and opened it: game/mouselook.js)
+    if ((e.code === 'Escape' ? !escJustReleased() : is('menu')) && !e.repeat) setMenuOpen(false);
     if (!['Tab', 'Enter', 'Space'].includes(e.code)) e.preventDefault();   // (the buttons keep Tab, Enter and Space)
     return;
   }
@@ -164,7 +174,10 @@ export const autoAttackHeld = () => !state.inventoryOpen && !state.transitioning
 export const wantsWalk = () => held('walk') || (controls.stick.m > 0 && controls.stick.m < WALK_BELOW);
 addEventListener('pointerdown', e => {
   // touches are game/touch.js's (a tap comes back through tapGame)
-  if (e.button !== 0 || e.pointerType === 'touch' || e.target.tagName !== 'CANVAS' || state.transitioning || state.inventoryOpen) return;
+  if (e.pointerType === 'touch' || e.target.tagName !== 'CANVAS') return;
+  // mouse look: a click while the mouse is free only captures it
+  if (mouseLook()) { e.preventDefault(); if (!looking()) capture(); else lookClick(e.button); return; }
+  if (e.button !== 0 || state.transitioning || state.inventoryOpen) return;
   e.preventDefault();
   pointer.down = true;
   click(true);
@@ -206,6 +219,63 @@ function click(walk) {
     if (a) orderMove({ x: a.x, z: a.z, s: null });
   }
 }
+
+// --- mouse look (the close view) ----------------------------------------------------------------
+
+function lookClick(button) {
+  if (state.transitioning || state.inventoryOpen) return;
+  if (button === 2) { toggleLock(hoveredEnemy()); return; }
+  if (button !== 0) return;
+  clearOrder();
+  pointer.down = true; pointer.mode = 'look';
+  lookAttack(true);
+}
+// what the crosshair is on (game/lootlabels.js), if it is in reach: used (a click); true if so
+function useHovered() {
+  const villager = hoveredVillager();
+  if (villager && canTrade(villager)) { talkTo(villager); return true; }
+  const item = hoveredPickup();
+  if (item && !item.questItem && canReachPickup(item)) { takePickup(item); return true; }
+  const chest = hoveredChest();
+  if (chest && canReachChest(chest)) { openChest(chest); return true; }
+  const part = hoveredPart();
+  if (part && canReachPart(part)) { usePart(part); return true; }
+  return false;
+}
+// the enemies within `cone` rad of `yaw`, seen from the player
+const inCone = (yaw, cone) => allEnemies().filter(e => {
+  const dx = e.x - player.x, dz = e.z - player.z;
+  return Math.hypot(dx, dz) < 0.3 || Math.cos(Math.atan2(dx, dz) - yaw) >= Math.cos(cone);
+});
+const RANGED_ASSIST = 0.35, MELEE_CONE = 1;   // rad either side of where the view looks
+// what an attack goes for with mouse look: the enemy hovered (under the crosshair, or locked on
+// to); a blade: unless it is out of reach, then the best one in reach ahead, else that way; a
+// shot: else the best one in sight a little either side of the crosshair, else straight on
+function lookTarget() {
+  const fwd = forwardYaw(view.yaw), stats = combatStats(player), hovered = hoveredEnemy();
+  const ahead = d => ({ x: player.x + Math.sin(fwd) * d, z: player.z + Math.cos(fwd) * d });
+  if (stats?.ranged) return hovered ?? softTarget(player, inCone(fwd, RANGED_ASSIST), fwd, e => lineOfFire(player, e, stats)) ?? ahead(stats.range);
+  const reach = e => Math.hypot(e.x - player.x, e.z - player.z) <= (stats?.range ?? 0.85) + e.profile.radius + AUTO_REACH + LUNGE_REACH;
+  if (hovered && reach(hovered)) return hovered;
+  return softTarget(player, inCone(fwd, MELEE_CONE), fwd, bladeSees, AUTO_REACH) ?? (hovered ? { x: hovered.x, z: hovered.z } : ahead(2));
+}
+// a click with mouse look (`click`), and every frame the button is held (game/update.js): attack
+// where the crosshair is, unlike Shift also into the air; a flask is thrown there (only on the click)
+export function lookAttack(click = false) {
+  if (state.transitioning || state.inventoryOpen) return;
+  const flask = readiedFlask(player);
+  if (flask) {
+    if (!click) return;
+    const fwd = forwardYaw(view.yaw), d = flask.flask.range * 0.8;
+    const t = throwTarget() ?? { x: player.x + Math.sin(fwd) * d, y: player.y, z: player.z + Math.cos(fwd) * d };
+    queueAttack(t.enemy ?? t);
+    return;
+  }
+  if (click && useHovered()) { pointer.down = false; return; }
+  queueAttack(lookTarget());
+}
+export const lookHeld = () => pointer.down && pointer.mode === 'look' && mouseLook();
+
 addEventListener('wheel', e => {
   if (!state.inventoryOpen && !state.menuOpen && state.mode === 'play') view.zoomTarget = stepZoom(view.zoomTarget, Math.sign(e.deltaY));
 }, { passive: true });
