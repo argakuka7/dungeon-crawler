@@ -12,7 +12,8 @@
 // platforms', game/movers.js; all sent to friends with his row, net/protocol.js).
 // Movement and attacks are the shared enemy AI's (game/enemyai.js): before the fight he waits at the
 // foot of his tower (`waiting`), up the ramp he follows a way of his own (`route`: after the player,
-// or to the top in a hurry), over the drowned tower the fight holds him (`anchored`) circling; the fight
+// or to the top in a hurry), over the drowned tower the fight holds him (`anchored`), going over the
+// platforms from one to another; the fight
 // says which attacks may start (`barred`) and carries out the summons at their hit frames.
 import { LH } from '../core/constants.js';
 import { state, setStatus } from './state.js';
@@ -23,11 +24,11 @@ import { enemySpots } from './enemyspawn.js';
 import { stepEnemies } from './enemyai.js';
 import { findPath, pathToward, walkable } from '../physics/enemynav.js';
 import { playerFloor } from './enemycombat.js';
-import { groundAt } from '../physics/collide.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { living, engage, leave, minionFloors, minion, sweep, players, nearest } from './bossfight.js';
 import { summonFx } from './juice.js';
 import { moverClock } from './movers.js';
+import { groundAt, moversNow } from '../physics/collide.js';
 import { sfx } from '../audio/sfx.js';
 
 export let foggerys = [];
@@ -204,17 +205,29 @@ function risen(f) {
   engage(e);
 }
 
-// Phase 3 (and rising into it): he floats over the drowned top of the tower, circling round it
-// at about the platforms' height, so that they pass by him
+// Phase 3 (and rising into it): he floats over the drowned top of the tower, circling, and once the
+// platforms are up he goes over them from one to another (`hop`), most often to one next to the
+// player's, rides it a while (`dwell` s) and goes on: on the platforms a blade reaches him too
 function float(f, dt) {
   const e = f.e, t = tower();
   if (!t || e.mode === 'dead' || !(e.stage === 3 || (e.stage === 2 && e.mode === 'split'))) return;
-  const O = G.orbit, mid = TOWER.mid;
-  if (f.angle === null) f.angle = Math.atan2(e.z - mid, e.x - mid);
-  if (e.mode !== 'split') f.angle += O.speed * dt;
-  const tx = mid + Math.cos(f.angle) * O.r, tz = mid + Math.sin(f.angle) * O.r, ty = PLATFORMS.top * LH + O.lift;
-  const k = Math.min(1, dt * (e.mode === 'split' ? 1.2 : 2));
-  e.x += (tx - e.x) * k; e.z += (tz - e.z) * k; e.y += (ty - e.y) * k;
+  const O = G.orbit, H = G.hop, mid = TOWER.mid, platforms = moversNow();
+  let tx, tz, ty, rate;
+  if (e.mode !== 'split' && platforms.length) {
+    let on = platforms.find(o => o.p === f.hop?.p);
+    if (!on || (f.hop.there && (f.hop.dwell -= dt) <= 0)) on = hopTo(f, platforms);
+    tx = (on.x0 + on.x1) / 2; tz = (on.z0 + on.z1) / 2; ty = on.y1 + H.lift;
+    const dx = tx - e.x, dz = tz - e.z, d = Math.hypot(dx, dz), step = H.speed * dt;
+    if (d > step) { e.x += dx / d * step; e.z += dz / d * step; e.speed = H.speed; }
+    else { e.x = tx; e.z = tz; e.speed = 0; f.hop.there = true; }
+    e.y += (ty - e.y) * Math.min(1, dt * 6);
+  } else {
+    if (f.angle === null) f.angle = Math.atan2(e.z - mid, e.x - mid);
+    if (e.mode !== 'split') f.angle += O.speed * dt;
+    tx = mid + Math.cos(f.angle) * O.r; tz = mid + Math.sin(f.angle) * O.r; ty = PLATFORMS.top * LH + O.lift;
+    rate = Math.min(1, dt * (e.mode === 'split' ? 1.2 : 2));
+    e.x += (tx - e.x) * rate; e.z += (tz - e.z) * rate; e.y += (ty - e.y) * rate;
+  }
   // (for the summons and the AI: the floor of the top nearest under him)
   let best = null, gap = Infinity;
   for (const g of state.map.floors) if (g.tower === 'top') {
@@ -222,6 +235,16 @@ function float(f, dt) {
     if (d < gap) { gap = d; best = g; }
   }
   if (best) e.f = best;
+}
+// the next platform he goes to: mostly the nearest to the player but theirs (so he lands next to
+// them), now and then any other
+function hopTo(f, platforms) {
+  const p = nearest(f.e), under = o => p.x >= o.x0 && p.x < o.x1 && p.z >= o.z0 && p.z < o.z1;
+  const others = platforms.filter(o => o.p !== f.hop?.p && !under(o)), centre = o => Math.hypot((o.x0 + o.x1) / 2 - p.x, (o.z0 + o.z1) / 2 - p.z);
+  const pick = Math.random() < G.hop.near ? others.sort((a, b) => centre(a) - centre(b))[0] : others[Math.floor(Math.random() * others.length)];
+  const on = pick ?? platforms[0];
+  f.hop = { p: on.p, there: false, dwell: between(G.hop.dwell) };
+  return on;
 }
 
 // a summon's hit frame: Fire-faces croaked up (phase 1), or two Fire-cats to guard him

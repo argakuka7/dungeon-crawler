@@ -656,9 +656,11 @@ frog shrinks and spins away in a puff of steam and the ball swells up. Then he f
 ### Phase 3 (a sixth to death)
 
 At a sixth of his health he rises up (2 s, nothing hurting him) and the lava floods the top of the
-tower over 6 s: "The lava swallows the tower! Jump onto the platforms!". From then on he floats
-over the drowned top at about the platforms' height, circling round it (`anchored`,
-`FOGGERY_FIGHT.orbit`), so that the platforms pass by him. He throws a **volley** of three
+tower over 6 s: "The lava swallows the tower! Jump onto the platforms!". From then on he goes over
+the platforms (`anchored`, `FOGGERY_FIGHT.hop`, `game/foggery.js float`): he floats to one, 2.2
+cells/s, mostly (seven times in ten) the nearest to the player but theirs, rides it 2.5 to 4 s as
+it slides, and goes on to the next; so on the platforms a blade reaches him, not only a bow or a
+staff. (Before the platforms are up he circles over the drowned top, `orbit`.) He throws a **volley** of three
 fireballs fanned out instead of one, makes **geysers** burst through the platforms and still calls
 **his cats**: they walk on the lava, over the drowned top and wherever the floors under it lead,
 and his shield holds while they live.

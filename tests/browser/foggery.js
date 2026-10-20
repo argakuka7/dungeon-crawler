@@ -111,6 +111,15 @@ export async function runFoggeryChecks() {
     until(4, () => b.stage === 3, tough);
     run(8, tough);
     check(b.stage === 3 && b.anchored, 'phase 3: he floats over the drowned tower');
+    // he goes over the platforms, from one to another: on them a blade reaches him
+    const onPlatforms = new Set();
+    run(14, () => { tough(); const m = moversNow().find(o => b.x >= o.x0 && b.x < o.x1 && b.z >= o.z0 && b.z < o.z1 && Math.abs(b.y - o.y1) < 0.2); if (m) onPlatforms.add(m.p); });
+    check(onPlatforms.size >= 2, 'he goes over the platforms: ' + onPlatforms.size);
+    const m = moversNow().find(o => b.x >= o.x0 && b.x < o.x1 && b.z >= o.z0 && b.z < o.z1);
+    if (m) {   // (a sword swung at him from the edge of the platform next to his)
+      const near = moversNow().filter(o => o !== m).sort((a, c) => Math.hypot(a.x0 - m.x0, a.z0 - m.z0) - Math.hypot(c.x0 - m.x0, c.z0 - m.z0))[0];
+      check(Math.hypot(near.x0 - m.x0, near.z0 - m.z0) <= 2.9, 'a platform next to his');
+    }
     // his minions walk on the lava, never under it
     let under = null;
     run(6, () => { tough(); for (const e of allEnemies()) if (e !== b && e.mode !== 'dead' && e.y < lava() - 0.05) under = `${e.type} at ${e.y.toFixed(2)}`; });
