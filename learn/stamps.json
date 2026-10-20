@@ -123,7 +123,7 @@
     "src/game/enemyai.js#act": "498926be",
     "src/game/enemyai.js#decide": "ebeaf350",
     "src/game/enemyai.js#notices": "6d10a4db",
-    "src/game/enemyai.js#stepEnemies": "12c9797e",
+    "src/game/enemyai.js#stepEnemies": "e3f73864",
     "src/game/enemyai.js#turn": "3b0bb33f",
     "src/game/flow.js#beginVisit": "7eda9529",
     "src/game/flow.js#die": "93343354",

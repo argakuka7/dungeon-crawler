@@ -547,24 +547,24 @@ walkOnLava`), wherever the floors lead them.
 
 ### His arena: the caldera
 
-His descent arena is always a caldera (`BOSS_ARENAS.foggery.type`, `cubegen/towerarena.js`): a rim
-of rock 22 to 24 levels high holds in the lava that fills the floor of the caldera (`map.tide`, its
-levels below). The rim is the cube's own outer ring of cells, so like Flip's box it does not match
-the neighbours' ground (only the doorway does). The doorway is a gap in it, eight levels up and in
-the middle of its face (`BOSS_ARENAS.foggery.door`, `centre`: `world/faces.js` gives the face
+His descent arena is always a caldera (`BOSS_ARENAS.foggery.type`, `cubegen/towerarena.js`): no
+walls, the lava fills the whole cube out to its sides, up to the glass (`map.tide`, its levels
+below), over a floor of ash a level up. Like Flip's box its edge does not match the neighbours'
+ground (only the doorway does). The doorway stands eight levels up and in the middle of its face (`BOSS_ARENAS.foggery.door`, `centre`: `world/faces.js` gives the face
 between his arena and the room before it that level and position, so the room before has its
 doorway there too). From it a stone bridge three cells wide leads over the lava to the tower.
 
 The tower (`TOWER`) is a stepped cone in the middle, 6.2 cells round at its foot and half that at
-its top (level 20), clear of the rim all round. A ramp 1.5 cells wide winds up round it from the
+its top (level 20), clear of the cube's sides all round. A ramp 1.5 cells wide winds up round it from the
 caldera's floor (level 1) to the top, a cell and a half further in each turn, about 1.4 turns, the
 way it turns (`spin`) drawn from the seed; on its inner side a wall goes up to the turn above. It is
 flat where the bridge joins it (the junction, on the doorway's side, at the bridge's level). Every
 point of the tower is on one turn of the ramp (`rampAt`) or on the top, so there is one floor to a
 column (but the bridge over the caldera's floor). The ramp's corners follow its height round the
 middle, so it is a smooth spiral for the physics and the eye; floors meeting edge to edge are
-linked. Low stone parapets run along the ramp and the bridge where they drop away (`fences`,
-`style: 'stone'`), none round the top. The tower, the ramp and the bridge are dark basalt
+linked. Low stone parapets run along the bridge where it drops away (`fences`, `style: 'stone'`),
+none up the ramp and none round the top: walking off the ramp stops at its edge over the lava like
+at any such edge, but where a turn below is dry it is a long way down. The tower, the ramp and the bridge are dark basalt
 (`paint: 'basalt'`, drawn with the structures' stone, `render/floors.js`), the caldera's floor a
 crust of ash (`'ash'`). Loose stones, rubble and gravel lie about the tower and the bridge, volcanic
 rocks, pumice and obsidian on the caldera's floor (`arenaPlacements`; under the lava till he is
@@ -573,14 +573,14 @@ under the lava until he is beaten; the way to it from the doorway goes over the 
 ramp and across the floor.
 
 **The lava** is a standing fluid like Squarlo's tide (`physics/fluid.js setTide`, drawn like a
-trial's rising fluid, `render/trials.js`), in the box of the caldera's cells. His `tide` says where
+trial's rising fluid, `render/trials.js`), over the whole cube. His `tide` says where
 it stands: 0 at rest (level 2, just over the caldera's floor), 1 at its highest (level 19, just
 under the top), more over the top (`LAVA.flood`, level 20.6: the top is drowned), less than 0
 drained (`LAVA.gone`). Beaten, it is gone for good (`map.tide.gone`: `game/tide.js` drains it, and
 there is none the next time you come).
 
-**The platforms** (`PLATFORMS`, `map.movers`): the caldera's fourteen by fourteen cells are 7 x 7
-slots of two by two; less the middle three by three (the top) and any where the tower reaches up
+**The platforms** (`PLATFORMS`, `map.movers`): the cube's fourteen by fourteen cells inside its
+outer ring are 7 x 7 slots of two by two; less the middle three by three (the top) and any where the tower reaches up
 close under them (`clear`: the end of the ramp), about 35 of them hold 22 stone platforms
 (`slots`, `next`: the slots next to each). They are not there at first: once the lava has risen to
 its highest they rise up out of it (1.8 s) and stay for the rest of the visit (a death or leaving
@@ -603,31 +603,34 @@ stood if the lava is still well under it (or it is the top of the tower), else t
 the fight well above the lava, else (the top drowned) the nearest platform. Only if that quarter is
 all you have left does it kill you, like any lava.
 
-### Phase 1 (full health to two thirds)
+### Phase 1 (full health to a third)
 
-- He stands on the bridge by the tower, facing the doorway. A player coming within 2.4 cells of
-  him, a hit, or his first attack starts the fight (`wake`): "Foggery croaks: the lava is rising!
-  Up the tower!". The lava rises from rest to its highest in **60 s**, and he walks up the ramp to
-  the top (`route`, `game/enemyai.js`: his own way, not after the player), 1 cell/s, stopping to
-  attack whoever is in reach. A player walking the same way keeps ahead of the lava, half again as
-  slow (`tests/foggery.test.js`).
+- He waits at the foot of the ramp, down in the lava (it does not burn him), facing the doorway
+  (`waiting`: the AI leaves him be). A player setting foot on the ramp (or coming within 2.4 cells
+  of him, or a hit) starts the fight (`wake`): "Foggery croaks: the lava is rising! Up the
+  tower!". The lava rises from rest to its highest in **60 s**; three Fire-faces wait spread up the
+  ramp between the bridge and the top (`lieInWait`), each idle where it is till the player comes
+  within 4.5 cells of it; and he comes up the ramp after the player (`route`, `game/enemyai.js`:
+  the way to the player's floor, or as close as it gets), 1.6 cells/s, stopping to attack whoever is
+  in reach. A player walking up keeps ahead of the lava, half again as slow
+  (`tests/foggery.test.js`).
 - **Eye throw** (within 8 cells, clips `FoggeryEyeL` / `FoggeryEyeR`, 1.4 s): he reaches up, plucks
   out one eye, draws it back over his shoulder and throws it at 0.8 s (a projectile, 8 cells/s,
   with a little push). It grows back in 2.5 s (`eyes`); he throws only an eye he has, so one at a
   time, but the other while the first grows back.
 - **Fire-faces** (`FoggerySummon`, 1.5 s): he crouches, puffs up and croaks at 0.9 s: plain
-  Fire-faces come out of his mouth onto the floors round him, as many as fill up to **three**,
-  every 10 s at most (the first after 4 s). They walk on the lava as it rises.
-- No blow takes him below two thirds before he is on top; there, he curls up. Brought there on the
+  Fire-faces come out of his mouth onto the floors round him, as many as fill up to **three** (the
+  ones waiting up the ramp count), every 10 s at most (the first after 4 s). They walk on the lava as it rises.
+- No blow takes him below a third before he is on top; there, he curls up. Brought there on the
   way, he hurries up (2.2× as fast) attacking no more.
 
 ### Curling up
 
-At two thirds of his health, on top, he stops (mode `split`): for 2.4 s nothing hurts him while the
+At a third of his health, on top, he stops (mode `split`): for 2.4 s nothing hurts him while the
 frog shrinks and spins away in a puff of steam and the ball swells up. Then he fights on as
 `FOGGERY_BALL`, his Fire-faces gone.
 
-### Phase 2 (two thirds to a third)
+### Phase 2 (a third to a sixth)
 
 - **His cats** (`FoggeryCats`, 1.6 s, warded): he spins right round and flares: two plain Fire-cats
   appear round him. While one of them lives (and while he is about to call them) his **shield**
@@ -642,11 +645,11 @@ frog shrinks and spins away in a puff of steam and the ball swells up. Then he f
   follow you for 1 s and hold still for the last 0.45 s, then at 1.6 s he slams down and a column of
   fire bursts out of each (`render/beams.js eruptGeyser`): whoever is in one is burned, set on fire
   and popped up into the air (`pop`).
-- No blow takes him below a third.
+- No blow takes him below a sixth.
 
-### Phase 3 (a third to death)
+### Phase 3 (a sixth to death)
 
-At a third of his health he rises up (2 s, nothing hurting him) and the lava floods the top of the
+At a sixth of his health he rises up (2 s, nothing hurting him) and the lava floods the top of the
 tower over 6 s: "The lava swallows the tower! Jump onto the platforms!". From then on he floats
 over the drowned top at about the platforms' height, circling round it (`anchored`,
 `FOGGERY_FIGHT.orbit`), so that the platforms pass by him. He throws a **volley** of three

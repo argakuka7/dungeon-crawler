@@ -1,16 +1,17 @@
 // Foggery's arena (core/bosses.js BOSS_ARENAS.foggery, docs/bosses.md): a caldera full of lava
-// with a great round tower in the middle (core/foggery.js TOWER). The rim of rock that holds the
-// lava in is the cube's own outer ring of cells (like Flip's box, it does not match the
-// neighbours' ground: only the doorway does); the doorway is a gap in it, and a stone bridge leads
-// from it over the lava to the tower. The tower is a stepped cone, wide at its foot and half as
+// with a great round tower in the middle (core/foggery.js TOWER). No walls: the caldera's floor and
+// its lava go out to the cube's sides (like Flip's box, its edge does not match the neighbours'
+// ground: only the doorway does), and a stone bridge leads from the doorway over the lava to the
+// tower. The tower is a stepped cone, wide at its foot and half as
 // wide at its top, a ramp winding round it from the caldera's floor up to the top, inward as it
 // climbs: flat where the bridge joins it, a wall on its inner side up to the turn above. One floor
-// to a column (but the bridge over the caldera's floor). The ramp and the bridge have low stone
-// parapets; the top has none (the platforms float round it, core/foggery.js PLATFORMS). The well
+// to a column (but the bridge over the caldera's floor). The bridge has low stone parapets; the
+// ramp and the top have none (the platforms float round the top, core/foggery.js PLATFORMS). He
+// waits at the foot of the ramp. The well
 // lies on the caldera's floor in a far corner, under the lava until he is beaten (game/tide.js
 // drains it). Loose stones, rubble and volcanic rocks lie about the tower and the caldera's floor.
 import { N, LH, DIRS, OPP, EDGE_CORNERS, LAVA } from '../core/constants.js';
-import { idx, edgeKey, hash32, mulberry32, makeNoise } from '../core/util.js';
+import { idx, edgeKey, hash32, mulberry32 } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
 import { indexBlockers } from '../core/blockers.js';
 import { propMetadata } from '../core/propcatalog.js';
@@ -39,17 +40,15 @@ export function towerArena({ spec, ctx, entry, role }) {
   // the bridge joins the ramp on the doorway's side; the ramp turns one way or the other
   const [ox, oz] = DIRS[d], junction = Math.atan2(oz, ox), spin = R() < 0.5 ? 1 : -1;
   const radius = (x, z) => Math.hypot(x - T.mid, z - T.mid);
-  const inPit = (x, z) => x >= T.pit[0] && z >= T.pit[0] && x < T.pit[1] && z < T.pit[1];
   const portalCells = new Set(pad.cells);
-  // the bridge: from the doorway to the ramp (over the doorway's rows, and along the rim to the
+  // the bridge: from the doorway to the ramp (over the doorway's rows, and along the side to the
   // middle rows if the doorway is off to a side), wherever the tower does not stand yet
   const bridge = new Set();
-  for (let t = Math.min(pad.pos - 1, 6); t <= Math.max(pad.pos + 1, 8); t++) for (let j = 1; j <= 4; j++) bridge.add(at(j, t));
+  for (let t = Math.min(pad.pos - 1, 6); t <= Math.max(pad.pos + 1, 8); t++) for (let j = 0; j <= 4; j++) bridge.add(at(j, t));
   // the well: a 3 x 3 pad on the caldera's floor in a far corner, clear of the tower's foot
   const wt = R() < 0.5 ? 2 : 13, wellC = at(13, wt), well = [];
   for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) well.push(at(13 + a, wt + b));
   const wellId = pad.id + 1;
-  const noise = makeNoise(R);
 
   // the tower's surface at the point (x, z) for the ramp's turn at u (the cell's own turn,
   // followed round, so a cell's corners lie on one smooth ramp)
@@ -69,11 +68,6 @@ export function towerArena({ spec, ctx, entry, role }) {
   const m = rampMarks(door);
   for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
     const c = idx(x, z);
-    if (!inPit(x, z)) {   // the rim (the doorway its gap): rough rock, higher than the lava ever rises
-      const top = portalCells.has(c) ? door : T.rim[0] + Math.round(noise(x * 0.45, z * 0.45) * (T.rim[1] - T.rim[0]));
-      add(c, top, 0, flat(top), portalCells.has(c) ? { prot: pad.id, arenaCell: false } : { rim: true });
-      continue;
-    }
     const { u } = towerAt(x + 0.5, z + 0.5);
     const ground = () => add(c, T.ground, 0, flat(T.ground), { paint: 'ash', ground: true, prot: well.includes(c) ? wellId : 0 });
     if (u === -Infinity || u <= 0) {   // the caldera's floor (and the bridge over it)
@@ -109,13 +103,13 @@ export function towerArena({ spec, ctx, entry, role }) {
     return best;
   });
 
-  // parapets along the ramp and the bridge where they drop away (not round the top)
+  // parapets along the bridge where it drops away (none up the ramp, none round the top)
   const fences = new Map(), fenceList = [];
-  for (const f of floors) if (f.tower === 'ramp' || f.tower === 'bridge') DIRS.forEach(([dx, dz], dd) => {
+  for (const f of floors) if (f.tower === 'bridge') DIRS.forEach(([dx, dz], dd) => {
     if (f.link[dd]) return;
     const x = f.x + dx, z = f.z + dz, mine = edge(f, dd), lo = Math.min(...mine);
     if (x < 0 || z < 0 || x >= N || z >= N) return;
-    // a wall there (the turn above, the rim): none needed
+    // a wall there (the turn above): none needed
     if (cols[idx(x, z)].some(g => g.bottom * LH < lo + 0.5 && Math.max(...edge(g, OPP[dd])) > lo + 0.3)) return;
     const pts = [0.07, 0.5, 0.93].map(t => {
       const fx = dd === 0 ? 0.93 : dd === 1 ? 0.07 : t, fz = dd === 2 ? 0.93 : dd === 3 ? 0.07 : t;
@@ -131,15 +125,13 @@ export function towerArena({ spec, ctx, entry, role }) {
   const wellFloor = cols[wellC].find(f => f.ground);
   const down = { id: wellId, kind: 'down', dir: 4, layer: 0, cells: well, x: wellC % N, z: Math.floor(wellC / N), y: T.ground * LH, floor: wellFloor };
   const portals = [entrance, down];
-  // he stands on the bridge by the tower, facing the doorway
-  const bridgeFloors = floors.filter(f => f.tower === 'bridge' && !f.prot);
-  const guardFloor = bridgeFloors.filter(f => f.link.some(g => g?.tower === 'ramp'))
-    .sort((a, b) => Math.hypot(a.x - entrance.x, a.z - entrance.z) - Math.hypot(b.x - entrance.x, b.z - entrance.z)
-      || Math.abs(a.x + a.z - entrance.x - entrance.z) - Math.abs(b.x + b.z - entrance.x - entrance.z))[0] ?? bridgeFloors.at(-1);
+  // he waits at the foot of the ramp (in the lava: it does not burn him), facing the doorway
+  const guardFloor = floors.filter(f => f.tower === 'ramp' && f.link.filter(Boolean).length >= 2).sort((a, b) => a.ramp - b.ramp)[0];
   const goal = cols[idx(T.mid, T.mid)].at(-1);
   const boss = role === 'descent' ? spec.guardian.boss ?? null : null;
   const guardian = { role, bossPlaceholder: !boss, boss, exit: 4, floor: guardFloor, x: guardFloor.x + .5, z: guardFloor.z + .5,
-    y: floorY(guardFloor, .5, .5), yaw: Math.atan2(ox, oz), approach: [-ox, -oz], portalId: wellId };
+    y: floorY(guardFloor, .5, .5), yaw: Math.atan2(entrance.x + .5 - guardFloor.x - .5, entrance.z + .5 - guardFloor.z - .5),
+    approach: [-ox, -oz], portalId: wellId };
   // the way from the doorway to the well: over the bridge, down the ramp, across the floor
   const prev = new Map([[entrance.floor, null]]), queue = [entrance.floor];
   for (let i = 0; i < queue.length; i++) for (const g of queue[i].link) if (g && !prev.has(g)) { prev.set(g, queue[i]); queue.push(g); }
@@ -199,7 +191,7 @@ export function towerArena({ spec, ctx, entry, role }) {
     routeIndex: spec.routeIndex, route: spec.route, gateKeys: spec.gateKeys, trialFaces: spec.trialFaces || [null, null, null, null],
     safe: Uint8Array.from(floors, f => prev.has(f) ? 1 : 0),
     kind: spec.kind, archetype: 'arena', roomRole: `${role}-guardian`, biome: spec.biome,
-    key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: true, enemyFree: false,
+    key: spec.key, depth: spec.depth, cave: !!spec.cave, walled: false, enemyFree: false,
     rewardSites: [], siteFailures: [], sitePlacements: [], siteReservations: [], spots: [],
     arenaPlacements: placements, staticBlockers, blockers: staticBlockers,
     routes: [path, [...path].reverse()].map(p => p.map(f => ({ x: f.x + .5, y: floorY(f, .5, .5) + .12, z: f.z + .5 }))),

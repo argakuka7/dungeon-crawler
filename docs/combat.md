@@ -178,13 +178,14 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   hole takes you through his flips too. See [bosses.md](bosses.md#flip).
 - Foggery (`blender/foggery.py`), the fifth real boss, in place of the descent guardian of depth 4,
   in a caldera of lava with a great round tower in the middle: a light green frog a little taller
-  than you, with big yellow eyes on top of his head. You come in on a bridge over the lava; when
-  the fight starts the lava rises for a minute and he climbs the ramp round the tower to its top,
-  throwing his eyes at you (one at a time; they grow back) and croaking up Fire-faces. Once the
+  than you, with big yellow eyes on top of his head. You come in on a bridge over the lava, and he
+  waits at the foot of the tower; once you set foot on the ramp the lava rises for a minute, three
+  Fire-faces wait for you up the ramp, and he comes up after you, throwing his eyes at you (one at
+  a time; they grow back) and croaking up more Fire-faces. Once the
   lava is at its highest, platforms rise out of it round the top and slide about like a sliding
-  puzzle. At two thirds of his health he curls up into a ball with a shield: two Fire-cats guard
+  puzzle. At a third of his health he curls up into a ball with a shield: two Fire-cats guard
   him, and only with both dead can he be hurt, until he calls new ones 8 s later. He spits
-  fireballs and makes fire geysers burst out of the floor. At a third the lava floods the top and
+  fireballs and makes fire geysers burst out of the floor. At a sixth the lava floods the top and
   only the platforms are safe. Falling into his lava costs a quarter of your health and magic pulls
   you out. See [bosses.md](bosses.md#foggery).
 - Squirtle (`blender/squirtle.py`): a little blue water serpent with a beak that runs about under

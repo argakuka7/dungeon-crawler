@@ -1,8 +1,8 @@
 // In devtools (?dev=1): await (await import('./tests/browser/foggery.js')).runFoggeryChecks()
 // Foggery's whole fight in his caldera (docs/bosses.md): he wakes when the player steps onto the
-// bridge, the lava rises and he climbs his tower; at two thirds he curls up into his ball and his
+// bridge, the lava rises and he climbs his tower; at a third he curls up into his ball and his
 // Fire-cats guard him (nothing hurts him while one lives); once the lava is at its highest the
-// platforms rise out of it; at a third the lava floods the top and
+// platforms rise out of it; at a sixth the lava floods the top and
 // only the platforms are safe; falling into the lava costs a quarter of one's health and magic
 // takes one out; his death drains the lava for good and opens the well.
 import { paused } from './combat.js';
@@ -17,6 +17,7 @@ import { spawnAt } from '../../src/game/flow.js';
 import { loadSpecies } from '../../src/render/enemies.js';
 import { moversNow } from '../../src/physics/collide.js';
 import { floorY } from '../../src/core/surfaces.js';
+import { findPath } from '../../src/physics/enemynav.js';
 import { gateLocked } from '../../src/core/guardians.js';
 import { TOWER, PLATFORMS, FOGGERY_FIGHT } from '../../src/core/foggery.js';
 
@@ -49,14 +50,26 @@ export async function runFoggeryChecks() {
     await loadSpecies(['foggery', 'fireface', 'firecat']);
     const map = state.map, b = boss();
     check(map.tower && map.arena.type === 'tower' && b, 'his caldera, and him on the bridge');
-    check(state.map.cols[Math.floor(b.z) * 16 + Math.floor(b.x)].some(f => f.tower === 'bridge'), 'he stands on the bridge');
+    check(b.f.tower === 'ramp' && b.waiting, 'he waits at the foot of the ramp');
     tough(); state.enemyGrace = 0;
-    // the lava at rest, then rising once he wakes
-    run(0.5, tough);
-    const rest = lava();
+    // the lava at rest while the player is on the bridge; he stands on it
+    const bridge = map.portals[0].floor.link.find(f => f?.tower === 'bridge');
+    spawnAt(bridge.x + .5, floorY(bridge, .5, .5), bridge.z + .5);
+    run(4, tough);
+    const rest = lava(), at = { x: b.x, z: b.z };
     check(Math.abs(rest - TOWER.lava.rest * LH) < 0.3, 'the lava at rest: ' + rest);
-    damageEnemy(b, 1);
-    run(20, tough);
+    check(b.waiting && Math.hypot(b.x - at.x, b.z - at.z) < 1e-6 && b.y >= rest - 0.05, 'he waits, on the lava');
+    // the player sets foot on the ramp: the lava rises, Fire-faces wait up the ramp, he comes after them
+    const ramp = map.floors.find(f => f.tower === 'ramp' && f.link.some(g => g?.tower === 'bridge'));
+    spawnAt(ramp.x + .5, floorY(ramp, .5, .5), ramp.z + .5);
+    run(0.5, tough);
+    check(!b.waiting && b.mode !== 'idle', 'awake once the player is on the ramp: ' + b.mode);
+    const faces = allEnemies().filter(e => e.type === 'fogface');
+    check(faces.length === 3 && faces.every(e => e.f.tower === 'ramp' && e.mode === 'idle' && e.f.top > ramp.top), 'three Fire-faces wait up the ramp');
+    const way = () => findPath(b.f, ramp, 200, b.profile.height)?.length ?? Infinity, w0 = way();
+    run(6, tough);
+    check(way() < w0 - 4, `he comes after the player: ${w0} -> ${way()} steps`);
+    run(14, tough);
     check(lava() > rest + 1, 'the lava rises: ' + lava());
     out.push(`lava ${rest.toFixed(1)} -> ${lava().toFixed(1)} after 20 s`);
     check(!moversNow().length, 'no platforms before the lava is at its highest');
@@ -68,9 +81,9 @@ export async function runFoggeryChecks() {
     run(45, tough);
     check(Math.abs(lava() - TOWER.lava.high * LH) < 0.2, 'the lava stops under the top: ' + lava());
     check(moversNow().length === PLATFORMS.count && moversNow().every(m => Math.abs(m.y1 - PLATFORMS.top * LH) < 1e-6), 'the platforms have risen out of it');
-    // two thirds: he curls up into his ball and calls his cats
+    // a third: he curls up into his ball and calls his cats
     damageEnemy(b, b.hp);
-    check(b.hp === b.hpFloor, 'no blow takes him below two thirds');
+    check(b.hp === b.hpFloor, 'no blow takes him below a third');
     until(4, () => b.stage === 2, tough);
     check(b.stage === 2 && b.profile.type === 'foggeryball', 'curled up into his ball');
     until(6, () => b.guard && allEnemies().filter(e => e.summoned && e.type === 'fogcat' && e.mode !== 'dead').length === 2, tough);
@@ -89,11 +102,11 @@ export async function runFoggeryChecks() {
     until(4, catsUp, tough);
     check(catsUp(), 'two new cats');
     out.push(`cats again after ${(again + 1.5).toFixed(1)} s`);
-    // a third: the lava floods the top; the platforms hold
+    // a sixth: the lava floods the top; the platforms hold
     for (const c of allEnemies().filter(e => e.type === 'fogcat')) damageEnemy(c, c.hp);
     run(1, tough);
     damageEnemy(b, b.hp);
-    check(b.hp === b.hpFloor, 'no blow takes him below a third');
+    check(b.hp === b.hpFloor, 'no blow takes him below a sixth');
     onPlatform();
     until(4, () => b.stage === 3, tough);
     run(8, tough);

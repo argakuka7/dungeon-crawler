@@ -8,14 +8,15 @@
 // the lava has risen to its highest, stone platforms rise out of it round the top, in slots two by
 // two cells each, and slide from slot to slot like a sliding puzzle (game/movers.js).
 //
-// Phase 1 (full health to two thirds): when the fight starts the lava rises from its rest to just
-// under the top of the tower over `lava.rise` s, and he walks up the ramp (`climb`) to the top,
-// throwing his eyes (one at a time; each grows back) and calling up Fire-faces (a summon fills up
-// to `minions[0]`). No blow takes him below two thirds before he is on top: once there, he curls
+// Phase 1 (full health to a third): he waits at the foot of his tower. When the player sets foot
+// on the ramp the fight starts: the lava rises from its rest to just under the top of the tower
+// over `lava.rise` s, Fire-faces wait up the ramp (`lieInWait`) and he comes after the player,
+// throwing his eyes (one at a time; each grows back) and calling up more Fire-faces (a summon
+// fills up to `minions[0]`). No blow takes him below a third before he is on top: once there, he curls
 // up into a ball with a shield (`morphTime`, nothing hurting him). Phase 2: two Fire-cats guard
 // him; while one lives the shield holds and nothing hurts him; once both are dead it is down, and
 // `catsAgain` s later he calls two new ones. He spits fireballs and makes fire geysers burst out
-// of the floor. At a third of his health (phase 3) the lava rises over the top of the tower
+// of the floor. At a sixth of his health (phase 3) the lava rises over the top of the tower
 // (`lava.flood` s): only the platforms are safe. He floats over the drowned top, circling, throws
 // volleys of fireballs, still calls his cats and makes geysers burst through the platforms.
 // His death drains the lava away for good and takes his minions along.
@@ -24,11 +25,13 @@
 import { mulberry32 } from './util.js';
 
 export const FOGGERY_FIGHT = Object.freeze({
-  splits: [2 / 3, 1 / 3],     // the shares of his health phase 2 and phase 3 start at
+  splits: [1 / 3, 1 / 6],     // the shares of his health phase 2 and phase 3 start at
   morphTime: 2.4,             // s he curls up into his ball, nothing hurting him
-  floodTime: 2,               // s he rises up at a third of his health, nothing hurting him
-  wake: 2.4,                  // cells: a player this close to him wakes him (or a hit)
-  hurry: 2.2,                 // how much faster he climbs at two thirds of his health, not yet on top
+  floodTime: 2,               // s he rises up at a sixth of his health, nothing hurting him
+  wake: 2.4,                  // cells: a player this close to him wakes him (or setting foot on the ramp, or a hit)
+  lieInWait: 3,               // Fire-faces waiting up the ramp when the fight starts
+  waitAggro: 4.5,             // cells: how far they notice the player from
+  hurry: 2.2,                 // how much faster he climbs at a third of his health, not yet on top
   eyes: { grow: 2.5 },        // s an eye he threw takes to grow back
   lava: { rise: 60, flood: 6, drain: 7 },   // s the lava takes to rise, to flood the top, to drain away
   minions: [3, 2, 2],         // the most Fire-faces (phase 1) / Fire-cats (2, 3) at once
@@ -60,19 +63,18 @@ export function barred({ phase, eyes = [1, 1], summonDue = false, catsDue = fals
 // stepped cone, `base` cells round at the bottom and half that (`crown`) at the top, and a ramp
 // `path` cells wide winding up round it, inward as it climbs. At a point r cells from the middle
 // the ramp passes once: each turn lies `path` further in than the one below, a wall between them.
-// The rim round the caldera (the cube's own sides) holds the lava in; the platforms float a level
-// over the top.
+// The lava fills the whole cube, out to its sides (no walls); the platforms float a level over the
+// top.
 export const TOWER = Object.freeze({
   mid: 8,
   ground: 1,                // the caldera's floor
   top: 20,                  // the top of the tower
-  rim: [22, 24],            // the rim round the caldera: the cube's outer ring of cells
   base: 6.2,                // cells: how far the tower reaches out at its foot
   crown: 2.6,               // cells: its top, round the middle (with the last of the ramp about half the foot)
   path: 1.5,                // cells: how wide the ramp is
   junction: 0.12,           // turns of the ramp kept flat where the bridge joins it
   slab: 2,                  // levels thick: the bridge
-  pit: [1, 15],             // the caldera's cells (each way: from, past the last)
+  pit: [0, 16],             // the caldera's cells (each way: from, past the last): the whole cube
   lava: { rest: 2, high: 19, flood: 20.6, gone: -1 },   // levels: the lava at rest, under the top, over it, drained
 });
 export const PLATFORMS = Object.freeze({
@@ -138,14 +140,14 @@ export function stepLava(w, dt) {
 }
 
 // --- the platforms -------------------------------------------------------------------------
-// The slots (map.movers.slots, cubegen/towerarena.js): the caldera's 14 x 14 cells cut into 7 x 7
-// slots of 2 x 2, less the middle 3 x 3 (the top of the tower) and any where the tower reaches up
+// The slots (map.movers.slots, cubegen/towerarena.js): the cube's 14 x 14 cells inside its outer
+// ring cut into 7 x 7 slots of 2 x 2, less the middle 3 x 3 (the top of the tower) and any where the tower reaches up
 // too close under them; `next`: the slots next to each (along the grid). Slot -> { i, j (slot
 // grid), x, z (its first cell) }.
 export function slotGrid() {
   const out = [];
   for (let j = 0; j < 7; j++) for (let i = 0; i < 7; i++) if (i < 2 || j < 2 || i > 4 || j > 4)
-    out.push({ i, j, x: TOWER.pit[0] + i * PLATFORMS.size, z: TOWER.pit[0] + j * PLATFORMS.size });
+    out.push({ i, j, x: 1 + i * PLATFORMS.size, z: 1 + j * PLATFORMS.size });
   return out;
 }
 export const slotNext = slots => slots.map(a => slots.flatMap((b, k) => Math.abs(a.i - b.i) + Math.abs(a.j - b.j) === 1 ? [k] : []));

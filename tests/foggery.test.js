@@ -44,10 +44,16 @@ test('his doorway is in the middle of its face, high up, and you come in onto th
     assert.equal(w.cube(w.layout(4).down).map, map);
     // the face's portal in the middle (cubegen/portals.js: the pad's middle cell)
     assert.ok([door.x, door.z].includes(BOSS_ARENAS.foggery.centre));
-    // past the doorway the bridge, over the lava at rest; he stands on it
+    // past the doorway the bridge, over the lava at rest
+    const bridge = door.floor.link.find(f => f?.tower === 'bridge');
+    assert.ok(bridge && bridge.top * LH > tideLevel(map.tide, LAVA.rest) * LH + 2, 'the bridge well over the lava');
+    // he waits at the foot of the ramp, down in the lava, a way off along the ramp from the bridge
     const g = map.guardian;
-    assert.equal(g.floor.tower, 'bridge');
-    assert.ok(g.floor.top * LH > tideLevel(map.tide, LAVA.rest) * LH + 2, 'the bridge well over the lava');
+    assert.equal(g.floor.tower, 'ramp');
+    assert.ok(g.floor.ramp < 0.15 && g.floor.top * LH < tideLevel(map.tide, LAVA.rest) * LH + 0.5);
+    assert.ok(findPath(bridge, g.floor, 200, FOGGERY.height).length > 8);
+    // no parapets up the ramp
+    assert.ok(map.fenceList.every(r => r.pts.every(([x, , z]) => map.cols[Math.floor(z) * 16 + Math.floor(x)].some(f => f.tower === 'bridge'))));
     // the well lies on the caldera's floor, under the lava until he is beaten
     assert.equal(well.kind, 'down'); assert.equal(well.y, TOWER.ground * LH);
     assert.ok(tideLevel(map.tide, LAVA.rest) > TOWER.ground && tideLevel(map.tide, LAVA.gone) < TOWER.ground);
@@ -71,13 +77,13 @@ test('the tower narrows as it rises, half as wide at the top, a ramp winding up 
   const N = 16;
   for (const seed of [0, 1, 2, 3, 4, 7, 11, 23]) {
     const { map } = fifthDescent(seed), t = map.tower;
-    // the rim: the cube's own sides, all of them high (but the doorway)
+    // no walls: the caldera's floor and its lava go out to the cube's sides (but the bridge from the doorway)
     for (let i = 0; i < N * N; i++) {
       const x = i % N, z = (i / N) | 0;
       if (x && z && x < N - 1 && z < N - 1) continue;
-      if (map.portals[0].cells.includes(i)) continue;
-      assert.ok(map.cols[i].every(f => f.top >= TOWER.rim[0]), `rim at ${x},${z}`);
+      assert.ok(map.cols[i].every(f => f.ground || f.tower === 'bridge'), `${x},${z}`);
     }
+    assert.deepEqual(map.tide.box, [0, 0, N, N]);
     // wide at the foot, half as wide at the top (and clear of the rim all round)
     const reach = test => Math.max(...map.floors.filter(test).map(f => Math.hypot(f.x + 0.5 - TOWER.mid, f.z + 0.5 - TOWER.mid)));
     const foot = reach(f => f.tower === 'ramp'), crown = reach(f => f.tower === 'top');
@@ -162,7 +168,7 @@ test('the platforms slide like a sliding puzzle: into empty slots next to theirs
 });
 
 test('his fight: eyes thrown one at a time, Fire-faces, then the ball, his cats, fireballs and geysers', () => {
-  assert.equal(splitHp(1000, 1), 667); assert.equal(splitHp(1000, 2), 334);
+  assert.equal(splitHp(1000, 1), 334); assert.equal(splitHp(1000, 2), 167);
   assert.equal(summonCount(1, 1), 2); assert.equal(summonCount(2, 0), 2); assert.equal(summonCount(3, 2), 0);
   // phase 1: an eye only while he has it; the summon when due
   const names = list => FOGGERY.attacks.map(a => a.name).filter(n => !list.has(n));

@@ -560,7 +560,7 @@ export const FOGGERY = {
   type: 'foggery', species: 'foggery', label: 'Foggery', hp: 1000, damage: 24, knock: 3,
   xp: 650, coins: [170, 300],
   radius: 0.45, height: 1.75, bodyHeight: 1.6, mass: 5, lavaproof: true,
-  aggro: 7, giveUp: 14, chase: 1, wander: 0.4, homeSpeed: 0.8,
+  aggro: 7, giveUp: 14, chase: 1.6, wander: 0.4, homeSpeed: 0.8,
   ...FOGGERY_EYE, cooldown: 2, ichor: ['#d8f8b0', '#5aa83a'], pitch: 0.8,
   attacks: [FOGGERY_EYE, FOGGERY_EYE_R, FOGGERY_SUMMON], phase: 1,
   poise: 2, hitStun: 0.25, deathTime: 2.4, corpseTime: 5,

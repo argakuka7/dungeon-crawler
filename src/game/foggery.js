@@ -10,8 +10,9 @@
 // STAGE_PROFILES), `tide` (his lava, game/tide.js), `eyes` ([left, right]: 1 in his head, 0 just
 // thrown, growing back), `guard` (1 while his shield holds: a Fire-cat lives) and `clock` (his
 // platforms', game/movers.js; all sent to friends with his row, net/protocol.js).
-// Movement and attacks are the shared enemy AI's (game/enemyai.js): up the ramp he follows a way of
-// his own (`route`), over the drowned tower the fight holds him (`anchored`) circling; the fight
+// Movement and attacks are the shared enemy AI's (game/enemyai.js): before the fight he waits at the
+// foot of his tower (`waiting`), up the ramp he follows a way of his own (`route`: after the player,
+// or to the top in a hurry), over the drowned tower the fight holds him (`anchored`) circling; the fight
 // says which attacks may start (`barred`) and carries out the summons at their hit frames.
 import { LH } from '../core/constants.js';
 import { state, setStatus } from './state.js';
@@ -20,10 +21,11 @@ import { FOGGERY_FIGHT as G, TOWER, PLATFORMS, LAVA, splitHp, summonCount, barre
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
 import { stepEnemies } from './enemyai.js';
-import { findPath } from '../physics/enemynav.js';
+import { findPath, pathToward, walkable } from '../physics/enemynav.js';
+import { playerFloor } from './enemycombat.js';
 import { groundAt } from '../physics/collide.js';
 import { removeEnemyViews } from '../render/enemies.js';
-import { living, engage, leave, minionFloors, minion, sweep, players } from './bossfight.js';
+import { living, engage, leave, minionFloors, minion, sweep, players, nearest } from './bossfight.js';
 import { summonFx } from './juice.js';
 import { moverClock } from './movers.js';
 import { sfx } from '../audio/sfx.js';
@@ -40,7 +42,8 @@ export function resetFoggerys() {
 // Foggerys to fight: this cube's, or spawned with the dev tools
 export function addFoggerys(list) {
   for (const e of list) {
-    Object.assign(e, { stage: 1, tide: 0, hpFloor: splitHp(e.profile.hp, 1), eyes: [1, 1], guard: 0, clock: 0 });
+    // (in his caldera he waits at the foot of his tower, the AI leaves him be: game/enemyai.js)
+    Object.assign(e, { stage: 1, tide: 0, hpFloor: splitHp(e.profile.hp, 1), eyes: [1, 1], guard: 0, clock: 0, waiting: !!tower() });
     const f = { e, on: false, lava: newLava(), cool: G.firstSummon, geyserIn: G.geyser.first, catsIn: null, split: 0, thrown: -1,
       minions: [], n: 0, nonce: Math.random().toString(36).slice(2, 7), over: false, angle: null, settle: null };
     e.barred = barred({ phase: 1, eyes: e.eyes });
@@ -95,10 +98,10 @@ function run(f, dt) {
   }
   const fighting = e.mode === 'chase' || e.mode === 'attack';
   if (fighting) { f.cool -= dt; if (e.stage > 1) f.geyserIn -= dt; }
-  // phase 1: up the ramp to the top (in a hurry once he cannot be hurt any further)
+  // phase 1: after the player, up the ramp (in a hurry to the top once he cannot be hurt any further)
   const top = onTop(e), stuck = e.hp <= e.hpFloor;
   if (e.stage === 1) {
-    e.route = top || !tower() ? null : climb(e);
+    e.route = !tower() ? null : stuck && !top ? climb(e) : chase(e);
     e.hurry = stuck && !top ? G.hurry : 1;
     if (stuck && top) { split(f); return; }
   }
@@ -124,26 +127,55 @@ function run(f, dt) {
   if (e.mode === 'attack' && attackOf(e).name === 'geyser' && f.geyserIn <= 0) f.geyserIn = between(G.geyser.every);
 }
 
-// Not yet in the fight: a player coming close (or a hit) wakes him; a dormant one (a test room's,
-// game/devspawn.js) only a hit. Then the lava starts rising and he heads for the top.
+// Not yet in the fight: a player setting foot on the ramp of his tower (or coming close, or a hit)
+// wakes him; a dormant one (a test room's, game/devspawn.js) only a hit. Then the lava starts
+// rising, Fire-faces wait up the ramp, and he comes after the player.
+const onRamp = p => { const s = groundAt(p.x, p.z, p.y + 0.1, 0.3).s; return s?.tower === 'ramp' || s?.tower === 'top'; };
 function wake(f) {
   const e = f.e, near = players().some(p => Math.hypot(p.x - e.x, p.z - e.z) < G.wake && Math.abs(p.y - e.y) < 2);
-  if (!(e.hp < e.profile.hp || e.attacks > 0 || (near && !e.dormant))) return;
+  const climbing = !!tower() && players().some(onRamp);
+  if (!(e.hp < e.profile.hp || e.attacks > 0 || ((near || climbing) && !e.dormant))) return;
   f.on = true;
-  e.dormant = false;
+  e.dormant = false; e.waiting = false;
   engage(e);
   if (tower()) {
     moveLava(f.lava, LAVA.high, G.lava.rise);
     setStatus(`${e.profile.label} croaks: the lava is rising! Up the tower!`);
     sfx('rumble', { at: e });
+    lieInWait(f);
   }
+}
+// Fire-faces waiting up the ramp, spread along the way from the bridge to the top: each waits
+// where it is till the player comes up to it (it notices them closer than a Fire-face would)
+function lieInWait(f) {
+  const e = f.e, kind = ENEMY_KINDS.fogface, t = tower(), n = summonCount(1, f.minions.length);
+  const ramp = state.map.floors.filter(g => g.tower === 'ramp' && walkable(g, kind.height));
+  const taken = [];
+  for (let k = 1; k <= n; k++) {
+    const u = t.marks.j1 + (t.marks.t - t.marks.j1) * k / (G.lieInWait + 1);
+    const s = ramp.filter(g => taken.every(o => Math.hypot(o.x - g.x, o.z - g.z) > 2)).sort((a, b) => Math.abs(a.ramp - u) - Math.abs(b.ramp - u))[0];
+    if (!s) continue;
+    taken.push(s);
+    const m = minion(e, `${e.id}:minion:${f.nonce}${++f.n}`, kind, s, Math.atan2(TOWER.mid - s.x - 0.5, TOWER.mid - s.z - 0.5) + Math.PI, f.n);
+    m.profile = { ...m.profile, aggro: G.waitAggro };
+    Object.assign(m, { mode: 'idle', t: 1, target: null, provoked: 0, path: null, seen: null });
+    foggerys.push(m); f.minions.push(m);
+  }
+  sfx('fireball', { at: e, pitch: 0.7 });
+}
+// after the nearest player: the way to their floor, else as close to them as it gets
+function chase(e) {
+  return () => {
+    const p = nearest(e), h = e.profile.height, to = playerFloor(h, p);
+    return (to && findPath(e.f, to, 200, h)) || pathToward(e.f, p.x, p.y, p.z, 200, h) || [e.f];
+  };
 }
 // the way up the ramp to the top of the tower
 function climb(e) {
   return () => findPath(e.f, goal(), 200, e.profile.height) ?? [e.f];
 }
 
-// At two thirds of his health (on top) he curls up into his ball; at a third he rises over the
+// At a third of his health (on top) he curls up into his ball; at a sixth he rises over the
 // tower and the lava floods it. Nothing hurts him meanwhile.
 function split(f) {
   const e = f.e, first = e.stage === 1, time = first ? G.morphTime : G.floodTime;
