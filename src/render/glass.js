@@ -3,7 +3,8 @@
 // The player always looks through this box, so it stays faint where it crosses the play
 // area and spends what little it has at the box's own corners and rims:
 //   - edges are thin strips widened on screen (WebGL lines are always 1px and alias), soft at
-//     their sides, a little stronger near the corners than along the middle of the edge
+//     their sides, a little stronger near the corners of the box's outline than along their
+//     middle, and fainter still inside the outline, where they cross the play area
 //   - the panes (only the far ones show, behind the terrain) are a touch denser along their
 //     rims and nearly clear in the middle, so an edge reads as the rim of a pane of glass
 // One look for the full cube's box (makeGlass) and every proxy's (glassBatch, instanced).
@@ -32,15 +33,16 @@ export const GLASS = {
   minPx: 1.0,         // ... but never thinner or thicker than this on screen
   maxPx: 1.5,
   feather: 0.8,       // soft falloff on either side, px
-  corner: 0.42,       // an edge's opacity at the box's corners ...
+  corner: 0.42,       // an edge's opacity at the corners of the box's outline ...
   mid: 0.45,          // ... and along its middle, as a share of that
   reach: 1.6,         // how far from a corner the stronger part reaches, world units
+  inner: 0.7,         // edges inside the outline (over the play area): a share of all that
   rim: 0.075,         // a pane's opacity along its rims ...
   centre: 0.35,       // ... and in its middle, as a share of that
   band: 1.2,          // how far in from a pane's rims the denser glass reaches, world units
 };
 // about what the box looked like before: hard 1px lines, flat panes (/glass old)
-const OLD = { width: 0, minPx: 0.7, maxPx: 0.7, feather: 0.5, corner: 0.35, mid: 1, reach: 0.001, rim: 0.05, centre: 1, band: 0.001 };
+const OLD = { width: 0, minPx: 0.7, maxPx: 0.7, feather: 0.5, corner: 0.35, mid: 1, reach: 0.001, inner: 1, rim: 0.05, centre: 1, band: 0.001 };
 const U = Object.fromEntries(Object.entries(GLASS).filter(([k]) => !k.endsWith('Color')).map(([k, v]) => [k, { value: v }]));
 // The full cube's cut caps are drawn a few steps nearer than its walls (render/section.js
 // CAP_AHEAD): along the bottom of the box, where they lie on its edges, the edges have to be
@@ -111,14 +113,28 @@ const EDGE_VERT = (offset, ahead) => `
   vAcross = aAcross;
   vLen = distance(gA, gB);
   vAlong = aEnd * vLen;
+  // Seen from outside, some of the box's corners and edges make its outline and the others lie
+  // inside it, over the play area (from above: the top corner nearest the camera and its three
+  // edges). A face looks at the camera when the camera is beyond its plane; an edge is on the
+  // outline when one of its two faces does and the other does not, a corner when some of its
+  // three do and some do not.
+  vec3 cam = cameraPosition - (modelMatrix * vec4(vec3(0.0)${offset}, 1.0)).xyz;
+  vec3 facesA = step(0.0, (cam - aA) * sign(aA)), facesB = step(0.0, (cam - aB) * sign(aB));
+  float sides = dot(facesA, vec3(1.0) - step(0.5, abs(aB - aA)));   // its two faces that look
+  vOutline = sides == 1.0 ? 1.0 : 0.0;
+  float a = dot(facesA, vec3(1.0)), b = dot(facesB, vec3(1.0));
+  vCornerA = a > 0.0 && a < 3.0 ? 1.0 : 0.0;
+  vCornerB = b > 0.0 && b < 3.0 ? 1.0 : 0.0;
   // a hair towards the camera: an edge wins over the cube's own outer walls it lies on
   clip.z -= ${(2 * ahead / 2 ** 24).toExponential(6)} * clip.w;
   gl_Position = clip;`;
 const EDGE_FRAG = `
   float across = abs(vAcross) * vHalf;
   float ink = 1.0 - smoothstep(vCore - 0.5, vCore + uGlassFeather * uGlassPx, across);
-  float fromCorner = min(vAlong, vLen - vAlong);
-  diffuseColor.a *= uGlassCorner * ink * mix(uGlassMid, 1.0, 1.0 - smoothstep(0.0, uGlassReach, fromCorner));
+  // stronger near the outline's corners, fainter inside the outline
+  float corner = max(vCornerA * (1.0 - smoothstep(0.0, uGlassReach, vAlong)),
+    vCornerB * (1.0 - smoothstep(0.0, uGlassReach, vLen - vAlong)));
+  diffuseColor.a *= uGlassCorner * ink * mix(uGlassMid, 1.0, corner) * mix(uGlassInner, 1.0, vOutline);
   #include <opaque_fragment>`;
 const PANE_FRAG = `
   // in from the nearest rim of this pane: along it (x or z, whichever is not the pane's own) or up
@@ -133,13 +149,13 @@ function edgeMaterial(strength, instanced) {
     depthWrite: false, side: THREE.DoubleSide });
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, { uGlassRes: RES, uGlassPx: PX, uGlassWidth: U.width, uGlassMin: U.minPx, uGlassMax: U.maxPx,
-      uGlassFeather: U.feather, uGlassMid: U.mid, uGlassReach: U.reach });
+      uGlassFeather: U.feather, uGlassMid: U.mid, uGlassReach: U.reach, uGlassInner: U.inner });
     sh.uniforms.uGlassCorner = U.corner;
-    const varyings = 'varying float vAcross, vHalf, vCore, vAlong, vLen;\nuniform float uGlassPx, uGlassFeather';
+    const varyings = 'varying float vAcross, vHalf, vCore, vAlong, vLen, vOutline, vCornerA, vCornerB;\nuniform float uGlassPx, uGlassFeather';
     sh.vertexShader = `attribute vec3 aA, aB;\nattribute float aEnd, aAcross;\n${varyings}, uGlassWidth, uGlassMin, uGlassMax;\nuniform vec2 uGlassRes;\n`
       + (instanced ? 'attribute vec3 aOffset;\nattribute vec4 aFade;\nflat varying vec4 vFade;\n' : '')
       + sh.vertexShader.replace('#include <project_vertex>', (instanced ? 'vFade = aFade;\n' : '') + EDGE_VERT(instanced ? ' + aOffset' : '', instanced ? PROXY_AHEAD : CUBE_AHEAD));
-    sh.fragmentShader = `${varyings}, uGlassMid, uGlassReach, uGlassCorner;\n` + (instanced ? 'flat varying vec4 vFade;\n' : '')
+    sh.fragmentShader = `${varyings}, uGlassMid, uGlassReach, uGlassCorner, uGlassInner;\n` + (instanced ? 'flat varying vec4 vFade;\n' : '')
       + sh.fragmentShader.replace('#include <opaque_fragment>', EDGE_FRAG)
         .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + (instanced ? dither('vFade.x', 'vFade.y', 'vFade.z') : ''));
   };
