@@ -19,13 +19,13 @@ test('the overview settles on the nearest of its four diagonal sides', () => {
   assert.ok(close(snapYaw(-0.1), -Math.PI / 4));
 });
 
-test('the close view zooms with the same presets, from about 1.5 to 4 units', () => {
+test('the close view zooms with the same presets, from about 1.2 to 4.7 units', () => {
   assert.equal(closeDistance(DEFAULT_ZOOM), 3);
   let zoom = DEFAULT_ZOOM;
-  for (let i = 0; i < 5; i++) zoom = stepZoom(zoom, -1);
-  assert.ok(closeDistance(zoom) > 1.4 && closeDistance(zoom) < 1.7);
-  for (let i = 0; i < 5; i++) zoom = stepZoom(zoom, 1);
-  assert.ok(closeDistance(zoom) > 3.8 && closeDistance(zoom) < 4.2);
+  for (let i = 0; i < 10; i++) zoom = stepZoom(zoom, -1);
+  assert.ok(closeDistance(zoom) > 1.1 && closeDistance(zoom) < 1.3);
+  for (let i = 0; i < 10; i++) zoom = stepZoom(zoom, 1);
+  assert.ok(closeDistance(zoom) > 4.5 && closeDistance(zoom) < 4.9);
 });
 
 test('the close view pitch stays within its limits', () => {
