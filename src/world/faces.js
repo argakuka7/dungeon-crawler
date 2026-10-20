@@ -12,14 +12,19 @@ import { areaPad, isInnerFace } from './areas.js';
 import { isTown, isMerchantCamp, townExitPosition } from './town.js';
 import { MAX_DEPTH } from '../themes/depth.js';
 import { trialPortalLayer } from './trials.js';
+import { BOSS_ARENAS } from '../core/bosses.js';
 
 export const LAYER_BASE = [0, 10, 16, 22];   // the levels of the world-wide layers
 
-const guarded = (world, k) => {
+const guardOf = (world, k) => {
   const d = -parse(k)[1];
-  if (d < 0 || d >= MAX_DEPTH) return false;
-  return world.layout(d).guardians.has(k);
+  if (d < 0 || d >= MAX_DEPTH) return null;
+  return world.layout(d).guardians.get(k) ?? null;
 };
+const guarded = (world, k) => !!guardOf(world, k);
+// a boss's arena may want its doorway higher up, and in the middle of the face (core/bosses.js
+// BOSS_ARENAS: Foggery's, over his lava)
+const doorOf = (world, k, d) => [guardOf(world, k), guardOf(world, step(k, d))].map(g => g?.role === 'descent' && BOSS_ARENAS[g.boss]).find(a => a?.door);
 
 // learn: world.html#faces (see learn/README.md)
 function sideFace(world, k, d, withPortal) {
@@ -44,12 +49,14 @@ function sideFace(world, k, d, withPortal) {
   else do pos = 3 + Math.floor(R() * 10); while (f.river && Math.abs(pos - f.river.pos - (f.river.w - 1) / 2) < 3.5);
   if (spanFace(world, fk)?.kind === 'cross') pos = spanFace(world, fk).span.pos;   // one straight bridge
   pos = areaPad(world, fk)?.pos ?? pos;   // where a large area's ramp or ridge meets the face
+  const own = guardian ? doorOf(world, k, d) : null;
+  if (own?.centre) pos = own.centre;
   // the portal's layer: any layer both cubes have, mostly the highest one (sky routes)
   const maxL = Math.min(world.wfc.tiles.get(k).K, world.wfc.tiles.get(step(k, d)).K) - 1;
   const layer = guardian ? 0 : trialPortalLayer(world, fk, maxL) ?? (maxL > 0 && R() < 0.5 ? maxL : Math.floor(R() * (maxL + 1)));
   let level = LAYER_BASE[layer];
   if (!layer) {   // a flat pad of three cells at the highest ground level around it
-    level = guardian ? 4 : Math.max(4, f.profile[pos - 1], f.profile[pos], f.profile[pos + 1]);   // never void
+    level = guardian ? own?.door ?? 4 : Math.max(4, f.profile[pos - 1], f.profile[pos], f.profile[pos + 1]);   // never void
     for (let t = pos - 1; t <= pos + 1; t++) f.profile[t] = level;
   }
   f.portal = { pos, layer, level };

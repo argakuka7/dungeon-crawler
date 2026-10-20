@@ -9,18 +9,28 @@ import { tideLevel } from '../core/squarlo.js';
 import { setTide, standingAt, enemyUnder } from '../physics/fluid.js';
 import { setTrialWater } from '../render/trials.js';
 import { state } from './state.js';
+import { guardianId } from '../core/guardians.js';
 
-// how fast a shown level follows the boss's (levels/s): it moves smoothly between rows
+// how fast a shown level follows the boss's (levels/s): it moves smoothly between rows (a tide's
+// own `follow`, else this)
 const FOLLOW = 1.2;
 let shown = null;
+const dry = () => { state.tide = null; setTide(null); setTrialWater(state.world, null, null); };
+// Foggery's lava (map.tide.gone, cubegen/towerarena.js) can go over the top of his tower (his
+// `tide` over 1) and drain away (under 0); once he is beaten it is gone for good
+const beaten = m => m.tide.gone !== undefined && !!m.guardian && state.run.defeated.has(guardianId(m.key));
 export function updateTide(list, dt) {
   const t = state.map?.tide;
   if (!t) {
-    if (shown !== null) { shown = null; state.tide = null; setTide(null); setTrialWater(state.world, null, null); }
+    if (shown !== null) { shown = null; dry(); }
     return;
   }
-  const k = list.reduce((m, e) => e.tide > m ? e.tide : m, 0), want = tideLevel(t, k);
-  shown = shown === null ? want : shown + Math.max(-FOLLOW * dt, Math.min(FOLLOW * dt, want - shown));
+  let k = 0, own = false;
+  for (const e of list) if (e.boss && Number.isFinite(e.tide) && (!own || e.tide > k)) { k = e.tide; own = true; }
+  if (beaten(state.map) && (!own || k > 0)) k = (t.gone - t.rest) / (t.high - t.rest);
+  const want = tideLevel(t, k), follow = t.follow ?? FOLLOW;
+  shown = shown === null ? want : shown + Math.max(-follow * dt, Math.min(follow * dt, want - shown));
+  if (t.gone !== undefined && shown <= t.gone + 0.05) { state.tide !== null && dry(); state.tide = null; return; }
   state.tide = shown;
   setTide({ y: shown * LH, fluid: t.fluid, box: t.box });
   setTrialWater(state.world, shown * LH, 'running');

@@ -53,6 +53,8 @@ import { snapSkullModel } from './snapskullmodel.js';
 import { squarloModel } from './squarlomodel.js';
 import { squirtleModel } from './squirtlemodel.js';
 import { flipModel } from './flipmodel.js';
+import { foggeryModel } from './foggerymodel.js';
+import { makeFoggeryLook, foggeryLook, disposeFoggeryLook } from './foggeryview.js';
 import { STAGE_PROFILES } from '../core/enemies.js';
 import { SQUARLO_FIGHT } from '../core/squarlo.js';
 import { standingAt } from '../physics/fluid.js';
@@ -74,7 +76,7 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
-  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, flip: flipModel };
+  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, flip: flipModel, foggery: foggeryModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -90,6 +92,7 @@ const GLOW = {
   snapskull: { light: [0xff5a1e, 0.8, 1.8, 0.4] },
   squarlo: { light: [0x7fe8ff, 1.2, 2.6, 0.5], flare: 0.8 },
   flip: { light: [0x8fdcff, 2.2, 4.5, 1.2], flare: 0.9 },
+  foggery: { light: [0xffd84a, 1.4, 3.2, 1.4], flare: 0.8 },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -306,7 +309,8 @@ function sizeOf(e) {
   return a + (b - a) * ease((e.t - 0.6) / (SQUARLO_FIGHT.morphTime - 0.8));
 }
 function growLook(v, e, dt) {
-  const want = sizeOf(e), splitting = e.mode === 'split' && STAGE_PROFILES[e.boss];
+  const stages = STAGE_PROFILES[e.boss], grows = !!stages && (stages[0].size ?? 1) !== (stages[1].size ?? 1);
+  const want = sizeOf(e), splitting = e.mode === 'split' && grows;
   if (Math.abs(want - v.size) > 1e-4) {
     v.size = want;
     v.model.scale.setScalar(v.prefab.scale * want);
@@ -493,7 +497,8 @@ function makeView(e, prefab) {
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, rings: findRings(model), ringSpeed: 0, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0,
     shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0,
-    sink: e.under ? 1 : 0, underWas: e.under ? 1 : 0, height: e.profile.height / size, morphing: false, swim: false };
+    sink: e.under ? 1 : 0, underWas: e.under ? 1 : 0, height: e.profile.height / size, morphing: false, swim: false,
+    fog: e.profile.species === 'foggery' ? makeFoggeryLook(model, group) : null };
 }
 // the hover clip's beat (matches blender/triangle.py): sharp, twice per loop
 const beat = phase => (0.5 + 0.5 * Math.cos(2 * Math.PI * 2 * phase)) ** 6;
@@ -554,6 +559,7 @@ function dying(v, e, dt, off) {
   v.mixer.update(0);
   spinWheels(v, e, dt); turnWaves(v, e, dt); spinRings(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off);
   shedParts(v, e); tumble(v, e, dt);
+  if (v.fog) foggeryLook(v, e, dt);
   flail(v, e, Math.max(0, 1 - e.deadT / (e.profile.deathTime * 0.5)));
   glowFx(v, e, 0, Math.max(0, 1 - e.deadT / e.profile.deathTime) * fade);   // the glow dies with it
 }
@@ -614,6 +620,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     spinWheels(v, e, dt); turnWaves(v, e, dt); spinRings(v, e, dt); thunder(v, e); wetTrail(v, e, dt, off); flail(v, e, 1);
     shedParts(v, e); tumble(v, e, dt); lightTurns(v, e, dt);
     burrowLook(v, e, dt); ripples(v, e, dt); wardLook(v, e, dt);
+    if (v.fog) foggeryLook(v, e, dt);
     glowFx(v, e, dt, 1); glints(v, e, dt);
   }
 }
@@ -647,6 +654,7 @@ export function removeEnemyViews(list) {
     if (v.light) untrackLight(v.light);
     if (v.flash) untrackLight(v.flash);
     removeTrail(v);
+    if (v.fog) disposeFoggeryLook(v.fog);
     v.mixer.stopAllAction(); v.mixer.uncacheRoot(v.model);
     v.material.dispose();
     v.ghost.dispose();

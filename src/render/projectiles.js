@@ -1,4 +1,4 @@
-// Projectiles in flight: the fireball / Triangle punch / ice ball / Totnar's skull / water ball meshes exported
+// Projectiles in flight: the fireball / Triangle punch / ice ball / Totnar's skull / water ball / Foggery's eye meshes exported
 // beside their thrower (enemymodel.js props), turned along the flight (a `tumble`ing one end over
 // end), each with a light and a particle trail.
 // A thrower's kind recolours the mesh and replaces the light and trail colours.
@@ -12,6 +12,7 @@ import { shrapsModel } from './shrapsmodel.js';
 import { totnarModel } from './totnarmodel.js';
 import { squirtleModel } from './squirtlemodel.js';
 import { flipModel } from './flipmodel.js';
+import { foggeryModel } from './foggerymodel.js';
 import { kindColors, recolor } from './recolor.js';
 
 const LOOKS = {
@@ -25,6 +26,8 @@ const LOOKS = {
   water: { model: squirtleModel, prop: () => squirtleModel.props?.SquirtleDrop, light: [0x8fdcff, 0.8, 2], trail: ['#ffffff', '#c8f0ff', '#7fcaf0'], rate: 40, gravity: 6 },
   // Flip's ball of light, its little ring spinning, sparkles streaming off it
   ball: { model: flipModel, prop: () => flipModel.props?.FlipBall, light: [0x8fdcff, 2.2, 3], trail: ['#ffffff', '#bfeaff', '#6fcbff'], rate: 55 },
+  // one of Foggery's eyes, looking where it flies, a glimmer and slime dripping off it
+  eye: { model: foggeryModel, prop: () => foggeryModel.props?.FoggeryEye, light: [0xffd84a, 1.2, 2.4], trail: ['#fff6b0', '#ffd23a', '#c8f080'], rate: 35, gravity: 3 },
 };
 const ahead = new THREE.Vector3();
 

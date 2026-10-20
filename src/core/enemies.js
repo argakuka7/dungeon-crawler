@@ -516,7 +516,66 @@ export const FLIP = {
   style: 'ranged', keep: [2.6, 5.5], guardian: true, guardianRole: 'descent', boss: 'flip',
   seedSalt: 0xf11b0, spacing: 6,
 };
-export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP];
+// Foggery, the fifth real boss (blender/foggery.py), in place of the descent guardian of depth 4
+// (core/bosses.js): a light green frog a little taller than the player, with two big yellow eyes on
+// top of his head, long thin arms and long legs. He fights in his caldera of lava, round and up his
+// tower (cubegen/towerarena.js); game/foggery.js runs his fight, core/foggery.js holds its rules.
+// Lava does not burn him (`lavaproof`, physics/fluid.js).
+// Phase 1: he plucks out one of his eyes and throws it (`eye`: which, 0 left, 1 right; it grows
+// back, game/foggery.js) and croaks up Fire-faces. Phases 2 and 3 (FOGGERY_BALL): a ball with his
+// eyes in the middle, floating, a shield round him while his Fire-cats live (a summon, `ward`ed:
+// nothing hurts him while he calls them). He spits fireballs (phase 3: a volley of three) and
+// makes fire geysers burst out of the floor (a beam of kind 'geyser' out of the floor: three
+// rings that follow the player, then a column of fire: it burns and pops one up).
+// (the summons are `cast`s too: they are started from any height, core/enemies.js attacksInReach)
+const FOGGERY_EYE = {
+  name: 'eyeL', clip: 'eyeL', weight: 3, reach: 8, hitAt: 24 / 30, trackUntil: 0.65, attackTime: 42 / 30, hitReach: 0,
+  arc: 0.5, power: 0.75, knock: 3, knockDown: false, hop: 2.5, reason: 'Hit by Foggery\'s eye!',
+  projectile: { kind: 'eye', speed: 8, radius: 0.2, range: 11, spin: 8, eye: 0, push: 4, pushTime: 0.25, muzzle: [0.401, 1.178, 0.802] },
+};
+const FOGGERY_EYE_R = { ...FOGGERY_EYE, name: 'eyeR', clip: 'eyeR', projectile: { ...FOGGERY_EYE.projectile, eye: 1, muzzle: [-0.401, 1.178, 0.802] } };
+const FOGGERY_SUMMON = {
+  name: 'summon', clip: 'summon', weight: 2, reach: 9, hitAt: 27 / 30, trackUntil: 0.5, attackTime: 45 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Foggery', cast: 'summon',
+  summon: { kind: 'fogface', muzzle: [0, 1.426, 0.266] },
+};
+const FOGGERY_SPIT = {
+  name: 'spit', clip: 'spit', weight: 3, reach: 9, hitAt: 18 / 30, trackUntil: 0.5, attackTime: 33 / 30, hitReach: 0,
+  arc: 0.5, power: 0.7, knock: 3, knockDown: false, hop: 3, reason: 'Scorched by Foggery!',
+  projectile: { ...FIREFACE.projectile, speed: 7.5, radius: 0.24, range: 11, burn: { time: 1, damage: 6, ticks: 2 }, muzzle: [0, 0.605, 0.705] },
+};
+const FOGGERY_VOLLEY = { ...FOGGERY_SPIT, name: 'volley', power: 0.55, projectile: { ...FOGGERY_SPIT.projectile, volley: 3, fan: 0.32 } };
+const FOGGERY_GEYSER = {
+  name: 'geyser', clip: 'geyser', weight: 2, reach: 11, hitAt: 48 / 30, trackUntil: 0.5, attackTime: 63 / 30, hitReach: 0,
+  arc: -1, power: 1, knock: 1.5, knockDown: false, hop: 3, pop: 5, reason: 'Burned by a fire geyser!', burn: { time: 1.5, damage: 5, ticks: 3 },
+  beam: { kind: 'geyser', aim: 'feet', time: 1.5, track: 2, lock: 0.45, radius: 0.55, range: 14, sky: 3, clear: false, color: '#ff8a2a',
+    bolts: 3, spread: [1.6, 2.8], muzzle: [0, 0.75, 0] },
+};
+const FOGGERY_CATS = {
+  name: 'cats', clip: 'cats', weight: 1, reach: 40, hitAt: 30 / 30, trackUntil: 0.4, attackTime: 48 / 30, hitReach: 0,
+  arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Foggery', cast: 'cats', ward: true,
+  summon: { kind: 'fogcat', muzzle: [0, 1.02, 0.728] },
+};
+export const FOGGERY = {
+  type: 'foggery', species: 'foggery', label: 'Foggery', hp: 1000, damage: 24, knock: 3,
+  xp: 650, coins: [170, 300],
+  radius: 0.45, height: 1.75, bodyHeight: 1.6, mass: 5, lavaproof: true,
+  aggro: 7, giveUp: 14, chase: 1, wander: 0.4, homeSpeed: 0.8,
+  ...FOGGERY_EYE, cooldown: 2, ichor: ['#d8f8b0', '#5aa83a'], pitch: 0.8,
+  attacks: [FOGGERY_EYE, FOGGERY_EYE_R, FOGGERY_SUMMON], phase: 1,
+  poise: 2, hitStun: 0.25, deathTime: 2.4, corpseTime: 5,
+  parts: { body: ['FoggeryBody', 'FoggeryBelly'], eyes: ['FoggeryEyes_glow'] },
+  light: '#ffe060', sparks: ['#ffd25a', '#ff8a2a', '#c8f080'],
+  style: 'ranged', keep: [2.4, 6], guardian: true, guardianRole: 'descent', boss: 'foggery',
+  seedSalt: 0xf0663e, spacing: 6,
+};
+// ... curled up into his ball (phases 2 and 3): floating, his eyes in the middle
+export const FOGGERY_BALL = {
+  ...FOGGERY, type: 'foggeryball', radius: 0.6, height: 1.6, bodyHeight: 1.5, hover: true, gait: 'float',
+  ...FOGGERY_SPIT, cooldown: 1, chase: 1.1, attacks: [FOGGERY_SPIT, FOGGERY_VOLLEY, FOGGERY_GEYSER, FOGGERY_CATS], phase: 2,
+  style: 'ranged', keep: [2.6, 6],
+};
+export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP, FOGGERY];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -738,7 +797,7 @@ export const SQUARLO_GIANT = enemyKind(SQUARLO, {
 });
 // a boss's profile for each of its stages (game/squarlo.js; a friend's game swaps it by the stage
 // the runner sends, net/foes.js)
-export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT] };
+export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT], foggery: [FOGGERY, FOGGERY_BALL, FOGGERY_BALL] };
 // One full attack and recovery, averaged over a species' attacks (s), and what it deals per
 // second at level 1 (a projectile's burn included): how dangerous it is to stand next to.
 export function attackCycle(profile) {
@@ -840,6 +899,18 @@ export const SKY_WOLLA = enemyKind(WOLLA, {
   aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.06), puff: { colors: ['#f0faff', '#bfe8ff', '#8fd0f8'], size: 0.6 },
   mods: { hp: 0.6, damage: 0.6, xp: 0.15 },
 });
+// Foggery's minions: plain Fire-faces (phase 1) and Fire-cats (phases 2 and 3: they guard him, and
+// lava does not burn them, `lavaproof`), weaker, going for the player at once. `plain`: they look
+// like and are called what they are, no kind of their own to tell apart.
+const EMBER_PUFF = { colors: ['#ffd25a', '#ff8a2a', '#5a4038'], size: 0.55 };
+export const FOG_FACE = enemyKind(FIREFACE, {
+  type: 'fogface', minion: true, plain: true, aggro: 10, giveUp: 14, coins: [0, 0], drops: MINION_DROPS(0.05), puff: EMBER_PUFF,
+  mods: { hp: 0.6, damage: 0.6, xp: 0.15 },
+});
+export const FOG_CAT = enemyKind(FIRECAT, {
+  type: 'fogcat', minion: true, plain: true, lavaproof: true, aggro: 12, giveUp: 16, coins: [0, 0], drops: MINION_DROPS(0.08), puff: EMBER_PUFF,
+  mods: { hp: 0.8, damage: 0.6, xp: 0.2 },
+});
 // small spiders of twigs, poured out of his ball by the dozen
 export const TOT_SPIDER = enemyKind(SPIDER, {
   type: 'totspider', label: 'Twig spider', reason: 'Bitten by a twig spider!', minion: true,
@@ -858,7 +929,7 @@ export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.valu
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
   BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
   NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
-  TIDE_SQUIRTLE, SKY_WOLLA].map(k => [k.type, k]));
+  TIDE_SQUIRTLE, SKY_WOLLA, FOG_FACE, FOG_CAT].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,
 // like the dead
@@ -922,7 +993,7 @@ export function blowOf(profile, a = profile) {
     chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage),
     ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }),
     ...(a.projectile?.push && { push: { speed: a.projectile.push, time: a.projectile.pushTime } }),
-    ...(a.beam?.shock && { shock: a.beam.shock }) };
+    ...(a.beam?.shock && { shock: a.beam.shock }), ...(a.pop && { pop: a.pop }) };
 }
 
 // a level-1 value grown to `level`

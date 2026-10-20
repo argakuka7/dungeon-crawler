@@ -22,6 +22,14 @@ let parts = null;
 export const setPartBlockers = cells => { parts = cells; };
 const blockersAt = i => parts?.[i]?.length ? [...(state.map.blockers?.[i] || []), ...parts[i].filter(b => !b.off)] : state.map.blockers?.[i] || [];
 const inPillar = (p, fx, fz) => fx >= p.x0 && fx <= p.x1 && fz >= p.z0 && fz <= p.z1;
+// The platforms floating round Foggery's tower (game/movers.js): slabs that move, in the active
+// cube. Each is a surface like a floor (flat, its top at y1, its underside at y0, from x0, z0
+// to x1, z1), and one that carries what stands on it (`dx`, `dz`: how far it moved this frame,
+// physics/move.js).
+let movers = [];
+export const setMovers = list => { movers = list; };
+export const moversNow = () => movers;
+const onMover = (m, x, z) => x >= m.x0 && x < m.x1 && z >= m.z0 && z < m.z1;
 const local = (x, z) => [x - Math.floor(x), z - Math.floor(z)];
 
 // highest walkable surface at (x,z) that is not above y+step: { h, s (floor or piece), i (cell) }
@@ -37,6 +45,7 @@ export function groundAt(x, z, y, step, map = state.map) {
     const t = runY(p, fx, fz);
     if (t <= y + step && t > h) { h = t; s = p; }
   }
+  if (map === state.map) for (const m of movers) if (onMover(m, x, z) && m.y1 <= y + step && m.y1 > h) { h = m.y1; s = m; }
   return { h, s, i };
 }
 
@@ -58,6 +67,7 @@ export function blockedAt(x, z, y, step, piecesOnly = false, h = player.h) {
     const t = runY(p, fx, fz), b = pieceBottom(p, t);
     if (piecesOnly ? b > y + 0.05 && b < head : t > y + step && b < head) return true;
   }
+  for (const m of movers) if (onMover(m, x, z) && (piecesOnly ? m.y0 > y + 0.05 && m.y0 < head : m.y1 > y + step && m.y0 < head)) return true;
   return false;
 }
 
@@ -73,6 +83,7 @@ export function ceilingAt(x, z, y) {
     const b = p.kind === 'pillar' ? (inPillar(p, fx, fz) ? p.bottom : Infinity) : pieceBottom(p, runY(p, fx, fz));
     if (b > y) c = Math.min(c, b);
   }
+  for (const m of movers) if (onMover(m, x, z) && m.y0 > y) c = Math.min(c, m.y0);
   return c;
 }
 
@@ -88,6 +99,7 @@ export function insideSolid(x, z, y) {
     const t = runY(p, fx, fz);
     if (t > y && pieceBottom(p, t) < y) return true;
   }
+  for (const m of movers) if (onMover(m, x, z) && y > m.y0 && y < m.y1) return true;
   return false;
 }
 
@@ -104,6 +116,7 @@ export function solidTop(x, z, y) {
     const t = runY(p, fx, fz);
     if (t > y && pieceBottom(p, t) < y) top = { h: t, s: p };
   }
+  for (const m of movers) if (onMover(m, x, z) && m.y1 > y && m.y0 < y) top = { h: m.y1, s: m };
   return top;
 }
 

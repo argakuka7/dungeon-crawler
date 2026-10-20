@@ -21,7 +21,7 @@ import { walkable, findPath } from '../src/physics/enemynav.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 
 const signature = spots => spots.map(s => [s.id, s.kind.type, s.level, s.f.id, s.x, s.y, s.z, s.yaw]);
-const arena = (seed = 123, depth = 4) => {   // (the first descent without a real boss, core/bosses.js)
+const arena = (seed = 123, depth = 5) => {   // (the first descent without a real boss, core/bosses.js)
   const world = new World(seed), key = world.layout(depth).down;
   return { world, map: state.map = world.cube(key).map };
 };
@@ -82,21 +82,24 @@ test('guardian arenas have dry, connected floors, shared ground entrances and no
       assert.equal(m.guardian.role, g.role); assert.equal(m.guardian.bossPlaceholder, g.role === 'descent' && !g.boss);
       assert.equal(m.guardian.boss, g.boss ?? null);
       assert.equal(voidAllowed(w, m.key), false);
-      // (Flip's box has floors stacked in its columns: its walls, its island, core/flip.js)
-      if (!m.flip) assert.equal(m.floors.length, 256);
+      // (Flip's box has floors stacked in its columns: its walls, its island, core/flip.js; so has
+      // Foggery's tower, its ramp winding round it, cubegen/towerarena.js)
+      const stacked = !!m.flip || !!m.tower;
+      if (!stacked) assert.equal(m.floors.length, 256);
       assert.ok(m.floors.every(f => !f.fluid && !f.covered));
-      if (!m.flip) for (const f of m.floors) if (f.encounter) for (const [dx, dz] of DIRS) {
+      if (!stacked) for (const f of m.floors) if (f.encounter) for (const [dx, dz] of DIRS) {
         const other = m.floors[(f.z + dz) * 16 + f.x + dx];
         if (!other.encounter && other.top < f.top - 1) assert.ok(m.fences.has(edgeKey(f.x, f.z, other.x, other.z)));
       }
       const entry = m.portals[0], down = m.portals[1];
-      assert.equal(entry.layer, 0); assert.equal(entry.y, down.y);
+      assert.equal(entry.layer, 0);
+      if (m.tower) assert.ok(down.y < entry.y); else assert.equal(entry.y, down.y);   // (his well lies on the caldera's floor)
       for (const cfg of ENEMY_PROFILES) {
         assert.ok(walkable(m.guardian.floor, cfg.height));
         assert.ok(findPath(entry.floor, m.guardian.floor, 40, cfg.height));
         assert.ok(findPath(m.guardian.floor, down.floor, 40, cfg.height));
       }
-      assert.equal(Math.hypot(m.guardian.x - down.x - .5, m.guardian.z - down.z - .5), 2);
+      if (!m.tower) assert.equal(Math.hypot(m.guardian.x - down.x - .5, m.guardian.z - down.z - .5), 2);
       assert.equal(clone.guardian.floor, clone.floors[m.guardian.floor.id]);
       assert.equal(buildCubeGeometry(m).length, 1);
       const neighbor = w.cube(step(m.key, entry.dir)).map;
@@ -201,9 +204,9 @@ test('the messages call a guardian by its kind: the one guardianSpots promotes',
       assert.equal(guardianLockMessage(map, label), `Defeat the ${label} to unlock this descent`);
     }
   }
-  const plain = w.cube(w.layout(4).down).map;
+  const plain = w.cube(w.layout(5).down).map;
   assert.equal(guardianLockMessage(plain), 'Defeat the Temp Boss to unlock this descent', 'unknown: by its tier');
-  assert.equal(guardianKind(w.cube(w.layout(4).route[1]).map), null, 'no guardian');
+  assert.equal(guardianKind(w.cube(w.layout(5).route[1]).map), null, 'no guardian');
 });
 test('leaving an arena while its guardian lives asks, and only when steered out', () => {
   const w = new World(3), run = createRun();

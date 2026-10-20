@@ -15,6 +15,7 @@ import { addGustos } from './gusto.js';
 import { addTotnars } from './totnar.js';
 import { addSquarlos } from './squarlo.js';
 import { addFlips } from './flip.js';
+import { addFoggerys } from './foggery.js';
 import { pickFloor, pointer } from './pointer.js';
 
 const SPREAD = 1.1;   // the least distance between enemies of one spawn
@@ -60,9 +61,9 @@ function spawned(kind, f, x, y, z, yaw, level, i) {
     ...(kind.guardian && { guardian: true, guardianRole: kind.guardianRole, bossPlaceholder: kind.bossPlaceholder, boss: kind.boss }),
   }, kind, i);
 }
-// a boss fights its own fight (game/gusto.js, game/totnar.js, game/squarlo.js, game/flip.js)
+// a boss fights its own fight (game/gusto.js, game/totnar.js, game/squarlo.js, game/flip.js, game/foggery.js)
 function enlist(kind, list) {
-  if (kind.boss) ({ gusto: addGustos, totnar: addTotnars, squarlo: addSquarlos, flip: addFlips })[kind.boss](list); else addEnemies(list);
+  if (kind.boss) ({ gusto: addGustos, totnar: addTotnars, squarlo: addSquarlos, flip: addFlips, foggery: addFoggerys })[kind.boss](list); else addEnemies(list);
 }
 
 // A test room's lineup (map.testRoom.lineup, cubegen/testrooms.js): every kind where it stands,

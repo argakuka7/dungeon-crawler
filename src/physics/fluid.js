@@ -2,11 +2,12 @@
 // Lava burns and acid dissolves on entry. Water only drowns a body whose head goes under: the
 // player wades through water shallower than their head stands (HEAD_Y, measured off the
 // character's rig), slowed by it, and an enemy through water shallower than its body is tall
-// (`headOf`); one that `swims` (Squarlo, the Squirtles) never drowns.
+// (`headOf`); one that `swims` (Squarlo, the Squirtles) never drowns, and one that is `lavaproof`
+// (Foggery, his Fire-cats) is not burned by lava.
 // Standing fluids fill a cube up to one level, everything under it is in it, any floor or
 // structure: a trial's rising fluid (core/trials.js, game/trials.js) over the whole cube, and a
 // boss's tide (game/tide.js) inside its box of cells.
-import { LH, N, WATER, HEAD_Y } from '../core/constants.js';
+import { LH, N, WATER, LAVA, HEAD_Y } from '../core/constants.js';
 
 let trial = null;   // { y (its surface), fluid } or null
 let tide = null;    // { y, fluid, box: [x0, z0, x1, z1] (cells, x1 / z1 past the last) } or null
@@ -78,5 +79,6 @@ export const headOf = profile => profile.bodyHeight;
 export function enemyUnder(e) {
   if (e.profile.swims) return 0;
   const s = standingAt(e.x, e.z);
-  return s && deep(s.fluid, s.y - e.y, headOf(e.profile)) ? s.fluid : 0;
+  if (!s || (s.fluid === LAVA && e.profile.lavaproof)) return 0;   // (Foggery and his Fire-cats wade through his lava)
+  return deep(s.fluid, s.y - e.y, headOf(e.profile)) ? s.fluid : 0;
 }

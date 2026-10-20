@@ -4,8 +4,9 @@ A real boss takes the place of one depth's descent guardian; the other descent g
 boss placeholders ([guardians.md](guardians.md)): the game calls them **Temp Bosses**
 (`♛ Temp Boss Spider`), as they hold the place of bosses to come. `BOSSES` in `src/core/bosses.js` says which
 depth has which: so far the first descent, on the road out of town (depth 0), has **Gusto**, the
-second (depth 1) **Totnar**, the third (depth 2) **Squarlo** and the fourth (depth 3) **Flip**. A
-boss may bring an arena of its own (`BOSS_ARENAS`: Squarlo's tidal hills, Flip's box).
+second (depth 1) **Totnar**, the third (depth 2) **Squarlo**, the fourth (depth 3) **Flip** and the
+fifth (depth 4) **Foggery**. A boss may bring an arena of its own (`BOSS_ARENAS`: Squarlo's tidal
+hills, Flip's box, Foggery's caldera).
 
 The layout marks that arena's guardian with `boss` (`world/layout.js`, `cubegen/guardian.js`;
 `bossPlaceholder` is false there). The boss stands on the guardian's spot **alone**: no
@@ -19,8 +20,9 @@ out of his arena (a dev spawn, the boss test room) he fights on the same (`relen
 Like every guardian's arena, leaving it while the boss lives asks first, and being pushed against
 the entrance never takes you out ([guardians.md](guardians.md#encounter-and-persistence)).
 
-Each boss runs its own fight (`game/gusto.js`, `game/totnar.js`, `game/squarlo.js`, `game/flip.js`, its
-rules in `core/gusto.js`, `core/totnar.js`, `core/squarlo.js`, `core/flip.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
+Each boss runs its own fight (`game/gusto.js`, `game/totnar.js`, `game/squarlo.js`, `game/flip.js`,
+`game/foggery.js`, its rules in `core/gusto.js`, `core/totnar.js`, `core/squarlo.js`, `core/flip.js`,
+`core/foggery.js`); what they share is `game/bossfight.js`: the players in the fight, sending a
 body into it, the floors a body fits on, putting minions down round their boss and letting
 bodies go. A boss's minions (`minion` kinds, summoned) live in no roster: they pay a little XP
 once, no coins, no weapons, now and then a minor health potion, and go with their boss when it
@@ -511,6 +513,140 @@ the floor.
 and damage, that lives in no roster (`minion`): only Flip brings them, and they go for the player at
 once. A little XP once, no coins and no weapons, a minor health potion 6% of the time.
 
+## Foggery
+
+![Foggery's clips](../blender/previews/foggery-preview.png)
+
+From the kids' whiteboard sketches (`blender/foggery.py`, `assets/foggery.glb`): a frog, light
+green, a little taller than the player (1.75 cells). Two big round yellow eyes sit on top of his
+head at the sides; a dark line runs across his face between them with a little round mouth under
+it; his body flares out like a bell below the head (pale belly in front); two long thin arms hang
+from the sides of his head down past his body, ending in three-fingered hands; two long straight
+legs with webbed feet carry him. His second form is a ball, light green, floating, his two eyes
+close together in the middle of its face, a shield of glowing segments turning round it while his
+cats guard him. One model holds both forms: each clip shows one and scales the other away (the
+bones `frog` and `ball`), and the game scales an eye he threw away and grows it back
+(`render/foggeryview.js`).
+
+Profiles: `FOGGERY` (the frog, phase 1) and `FOGGERY_BALL` (phases 2 and 3; `STAGE_PROFILES`) in
+`src/core/enemies.js`; the fight's rules, his tower and the platforms' puzzle in
+`src/core/foggery.js` (`FOGGERY_FIGHT`, `TOWER`, `PLATFORMS`); the fight in `src/game/foggery.js`,
+the platforms in `src/game/movers.js` (drawn by `render/movers.js`), the lava's rescue in
+`src/game/lavarescue.js`.
+
+| | Level 6 |
+|---|---|
+| Health | 1850 (the descent tier's floor, grown five levels) |
+| Damage | 36 (eye ×0.75 and a little push, fireball ×0.7 (volley ×0.55 a ball) and a burn, geyser ×1, a burn and a pop up into the air) |
+| XP | 650 grown; coins 170–300 at level 1; two weapons and two potions like a descent guardian |
+| Poise | 2 s |
+
+Lava does not burn him (`lavaproof`, `physics/fluid.js enemyUnder`), nor his Fire-cats.
+
+### His arena: the caldera
+
+His descent arena is always a caldera (`BOSS_ARENAS.foggery.type`, `cubegen/towerarena.js`): a rim
+of rock round the cube a cell in from its edge, 22 to 24 levels high, holds in the lava that fills
+the floor of the caldera (`map.tide`, its levels below). The doorway is a gap in the rim, eight
+levels up and in the middle of its face (`BOSS_ARENAS.foggery.door`, `centre`: `world/faces.js`
+gives the face between his arena and the room before it that level and position, so the room
+before has its doorway there too). From it a stone bridge two cells wide leads over the lava to
+the tower in the middle.
+
+The tower (`TOWER`): a solid core (2.2 cells round the middle) as high as its top (level 20), and
+round it, out to 4.3 cells, a ramp winding up from the caldera's floor (level 1) to the top, ten
+levels a turn, the way it turns (`spin`) drawn from the seed. It is flat where the bridge joins it
+(the junction, on the doorway's side, at the bridge's level) and for 0.4 of a turn at the top (the
+landing): the core and the landing are the top of the tower. Each turn is a slab two levels thick
+over the one below, with room enough to walk under (three levels at least); low down, near the
+floor, the ramp is solid to the ground. The ramp's corners follow its height round the middle, so
+it is a smooth spiral for the physics and the eye; floors meeting edge to edge are linked. Low
+stone parapets run along the ramp and the bridge where they drop away (`fences`, `style: 'stone'`),
+none round the top. The tower, the ramp and the bridge are dark basalt (`paint: 'basalt'`, drawn
+with the structures' stone, `render/floors.js`), the caldera's floor a crust of ash (`'ash'`). The
+well lies on the caldera's floor in a far corner, under the lava until he is beaten; the way to
+it from the doorway goes over the bridge, down the ramp and across the floor.
+
+**The lava** is a standing fluid like Squarlo's tide (`physics/fluid.js setTide`, drawn like a
+trial's rising fluid, `render/trials.js`), in the box of the caldera's cells. His `tide` says where
+it stands: 0 at rest (level 2, just over the caldera's floor), 1 at its highest (level 19, just
+under the top), more over the top (`LAVA.flood`, level 20.6: the top is drowned), less than 0
+drained (`LAVA.gone`). Beaten, it is gone for good (`map.tide.gone`: `game/tide.js` drains it, and
+there is none the next time you come).
+
+**The platforms** (`PLATFORMS`, `map.movers`): the caldera's twelve by twelve cells are 36 slots of
+two by two; the ring of 20 slots round the tower's block holds 13 stone platforms. They are not
+there at first: once the lava has risen to its highest they rise up out of it (1.8 s) and stay for
+the rest of the visit (a death or leaving the cube puts them back under, `game/movers.js`). Their
+tops float a level over the top of the tower (a jump up), 0.2 cells over the drowned top. Every
+2 s up to two of them slide into an empty slot next to theirs (in 1.2 s), never back where they just
+came from (unless nothing else can move), and at least two of the slots touching the top of the
+tower stay filled (`touch`, `puzzleMoves`). Nobody can steer them; what stands on one is carried
+along (`physics/move.js`). The puzzle is a function of its clock alone (`puzzleAt`): every game
+that knows the clock sees the same. They are surfaces like floors for the physics
+(`physics/collide.js setMovers`: ground, walls, ceilings, solids). Walking off one stops at its
+edge like at any edge over lava; a jump goes across to a platform next to it (an empty slot
+between two is too far).
+
+**Falling into the lava** (`game/lavarescue.js`, `game/ragdoll.js dieInFluid`) costs a quarter of
+your most health (`FOGGERY_FIGHT.rescue`), and magic pulls you out to safe ground: where you last
+stood if the lava is still well under it (or it is the top of the tower), else the nearest floor of
+the fight well above the lava, else (the top drowned) the nearest platform. Only if that quarter is
+all you have left does it kill you, like any lava.
+
+### Phase 1 (full health to two thirds)
+
+- He stands on the bridge by the tower, facing the doorway. A player coming within 2.4 cells of
+  him, a hit, or his first attack starts the fight (`wake`): "Foggery croaks: the lava is rising!
+  Up the tower!". The lava rises from rest to its highest in **60 s**, and he walks up the ramp to
+  the top (`route`, `game/enemyai.js`: his own way, not after the player), 1 cell/s, stopping to
+  attack whoever is in reach. A player walking the same way keeps ahead of the lava, half again as
+  slow (`tests/foggery.test.js`).
+- **Eye throw** (within 8 cells, clips `FoggeryEyeL` / `FoggeryEyeR`, 1.4 s): he reaches up, plucks
+  out one eye, draws it back over his shoulder and throws it at 0.8 s (a projectile, 8 cells/s,
+  with a little push). It grows back in 2.5 s (`eyes`); he throws only an eye he has, so one at a
+  time, but the other while the first grows back.
+- **Fire-faces** (`FoggerySummon`, 1.5 s): he crouches, puffs up and croaks at 0.9 s: plain
+  Fire-faces come out of his mouth onto the floors round him, as many as fill up to **three**,
+  every 10 s at most (the first after 4 s). The lava burns them (no reward).
+- No blow takes him below two thirds before he is on top; there, he curls up. Brought there on the
+  way, he hurries up (2.2× as fast) attacking no more.
+
+### Curling up
+
+At two thirds of his health, on top, he stops (mode `split`): for 2.4 s nothing hurts him while the
+frog shrinks and spins away in a puff of steam and the ball swells up. Then he fights on as
+`FOGGERY_BALL`, his Fire-faces gone.
+
+### Phase 2 (two thirds to a third)
+
+- **His cats** (`FoggeryCats`, 1.6 s, warded): he spins right round and flares: two plain Fire-cats
+  appear round him. While one of them lives (and while he is about to call them) his **shield**
+  holds (`guard`) and nothing hurts him. Once both are dead it shatters ("Foggery's shield is down!
+  Hit him now!") and he can be hurt; **8 s** later he calls two new ones. While they are due he
+  starts nothing else.
+- **Fireball** (within 9 cells, `FoggerySpit`, 1.1 s): he draws back and spits a fireball at 0.6 s
+  (7.5 cells/s) that sets you on fire.
+- **Fire geysers** (within 11 cells, `FoggeryGeyser`, 2.1 s, every 7–10 s, the first 2 s into the
+  phase): he rises and shudders, and three rings of glowing cracks open on the floor, one under you
+  and two 1.6–2.8 cells round you (`beam` of kind `geyser`, three `bolts`, `core/beams.js`); they
+  follow you for 1 s and hold still for the last 0.45 s, then at 1.6 s he slams down and a column of
+  fire bursts out of each (`render/beams.js eruptGeyser`): whoever is in one is burned, set on fire
+  and popped up into the air (`pop`).
+- No blow takes him below a third.
+
+### Phase 3 (a third to death)
+
+At a third of his health he rises up (2 s, nothing hurting him) and the lava floods the top of the
+tower over 6 s: "The lava swallows the tower! Jump onto the platforms!". From then on he floats
+over the drowned top at about the platforms' height, circling round it (`anchored`,
+`FOGGERY_FIGHT.orbit`), so that the platforms pass by him. He throws a **volley** of three
+fireballs fanned out instead of one, makes **geysers** burst through the platforms and still calls
+**his cats**: they wade through the lava on the drowned top, and his shield holds while they live.
+
+His death drains the lava away for good (7 s), takes his minions along and opens the well on the
+caldera's floor; floating, he sinks onto the floor under him, his loot with him.
+
 ## Playing together
 
 The game that runs the cube's enemies runs the fight; the others are shown it (`net/foes.js`):
@@ -530,7 +666,11 @@ slot: the way his box is turned (an index into `ORIENTS`), how often he turned i
 holes. Every game turns its own world after them (`game/flipworld.js`: its own player carried and
 falling, the enemies shown as the runner moves them) and is pulled by the holes; a friend a black
 hole swallows comes out of another after a moment, without a turn (only the runner's player makes
-him turn the world).
+him turn the world). Foggery's stage swaps his profile like Squarlo's, his tide goes over 1 and
+under 0 (his lava), and his row carries two more slots (the first unused): his eyes, his shield and
+the clock of his platforms. Every game raises its own lava by his tide, raises its platforms once
+the lava is at its highest, follows his platforms' clock (`game/movers.js followMovers`) and pulls
+its own player out of the lava.
 
 ## Dev
 
@@ -540,7 +680,9 @@ kills it whatever its phase. `/spawn custotriangle` spawns its minions on their 
 and `/spawn squarlo` (`addSquarlos`; without his tidal hills he calls no tide), `/spawn squirtle`,
 `/spawn coralsquirtle` and `/spawn tidesquirtle`. `/arena tidal` goes to his arena. `/spawn flip`
 (`addFlips`; out of his box he turns nothing, and a black hole lets a swallowed player out
-elsewhere without a turn) and `/spawn skywolla`; `/arena flip` goes to his box.
+elsewhere without a turn) and `/spawn skywolla`; `/arena flip` goes to his box. `/spawn foggery`
+(`addFoggerys`; out of his caldera there is no lava, no climb and no platforms), `/spawn fogface`
+and `/spawn fogcat`; `/arena tower` goes to his caldera, `/boss foggery` into it.
 
 `/boss gusto` goes into the real arena (one beaten is up again). `/testroom boss gusto` (or
 `/testroom boss 0`: a boss, or the depth whose boss it is) goes into his **test room**
@@ -560,13 +702,14 @@ without a boss of its own has no boss room yet.
 ## Checks
 
 ```sh
-node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/flip.test.js tests/testrooms.test.js tests/assets.test.js
+node --test tests/gusto.test.js tests/totnar.test.js tests/squarlo.test.js tests/flip.test.js tests/foggery.test.js tests/testrooms.test.js tests/assets.test.js
 ```
 
 ```js
 await (await import('./tests/browser/gusto.js')).runGustoChecks()   // the whole fight, in its arena
 await (await import('./tests/browser/totnar.js')).runTotnarChecks() // Totnar's, in his
 await (await import('./tests/browser/squarlo.js')).runSquarloChecks() // Squarlo's, in his tidal hills
+await (await import('./tests/browser/foggery.js')).runFoggeryChecks()  // Foggery's, in his caldera: the lava, the climb, his cats, the platforms
 await (await import('./tests/browser/bossroom.js')).runBossRoomChecks() // each boss's test room: idle until hit
 ```
 
@@ -589,3 +732,7 @@ that they print must match `SQUARLO`, `SQUARLO_GIANT` and `SQUIRTLE` (`tests/ass
 Flip: `Blender -b --python blender/flip.py -- assets/flip.glb blender/flip.blend
 blender/previews/flip-preview.png`, then `npm run compress-assets`. The throw and summon points it
 prints must match `FLIP` (`tests/assets.test.js`).
+
+Foggery: `Blender -b --python blender/foggery.py -- assets/foggery.glb blender/foggery.blend
+blender/previews/foggery-preview.png`, then `npm run compress-assets`. The eye, summon, spit and
+cats points it prints must match `FOGGERY` and `FOGGERY_BALL` (`tests/assets.test.js`).

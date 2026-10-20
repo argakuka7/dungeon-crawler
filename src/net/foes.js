@@ -18,6 +18,7 @@ import { clearProjectiles } from '../game/projectiles.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { guardianId } from '../core/guardians.js';
 import { STAGE_PROFILES, enemyProfile } from '../core/enemies.js';
+import { followMovers } from '../game/movers.js';
 import { Timeline, lerpAngle, PREDICT } from './sync.js';
 import { MODES, BURNING, TOXIC, rosterOf, rowOf } from './protocol.js';
 
@@ -150,7 +151,7 @@ export class Viewer {
       // and a Squirtle under the floor (game/enemyai.js)
       const stages = STAGE_PROFILES[e.boss], want = stages?.[(e.stage ?? 1) - 1];
       if (want && e.profile.type !== want.type) e.profile = enemyProfile(want, e.level);
-      e.tide = Number.isFinite(b[17]) ? Math.max(0, Math.min(1, b[17])) : 0;
+      e.tide = Number.isFinite(b[17]) ? Math.max(-2, Math.min(2, b[17])) : 0;   // (Foggery's lava goes over 1 and drains under 0)
       e.under = b[18] === 1 ? 1 : 0;
       // Flip's world and black holes (game/flipworld.js turns ours after them)
       if (Array.isArray(b[19])) {
@@ -158,6 +159,13 @@ export class Viewer {
         if (Number.isInteger(orient) && Number.isInteger(turns)) { e.orient = orient; e.turns = turns; }
         e.holes = (Array.isArray(holes) ? holes : []).filter(Array.isArray).map(([n, x, y, z, t, life]) =>
           Object.assign((e.holes ?? []).find(h => h.n === n) ?? { n }, { x, y, z, t, life }));
+      }
+      // Foggery's eyes, his shield and the clock of his platforms (game/foggery.js, game/movers.js)
+      if (Array.isArray(b[20])) {
+        const [eyes, guard, clock] = b[20];
+        if (Array.isArray(eyes)) e.eyes = eyes.map(v => Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1);
+        e.guard = guard === 1 ? 1 : 0;
+        followMovers(clock);
       }
       if (e.mode === 'dead') { e.hp = 0; e.deadT = b[6]; e.dark = 0; (e.beam || e.bolts) && mirrorBeam(e, null); return; }
       mirrorBeam(e, Array.isArray(b[12]) ? b[12] : null, Array.isArray(b[16]) ? b[16] : null);

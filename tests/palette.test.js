@@ -41,7 +41,7 @@ test('every kind is painted from the palette, and only guardians wear pink and a
 
 test('the kinds of a species are told apart at a glance', () => {
   const species = {};
-  for (const k of Object.values(ENEMY_KINDS)) if (!k.guardian && !k.boss) (species[k.species] ??= []).push(k);
+  for (const k of Object.values(ENEMY_KINDS)) if (!k.guardian && !k.boss && !k.plain) (species[k.species] ??= []).push(k);
   for (const list of Object.values(species)) for (const a of list) for (const b of list) if (a !== b) {
     const role = Object.keys(a.parts)[0];
     assert.ok(dE(a.colors[role], b.colors[role]) >= 0.08, `${a.type} vs ${b.type}`);

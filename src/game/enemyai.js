@@ -208,6 +208,15 @@ function decide(e) {
   // a boss, once hurt or once it has struck, fights on wherever the player goes: in his arena
   // his room says so (game/defence.js), anywhere else (a dev spawn, the boss test room) he does
   const relentless = !e.defence && e.boss && !e.proxy && (e.hp < cfg.hp || e.attacks > 0);
+  // a boss whose fight moves him itself: along a way of its own (`route`: Foggery climbing his
+  // tower), or where it holds him (`anchored`: Foggery floating over his lava). No hunting, only
+  // striking whoever is in reach (game/foggery.js)
+  if (e.route || e.anchored) {
+    if (e.mode === 'attack') return;
+    e.mode = 'chase'; e.lost = 0;
+    e.path = e.anchored ? null : e.route();
+    return;
+  }
   if (e.defence || relentless) {
     if (e.mode === 'attack') return;   // never cancel a committed wind-up
     // it engages when its room says so, or for a while after a hit: shot at from beyond its
@@ -348,7 +357,7 @@ function manoeuvre(e, dt, d, strike) {
 }
 function fight(e, dt) {
   const p = foe(e), cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
-  if (!e.path) { e.speed = 0; turn(e, toPlayer(e), dt, 3); return; }
+  if (!e.path && !e.anchored) { e.speed = 0; turn(e, toPlayer(e), dt, 3); return; }
   const facing = Math.cos(Math.atan2(dx, dz) - e.yaw) > 0.7, can = ready(e, d), list = cfg.attacks ?? [cfg];
   // only throws in reach while they recover: one that also bites keeps coming
   const closing = e.cool > 0 && can.every(i => shotOf(list[i])) && list.some(a => !shotOf(a));
@@ -364,6 +373,9 @@ function fight(e, dt) {
     e.held = true;   // the horde has enough attackers
   }
   // in the fight (close, in sight, a short way): manoeuvre between blows
+  // (one held where its fight puts it only turns; one on its own way keeps going between blows)
+  if (e.anchored) { e.speed = 0; turn(e, Math.atan2(dx, dz), dt, 3); return; }
+  if (e.route) { follow(e, cfg.chase * (e.hurry ?? 1), dt); return; }
   if (d < 4 && e.lost === 0 && e.path.length <= 4 && manoeuvre(e, dt, d, strike)) return;
   if (strike) { e.speed = 0; turn(e, Math.atan2(dx, dz), dt); return; }
   // a charger runs the last few cells at a player it sees, when it can strike again

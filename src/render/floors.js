@@ -11,8 +11,12 @@ import { groundAt, slopeAt, triangleSlope, waterSolids, WET_LIFT } from './shore
 const ICE_TOP = C('#cfe8f4');
 const shade = (x, z) => ((x + z) & 1 ? 1.0 : 0.95) * (0.97 + (hash32(x * 31 + z * 977) % 100) / 1600);
 
+// Foggery's tower and the floor of his caldera (cubegen/towerarena.js `paint`): dark basalt
+// blocks, and a crust of ash and cooled lava
+const PAINT = { basalt: { top: C('#6a625c'), side: [C('#5c5550'), C('#4b4541')] }, ash: { top: C('#2e2624'), side: [C('#3a2e2a'), C('#2c2320')] } };
 function topColor(m, f) {
   const cs = f.cs;
+  if (f.paint) return PAINT[f.paint].top.clone().multiplyScalar(shade(f.x, f.z) * (0.92 + (hash32(f.c * 7 + Math.round(cs[0] * 4)) % 100) / 600));
   if (f.fluid) return fluidBed(f.fluid);
   if (f.soft) return SOFT.clone().multiplyScalar(shade(f.x, f.z));   // a plunge's landing
   if (f.ice) return ICE_TOP.clone().multiplyScalar(shade(f.x, f.z));   // a slide puzzle's ice (cubegen/trials/slide.js)
@@ -50,7 +54,19 @@ export function wallPieces(m, f, d) {
 function walls(m, f, b) {
   for (let d = 0; d < 4; d++) {
     const w = wallPieces(m, f, d);
-    for (const p of w.pieces) cliffWall(b, w.P0, w.P1, p.lows, p.ups, w.topLine, DIRV[d], !f.fluid);
+    for (const p of w.pieces) {
+      if (f.paint) paintedWall(b, w.P0, w.P1, p.lows, p.ups, w.topLine, DIRV[d], PAINT[f.paint].side, f.c + d);
+      else cliffWall(b, w.P0, w.P1, p.lows, p.ups, w.topLine, DIRV[d], !f.fluid);
+    }
+  }
+}
+// a painted floor's side: courses of blocks half a cell high, every other one darker
+function paintedWall(b, P0, P1, lows, ups, topLine, nrm, [a, c], seed) {
+  const ymin = Math.max(...lows.map(l => Math.min(l[0], l[1]))), ymax = Math.min(Math.max(...topLine), ...ups.map(l => Math.max(l[0], l[1])));
+  if (ymax <= ymin) return;
+  for (let j = Math.floor(ymin / LH); j * LH < ymax; j++) {
+    const col = (j & 1 ? a : c).clone().multiplyScalar(0.94 + (hash32(seed * 31 + j) % 100) / 900);
+    wallRegion(b, P0, P1, lows.concat([[j * LH, j * LH]]), ups.concat([[(j + 1) * LH, (j + 1) * LH], topLine]), nrm, col);
   }
 }
 
@@ -151,18 +167,18 @@ export function buildFloors(m, layers) {
   if (m.interior) return buildInteriorFloors(m, layers);
   for (const f of m.floors) {
     if (f.crust) continue;   // the crumbling crust: drawn on its own, it falls (render/trials.js)
-    const L = layers[f.layer], x = f.x, z = f.z, cs = f.cs;
+    const L = layers[f.layer], x = f.x, z = f.z, cs = f.cs, B = f.paint === 'basalt' ? L.stone : L.terrain;
     const P = [[x, cs[0], z], [x + 1, cs[1], z], [x, cs[2], z + 1], [x + 1, cs[3], z + 1]];
     // smooth top surface: 2 triangles, shared normals for soft shading
     const top = topColor(m, f);
     const tris = f.split ? [[0, 1, 2], [1, 3, 2]] : [[0, 1, 3], [0, 3, 2]];
     tris.forEach((t, ti) => {
       const col = top.clone().multiplyScalar(0.95 + (hash32(f.c * 2 + ti + f.layer * 977) % 100) / 1000);
-      L.terrain.tri(P[t[0]], P[t[1]], P[t[2]], col, [0, 1, 0], true);
+      B.tri(P[t[0]], P[t[1]], P[t[2]], col, [0, 1, 0], true);
     });
-    walls(m, f, L.terrain);
+    walls(m, f, B);
     const fb = f.bottom * LH;
-    L.terrain.quad([x, fb, z], [x + 1, fb, z], [x + 1, fb, z + 1], [x, fb, z + 1], [0, -1, 0], UNDERSIDE);
+    B.quad([x, fb, z], [x + 1, fb, z], [x + 1, fb, z + 1], [x, fb, z + 1], [0, -1, 0], f.paint ? PAINT[f.paint].side[1] : UNDERSIDE);
     if (f.fluid) fluidVolume(m, f, L.fluids[f.fluid]);
   }
   const clearing = m.town || m.merchantCamp;

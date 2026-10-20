@@ -44,7 +44,7 @@ silver cloud. The HP bar and the label keep the tier's colour.
 onward marker `userData` expose these identifiers. The descent tier is explicitly
 reserved for replacement by real bosses: the first descent (depth 0) is guarded by **Gusto**
 instead, the second (depth 1) by **Totnar**, the third (depth 2) by **Squarlo**, the fourth (depth 3)
-by **Flip**, each alone and
+by **Flip**, the fifth (depth 4) by **Foggery**, each alone and
 with a fight of his own ([bosses.md](bosses.md)); `map.guardian.boss` names him and
 `bossPlaceholder` is false there.
 
@@ -130,7 +130,11 @@ A boss may have an arena type of its own instead (`BOSS_ARENAS` in `core/bosses.
 ramp up) where his tide comes and goes, and a bank round the cube's edge holding the water in (`map.tide`; [bosses.md](bosses.md#squarlo)).
 Flip's **box** (`cubegen/fliparena.js`) is not a heightmap at all: a floor and four walls of solid
 cells round the whole cube, open at the top, with a floating island in the middle, any side of
-which can be the floor ([bosses.md](bosses.md#his-arena-the-box)).
+which can be the floor ([bosses.md](bosses.md#his-arena-the-box)). Foggery's **tower**
+(`cubegen/towerarena.js`) has floors stacked in its columns too: a caldera of lava, a ramp winding
+round a great tower in the middle, a bridge from the doorway to it; its doorway is higher up than
+other arenas' and in the middle of its face (`door`, `centre`, `world/faces.js`)
+([bosses.md](bosses.md#his-arena-the-caldera)).
 
 The fight zone (`encounter` floors) links only by slopes of one level and by flat
 edges. Terraces and lips are crisp steps that ramps join. Scenery next to the zone

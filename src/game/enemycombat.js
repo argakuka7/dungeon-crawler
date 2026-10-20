@@ -51,6 +51,8 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   if (blow.damage > 0) p.lastHurt = { reason: blow.reason, by };
   takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
+  // a fire geyser (Foggery's) pops the player up into the air
+  if (blow.pop > 0 && blow.pop < 12 && !p.climb) { p.vy = blow.pop; p.grounded = false; }
   const shock = blow.shock;
   if (shock > 0 && shock < 3) { p.stun = Math.max(p.stun, shock); p.shocked = shock; zappedFx(); }
   const push = blow.push;

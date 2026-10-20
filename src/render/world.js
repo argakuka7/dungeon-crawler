@@ -22,6 +22,7 @@ import { themeOf } from '../themes/depth.js';
 import { ownShadowDepth } from './skinned.js';
 import { buildTrialView, tickTrialView } from './trials.js';
 import { flipPivot, tickFlipView } from './flipview.js';
+import { buildMoverView, tickMoverView } from './movers.js';
 
 export function disposeWorld(world) {
   if (!world) return;
@@ -55,6 +56,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   const villagers = buildVillagers([...(m.villagers || []), ...(m.npcs || [])], group);
   addGhosts(group);
   const trialView = buildTrialView(m, group, water);   // a trial room's parts and rising fluid (render/trials.js)
+  const movers = m.movers ? buildMoverView(m, group) : null;   // the platforms round Foggery's tower (render/movers.js)
   const glass = makeGlass(1, open);
   glass.visible = !m.interior;   // inside a house: walls, no glass box
   group.add(glass);
@@ -62,7 +64,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   makeFadable(group);
   ownShadowDepth(group);   // the props' instanced meshes
   scene.add(group);
-  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, trialView, flip, ...markers };
+  const world = { group, glass, fluidMeshes, splashes, lights, villagers, missingSets, trialView, flip, movers, ...markers };
   setTownPortal(world, townPad);
   return world;
 }
@@ -123,6 +125,7 @@ export function animateWorld(world, dt, time) {
   for (const p of world.portalFx) p.tick(time);
   tickTrialView(world, time);
   tickFlipView(world, time);
+  tickMoverView(world.movers, time);
   tickChests(dt);
   tickVillagers(world.villagers, dt, time);
 }

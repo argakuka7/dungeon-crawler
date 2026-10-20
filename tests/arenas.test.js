@@ -13,6 +13,7 @@ import { guardianSpots } from '../src/game/enemyspawn.js';
 import { walkable, findPath } from '../src/physics/enemynav.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
 import { placeProps } from '../src/render/propplace.js';
+import { BOSS_ARENAS } from '../src/core/bosses.js';
 
 // every guardian cube of a few worlds, generated as each arena type in turn
 function* forced(seeds, depths) {
@@ -21,6 +22,7 @@ function* forced(seeds, depths) {
     for (const d of depths) for (const [key] of w.layout(d).guardians) {
       w.prepare(key);
       const spec = w.spec(key);
+      if (BOSS_ARENAS[spec.guardian.role === 'descent' && spec.guardian.boss]?.type) continue;   // (a boss's arena of his own)
       for (const type of ARENA_TYPES) yield { type, d, map: generate({ ...spec, guardian: { ...spec.guardian, arena: type } }) };
     }
   }
@@ -44,7 +46,7 @@ test('each depth plans distinct arena types, and every type turns up', () => {
 
 test('every arena type keeps a connected zone, flat doorways, out-of-reach scenery and room for its roster', () => {
   const kept = new Map(ARENA_TYPES.map(t => [t, 0])), total = new Map(ARENA_TYPES.map(t => [t, 0]));
-  for (const { type, map: m } of forced([0, 7], [0, 4, 6, 9, 12, 16, 19])) {   // (not Squarlo's or Flip's: their own arenas)
+  for (const { type, map: m } of forced([0, 7], [0, 4, 6, 9, 12, 16, 19])) {   // (not Squarlo's, Flip's or Foggery's: their own arenas)
     state.map = m;
     total.set(type, total.get(type) + 1);
     if (m.arena.type === type) kept.set(type, kept.get(type) + 1);
@@ -99,7 +101,7 @@ test('arena types look different: relief, walls, standing stones, trees and thei
 });
 
 test('arena floors are left to the arena dressing; the generic scatter only dresses the outer ring', () => {
-  const w = new World(5), key = w.layout(4).down, m = w.cube(key).map;
+  const w = new World(5), key = w.layout(5).down, m = w.cube(key).map;
   assert.ok(m.arena && m.arenaPlacements.length);
   const { out } = placeProps(m, { props: 'badlands', side: [[0, '#000'], [0, '#111']] });
   for (const q of m.arenaPlacements) assert.ok(out.includes(q));

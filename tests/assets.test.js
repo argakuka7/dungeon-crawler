@@ -8,7 +8,7 @@ import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } f
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
 import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL,
-  SQUARLO, SQUARLO_GIANT, SQUIRTLE, FLIP, fireAt } from '../src/core/enemies.js';
+  SQUARLO, SQUARLO_GIANT, SQUIRTLE, FLIP, FOGGERY, FOGGERY_BALL, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -35,6 +35,7 @@ const BUDGETS = {
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
   gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
   squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 }, flip: { Flip: 10000, FlipBall: 1200 },
+  foggery: { Foggery: 9000, FoggeryEye: 1000 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -444,6 +445,30 @@ test('Flip: his clips match his attacks, the ball and the Sky wollas come from h
   // three rings, each a bone the game turns (render/enemies.js spinRings), and the ball he throws
   for (const k of [0, 1, 2]) assert.ok(j.nodes.some(n => n.name === `ring${k}`), `ring${k}`);
   assert.ok(j.nodes.some(n => n.name === 'FlipBall'));
+});
+test('Foggery: a frog and his ball, his clips match his attacks, his eyes thrown from his hands', () => {
+  const { json: j, duration } = glb('foggery'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['FoggeryCats', 'FoggeryDeath', 'FoggeryEyeL', 'FoggeryEyeR', 'FoggeryFloat', 'FoggeryGeyser',
+    'FoggerySpit', 'FoggerySummon', 'FoggeryWalk']);
+  assert.equal(a.FoggeryWalk.extras.loop, true); assert.equal(a.FoggeryFloat.extras.loop, true);
+  assert.ok(Math.abs(duration(a.FoggeryDeath) - FOGGERY.deathTime) < 1e-5); assert.equal(a.FoggeryDeath.extras.hold_last_frame, true);
+  const clip = { eyeL: 'FoggeryEyeL', eyeR: 'FoggeryEyeR', summon: 'FoggerySummon', spit: 'FoggerySpit', geyser: 'FoggeryGeyser', cats: 'FoggeryCats' };
+  for (const at of [...FOGGERY.attacks, ...FOGGERY_BALL.attacks]) {
+    const c = a[clip[at.clip]];
+    assert.equal(c.extras.hit_frame / 30, at.hitAt, at.name);
+    assert.ok(Math.abs(duration(c) - at.attackTime) < 1e-5, at.name);
+    if (at.projectile) assert.deepEqual(c.extras.muzzle, at.projectile.muzzle, at.name);
+    if (at.summon) assert.deepEqual(c.extras.muzzle, at.summon.muzzle, at.name);
+  }
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(FOGGERY.parts).flat()) assert.ok(names.has(m), m);
+  const body = j.materials.find(m => m.name === 'FoggeryBody').pbrMetallicRoughness.baseColorFactor;
+  const eyes = j.materials.find(m => m.name === 'FoggeryEyes_glow').pbrMetallicRoughness.baseColorFactor;
+  assert.ok(body[1] > body[0] && body[1] > body[2], 'light green'); assert.ok(eyes[0] > eyes[2] * 3 && eyes[1] > eyes[2] * 2, 'yellow eyes');
+  // his forms and his eyes are bones the game scales (render/foggeryview.js), and the eye he throws
+  for (const n of ['frog', 'ball', 'eye.L', 'eye.R', 'FoggeryEye']) assert.ok(j.nodes.some(o => o.name === n), n);
+  // a little taller than the player
+  assert.ok(FOGGERY.height > CHAR_SCALE * 2 && FOGGERY.height < 2);
 });
 test('the Squirtle sways, spits from its beak at its hit frame and wilts', () => {
   const { json: j, duration } = glb('squirtle'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));

@@ -4,12 +4,13 @@
 // tentacles, Totnar's rolling ball and the skulls and sticks he loses). The numbers (health,
 // level, size) come from the game's profiles (src/core/enemies.js). Drag to turn him.
 import * as THREE from 'three';
-import { GUSTO, TOTNAR, SQUARLO, SQUARLO_GIANT, FLIP, enemyProfile, guardianLevel } from '../../src/core/enemies.js';
+import { GUSTO, TOTNAR, SQUARLO, SQUARLO_GIANT, FLIP, FOGGERY, enemyProfile, guardianLevel } from '../../src/core/enemies.js';
 import { BOSSES } from '../../src/core/bosses.js';
 import { gustoModel } from '../../src/render/gustomodel.js';
 import { totnarModel } from '../../src/render/totnarmodel.js';
 import { squarloModel } from '../../src/render/squarlomodel.js';
 import { flipModel } from '../../src/render/flipmodel.js';
+import { foggeryModel } from '../../src/render/foggerymodel.js';
 import { dressEnemy } from '../../src/render/enemymodel.js';
 import { findTentacles, shakeTentacles, findShed, hideShed, findBall, turnBall } from '../../src/render/bossbones.js';
 import { html, loop, t as tr, lang } from '../deck.js';
@@ -54,12 +55,24 @@ const BOSS = {
     summon: ['He bows and light blue Sky wollas come out of his rings.', 'Er verbeugt sich, und hellblaue Himmels-Wollas kommen aus seinen Ringen.'],
     death: ['Beaten! His rings fall apart, and the world turns the right way up again.', 'Besiegt! Seine Ringe fallen auseinander, und die Welt dreht sich wieder richtig herum.'],
   } },
+  foggery: { kind: FOGGERY, model: foggeryModel, clips: {
+    walk: ['A frog, a little taller than you, with big yellow eyes on top of his head. When the fight starts the lava rises, and he waddles up the ramp round his tower.', 'Ein Frosch, ein bisschen größer als du, mit großen gelben Augen oben auf dem Kopf. Wenn der Kampf beginnt, steigt die Lava, und er watschelt die Rampe um seinen Turm hinauf.'],
+    eyeL: ['He plucks out one of his eyes and throws it at you! It grows back.', 'Er reißt sich ein Auge heraus und wirft es nach dir! Es wächst wieder nach.'],
+    eyeR: ['The other eye, while the first one grows back.', 'Das andere Auge, während das erste nachwächst.'],
+    summon: ['He puffs up and croaks: Fire-faces come out of his mouth.', 'Er bläst sich auf und quakt: Feuergesichter kommen aus seinem Maul.'],
+    float: ['At two thirds of his health he curls up into a ball with a shield. Two Fire-cats guard him: kill both, then hit him quickly before new ones come!', 'Bei zwei Dritteln seiner Gesundheit rollt er sich zu einer Kugel mit einem Schild zusammen. Zwei Feuerkatzen beschützen ihn: Besiege beide und schlag ihn schnell, bevor neue kommen!'],
+    spit: ['Fireball! At a third of his health he spits three at once, and the lava swallows the tower: jump onto the floating platforms!', 'Feuerball! Bei einem Drittel seiner Gesundheit spuckt er drei auf einmal, und die Lava verschluckt den Turm: Spring auf die schwebenden Plattformen!'],
+    geyser: ['Fire geysers: glowing rings follow you on the floor. Get out of them before the fire shoots up!', 'Feuergeysire: Glühende Ringe folgen dir auf dem Boden. Raus da, bevor das Feuer hochschießt!'],
+    cats: ['He spins round and calls two new Fire-cats. While one of them lives, nothing hurts him.', 'Er dreht sich und ruft zwei neue Feuerkatzen. Solange eine davon lebt, kann ihm nichts etwas anhaben.'],
+    death: ['Beaten! The lava drains away, and his well opens on the floor of the caldera.', 'Besiegt! Die Lava fließt ab, und sein Brunnen öffnet sich unten im Krater.'],
+  } },
 };
 const NAMES = { walk: ['move', 'laufen'], death: ['death', 'Tod'], grab: ['grab', 'Griff'], stuck: ['fallen', 'hingefallen'], inhale: ['breathe in', 'einatmen'],
   summon: ['summon', 'rufen'], blow: ['blow', 'blasen'], throw: ['throw', 'werfen'], gloom: ['dark', 'dunkel'], roll: ['roll', 'rollen'],
   storm: ['storm', 'Sturm'], swim: ['swim', 'schwimmen'], cast: ['tide', 'Flut'], rest: ['rest', 'ausruhen'], stride: ['stride', 'stapfen'], stomp: ['stomp', 'stampfen'],
-  flip: ['flip', 'kippen'], hole: ['black hole', 'schwarzes Loch'] };
-const LOOPS = new Set(['walk', 'swim', 'stride']);
+  flip: ['flip', 'kippen'], hole: ['black hole', 'schwarzes Loch'], eyeL: ['left eye', 'linkes Auge'], eyeR: ['right eye', 'rechtes Auge'],
+  float: ['ball', 'Kugel'], spit: ['fireball', 'Feuerball'], geyser: ['geysers', 'Geysire'], cats: ['fire cats', 'Feuerkatzen'] };
+const LOOPS = new Set(['walk', 'swim', 'stride', 'float']);
 
 export default function mount(el) {
   const W = 640, H = 400, cnv = document.createElement('canvas');

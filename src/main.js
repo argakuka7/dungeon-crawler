@@ -8,6 +8,7 @@ import { groundAt } from './physics/collide.js';
 import { player, state, setStatus, worldPaused } from './game/state.js';
 import { loadCube } from './game/flow.js';
 import { updatePlayer } from './game/update.js';
+import { updateMovers } from './game/movers.js';
 import { updateCamera, closeView } from './game/camera.js';
 import { updateCut } from './game/cut.js';
 import { updateHud } from './game/hud.js';
@@ -125,6 +126,7 @@ function frame(now = performance.now()) {
   if (state.map) state.run.clock += dt;   // the world's play time: when its enemies come back (core/respawn.js)
   if (dt > 0 && travelling()) updateTravel(dt);
   else if (dt > 0 && state.map && !state.transitioning) {
+    updateMovers(dt);   // the platforms round Foggery's tower, before whoever stands on one moves (game/movers.js)
     updatePlayer(dt);
     if (!state.transitioning) updateEnemies(dt);
     if (!state.transitioning) updateTrial(dt);   // a trial room's clock, its rising fluid (game/trials.js)

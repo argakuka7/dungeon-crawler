@@ -9,7 +9,8 @@
 // towards the spot. The strike itself (strikeBolt, from game/juice.js) is a jagged flash from
 // the cloud to the spot, with a branch or two, that flickers twice and lights up the floor. A
 // bolt out of the sky (Totnar's) gathers a dark storm cloud high above its spot. A giant's stomp
-// (kind 'stomp', Squarlo's) shows his foot's shadow where it will come down.
+// (kind 'stomp', Squarlo's) shows his foot's shadow where it will come down; a geyser (kind
+// 'geyser', Foggery's) glowing cracks where fire will burst out of the floor.
 import * as THREE from 'three';
 import { scene } from './scene.js';
 import { glow, soft, emit, rand } from './particles.js';
@@ -23,6 +24,7 @@ const up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), start = new TH
 function makeView(b) {
   if (b.spec.kind === 'bolt') return makeBoltView(b);
   if (b.spec.kind === 'stomp') return makeStompView(b);
+  if (b.spec.kind === 'geyser') return makeGeyserView(b);
   const color = new THREE.Color(b.profile?.beamColor ?? b.spec.color ?? '#7dff3a');
   const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
   const core = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff').lerp(color, 0.3), ...additive });
@@ -44,11 +46,12 @@ function eyeAt(b, i, off, out) {
   return out.set(b.x + off.x, b.y + off.y, b.z + off.z);
 }
 export function drawBeams(list, dt, off = { x: 0, y: 0, z: 0 }) {
-  drawStrikes(dt, off);
+  drawStrikes(dt, off); drawEruptions(dt, off);
   for (const b of list) {
     const v = b.view || (b.view = makeView(b));
     if (b.spec.kind === 'bolt') { drawBolt(b, v, dt, off); continue; }
     if (b.spec.kind === 'stomp') { drawStomp(b, v, dt, off); continue; }
+    if (b.spec.kind === 'geyser') { drawGeyser(b, v, dt, off); continue; }
     const k = Math.min(1, b.t / b.spec.time), t = b.t;
     const flick = 0.75 + 0.25 * Math.sin(t * 61) * Math.sin(t * 23) + 0.3 * k * Math.sin(t * 97);
     end.set(b.ex + off.x, b.ey + off.y, b.ez + off.z);
@@ -257,4 +260,73 @@ function removeStrike(s) {
   scene.remove(s.view.group); untrackLight(s.view.light);
   s.view.owned.forEach(m => m.dispose());
 }
-export function clearStrikes() { strikes.forEach(removeStrike); strikes = []; }
+export function clearStrikes() { strikes.forEach(removeStrike); strikes = []; eruptions.forEach(removeEruption); eruptions = []; }
+
+// --- Foggery's fire geysers ----------------------------------------------------------------------
+// Where one will burst (a beam of kind 'geyser' out of the floor, game/beams.js): a ring of glowing
+// cracks that follows the player, tightens and flashes once it holds still, the floor in it
+// glowing redder, embers and drops of lava bubbling up out of it. When it bursts (eruptGeyser,
+// game/juice.js) a column of fire shoots up out of the spot and dies down.
+const FIRE = ['#fff0a0', '#ffb040', '#ff5a14'], RING_FIRE = new THREE.Color('#ff7a1a');
+function makeGeyserView(b) {
+  const plain = { transparent: true, depthWrite: false }, additive = { ...plain, blending: THREE.AdditiveBlending };
+  const ringMat = new THREE.MeshBasicMaterial({ color: RING_FIRE, opacity: 0.8, ...plain });
+  const fillMat = new THREE.MeshBasicMaterial({ color: '#ff3a0a', opacity: 0.1, ...additive });
+  const group = new THREE.Group(), ring = new THREE.Mesh(flat, ringMat), fill = new THREE.Mesh(disc, fillMat);
+  ring.renderOrder = fill.renderOrder = 2;
+  group.add(ring, fill);
+  const light = new THREE.PointLight('#ff7a2a', 0, 2.6, 2); light.position.y = 0.3;
+  scene.add(group); trackLight(light, ring);
+  return { group, ring, fill, light, owned: [ringMat, fillMat] };
+}
+function drawGeyser(b, v, dt, off) {
+  const k = Math.min(1, b.t / b.spec.time), t = b.t, held = b.spec.lock && b.t >= b.spec.time - b.spec.lock;
+  const r = b.spec.radius + 0.1, x = (b.ax ?? b.ex) + off.x, y = (b.ay ?? b.ey) + off.y - 0.03, z = (b.az ?? b.ez) + off.z;
+  v.ring.position.set(x, y + 0.04, z); v.fill.position.set(x, y + 0.035, z);
+  v.ring.scale.setScalar(r * (held ? 1 + 0.06 * Math.sin(t * 50) : 1.5 - 0.5 * k));
+  v.ring.rotation.y = -t * 2;
+  v.fill.scale.setScalar(r * (0.6 + 0.4 * k));
+  v.owned[0].opacity = held ? 0.6 + 0.4 * Math.max(0, Math.sin(t * 60)) : 0.45 + 0.4 * k;
+  v.owned[0].color.copy(RING_FIRE).lerp(RING_FLASH, held ? 0.4 * Math.max(0, Math.sin(t * 60)) : 0);
+  v.owned[1].opacity = 0.1 + 0.35 * k;
+  v.light.intensity = (0.4 + 1.6 * k) * (0.8 + 0.2 * Math.sin(t * 29));
+  for (let i = Math.floor((8 + 40 * k) * dt + Math.random()); i > 0; i--) {
+    const a = Math.random() * Math.PI * 2, d = Math.random() * r;
+    emit(glow, x + Math.cos(a) * d, y + 0.05, z + Math.sin(a) * d, { v: [rand(-0.3, 0.3), rand(0.6, 1.8) * (0.5 + k), rand(-0.3, 0.3)],
+      life: rand(0.2, 0.45), size: rand(0.04, 0.08), color: FIRE[i % 3], gravity: 4, drag: 1.5 });
+  }
+}
+// a column of fire bursting up out of the spot of geyser b
+let eruptions = [];
+const ERUPT = 0.9, column = new THREE.CylinderGeometry(0.7, 1, 1, 16, 1, true).translate(0, 0.5, 0);
+export function eruptGeyser(b) {
+  const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide };
+  const outer = new THREE.MeshBasicMaterial({ color: '#ff6a1a', opacity: 0.6, ...additive });
+  const inner = new THREE.MeshBasicMaterial({ color: '#ffe080', opacity: 0.8, ...additive });
+  const group = new THREE.Group(), a = new THREE.Mesh(column, outer), c = new THREE.Mesh(column, inner);
+  a.frustumCulled = c.frustumCulled = false;
+  const at = { x: b.ax ?? b.ex, y: b.ay ?? b.ey, z: b.az ?? b.ez };
+  group.add(a, c); group.position.set(at.x, at.y - 0.05, at.z);
+  const light = new THREE.PointLight('#ff8a3a', 0, 6, 2); light.position.y = 1;
+  scene.add(group); trackLight(light, group);
+  eruptions.push({ t: 0, at, r: b.spec.radius, h: b.spec.sky ?? 3, view: { group, a, c, light, owned: [outer, inner] } });
+}
+function drawEruptions(dt, off) {
+  eruptions = eruptions.filter(e => {
+    e.t += dt;
+    if (e.t >= ERUPT) { removeEruption(e); return false; }
+    const v = e.view, up = Math.min(1, e.t / 0.12), fade = 1 - Math.max(0, (e.t - 0.35) / (ERUPT - 0.35));
+    v.group.position.set(e.at.x + off.x, e.at.y + off.y - 0.05, e.at.z + off.z);
+    const wob = 1 + 0.08 * Math.sin(e.t * 47);
+    v.a.scale.set(e.r * wob * (0.8 + 0.3 * fade), e.h * up * (0.6 + 0.4 * fade), e.r * wob * (0.8 + 0.3 * fade));
+    v.c.scale.set(e.r * 0.55 * wob, e.h * 0.85 * up, e.r * 0.55 * wob);
+    v.a.rotation.y = e.t * 5; v.c.rotation.y = -e.t * 7;
+    v.owned[0].opacity = 0.6 * fade; v.owned[1].opacity = 0.85 * fade;
+    v.light.intensity = 7 * fade * up;
+    return true;
+  });
+}
+function removeEruption(e) {
+  scene.remove(e.view.group); untrackLight(e.view.light);
+  e.view.owned.forEach(m => m.dispose());
+}

@@ -5,7 +5,7 @@ import { emit, glow, soft, rand } from '../render/particles.js';
 import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { muzzleAt } from '../core/beams.js';
-import { strikeBolt } from '../render/beams.js';
+import { strikeBolt, eruptGeyser } from '../render/beams.js';
 
 let stop = 0;
 // world-space camera offset that springs back (camera.js)
@@ -108,6 +108,7 @@ export function projectileFx(pr, what) {
   const fire = pr.kind === 'fireball', ice = pr.kind === 'iceball', { x, y, z } = pr;
   if (pr.kind === 'skull') { skullFx(pr, what); return; }
   if (pr.kind === 'water') { waterFx(pr, what); return; }
+  if (pr.kind === 'eye') { eyeFx(pr, what); return; }
   const ball = pr.kind === 'ball';   // Flip's ball of light
   if (what === 'launch') { sfx(fire ? 'fireball' : ice || ball ? 'frost' : 'zap', { at: pr, pitch: ball ? 1.3 : 1 }); return; }
   const colors = fire ? ['#ffd25a', '#ff8a2a', '#ff4a17'] : ice || ball ? ['#ffffff', '#c4ecff', '#7fc8ff'] : ['#f0d0ff', '#b57aff', '#7a3cff'];
@@ -137,6 +138,19 @@ function skullFx(pr, what) {
   if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.08, 0.02);
 }
 
+// Foggery's eye: plucked out with a pop and thrown, and where it ends a splat of yellow slime
+const SLIME = ['#fff6b0', '#ffd23a', '#c8f080'];
+function eyeFx(pr, what) {
+  if (what === 'launch') { sfx('pop', { at: pr, pitch: 0.8 }); sfx('skullthrow', { at: pr, pitch: 1.4, volume: 0.6 }); return; }
+  const { x, y, z } = pr, n = what === 'spent' ? 8 : 18;
+  for (let i = 0; i < n; i++)
+    emit(soft, x, y, z, { v: [rand(-1.8, 1.8) - pr.vx * 0.08, rand(0.4, 2.2), rand(-1.8, 1.8) - pr.vz * 0.08], life: rand(0.35, 0.65),
+      size: rand(0.05, 0.11), color: SLIME[i % 3], alpha: 0.95, gravity: 9, drag: 1 });
+  emit(glow, x, y, z, { life: 0.2, size: 0.5, grow: 1.2, color: '#ffe060', alpha: 0.7 });
+  sfx('drip', { at: pr, pitch: 0.7 }); sfx('bonk', { at: pr, pitch: 1.6, volume: 0.6 });
+  if (what === 'hit') cameraKick(pr.vx, pr.vz, 0.06, 0.02);
+}
+
 // a Squirtle's water ball: spat with a gulp, and where it ends a splash of droplets
 const DROPS = ['#ffffff', '#c8f0ff', '#7fcaf0'];
 function waterFx(pr, what) {
@@ -154,6 +168,7 @@ function waterFx(pr, what) {
 export function beamFx(b, what) {
   if (b.spec.kind === 'bolt') { boltFx(b, what); return; }
   if (b.spec.kind === 'stomp') { stompFx(b, what); return; }
+  if (b.spec.kind === 'geyser') { geyserFx(b, what); return; }
   const color = b.profile?.beamColor ?? b.spec.color ?? '#7dff3a', colors = ['#ffffff', color, '#d8ff7a'];
   if (what === 'start') { sfx('laser', { at: b }); return; }
   if (what === 'fizzle') {
@@ -179,6 +194,26 @@ export function beamFx(b, what) {
   }
   sfx('zapburst', { at: { x, y, z } });
   if (Math.hypot(x - player.x, z - player.z) < 3) cameraKick(x - player.x, z - player.z, 0.06, 0.02);
+}
+
+// Foggery's fire geysers (a beam of kind 'geyser', game/beams.js): a rumble as the floor starts to
+// glow ('start'), a hiss when he is stopped ('fizzle'), and when it bursts a column of fire
+// (render/beams.js eruptGeyser), a roar, fire and lava spraying up and the ground shaking
+const FIRE_SPRAY = ['#fff0a0', '#ffb040', '#ff5a14'];
+function geyserFx(b, what) {
+  const x = b.ax ?? b.ex, y = b.ay ?? b.ey, z = b.az ?? b.ez;
+  if (what === 'start') { if (!b.quiet) sfx('rumble', { at: { x, y, z }, volume: 0.6, pitch: 1.3 }); return; }
+  if (what === 'fizzle') { sfx('hiss', { at: { x, y, z }, volume: 0.5 }); return; }
+  eruptGeyser(b);
+  emit(glow, x, y + 0.4, z, { life: 0.3, size: 1.6, grow: 1.4, color: '#ffb040', alpha: 0.8 });
+  for (let i = 0; i < 40; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(0.3, 1.6);
+    emit(i % 4 ? glow : soft, x + Math.cos(a) * 0.2, y + rand(0, 0.6), z + Math.sin(a) * 0.2, { v: [Math.cos(a) * s, rand(4, 8), Math.sin(a) * s],
+      life: rand(0.5, 0.9), size: rand(0.06, 0.14), color: i % 4 ? FIRE_SPRAY[i % 3] : '#4a3a34', alpha: 0.95, gravity: 9, drag: 0.8 });
+  }
+  if (!b.quiet) sfx('fireball', { at: { x, y, z }, pitch: 0.6 });
+  sfx('boom', { at: { x, y, z }, volume: 0.5, pitch: 1.2 });
+  if (Math.hypot(x - player.x, z - player.z) < 4) cameraKick(x - player.x, z - player.z, 0.05, 0.05);
 }
 
 // The Wolk's lightning (a beam of kind 'bolt', game/beams.js): it starts gathering ('start'),
@@ -410,18 +445,19 @@ function jetFx(e, g, what, dt) {
 // to each of them (they appear there in a puff, render/enemies.js). Totnar tears himself open
 // (look 'leaves', game/totnar.js): a rustle and a spray of leaves and twigs towards each of his.
 // Squarlo slaps the floor (look 'splash', game/squarlo.js): water runs from his hands to each
-// Squirtle popping out of it.
+// Squirtle popping out of it. Foggery croaks his Fire-faces and Fire-cats up (look 'embers').
 const SUMMONS = { triangles: { sound: 'summon', flash: '#9fdcff', colors: ['#e0f6ff', '#7fd0ff'], streak: 10 },
   leaves: { sound: 'rustle', flash: '#ffb070', colors: ['#8a6440', '#7d8a3c', '#b8a07a'], streak: 5 },
   splash: { sound: 'splash', flash: '#c8f4ff', colors: DROPS, streak: 8 },
-  rings: { sound: 'summon', flash: '#bfe8ff', colors: ['#f0faff', '#8fd8ff'], streak: 10 } };
+  rings: { sound: 'summon', flash: '#bfe8ff', colors: ['#f0faff', '#8fd8ff'], streak: 10 },
+  embers: { sound: 'fireball', flash: '#ffb050', colors: ['#ffd25a', '#ff8a2a', '#ff4a17'], streak: 10 } };
 export function summonFx(mouth, list, look = 'triangles') {
   const s = SUMMONS[look];
   sfx(s.sound, { at: mouth });
   emit(glow, mouth.x, mouth.y, mouth.z, { life: 0.25, size: 0.7, grow: 1.2, color: s.flash, alpha: 0.9 });
   for (const m of list) for (let i = 0; i < s.streak; i++) {
     const k = i / s.streak, x = mouth.x + (m.x - mouth.x) * k, y = mouth.y + (m.y + 0.4 - mouth.y) * k + Math.sin(k * Math.PI) * 0.5;
-    emit(look === 'triangles' ? glow : soft, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
+    emit(look === 'triangles' || look === 'embers' ? glow : soft, x, y, mouth.z + (m.z - mouth.z) * k, { v: [rand(-0.3, 0.3), rand(-0.2, 0.4), rand(-0.3, 0.3)], life: 0.15 + k * 0.2,
       size: rand(0.08, 0.13), color: s.colors[i % s.colors.length], drag: 2 });
   }
 }

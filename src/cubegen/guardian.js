@@ -16,6 +16,7 @@ import { SHAPES, BOSS_SHAPES, TIDAL } from './arenashapes.js';
 import { dressArena } from './arenaprops.js';
 import { BOSS_ARENAS } from '../core/bosses.js';
 import { flipArena } from './fliparena.js';
+import { towerArena } from './towerarena.js';
 
 const inner = (x, z) => x > 0 && z > 0 && x < N - 1 && z < N - 1;
 const FLAT = { rel: new Int8Array(N * N), zone: new Uint8Array(N * N).fill(1),
@@ -90,6 +91,14 @@ export function generateGuardian(spec) {
   ctx.spec = spec; ctx.K = 1; ctx.B = [0];
   groundHeights(ctx);
   const [dx, dz] = DIRS[exit < 4 ? exit ^ 1 : entry.dir], level = entry.level;
+  // a boss may have an arena of its own (core/bosses.js BOSS_ARENAS: Squarlo's tidal hills)
+  const own = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss] : null;
+  // Foggery's caldera and tower, its well on the caldera's floor (cubegen/towerarena.js)
+  if (own?.type === 'tower') {
+    const base = Int16Array.from(ctx.lvl0);
+    for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) { ctx.lvl0[idx(x, z)] = level; ctx.void0[idx(x, z)] = 0; }
+    return towerArena({ spec, ctx, entry, role, base });
+  }
   // Wells sit opposite the entrance; side exits retain their shared face position.
   const gx = dx ? dx > 0 ? 4 : N - 5 : N / 2;
   const gz = dz ? dz > 0 ? 4 : N - 5 : N / 2;
@@ -117,8 +126,6 @@ export function generateGuardian(spec) {
   const frame = { level, need, flat, R, noise: makeNoise(R), noise2: makeNoise(R),
     E: inward([ex, ez], entry.dir), U, G: exit < 4 ? inward([px, pz], exit) : [px, pz] };
 
-  // a boss may have an arena of its own (core/bosses.js BOSS_ARENAS: Squarlo's tidal hills)
-  const own = role === 'descent' ? BOSS_ARENAS[spec.guardian.boss] : null;
   // Flip's box, any side of which can be the floor (cubegen/fliparena.js)
   if (own?.type === 'flip') return flipArena({ spec, ctx, level, U, approach: [dx, dz], exit, role, R });
   const requested = own?.type ?? (spec.guardian.arena && SHAPES[spec.guardian.arena] ? spec.guardian.arena : 'hills');

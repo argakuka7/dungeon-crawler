@@ -162,6 +162,21 @@ export function voices({ amp, noise, filter, tone, sweep }) {
         gloops(t + 0.4, 10, 300 * p, 2 * 300 * p, 0.05, 0.3, out);
       },
     },
+    foggery: {   // the frog boss: a deep double croak, a gulping ribbit, a long sinking croak and a squelch
+      alert: (t, out, p) => {
+        for (let i = 0; i < 2; i++) {
+          const at = t + i * 0.24;
+          bend(at, 0.2, 110 * p, 150 * p, 95 * p, 520 * p, 0.55, out);
+          noise(at, 0.18, filter('bandpass', 380 * p, 3, amp(at, 0.01, 0.2, 0.17, out)));
+        }
+      },
+      windup: (t, out, p) => { bend(t, 0.16, 140 * p, 230 * p, 160 * p, 700 * p, 0.4, out); gloops(t + 0.12, 2, 260 * p, 2 * 260 * p, 0.06, 0.25, out); },
+      death: (t, out, p) => {
+        bend(t, 1.4, 150 * p, 110 * p, 45 * p, 480 * p, 0.55, out);
+        noise(t + 1.2, 0.35, filter('lowpass', 600 * p, 1, amp(t + 1.2, 0.02, 0.35, 0.3, out)));
+        gloops(t + 0.8, 6, 180 * p, 2 * 180 * p, 0.07, 0.3, out, false);
+      },
+    },
     flip: {   // the ring boss: glassy chimes ringing round, a rising shimmer, rings clattering down
       alert: (t, out, p) => {
         for (const [i, hz] of [880, 1175, 988, 1319].entries()) { const at = t + i * 0.08; tone('triangle', hz * p, hz * 1.02 * p, at, 0.35, amp(at, 0.005, 0.12, 0.35, out)); }

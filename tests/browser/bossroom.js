@@ -17,13 +17,14 @@ import { idx } from '../../src/core/util.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 const run = (seconds, dt = 1 / 30, also = () => {}) => { for (let t = 0; t < seconds; t += dt) { updatePlayer(dt); updateEnemies(dt); also(); } };
-const MINIONS = { gusto: ['custotriangle'], totnar: ['snapskull', 'totspider', 'totstunder'], squarlo: ['squirtle'] };
+const MINIONS = { gusto: ['custotriangle'], totnar: ['snapskull', 'totspider', 'totstunder'], squarlo: ['squirtle'], flip: ['wolla'], foggery: ['fireface', 'firecat'] };
 
-export async function runBossRoomChecks() {
+export async function runBossRoomChecks(only = null) {   // only: the bosses to check (names), else all
   return paused(async () => {
     const results = [], defeated = state.run.defeated.size, gates = state.run.unlockedGates.size, hero = { ...player };
     try {
       for (const [depth, boss] of Object.entries(BOSSES)) {
+        if (only && !only.includes(boss)) continue;
         await goTestRoom('boss', Number(depth));
         const map = state.map;
         check(map.testRoom?.name === 'boss' && map.depth === Number(depth) && !map.guardian && !map.portals.length, `${boss}: his test room`);
