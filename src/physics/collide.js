@@ -34,7 +34,10 @@ const local = (x, z) => [x - Math.floor(x), z - Math.floor(z)];
 
 // highest walkable surface at (x,z) that is not above y+step: { h, s (floor or piece), i (cell) }
 // map: the active cube's, or another one's (a neighbour across an open face)
-export function groundAt(x, z, y, step, map = state.map) {
+export const groundAt = (x, z, y, step, map = state.map) => ground(x, z, y, step, map, true);
+// ... but not the platforms: the ground that stays (what loot rests on, physics/rest.js)
+export const stillGroundAt = (x, z, y, step, map = state.map) => ground(x, z, y, step, map, false);
+function ground(x, z, y, step, map, moving) {
   const i = cellAt(x, z);
   if (i < 0) return { h: -Infinity, s: null, i };
   const [fx, fz] = local(x, z);
@@ -45,7 +48,7 @@ export function groundAt(x, z, y, step, map = state.map) {
     const t = runY(p, fx, fz);
     if (t <= y + step && t > h) { h = t; s = p; }
   }
-  if (map === state.map) for (const m of movers) if (onMover(m, x, z) && m.y1 <= y + step && m.y1 > h) { h = m.y1; s = m; }
+  if (moving && map === state.map) for (const m of movers) if (onMover(m, x, z) && m.y1 <= y + step && m.y1 > h) { h = m.y1; s = m; }
   return { h, s, i };
 }
 

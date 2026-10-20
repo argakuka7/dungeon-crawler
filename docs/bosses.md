@@ -643,6 +643,14 @@ frog shrinks and spins away in a puff of steam and the ball swells up. Then he f
   holds (`guard`) and nothing hurts him. Once both are dead it shatters ("Foggery's shield is down!
   Hit him now!") and he can be hurt; **8 s** later he calls two new ones. While they are due he
   starts nothing else.
+- **His cats on the platforms** (once they are up; `FOGGERY_FIGHT.leap`, `game/foggery.js leaps`):
+  a player standing on a platform the cat is not on, 0.35 to 0.8 s later it leaps after them
+  (`jump`, 6 cells/s in an arc), straight onto theirs if it is within 5 cells (edge to edge), else
+  onto the one within reach nearest to theirs, and on from there. On a platform (`deck`) it fights
+  like any Fire-cat, its steps kept on the slab (`physics/enemynav.js onDeck`), and the platform
+  carries it, so a blade reaches it there too, not only a bow or a staff. A player back on the top
+  of the tower (out of the lava) it leaps back down to. It waits 0.6 s after landing before it
+  leaps again, and never leaps in the middle of a bite.
 - **Fireball** (within 9 cells, `FoggerySpit`, 1.1 s): he draws back and spits a fireball at 0.6 s
   (7.5 cells/s) that sets you on fire.
 - **Fire geysers** (within 11 cells, `FoggeryGeyser`, 2.1 s, every 7–10 s, the first 2 s into the
@@ -663,11 +671,13 @@ it slides, and goes on to the next; so on the platforms a blade reaches him, not
 staff. (Before the platforms are up he circles over the drowned top, `orbit`.) He throws a **volley** of three
 fireballs fanned out instead of one, makes **geysers** burst through the platforms and still calls
 **his cats**: they walk on the lava, over the drowned top and wherever the floors under it lead,
-and his shield holds while they live.
+and leap after the player onto the platforms (as in phase 2); his shield holds while they live.
 
 His death drains the lava away for good (7 s), the platforms float down with it and sink under
 the floor, his minions go along and the well opens on the caldera's floor; floating, he sinks onto
-the floor under him, his loot with him.
+the floor under him. His loot scatters round the floor under him (the top of the tower, or the
+ramp or the caldera's floor under a platform), never on a platform: under the lava until it has
+drained, and nothing can be taken out of it meanwhile ([loot.md](loot.md)).
 
 ## Playing together
 

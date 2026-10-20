@@ -19,7 +19,8 @@
 // of the floor. At a sixth of his health (phase 3) the lava rises over the top of the tower
 // (`lava.flood` s): only the platforms are safe. He goes over them from one to another (mostly to
 // one next to the player: a blade reaches him there), throws volleys of fireballs, still calls his
-// cats and makes geysers burst through the platforms.
+// cats and makes geysers burst through the platforms. His cats leap after a player on the
+// platforms, from one to another, so a blade reaches them there too.
 // His death drains the lava away for good and takes his minions along.
 // Falling into his lava costs a quarter of one's health, and magic takes one back to safe ground
 // (game/foggery.js lavaRescue).
@@ -42,6 +43,10 @@ export const FOGGERY_FIGHT = Object.freeze({
   geyser: { first: 2, every: [7, 10] },   // s into phase 2 before the first geysers, then between them
   orbit: { r: 2.3, speed: 0.22, lift: 0.4 },   // rising into phase 3: how far from the middle he circles (cells), how fast (rad/s), how high
   hop: { speed: 2.2, dwell: [2.5, 4], near: 0.7, lift: 0.02 },   // phase 3, over the platforms: cells/s, s on each, how often next to the player, over its top
+  // his Fire-cats leap after a player on the platforms (and back down onto the top of the tower):
+  // cells a leap goes at most (edge to edge), cells/s, how high (cells, and per cell of the leap),
+  // s before they leap after the player, s before they leap again
+  leap: { reach: 5, speed: 6, arc: [0.35, 0.12], react: [0.35, 0.8], again: 0.6 },
   rescue: 0.25,               // what falling into his lava costs, of one's most health
   leave: 0.5,                 // s a minion he takes along lingers, gone, before it is let go
 });

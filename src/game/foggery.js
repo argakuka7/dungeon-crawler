@@ -15,6 +15,9 @@
 // or to the top in a hurry), over the drowned tower the fight holds him (`anchored`), going over the
 // platforms from one to another; the fight
 // says which attacks may start (`barred`) and carries out the summons at their hit frames.
+// His Fire-cats leap after a player standing on a platform (`jump`) and fight on it (`deck`: the AI
+// moves them over the slab, physics/enemynav.js onDeck, and the platform carries them), and leap
+// back down onto the top of the tower after one who goes back there.
 import { LH } from '../core/constants.js';
 import { state, setStatus } from './state.js';
 import { FOGGERY, FOGGERY_BALL, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf } from '../core/enemies.js';
@@ -22,7 +25,8 @@ import { FOGGERY_FIGHT as G, TOWER, PLATFORMS, LAVA, splitHp, summonCount, barre
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
 import { stepEnemies } from './enemyai.js';
-import { findPath, pathToward, walkable } from '../physics/enemynav.js';
+import { findPath, pathToward, walkable, onDeck } from '../physics/enemynav.js';
+import { standingAt } from '../physics/fluid.js';
 import { playerFloor } from './enemycombat.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { living, engage, leave, minionFloors, minion, sweep, players, nearest } from './bossfight.js';
@@ -57,8 +61,10 @@ export function detachFoggerys() { const list = foggerys; foggerys = []; fights 
 export function updateFoggerys(dt) {
   for (const e of foggerys) if (e.shield > 0) e.shield = Math.max(0, e.shield - dt);
   for (const f of fights) run(f, dt);
-  stepEnemies(foggerys.filter(e => e.mode !== 'gone' && e.mode !== 'split'), dt);
+  carry();
+  stepEnemies(foggerys.filter(e => e.mode !== 'gone' && e.mode !== 'split' && !(e.jump && e.mode !== 'dead')), dt);
   for (const f of fights) float(f, dt);
+  leaps(dt);
   foggerys = sweep(foggerys, dt);
   fights = fights.filter(f => foggerys.includes(f.e));
 }
@@ -245,6 +251,91 @@ function hopTo(f, platforms) {
   const on = pick ?? platforms[0];
   f.hop = { p: on.p, there: false, dwell: between(G.hop.dwell) };
   return on;
+}
+
+// His Fire-cats on the platforms. A player standing on a platform the cat is not on: a moment
+// later it leaps after them (`jump`), straight onto theirs if it is in reach (G.leap.reach, edge
+// to edge), else onto the one in reach nearest to theirs, and fights them there (`deck`). One on a
+// platform after a player standing on the top of the tower (out of the lava) leaps back down to
+// them. A platform carries what stands on it, the living and the dead.
+const L = G.leap;
+const cats = () => foggerys.filter(e => e.type === 'fogcat');
+function carry() {
+  const decks = moversNow();
+  for (const c of cats()) {
+    if (c.deck && !decks.includes(c.deck)) offDeck(c);
+    if (c.deck) onDeck(c, c.x + c.deck.dx, c.z + c.deck.dz);
+  }
+}
+// (its platform gone: onto the floor under it, the lava holding it up)
+function offDeck(c) {
+  c.deck = null;
+  const g = groundAt(c.x, c.z, c.y + 0.2, 0);
+  if (g.s && !g.s.mover && !g.s.kind && walkable(g.s, c.profile.height)) c.f = g.s;
+}
+function leaps(dt) {
+  const decks = moversNow();
+  for (const c of cats()) {
+    if (c.jump) { leaping(c, dt, decks); continue; }
+    c.again = Math.max(0, (c.again ?? 0) - dt);
+    const to = tower() && decks.length && living(c) && c.mode !== 'attack' && !(c.stun > 0) && !c.again ? wanted(c, decks) : null;
+    if (!to) { c.leapIn = null; continue; }
+    c.leapIn = (c.leapIn ?? between(L.react)) - dt;
+    if (c.leapIn <= 0) { c.leapIn = null; leap(c, to, decks); }
+  }
+}
+// where cat c should be and is not: { deck } (the platform its player stands on) or { floor, p }
+// (the top of the tower, out of the lava, the player on it); null while they are in the air
+function wanted(c, decks) {
+  const p = c.target && players().includes(c.target) ? c.target : nearest(c);
+  const g = groundAt(p.x, p.z, p.y + 0.1, 0.3);
+  if (!g.s || Math.abs(g.h - p.y) > 0.15) return null;
+  if (g.s.mover) return g.s === c.deck || !decks.includes(g.s) ? null : { deck: g.s };
+  if (!c.deck || g.s.kind || g.s.tower !== 'top' || (standingAt(p.x, p.z)?.y ?? -Infinity) > g.h) return null;
+  return { floor: g.s, p };
+}
+// how far (x, z) is from the platform o's edge (0 on it)
+const gap = (o, x, z) => Math.hypot(Math.max(o.x0 - x, 0, x - o.x1), Math.max(o.z0 - z, 0, z - o.z1));
+function leap(c, to, decks) {
+  const r = c.profile.radius + 0.15;
+  let j = null;
+  if (to.deck) {
+    let o = to.deck;
+    if (gap(o, c.x, c.z) > L.reach) {   // (too far: onto the one in reach nearest to theirs)
+      const now = gap(o, c.x, c.z), mid = (q) => gap(o, (q.x0 + q.x1) / 2, (q.z0 + q.z1) / 2);
+      o = decks.filter(q => q !== c.deck && gap(q, c.x, c.z) <= L.reach && mid(q) < now).sort((a, b) => mid(a) - mid(b))[0];
+      if (!o) return;
+    }
+    // (onto its near side)
+    const x = Math.min(o.x1 - r, Math.max(o.x0 + r, c.x)), z = Math.min(o.z1 - r, Math.max(o.z0 + r, c.z));
+    j = { deck: o, lx: x - o.x0, lz: z - o.z0 };
+  } else {
+    // (down next to the player, on the top of the tower)
+    const p = to.p, d = Math.hypot(c.x - p.x, c.z - p.z) || 1, k = Math.min(1.1, d);
+    const x = p.x + (c.x - p.x) / d * k, z = p.z + (c.z - p.z) / d * k, g = groundAt(x, z, p.y + 0.3, 0.6);
+    const ok = g.s && !g.s.mover && g.s.tower === 'top' && walkable(g.s, c.profile.height) && Math.abs(g.h - p.y) < 0.6;
+    j = ok ? { floor: g.s, x, y: g.h, z } : { floor: to.floor, x: to.floor.x + 0.5, y: groundAt(to.floor.x + 0.5, to.floor.z + 0.5, p.y + 0.3, 0.6).h, z: to.floor.z + 0.5 };
+    if (gap({ x0: j.x, x1: j.x, z0: j.z, z1: j.z }, c.x, c.z) > L.reach + 1) return;
+  }
+  const tx = j.deck ? j.deck.x0 + j.lx : j.x, tz = j.deck ? j.deck.z0 + j.lz : j.z, d = Math.hypot(tx - c.x, tz - c.z);
+  Object.assign(j, { x0: c.x, y0: c.y, z0: c.z, t: 0, T: 0.25 + d / L.speed, h: L.arc[0] + L.arc[1] * d });
+  Object.assign(c, { jump: j, deck: null, path: null, yaw: Math.atan2(tx - c.x, tz - c.z) });
+  sfx('jump', { at: c, pitch: 1.3, volume: 0.6 });
+}
+// through the air, onto a platform (where it is now: it slides on meanwhile) or the top of the tower
+function leaping(c, dt, decks) {
+  const j = c.jump;
+  if (j.deck && !decks.includes(j.deck)) { c.jump = null; offDeck(c); return; }
+  j.t += dt;
+  const k = Math.min(1, j.t / j.T), tx = j.deck ? j.deck.x0 + j.lx : j.x, tz = j.deck ? j.deck.z0 + j.lz : j.z, ty = j.deck ? j.deck.y1 : j.y;
+  const x = c.x, z = c.z;
+  c.x = j.x0 + (tx - j.x0) * k; c.z = j.z0 + (tz - j.z0) * k;
+  c.y = j.y0 + (ty - j.y0) * k + 4 * j.h * k * (1 - k);
+  if (dt > 0) c.speed = Math.hypot(c.x - x, c.z - z) / dt;
+  if (k < 1) return;
+  c.jump = null; c.speed = 0; c.think = 0; c.again = L.again;
+  if (j.deck) { c.deck = j.deck; onDeck(c, c.x, c.z); }
+  else { c.f = j.floor; c.y = ty; }
 }
 
 // a summon's hit frame: Fire-faces croaked up (phase 1), or two Fire-cats to guard him

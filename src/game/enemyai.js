@@ -217,6 +217,13 @@ function decide(e) {
     e.path = e.anchored ? null : e.route();
     return;
   }
+  // on one of the platforms round Foggery's tower (`deck`: his Fire-cats, game/foggery.js): it
+  // goes for the player over the slab (its fight takes it from one platform to another)
+  if (e.deck) {
+    if (e.mode === 'attack') return;
+    e.mode = 'chase'; e.lost = 0; e.path = [e.f];
+    return;
+  }
   if (e.defence || relentless) {
     if (e.mode === 'attack') return;   // never cancel a committed wind-up
     // it engages when its room says so, or for a while after a hit: shot at from beyond its

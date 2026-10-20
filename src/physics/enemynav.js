@@ -33,6 +33,7 @@ export const groundY = (f, x, z) => topOf(f, x - f.x, z - f.z);
 // The body must fit on the floors it covers; the probe is kept a little inside a cell's
 // half-width, so that even a broad body fits on a stair or bridge one cell wide.
 export function stepEnemy(s, mx, mz, radius = s.profile.radius, height = s.profile.height) {
+  if (s.deck) return onDeck(s, s.x + mx, s.z + mz, radius);
   radius = Math.min(radius, 0.42);
   const go = (x, z) => {
     const g = floorAt(s.f, x, z, height);
@@ -43,6 +44,16 @@ export function stepEnemy(s, mx, mz, radius = s.profile.radius, height = s.profi
     return true;
   };
   return go(s.x + mx, s.z + mz) || go(s.x + mx, s.z) || go(s.x, s.z + mz);
+}
+// One standing on a platform floating round Foggery's tower (`deck`, a mover: physics/collide.js,
+// game/foggery.js): it goes to (x, z) as far as the slab reaches, never off it, on its top.
+// true: it moved.
+export function onDeck(s, x, z, radius = s.profile.radius) {
+  const d = s.deck, r = Math.min(radius + 0.05, (d.x1 - d.x0) / 2, (d.z1 - d.z0) / 2);
+  const cx = Math.min(d.x1 - r, Math.max(d.x0 + r, x)), cz = Math.min(d.z1 - r, Math.max(d.z0 + r, z));
+  const moved = Math.abs(cx - s.x) > 1e-9 || Math.abs(cz - s.z) > 1e-9;
+  s.x = cx; s.z = cz; s.y = d.y1;
+  return moved;
 }
 // learn: paths.html#bfs-code (see learn/README.md)
 export function findPath(a, b, maxLen, height = 0.9) {

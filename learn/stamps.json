@@ -121,7 +121,7 @@
     "src/game/enemies.js#shareDefeat": "28ba4397",
     "src/game/enemies.js#updateEnemies": "3f0b8023",
     "src/game/enemyai.js#act": "498926be",
-    "src/game/enemyai.js#decide": "ebeaf350",
+    "src/game/enemyai.js#decide": "4a357081",
     "src/game/enemyai.js#notices": "6d10a4db",
     "src/game/enemyai.js#stepEnemies": "e3f73864",
     "src/game/enemyai.js#turn": "3b0bb33f",

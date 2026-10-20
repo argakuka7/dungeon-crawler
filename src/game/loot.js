@@ -6,6 +6,13 @@
 // puts things from the bag back on the floor. Pickups stay where they fell (per cube, for the
 // whole run) until collected. They are credited when they reach the player.
 //
+// They lie on the ground that stays (physics/rest.js): never on one of Foggery's platforms (it
+// would slide away from under them), never in a pit of lava or acid. Ground that goes from under
+// one (a trial's crumbling crust, a black hole opening) lets it fall to the ground under it; with
+// none, or a pit, it goes to the nearest dry spot. A standing fluid that rises and falls may go over
+// it (Foggery's lava over what his death scatters): nothing under a deep one can be taken until it
+// drains (`drowned`).
+//
 // Every drop has a source: an enemy (`e:<id>`, from its second life `e:<id>~<life>`, core/respawn.js), a chest (`c:<site id>`) or something put down
 // from the bag (`b:<player>:<page><n>`), and each pickup is `<source>#<i>`. A source drops once per
 // run (run.dropped), until a death puts its enemy back (forgetLoot).
@@ -21,7 +28,9 @@
 // refused, kept? }; gen: a generated weapon's own data; kept: put down by the player or
 // spilled by a chest (a death leaves it); seq: the order they came onto this game's floors;
 // claim: null, 'mine' (it is ours), 'asked' (the host has not answered yet) or 'other' (going
-// to another player); fly: { t, dur, to? (the player number it flies to, not us) }.
+// to another player); fly: { t, dur, to? (the player number it flies to, not us) };
+// carried: something else moves it for now (Flip's world turning, game/flipworld.js), it does not
+// settle; vy: falling.
 import { player, state, setStatus } from './state.js';
 import { coinDrops, inCollectReach, inMagnetReach, inFloorReach, steppedOn, walkTakes } from '../core/loot.js';
 import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar, fits } from '../core/inventory.js';
@@ -31,8 +40,8 @@ import { enemyDrops } from '../core/gear/drops.js';
 import { dropSource } from '../core/respawn.js';
 import { favoredKind } from '../core/combat.js';
 import { displayName } from '../core/gear/stats.js';
-import { groundAt } from '../physics/collide.js';
 import { inFluid } from '../physics/fluid.js';
+import { restGround, scatterSpot, settle } from '../physics/rest.js';
 import { drawLoot, lootLanded } from '../render/loot.js';
 import { questItemsHere } from './questworld.js';
 import { floatText } from '../render/floattext.js';
@@ -48,13 +57,16 @@ let seq = 1, bagDrops = 0, collectRequested = false;
 // we come back to after a reload) may still hold what an earlier page put down
 const page = Math.random().toString(36).slice(2, 7);
 let gained = null, quiet = 0;      // pickups credited recently, shown together
+let settledIn = null;              // the cube whose loot has settled once (a new one's snaps, unseen)
 
 export const lootHere = () => state.run.loot.get(state.cubeKey) || [];
 const lootIn = key => { let l = state.run.loot.get(key); if (!l) state.run.loot.set(key, l = []); return l; };
 export function requestCollect() { collectRequested = true; }
 // what a collect (the action key, game/action.js) would take
 export const collectable = () => lootHere().filter(p => !p.fly && !p.claim && p.toss >= 0 && walkTakes(p)
-  && inCollectReach(p, player.x, player.y, player.z));
+  && inCollectReach(p, player.x, player.y, player.z) && !drowned(p));
+// is pickup p under a fluid too deep to reach into (a boss's lava over it)?
+export const drowned = p => !!inFluid(restGround(p.x, p.z, p.y), p.y + 0.01);
 // pickups dropped from now on have seq >= lootMark(); forgetLoot takes their drops out of a
 // cube again (except what is kept)
 export const lootMark = () => seq;
@@ -71,15 +83,15 @@ export function forgetDrops(key, sources) {
   for (const s of sources) state.run.dropped.delete(s);
 }
 
-// a dry landing spot near (x, y, z) on about the same level, between near and far away; the
-// spot itself otherwise
-function landing(x, y, z, near = 0.3, far = 0.8) {
-  for (let i = 0; i < 8; i++) {
-    const a = Math.random() * Math.PI * 2, r = near + Math.random() * (far - near);
-    const tx = x + Math.cos(a) * r, tz = z + Math.sin(a) * r, g = groundAt(tx, tz, y + 0.5, 0.6);
-    if (g.s && Math.abs(g.h - y) < 0.6 && !inFluid(g, g.h + 0.01)) return { x: tx, y: g.h, z: tz };
+// a landing spot near (x, y, z), between near and far away (physics/rest.js scatterSpot)
+const landing = (x, y, z, near = 0.3, far = 0.8) => scatterSpot(x, y, z, near, far);
+// Pickups lying about come to rest on the ground that stays under them (physics/rest.js
+// settle); `snap`: no falling (a cube just come into: what was already there lies where it rests)
+function settleAll(list, dt, snap) {
+  for (const p of list) {
+    if (p.toss < 1 || p.fly || p.claim || p.carried) continue;
+    if (settle(p, dt, snap)) p.gen ? landed(p) : sfx('clink', { at: p, volume: 0.4 });   // (a noticeable fall: it lands again)
   }
-  return { x, y, z };
 }
 
 function place(list, item, id, source, at, from, extra = {}) {
@@ -176,7 +188,7 @@ function announce(dt) {
   gained = null;
 }
 
-const available = p => p.toss >= 1 && !p.fly && !p.claim && lootHere().includes(p);
+const available = p => p.toss >= 1 && !p.fly && !p.claim && lootHere().includes(p) && !drowned(p);
 // the clicked pickup p: the player is at it (game/orders.js); fly it in, or say why not
 export function takePickup(p) {
   if (!available(p)) return false;
@@ -189,7 +201,7 @@ export const canReachPickup = p => Math.hypot(p.x - player.x, p.z - player.z) <=
 // host's word, hidden meanwhile)
 export function takeNow(p) {
   const list = lootHere(), i = list.indexOf(p);
-  if (i < 0 || p.fly || p.claim) return false;
+  if (i < 0 || p.fly || p.claim || drowned(p)) return false;
   if (!room(p)) { setStatus('Inventory is full'); return false; }
   claim(p);
   if (p.claim === 'mine') { list.splice(list.indexOf(p), 1); receive(p); }
@@ -198,7 +210,7 @@ export function takeNow(p) {
 // labelled pickups within C's reach, best first, then nearest: what the inventory lists beside the bag
 export function floorItems() {
   const d = p => Math.hypot(p.x - player.x, p.z - player.z);
-  return lootHere().filter(p => !p.fly && !p.claim && p.toss >= 0 && inFloorReach(p, player.x, player.y, player.z))
+  return lootHere().filter(p => !p.fly && !p.claim && p.toss >= 0 && inFloorReach(p, player.x, player.y, player.z) && !drowned(p))
     .sort((a, b) => (b.gen ? rarityOf(b).rank : -1) - (a.gen ? rarityOf(a).rank : -1) || d(a) - d(b));
 }
 
@@ -213,12 +225,16 @@ export function updateLoot(dt, time) {
       const near = steppedOn(p, player.x, player.y, player.z) || inMagnetReach(p, player.x, player.y, player.z);
       if (p.refused) { p.refused = near; continue; }
       const take = settled && near ? 'walk' : collect && inCollectReach(p, player.x, player.y, player.z) ? 'collect' : null;
-      if (!take) continue;
+      if (!take || drowned(p)) continue;   // (none out of a deep fluid over it)
       if (!room(p)) { p.refused = true; setStatus('Inventory is full'); continue; }
       const d = Math.hypot(p.x - player.x, p.z - player.z);
       if (take === 'walk') claim(p, 0, 0.16 + d * 0.12);
       else claim(p, d * 0.07 + Math.random() * 0.05, 0.28 + d * 0.1);   // the near ones first
     }
+  }
+  if (state.map && !state.transitioning) {
+    settleAll(list, dt, settledIn !== state.cubeKey);
+    settledIn = state.cubeKey;
   }
   for (let i = list.length - 1; i >= 0; i--) {
     const p = list[i];
@@ -318,6 +334,7 @@ export const savedLoot = () => allLoot().map(([k, list]) => [k, list.map(p => ({
 // a guest coming into the host's world (and a saved world, game/flow.js): its floor loot instead of ours
 export function takeLoot(cubes) {
   state.run.loot.clear();
+  settledIn = null;   // (what comes rests where it should at once)
   for (const [k, list] of cubes) state.run.loot.set(k, list.map(m => unpack(m, m.source)));
 }
 // alone again (net/session.js): what we reached for and the host did not answer is ours

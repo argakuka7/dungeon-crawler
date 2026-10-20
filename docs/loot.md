@@ -41,6 +41,14 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
   cannot attack ("No weapon equipped") until you pick one up and equip it.
 - Items you put down are `kept`: a death leaves them on the floor, while weapons enemies dropped
   during that visit go with the rest of the visit (see `docs/progression.md`).
+- Loot lies on the **ground that stays** (`physics/rest.js`): a body floating or flying when it
+  dies scatters it round the floor under it, never on one of Foggery's platforms (it would slide
+  away from under it) and never into a pit of lava or acid; a dry spot first, else one under a
+  standing fluid that will drain (a boss's lava, a trial's flood). Ground that goes from under a
+  pickup (a crumbling crust, a black hole opening) lets it fall onto the ground under it; with
+  none, or a pit, it goes to the nearest dry spot at once. Coming into a cube (or a save, or a
+  friend's world) it lies where it rests at once, unseen. Nothing under such a fluid too deep to
+  wade can be taken (walked over, pulled in, collected, clicked) until it drains.
 - Playing together the floor loot and the chests are shared: one copy of every pickup, for
   whoever takes it first; the killer's or opener's game rolls the drop (see `docs/online.md`,
   Rewards).

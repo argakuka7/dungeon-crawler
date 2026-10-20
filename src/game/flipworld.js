@@ -77,6 +77,7 @@ function sync() {
 // the box unturned again (a death, the fight reset): at once
 export function resetFlipWorld() {
   if (!w) return;
+  for (const l of w.turn?.loot ?? []) delete l.p.carried;   // (where the turn left it: it settles, game/loot.js)
   if (w.world === state.world && state.map !== w.base) state.map = w.base;
   if (w.world === state.world) { restoreWalls(w.world); turnBox(w.world, IDENTITY); showCovers(w.world, null, 0); }
   if (player.flipping) { player.flipping = null; player.vanished = false; }
@@ -199,7 +200,7 @@ function startTurn(O, boss, list) {
   const bodies = list.filter(e => e.mode !== 'gone').map(e => ({ e, x: e.x, y: e.y, z: e.z }));
   w.turn = { from: w.O, to: O, axis: found.axis, q: found.q, t: 0, dur: Math.abs(found.q) === 2 ? G.turnHalf : G.turn,
     carry: player.flipping?.kind === 'turn', p: { x: player.x, y: player.y, z: player.z }, bodies, gentle,
-    loot: lootHere().map(p => ({ p, x: p.x, y: p.y, z: p.z })) };
+    loot: lootHere().map(p => { p.carried = true; return { p, x: p.x, y: p.y, z: p.z }; }) };   // (carried: it does not settle meanwhile, game/loot.js)
   w.fall = null; w.holes = null; w.beam = null;
   if (w.removed) rebuild(list, list.length > 0);   // (the box whole again for the turn: a black hole's)
   showCovers(w.world, null, 0);
@@ -289,6 +290,7 @@ function endTurn(list) {
     const p = turnPoint(R, l.x, l.y, l.z), g = groundAt(p.x, p.z, p.y + 0.2, 0);
     const f = Number.isFinite(g.h) ? null : landing(player.x, player.z, 0);
     Object.assign(l.p, f ? { x: f.x + 0.5, y: f.top * LH, z: f.z + 0.5 } : { x: p.x, y: g.h, z: p.z });
+    delete l.p.carried;
   }
   w.fall = { t: 0, landed: false };
   w.holes = { phase: 'shut', t: 0 };

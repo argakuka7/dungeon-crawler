@@ -4,7 +4,9 @@
 // Fire-cats guard him (nothing hurts him while one lives); once the lava is at its highest the
 // platforms rise out of it; at a sixth the lava floods the top and
 // only the platforms are safe; falling into the lava costs a quarter of one's health and magic
-// takes one out; his death drains the lava for good and opens the well.
+// takes one out; his death drains the lava for good and opens the well. His Fire-cats leap after a
+// player onto the platforms (and back down onto the top); his loot comes to rest on the ground
+// that stays, never on a platform or in the air.
 import { paused } from './combat.js';
 import { state, player } from '../../src/game/state.js';
 import { LH } from '../../src/core/constants.js';
@@ -16,13 +18,15 @@ import { goBoss } from '../../src/game/dev.js';
 import { spawnAt } from '../../src/game/flow.js';
 import { loadSpecies } from '../../src/render/enemies.js';
 import { moversNow } from '../../src/physics/collide.js';
+import { updateLoot, lootHere } from '../../src/game/loot.js';
+import { restGround } from '../../src/physics/rest.js';
 import { floorY } from '../../src/core/surfaces.js';
 import { findPath } from '../../src/physics/enemynav.js';
 import { gateLocked } from '../../src/core/guardians.js';
 import { TOWER, PLATFORMS, FOGGERY_FIGHT } from '../../src/core/foggery.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
-const step = (dt, also) => { updateMovers(dt); updatePlayer(dt); updateEnemies(dt); also(); };
+const step = (dt, also) => { updateMovers(dt); updatePlayer(dt); updateEnemies(dt); updateLoot(dt, state.time); also(); };
 const run = (seconds, also = () => {}, dt = 1 / 30) => { for (let t = 0; t < seconds; t += dt) step(dt, also); };
 const until = (seconds, done, also = () => {}, dt = 1 / 30) => {
   for (let t = 0; t < seconds; t += dt) { step(dt, also); if (done()) return t; }
@@ -38,6 +42,11 @@ function onTop() {
   const f = tops[0];
   spawnAt(f.x + .5, floorY(f, .5, .5), f.z + .5);
 }
+// the platform under q, if it stands on one
+const deckOf = q => moversNow().find(o => q.x >= o.x0 && q.x < o.x1 && q.z >= o.z0 && q.z < o.z1 && Math.abs(q.y - o.y1) < 0.05);
+const livingCats = () => allEnemies().filter(e => e.type === 'fogcat' && e.mode !== 'dead' && e.mode !== 'gone');
+// a cat on the player's platform (and standing on it)
+const catWithPlayer = () => { const d = deckOf(player); return !!d && livingCats().some(c => c.deck === d && deckOf(c) === d); };
 function onPlatform() {
   const m = moversNow()[0];
   spawnAt((m.x0 + m.x1) / 2, m.y1, (m.z0 + m.z1) / 2);
@@ -102,6 +111,18 @@ export async function runFoggeryChecks() {
     until(4, catsUp, tough);
     check(catsUp(), 'two new cats');
     out.push(`cats again after ${(again + 1.5).toFixed(1)} s`);
+    // onto a platform: his cats leap after the player, from one to another, and fight them there
+    // (it carries them along); back on the top they leap back down
+    onPlatform();
+    const leapt = until(12, catWithPlayer, tough);
+    check(leapt < 12, 'his cats leap after the player onto their platform');
+    out.push(`a cat on the player's platform after ${leapt.toFixed(1)} s`);
+    let off = null;
+    run(3, () => { tough(); for (const c of livingCats()) if (c.deck && (c.x < c.deck.x0 || c.x > c.deck.x1 || c.z < c.deck.z0 || c.z > c.deck.z1 || c.y !== c.deck.y1)) off = `${c.x.toFixed(2)},${c.y.toFixed(2)},${c.z.toFixed(2)}`; });
+    check(!off, 'on the platform, never off it: ' + off);
+    onTop();
+    const down = until(8, () => livingCats().some(c => !c.deck && !c.jump && c.f?.tower === 'top' && Math.abs(c.y - player.y) < 0.1), tough);
+    check(down < 8, 'and back down onto the top after the player');
     // a sixth: the lava floods the top; the platforms hold
     for (const c of allEnemies().filter(e => e.type === 'fogcat')) damageEnemy(c, c.hp);
     run(1, tough);
@@ -124,6 +145,9 @@ export async function runFoggeryChecks() {
     let under = null;
     run(6, () => { tough(); for (const e of allEnemies()) if (e !== b && e.mode !== 'dead' && e.y < lava() - 0.05) under = `${e.type} at ${e.y.toFixed(2)}`; });
     check(!under, 'his minions walk on the lava: ' + under);
+    // his cats come after the player on the platforms
+    const caught = until(14, catWithPlayer, tough);
+    check(caught < 14, "phase 3: his cats leap onto the player's platform");
     // the platforms keep moving
     const was = moversNow().map(m => m.x0 + ',' + m.z0).join(' ');
     run(PLATFORMS.every * 2, tough);
@@ -153,6 +177,11 @@ export async function runFoggeryChecks() {
     check(!moversNow().length, 'the platforms are gone, under the floor');
     check(!gateLocked(map, state.run), 'the well is open');
     out.push('dead: lava drained, well open');
+    // his loot rests on the ground that stays (none on a platform, none in the air), out of the lava
+    const loot = lootHere().filter(p => p.toss >= 1 && !p.fly && !p.claim);
+    const floating = loot.filter(p => Math.abs(restGround(p.x, p.z, p.y).h - p.y) > 0.02);
+    check(!floating.length, 'his loot on the ground: ' + floating.map(p => `${p.itemId} at ${p.y.toFixed(2)} over ${restGround(p.x, p.z, p.y).h.toFixed(2)}`).join(', '));
+    out.push(`loot: ${loot.length} pickups on the ground`);
     return out;
   });
 }

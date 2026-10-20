@@ -45,10 +45,11 @@ export function drownEnemies(list) {
   }
 }
 // those lava does not burn (Foggery, his Fire-faces and Fire-cats: `lavaproof`) walk on it: where it
-// stands over the floor under them, they stand on its surface, wherever they move
+// stands over the floor under them, they stand on its surface, wherever they move (not one held
+// where its fight puts it: on a platform, leaping, Foggery floating)
 export function walkOnLava(list) {
   for (const e of list) {
-    if (!e.profile.lavaproof || e.mode === 'dead' || e.anchored) continue;
+    if (!e.profile.lavaproof || e.mode === 'dead' || e.anchored || e.deck || e.jump) continue;
     const s = standingAt(e.x, e.z);
     if (s?.fluid === LAVA && s.y > e.y) e.y = s.y;
   }

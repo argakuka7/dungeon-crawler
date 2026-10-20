@@ -33,10 +33,16 @@ export const deep = (fluid, depth, head) => depth > 0 && (fluid !== WATER || dep
 // the fluid the body with its feet at y (over the ground gr) is lost in (0 when dry, wading, or
 // above the surface); head: how high its head stands over its feet
 export function inFluid(gr, y, head = HEAD_Y) {
-  const f = gr.s;
-  if (f && !f.kind && f.fluid && deep(f.fluid, f.surf * LH - y, head)) return f.fluid;
+  const own = fixedFluid(gr, y, head);
+  if (own) return own;
   const s = standing(gr.i ?? -1);
   return s && deep(s.fluid, s.y - y, head) ? s.fluid : 0;
+}
+// ... in the ground's own fluid only (a lava, acid or deep water floor: there for good), not a
+// standing one that rises and falls (a trial's, a boss's tide)
+export function fixedFluid(gr, y = gr.h, head = HEAD_Y) {
+  const f = gr.s;
+  return f && !f.kind && f.fluid && deep(f.fluid, f.surf * LH - y, head) ? f.fluid : 0;
 }
 // how deep the water the feet at y stand in is (0: dry; for the slowing of wading)
 export function wading(gr, y) {
