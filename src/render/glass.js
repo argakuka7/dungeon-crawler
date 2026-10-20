@@ -23,7 +23,8 @@ const sides = [0, 1, 4, 5].map(face => {
   return geo;
 });
 
-// The look, shared by every box (as uniforms).
+// The look, shared by every box (as uniforms: the dev console's /glass, game/devcommands.js,
+// switches to the old look to compare and tunes the numbers live).
 // Widths are in CSS pixels, so a box looks the same on any screen and at any resolution drop.
 export const GLASS = {
   edgeColor: 0x8fb3d9, paneColor: 0x6d8db5,
@@ -38,12 +39,18 @@ export const GLASS = {
   centre: 0.35,       // ... and in its middle, as a share of that
   band: 1.2,          // how far in from a pane's rims the denser glass reaches, world units
 };
+// about what the box looked like before: hard 1px lines, flat panes (/glass old)
+const OLD = { width: 0, minPx: 0.7, maxPx: 0.7, feather: 0.5, corner: 0.35, mid: 1, reach: 0.001, rim: 0.05, centre: 1, band: 0.001 };
 const U = Object.fromEntries(Object.entries(GLASS).filter(([k]) => !k.endsWith('Color')).map(([k, v]) => [k, { value: v }]));
 // The full cube's cut caps are drawn a few steps nearer than its walls (render/section.js
 // CAP_AHEAD): along the bottom of the box, where they lie on its edges, the edges have to be
 // nearer still or they break up into dashes. Proxies have no caps.
 const CUBE_AHEAD = 64, PROXY_AHEAD = 8;
 const RES = { value: new THREE.Vector2(1, 1) }, PX = { value: 1 };
+export const GLASS_KNOBS = Object.keys(U);
+export const glassKnob = k => U[k].value;
+export function setGlassKnob(k, v) { U[k].value = v; }
+export function setGlassLook(old) { for (const k in U) U[k].value = old ? OLD[k] : GLASS[k]; }
 
 // the size of what is drawn into, for the edges' widths on screen
 const size = new THREE.Vector2();
