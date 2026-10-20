@@ -112,7 +112,7 @@ function animateBody() {
     m.emissive.copy(t.emissive); m.emissiveIntensity = Math.max(0, 1 - fx.t / fx.style.duration) * 1.6 * flicker;
   }
   if (saved.light) { character.light.color.copy(t.light);
-    character.light.intensity = 3 * Math.max(0, 1 - fx.t / fx.style.duration); }
+    character.light.intensity = 5.2 * Math.max(0, 1 - fx.t / fx.style.duration); }   // (look.js: as bright as deep down)
   if (t.fade) {   // dissolve: fade out after the first moments
     const a = Math.max(0, 1 - Math.max(0, fx.t - .5) / 1.3);
     m.opacity = saved.opacity * a;

@@ -167,7 +167,7 @@ function frame(now = performance.now()) {
   // and so does a boss's fog (Squarlo growing, game/squarlo.js)
   state.lookMist += (state.mist - state.lookMist) * Math.min(1, dt * (state.mist ? 1.2 : 0.8));
   applyLook(state.lookDepth, camera.position.distanceTo(focusPoint(player.x, player.visY, player.z)), state.cubes?.layout.themes, state.lookDark, state.lookMist);
-  followHero();   // the hero's light where it stands (render/character.js)
+  followHero(dt);   // the hero's light where it stands (render/character.js)
   updateLightPool(focusPoint(player.x, player.visY + 1, player.z));
   // (the close view's camera stays out of the solids: nothing of the neighbours is cut either)
   cullNeighbors(player.x, player.z, !state.transitioning && !closeView(), state.showNeighbors, player.visY + (player.swimming ? 0.6 : 0.3));

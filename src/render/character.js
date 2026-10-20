@@ -4,7 +4,9 @@
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
-import { scene } from './scene.js';
+import { scene, camera } from './scene.js';
+import { state } from '../game/state.js';
+import { ceilingAt, insideSolid, cellAt } from '../physics/collide.js';
 import { prepareHeld } from './held.js';
 import { rigReady } from './figure.js';
 import { ownShadowDepth } from './skinned.js';
@@ -23,13 +25,40 @@ export const character = { ready: false };
 // (render/lightpool.js). With the light on the figure, that happened going from the main menu
 // into the game, and the shaders compiled before the hero loaded (render/warmup.js) were not
 // the ones it took to draw the world.
+// It hangs over the hero and a little towards the camera, like a lantern held up: in the body
+// (it once was, at the chest) every face of the figure looks away from it, and the hero stood
+// dark in a pool of light. It casts no shadow, so it stays out of ceilings and walls: there it
+// would light the far side of them.
 const light = new THREE.PointLight(0xffd9a0, 1.2, 3.5, 2);
 scene.add(light);
-// every frame, once the figure stands where it stands (main.js)
-export function followHero() {
+const LIFT = 2.3;          // over the feet (the hero is ~1.1 tall; closer, the head is blown out)
+const LEAD = 0.55;         // towards the camera, level
+const UNDER_CEILING = 0.2; // this far under a ceiling at most
+const MIN_LIFT = 1.2;      // and never lower than this (a crawlway: rather in the ceiling than in the head)
+const EASE = 10;           // 1/s: lift and lead follow a ceiling or wall that comes and goes
+let lift = LIFT, lead = LEAD;
+// solid matter at a point, with the outside of the cube open (the hero at its edge)
+const solid = (x, z, y) => cellAt(x, z) >= 0 && insideSolid(x, z, y);
+// every frame, once the figure and the camera stand where they stand (main.js)
+export function followHero(dt = 0) {
   const g = character.group;
-  if (character.ready && g.visible && g.parent === scene) light.position.set(g.position.x, g.position.y + 0.9, g.position.z);
-  else light.intensity = 0;
+  if (!(character.ready && g.visible && g.parent === scene)) { light.intensity = 0; return; }
+  const p = g.position;
+  let dx = camera.position.x - p.x, dz = camera.position.z - p.z;
+  const len = Math.hypot(dx, dz);
+  if (len > 1e-3) { dx /= len; dz /= len; } else dx = dz = 0;   // (the camera straight overhead)
+  // where it would like to be: under the ceiling, out of the walls (not while travelling: the
+  // map is the next cube's then)
+  let wantLift = LIFT, wantLead = LEAD;
+  if (state.map && !state.transitioning) {
+    const ceil = Math.min(ceilingAt(p.x, p.z, p.y + 0.5), ceilingAt(p.x + dx * LEAD, p.z + dz * LEAD, p.y + 0.5));
+    wantLift = Math.max(MIN_LIFT, Math.min(LIFT, ceil - UNDER_CEILING - p.y));
+    if (solid(p.x + dx * wantLead, p.z + dz * wantLead, p.y + wantLift)) wantLead /= 2;
+    if (solid(p.x + dx * wantLead, p.z + dz * wantLead, p.y + wantLift)) wantLead = 0;
+  }
+  const k = dt > 0 ? 1 - Math.exp(-EASE * dt) : 1;
+  lift += (wantLift - lift) * k; lead += (wantLead - lead) * k;
+  light.position.set(p.x + dx * lead, p.y + lift, p.z + dz * lead);
 }
 const weapons = new Map();
 let loadRequest = 0;

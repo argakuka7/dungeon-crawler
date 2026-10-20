@@ -156,7 +156,7 @@
     "src/game/sword.js#updateSword": "f8172587",
     "src/game/update.js#lunge": "b13cb313",
     "src/game/update.js#updatePlayer": "23eaa929",
-    "src/main.js#frame": "58838b9b",
+    "src/main.js#frame": "4b9e8a03",
     "src/net/foes.js#header": "6a75fdb3",
     "src/net/foes.js#Viewer": "3ebe4feb",
     "src/net/peerjs.js#header": "23788d9d",

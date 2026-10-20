@@ -46,7 +46,9 @@ export function applyLook(depth, camDist, themes = NO_WORLD, dark = 0, mist = 0)
   scene.fog.far = f > 0.01 ? camDist + 6 + 70 * (1 - f) : 2e4;
   if (character.ready) {
     const lamp = lerp(lampAt(depth, themes), NIGHT.lamp, k);
-    character.light.intensity = lerp(1.2, 3, lamp);
-    character.light.distance = lerp(3.5, 8, lamp);
+    // (it hangs ~2.3 over the feet, render/character.js: brighter and farther reaching than it
+    // was at the chest, for about the same light on the floor around, less at the feet)
+    character.light.intensity = lerp(2.1, 5.2, lamp);
+    character.light.distance = lerp(4.5, 10, lamp);
   }
 }
