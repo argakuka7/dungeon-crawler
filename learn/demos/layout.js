@@ -3,6 +3,7 @@
 import { makeLayouts } from '../../src/world/layout.js';
 import { parse } from '../../src/world/coords.js';
 import { MAX_DEPTH } from '../../src/themes/depth.js';
+import { bossAt } from '../../src/core/bosses.js';
 import { canvas, html, t as tr, themeLabel } from '../deck.js';
 
 const AXES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -63,15 +64,16 @@ export default function mount(el) {
     // legend
     g.textAlign = 'left'; g.font = "15px 'Crimson Text', serif";
     const lx = ox + (2 * R + 1) * S + 14;
-    [['#ffc94a', tr('the route', 'die Route')], ['#70d6aa', tr('side room (+)', 'Nebenraum (+)')], ['#ff5ab4', tr('side guardian', 'Torwächter')], ['#ffb000', tr('descent guardian', 'Brunnenwächter')], ['#5fd3ff', tr('way in (ring up)', 'Eingang (Ring)')], ['#ffc94a', tr('well down', 'Brunnen runter')], ['#ffcf7a', tr('treasure site', 'Schatzplatz')], ['#ff5a4a', tr('horde', 'Horde')]]
+    [['#ffc94a', tr('the route', 'die Route')], ['#70d6aa', tr('side room (+)', 'Nebenraum (+)')], ['#ff5ab4', tr('guardian', 'Wächter')], ['#ffb000', tr('Temp Boss or boss', 'Temp-Boss oder Boss')], ['#5fd3ff', tr('way in (ring up)', 'Eingang (Ring)')], ['#ffc94a', tr('well down', 'Brunnen runter')], ['#ffcf7a', tr('treasure site', 'Schatzplatz')], ['#ff5a4a', tr('horde', 'Horde')]]
       .forEach(([c, t], j) => { g.fillStyle = c; g.fillRect(lx, 20 + j * 22, 12, 12); g.fillStyle = '#aab3c2'; g.fillText(t, lx + 18, 31 + j * 22); });
     const sides = [...L.guardians.values()].filter(x => x.role === 'side').length;
+    const boss = bossAt(d) && bossAt(d)[0].toUpperCase() + bossAt(d).slice(1);   // (the well's: a real boss, else a Temp Boss)
     const hordes = [...L.hordes].map(([k, h]) => [spine.indexOf(k) + 1, h.count]);
     out.innerHTML = tr(`depth ${d}: <b>${spine.length}</b> rooms on the route, <b>${cells.length - spine.length}</b> side rooms, `
-      + (d < MAX_DEPTH ? `<b>${sides}</b> side guardian${sides === 1 ? '' : 's'} and a descent guardian at the well` : 'the core: no way further down')
+      + (d < MAX_DEPTH ? `<b>${sides}</b> guardian${sides === 1 ? '' : 's'} and ${boss ? `the boss <b>${boss}</b>` : 'a Temp Boss'} at the well` : 'the core: no way further down')
       + hordes.map(([i, n]) => `; a horde of <b>${n}</b> in room ${i}`).join(''),
       `Tiefe ${d}: <b>${spine.length}</b> Räume auf der Route, <b>${cells.length - spine.length}</b> Nebenräume, `
-      + (d < MAX_DEPTH ? `<b>${sides}</b> Torwächter und ein Brunnenwächter am Brunnen` : 'der Kern: kein Weg weiter nach unten')
+      + (d < MAX_DEPTH ? `<b>${sides}</b> Wächter und ${boss ? `der Boss <b>${boss}</b>` : 'ein Temp-Boss'} am Brunnen` : 'der Kern: kein Weg weiter nach unten')
       + hordes.map(([i, n]) => `; eine Horde aus <b>${n}</b> in Raum ${i}`).join(''));
   }
   seedIn.oninput = draw; depthIn.oninput = draw;

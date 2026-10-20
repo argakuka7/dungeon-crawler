@@ -11,11 +11,11 @@ import { guardianColor, guardianTitle } from '../src/core/guardians.js';
 import { bossAt } from '../src/core/bosses.js';
 import { parseColor } from '../src/core/oklch.js';
 import { ENEMY_PROFILES, ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, GUARDIAN_TIERS, enemyProfile, makeEnemy, threat, guardianLevel, depthLevel } from '../src/core/enemies.js';
-import { guardianId, gateLocked, portalLocked, restoreDefeated, leavingFight, steersOut, guardianName } from '../src/core/guardians.js';
+import { guardianId, gateLocked, portalLocked, restoreDefeated, leavingFight, steersOut, guardianName, guardianLockMessage, lockMessage } from '../src/core/guardians.js';
 import { createRun, createPlayerStats, awardKill } from '../src/core/progression.js';
 import { population } from '../src/core/spawns.js';
 import { damageEnemy } from '../src/core/combat.js';
-import { enemySpots, guardianSpots } from '../src/game/enemyspawn.js';
+import { enemySpots, guardianSpots, guardianKind } from '../src/game/enemyspawn.js';
 import { coordinateDefence } from '../src/game/defence.js';
 import { walkable, findPath } from '../src/physics/enemynav.js';
 import { buildCubeGeometry } from '../src/render/cubegeo.js';
@@ -144,7 +144,10 @@ test('descent guardians are explicit stronger boss placeholders for every specie
     assert.equal(descent.guardianRole, 'descent'); assert.equal(descent.bossPlaceholder, true);
     assert.notEqual(descent.type, side.type); assert.notEqual(descent.colors, side.colors);
     assert.notEqual(guardianColor('side'), guardianColor('descent'));
-    assert.notEqual(guardianTitle('side'), guardianTitle('descent'));
+    // a side guardian is the Guardian of its species, a descent guardian its Temp Boss
+    assert.equal(side.label, `Guardian ${base.label}`); assert.equal(descent.label, `Temp Boss ${base.label}`);
+    assert.equal(guardianTitle('side', side.label), `◆ Guardian ${base.label}`);
+    assert.equal(guardianTitle('descent', descent.label), `♛ Temp Boss ${base.label}`);
     // each tier meets its floors (damage is rounded to whole points), so the species it promotes
     // decides how it fights, not how strong it is
     for (const [kind, t] of [[side, GUARDIAN_TIERS.side], [descent, GUARDIAN_TIERS.descent]]) {
@@ -178,6 +181,28 @@ test('guardians are pink and amber, except where a species dresses them otherwis
     assert.ok(parseColor(k.gloom.color).l < parseColor(k.colors.body).l, 'still darkens to strike');
     assert.ok(k.hp > wolk.hp * 3 && k.guardian, k.type);
   }
+});
+test('the messages call a guardian by its kind: the one guardianSpots promotes', () => {
+  const w = new World(5);
+  for (const depth of [0, 1, 3, 4]) for (const [key, g] of w.layout(depth).guardians) {
+    const map = w.cube(key).map, kind = guardianKind(map), label = kind.label;
+    assert.equal(kind, guardianSpots(map)[0].kind, 'the guardian that stands there');
+    const exit = map.portals.find(p => p.dir === map.exit);
+    if (g.role === 'side') {
+      assert.match(label, /^Guardian /);
+      assert.equal(guardianName(map, label), `The ${label}`);
+      assert.equal(lockMessage(map, exit.dir, label), `Defeat the ${label} to unlock this passage`);
+    } else if (bossAt(depth)) {
+      assert.equal(guardianName(map, label), label); assert.equal(guardianLockMessage(map, label), `Defeat ${label} to unlock this descent`);
+    } else {
+      assert.match(label, /^Temp Boss /);
+      assert.equal(guardianName(map, label), `The ${label}`);
+      assert.equal(guardianLockMessage(map, label), `Defeat the ${label} to unlock this descent`);
+    }
+  }
+  const plain = w.cube(w.layout(3).down).map;
+  assert.equal(guardianLockMessage(plain), 'Defeat the Temp Boss to unlock this descent', 'unknown: by its tier');
+  assert.equal(guardianKind(w.cube(w.layout(3).route[1]).map), null, 'no guardian');
 });
 test('leaving an arena while its guardian lives asks, and only when steered out', () => {
   const w = new World(3), run = createRun();

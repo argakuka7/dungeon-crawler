@@ -73,8 +73,8 @@
       <h3 lang="de">Warum ist das eine gute Idee?</h3>
       <p lang="en">Each state is small and easy to understand. To add a new behaviour (say, "flee when hurt"), you add one state and a few switches. You don't have to rethink everything.</p>
       <p lang="de">Jeder Zustand ist klein und leicht zu verstehen. Für ein neues Verhalten (zum Beispiel "fliehen, wenn verletzt") fügst du einen Zustand und ein paar Wechsel hinzu. Du musst nicht alles neu durchdenken.</p>
-      <p lang="en">Guardians use one more state, <b>defend</b>: they stay near their post and only charge when you come close to their gate, or when you hit them.</p>
-      <p lang="de">Wächter benutzen noch einen Zustand, <b>defend</b> (verteidigen): Sie bleiben nahe ihrem Posten und stürmen nur los, wenn du ihrem Tor zu nahe kommst oder sie triffst.</p>
+      <p lang="en">Guardians use one more state, <b>defend</b>: they stay near their post and only charge when you come close to their gate, or when you hit them. A boss you have hurt never goes back to his post: he follows you wherever you go.</p>
+      <p lang="de">Wächter benutzen noch einen Zustand, <b>defend</b> (verteidigen): Sie bleiben nahe ihrem Posten und stürmen nur los, wenn du ihrem Tor zu nahe kommst oder sie triffst. Ein Boss, den du verletzt hast, geht nie mehr zu seinem Posten zurück: Er folgt dir, wohin du auch gehst.</p>
       <p lang="en">Most game characters, from Pac-Man's ghosts to big game bosses, use a state machine somewhere inside.</p>
       <p lang="de">Die meisten Spielfiguren, von den Geistern in Pac-Man bis zu großen Spiel-Bossen, haben irgendwo innen einen Zustandsautomaten.</p>
     </div>
@@ -121,6 +121,14 @@
     <figure><img class="shot" src="../blender/previews/wolk-preview.png" alt="A sad light blue cloud with a tear on its cheek, walking on long blue stick legs" data-de-alt="Eine traurige hellblaue Wolke mit einer Träne auf der Wange, die auf langen blauen Strichbeinen läuft"><figcaption lang="en">Wolk: a sad little cloud on long legs. When it closes its eyes and lifts its arms, it turns dark grey and a crackling ring shows up under your feet. Step out of it: the lightning strikes there and stuns you! The thunder comes a moment later. When it dies, it loses its arms and legs.</figcaption> <figcaption lang="de">Wolk: eine traurige kleine Wolke auf langen Beinen. Wenn sie die Augen schließt und die Arme hebt, wird sie dunkelgrau und unter deinen Füßen erscheint ein knisternder Ring. Geh da raus: Dort schlägt der Blitz ein und lähmt dich! Der Donner kommt einen Moment später. Wenn sie stirbt, verliert sie ihre Arme und Beine.</figcaption></figure>
     <figure><img class="shot" src="../blender/previews/squirtle-preview.png" alt="A little blue serpent with a beak, poking out of the floor" data-de-alt="Eine kleine blaue Schlange mit Schnabel, die aus dem Boden ragt"><figcaption lang="en">Squirtle: runs about under the floor, where nothing can hit it, and pokes out of it to spit balls of water at you. It lives where there is a lot of water.</figcaption> <figcaption lang="de">Squirtle: läuft unter dem Boden herum, wo nichts es treffen kann, und streckt sich heraus, um Wasserbälle auf dich zu spucken. Es lebt da, wo viel Wasser ist.</figcaption></figure>
   </div>
+</section>
+
+<section class="slide" id="bosses" data-lv="1">
+  <h2 lang="en">The bosses</h2>
+  <h2 lang="de">Die Bosse</h2>
+  <p lang="en">The first three wells down are guarded by real <b>bosses</b>, drawn by the kids on a whiteboard and then built in Blender by code: <b>Gusto</b> on the road out of town, <b>Totnar</b> one depth below, <b>Squarlo</b> below him. Every boss fights in his own way, in phases, and every big attack has a warning you can learn to read. Pick a boss and play his moves: the text says what each one does, and how to beat it. Drag to turn him around.</p>
+  <p lang="de">Die ersten drei Brunnen nach unten bewachen echte <b>Bosse</b>, von den Kindern auf ein Whiteboard gezeichnet und dann in Blender von Code gebaut: <b>Gusto</b> auf dem Weg aus der Stadt, <b>Totnar</b> eine Tiefe darunter, <b>Squarlo</b> unter ihm. Jeder Boss kämpft auf seine eigene Art, in Phasen, und jeder große Angriff hat eine Warnung, die du lesen lernen kannst. Such dir einen Boss aus und spiel seine Bewegungen ab: Der Text sagt, was jede macht und wie du sie besiegst. Zieh, um ihn umzudrehen.</p>
+  <div class="demo real" data-demo="bosses"></div>
 </section>
 
 <section class="slide" id="kinds" data-lv="2" data-src="src/core/enemies.js#BLOOD_VIPER,enemyKind">
@@ -172,8 +180,8 @@
     <div class="card">
       <h3 lang="en">Guardians</h3>
       <h3 lang="de">Wächter</h3>
-      <p lang="en">Every well down is guarded by a <b style="color:#ffb000">descent guardian</b> (gold), and one or two gates on the way by <b style="color:#ff5ab4">side guardians</b> (pink). They are normal species, promoted: much more health, harder hits, and lots of poise.</p>
-      <p lang="de">Jeder Brunnen nach unten wird von einem <b style="color:#ffb000">Brunnenwächter</b> (gold) bewacht, und ein oder zwei Tore unterwegs von <b style="color:#ff5ab4">Torwächtern</b> (pink). Es sind normale Arten, befördert: viel mehr Gesundheit, härtere Treffer und viel Standfestigkeit.</p>
+      <p lang="en">One or two gates on the way are held by a <b style="color:#ff5ab4">Guardian</b> (pink), named after its species: a <i>Guardian Spider</i>, a <i>Guardian Wolla</i>. Every well down is guarded by a <b style="color:#ffb000">Temp Boss</b> (gold), like a <i>Temp Boss Stunder</i>: it keeps the place warm until that depth gets a real boss (the first three already have theirs). They are normal species, promoted: much more health, harder hits, and lots of poise.</p>
+      <p lang="de">Ein oder zwei Tore unterwegs bewacht ein <b style="color:#ff5ab4">Wächter</b> (pink), benannt nach seiner Art: im Spiel ein <i>Guardian Spider</i> oder ein <i>Guardian Wolla</i>. Jeden Brunnen nach unten bewacht ein <b style="color:#ffb000">Temp-Boss</b> (gold), etwa ein <i>Temp Boss Stunder</i>: ein vorläufiger Boss, der den Platz freihält, bis diese Tiefe einen echten Boss bekommt (die ersten drei haben ihren schon). Es sind normale Arten, befördert: viel mehr Gesundheit, härtere Treffer und viel Standfestigkeit.</p>
       <p lang="en">Their gate stays sealed with a red cross until the guardian dies. Killing the others is not enough. Their arena has twice the usual monsters, and they defend together.</p>
       <p lang="de">Ihr Tor bleibt mit einem roten Kreuz versiegelt, bis der Wächter tot ist. Die anderen zu besiegen reicht nicht. In ihrer Arena gibt es doppelt so viele Monster wie sonst, und sie verteidigen gemeinsam.</p>
       <p lang="en">Guardians always drop good loot.</p>
@@ -193,6 +201,33 @@
   </div>
 </section>
 
+<section class="slide" id="boss-fight" data-lv="2" data-src="src/game/gusto.js#addGustos src/cubegen/testrooms.js#bossRoom">
+  <h2 lang="en">How a boss fight is built</h2>
+  <h2 lang="de">Wie ein Bosskampf gebaut ist</h2>
+  <div class="cols">
+    <div>
+      <p lang="en">A boss is an ordinary monster with a few extra rules on top. The same brain as a spider's walks him about, picks his attacks and plays their wind-ups. Then each boss has a file of his own (<code>game/gusto.js</code>, <code>game/totnar.js</code>, <code>game/squarlo.js</code>) that only says three kinds of things:</p>
+      <p lang="de">Ein Boss ist ein gewöhnliches Monster mit ein paar Extra-Regeln obendrauf. Dasselbe Gehirn wie bei einer Spinne lässt ihn herumlaufen, sucht seine Angriffe aus und spielt ihr Ausholen ab. Dazu hat jeder Boss eine eigene Datei (<code>game/gusto.js</code>, <code>game/totnar.js</code>, <code>game/squarlo.js</code>), die nur drei Arten von Dingen sagt:</p>
+      <ul>
+        <li lang="en"><b>What he may not do right now</b> (<code>barred</code>): Squarlo starts nothing else once his tide is due, Totnar only rolls once he has lost a skull.</li>
+        <li lang="de"><b>Was er gerade nicht darf</b> (<code>barred</code>): Squarlo fängt nichts anderes an, wenn seine Flut fällig ist, Totnar rollt erst, wenn er einen Schädel verloren hat.</li>
+        <li lang="en"><b>When the next phase starts.</b> A health floor (<code>hpFloor</code>) stops any blow from taking Gusto below half his health. So however hard you hit, he always splits first.</li>
+        <li lang="de"><b>Wann die nächste Phase anfängt.</b> Ein Gesundheitsboden (<code>hpFloor</code>) sorgt dafür, dass kein Treffer Gusto unter die Hälfte seiner Gesundheit bringt. Egal wie fest du zuschlägst, er teilt sich immer zuerst.</li>
+        <li lang="en"><b>His minions.</b> They belong to no depth: he brings them, they give a little XP, and they go when he dies.</li>
+        <li lang="de"><b>Seine Helfer.</b> Sie gehören zu keiner Tiefe: Er bringt sie mit, sie geben ein bisschen Erfahrung, und sie verschwinden, wenn er stirbt.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 lang="en">Trying a boss out</h3>
+      <h3 lang="de">Einen Boss ausprobieren</h3>
+      <p lang="en">To work on a boss, the makers don't want to walk all the way to his well every time. In the game with <code>?dev=1</code>, type <code>/testroom boss gusto</code> (or <code>/testroom boss 1</code> for the boss of depth 1). That builds a copy of his real arena, with the same generator, and puts him in it alone. He stands still until you hit him, and nothing you do there is saved.</p>
+      <p lang="de">Um an einem Boss zu arbeiten, wollen die Macher nicht jedes Mal bis zu seinem Brunnen laufen. Im Spiel mit <code>?dev=1</code> tippst du <code>/testroom boss gusto</code> (oder <code>/testroom boss 1</code> für den Boss von Tiefe 1). Das baut eine Kopie seiner echten Arena, mit demselben Generator, und stellt ihn allein hinein. Er steht still, bis du ihn triffst, und nichts, was du dort tust, wird gespeichert.</p>
+      <p class="small muted" lang="en">Details for grown-ups: <code>docs/bosses.md</code></p>
+      <p class="small muted" lang="de">Details für Erwachsene: <code>docs/bosses.md</code></p>
+    </div>
+  </div>
+</section>
+
 <section class="slide" id="decide-code" data-lv="3">
   <h2 lang="en">The real code: deciding</h2>
   <h2 lang="de">Der echte Code: entscheiden</h2>
@@ -203,6 +238,8 @@
       <p lang="de"><code>notices</code>: Direkt neben ihr hört sie dich (<code>HEAR</code>). Sonst muss sie dich sehen: eine freie Linie von ihren Augen zu deiner Brust (<code>clearLine</code>), höchstens <code>aggro</code> weit, wenn du vor ihr bist, halb so weit, wenn du hinter ihr bist.</p>
       <p lang="en">While chasing (<code>hunt</code>), it plans a new path every think, to where it last saw you. <code>e.lost</code> counts up while it can't see you. After 3 seconds of that (6 if you hit it), or once it gets there and you're gone, it searches. A monster can't climb or jump, so if you're out of reach, it walks as close as it gets (a monster that shoots, to a spot it can hit you from). Still no way to you? Then it hides (<code>hide</code>): somewhere out of your sight or further than your weapon reaches. If you hit it, it hides at once instead of standing there as a target.</p>
       <p lang="de">Beim Jagen (<code>hunt</code>) plant sie bei jedem Nachdenken einen neuen Weg, dorthin, wo sie dich zuletzt gesehen hat. <code>e.lost</code> zählt hoch, solange sie dich nicht sieht. Nach 3 Sekunden davon (6, wenn du sie getroffen hast), oder wenn sie dort ankommt und du weg bist, sucht sie. Ein Monster kann weder klettern noch springen; wenn du außer Reichweite bist, läuft es so nah heran, wie es geht (ein Monster, das schießt, zu einer Stelle, von der aus es dich treffen kann). Immer noch kein Weg zu dir? Dann versteckt es sich (<code>hide</code>): irgendwo, wo du es nicht siehst oder wohin deine Waffe nicht reicht. Triffst du es, versteckt es sich sofort, statt als Zielscheibe stehen zu bleiben.</p>
+      <p lang="en">Guardians and bosses take the <code>e.defence</code> branch: their room tells them when to charge. A boss you have hurt (<code>relentless</code>) takes it too where he has no room to tell him, like in his test room: he comes for you wherever you are.</p>
+      <p lang="de">Wächter und Bosse nehmen den Zweig mit <code>e.defence</code>: Ihr Raum sagt ihnen, wann sie losstürmen. Ein Boss, den du verletzt hast (<code>relentless</code>, unerbittlich), nimmt ihn auch dort, wo kein Raum es ihm sagt, wie in seinem Testraum: Er kommt dich holen, wo immer du bist.</p>
       <p lang="en">Playing together with a friend, every think it first picks whom to go after: <code>chooseTarget</code> takes the nearer of you two, and only switches when the other is clearly nearer.</p>
       <p lang="de">Spielst du mit einem Freund zusammen, sucht sie sich bei jedem Nachdenken zuerst aus, wen sie verfolgt: <code>chooseTarget</code> nimmt den Näheren von euch beiden und wechselt erst, wenn der andere deutlich näher ist.</p>
       <p lang="en"><code>e.think</code> is a countdown. When it reaches zero, think, and start again at about 0.2. That's how "five times a second" works.</p>

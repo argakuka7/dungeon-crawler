@@ -13,6 +13,9 @@ import { kindColors } from './recolor.js';
 import { loadGLB } from './gltf.js';
 
 const MAX_PARTS = 12;
+// the game's root, which a model's url is from: the same whichever page loads it (the kids'
+// guide shows the bosses too, learn/demos/bosses.js)
+const ROOT = new URL('../../', import.meta.url);
 
 // An enemy model, loaded the first time it is needed: model.load() (once; render/cubeassets.js
 // before a cube with the species is entered, render/enemies.js for any other way one turns up).
@@ -22,7 +25,7 @@ const MAX_PARTS = 12;
 // names.gaits: other looping gaits (swimming, a giant's stride) by name, played like the walk.
 export function loadEnemyModel(url, scale, names) {
   const model = { ready: false, scale, loading: null };
-  model.load = () => model.loading ??= loadGLB(url).then(gltf => setup(model, url, names, gltf),
+  model.load = () => model.loading ??= loadGLB(new URL(url, ROOT).href).then(gltf => setup(model, url, names, gltf),
     error => { model.error = String(error); console.error('Enemy failed to load:', url, error); });
   return model;
 }

@@ -54,5 +54,6 @@ test('banks keep out of the fluids beside them, and no column shows two fluid su
 
 test('the test rooms keep to the rules their fluids are drawn by', () => {
   const w = new World(2);
-  for (const name of TEST_ROOM_NAMES) assert.deepEqual(shoreIssues(w.cube(testRoomKey(name, 3)).map), [], name);
+  // (the boss room at Squarlo's depth: his tidal hills)
+  for (const name of TEST_ROOM_NAMES) assert.deepEqual(shoreIssues(w.cube(testRoomKey(name, name === 'boss' ? 2 : 3)).map), [], name);
 });

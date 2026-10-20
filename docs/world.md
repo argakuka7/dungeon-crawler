@@ -243,7 +243,8 @@ Which cubes exist and how they connect depends only on the world seed:
   possible from a corner) and has no further descent.
 - **Branches:** optional one-room detours fit within the band's most rooms per depth. No
   portal loops or discovered-face shortcuts can bypass undiscovered route rooms or guardians.
-- **Guardians:** every well has a stronger descent guardian (future boss placeholder),
+- **Guardians:** every well has a stronger descent guardian (future boss placeholder, a "Temp
+  Boss" to players; a real boss where there is one, docs/bosses.md),
   with one or two mandatory side guardian arenas on its approach. They stand at evenly
   spaced rooms, moved to the nearest free one off a large area (and the room after it).
 - **Large areas:** a depth's large area (see "Large areas" below) is built into the route:
@@ -891,7 +892,8 @@ in game devtools for real worker, asset, shader and collision checks.
 ## Guardian descents
 
 Every descent at depths 0–19 has an amber descent guardian, explicitly marked as a
-future boss placeholder. Every approach also has one or two hot-pink sideways guardians.
+future boss placeholder (players see it as the "Temp Boss" of its species), or a real boss.
+Every approach also has one or two hot-pink sideways guardians ("Guardian" and their species).
 Their dry arenas contain twice the normal local population. Guardian death alone
 permanently unlocks the corresponding red side gate or well for the current run.
 Defenders coordinate to intercept the approach while it lives.

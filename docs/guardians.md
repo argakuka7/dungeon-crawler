@@ -26,8 +26,15 @@ Each species has two distinct registered kinds, excluded from ordinary rosters:
 
 | Tier | Kind table | Indicators | Hook |
 |---|---|---|---|
-| Side guardian | `GUARDIAN_KINDS` | Hot-pink body/glow, pink HP bar, `◆ Side guardian` label | `guardianRole: 'side'` |
-| Descent guardian | `DESCENT_GUARDIAN_KINDS` | Amber body/glow, wider amber HP bar, `♛ Descent guardian` label | `guardianRole: 'descent'`, `bossPlaceholder: true` |
+| Side guardian | `GUARDIAN_KINDS` | Hot-pink body/glow, pink HP bar, `◆ Guardian Spider` label (its species) | `guardianRole: 'side'` |
+| Descent guardian | `DESCENT_GUARDIAN_KINDS` | Amber body/glow, wider amber HP bar, `♛ Temp Boss Spider` label | `guardianRole: 'descent'`, `bossPlaceholder: true` |
+
+Players know them by those names, the kinds' labels (`Guardian Grass snake`, `Temp Boss
+Fire-face`): a descent guardian is a Temp Boss, holding the place of the boss its depth will
+get ([bosses.md](bosses.md)). The messages name the one of the arena (`guardianKind` in
+`game/enemyspawn.js`, the species the arena promotes): "Defeat the Temp Boss Spider to unlock
+this descent", "The Guardian Spider still stands. Leave the arena?", "Guardian Spider defeated ·
+Gate unlocked!".
 
 A species may replace the pink and amber look with its own (`guardianLooks` on its profile,
 [enemy-kinds.md](enemy-kinds.md#guardians)): the Wolk's guardians are a grey and a shining

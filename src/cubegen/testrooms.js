@@ -5,7 +5,8 @@
 // shape's, so a shore runs down into the water as one slope. Floors next to each other link
 // where their edges meet. No portals, no props, no enemies of the cube's own (/spawn brings
 // some; the `enemies` and `guardians` rooms line every kind up, game/devspawn.js): nothing leads
-// in or out but /testroom.
+// in or out but /testroom. The `boss` room is the exception: the generator's own descent arena of
+// its depth (bossRoom), its boss in the lineup.
 import { N, LH, DIRS, OPP, EDGE_CORNERS, WATER, LAVA, ACID, FLUID_NAME } from '../core/constants.js';
 import { idx } from '../core/util.js';
 import { floorY } from '../core/surfaces.js';
@@ -15,6 +16,7 @@ import { ladderInfo } from './climbs.js';
 import { shapeStructures } from './shape.js';
 import { testRoomOf } from '../world/testrooms.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
+import { generateGuardian } from './guardian.js';
 
 const flat = top => Array(4).fill(top * LH);
 const corners = (H, x, z) => [H(x, z), H(x + 1, z), H(x, z + 1), H(x + 1, z + 1)];
@@ -160,9 +162,9 @@ function climb(spec) {
 
 // Flat ground (level 2) with every enemy kind standing in it, idle (game/devspawn.js
 // spawnLineup): `enemies` has the species with their kinds and their bosses' minions, a row per
-// species; `guardians` the side guardians in front, the descent guardians behind them (a
-// species' two in one column) and the bosses at the back. The shortest stand in front, all
-// face the arrival. lineup: [{ type, x, z, yaw }]
+// species; `guardians` the side guardians, the shorter half in front (the descent guardians,
+// the Temp Bosses, wait for bosses of their own; the bosses have the `boss` room). The shortest
+// stand in front, all face the arrival. lineup: [{ type, x, z, yaw }]
 const KINDS = Object.values(ENEMY_KINDS);
 const tallest = row => Math.max(...row.map(k => k.height));
 const bySpecies = list => [...new Set(list.map(k => k.species))].map(s => list.filter(k => k.species === s));
@@ -170,9 +172,8 @@ const byHeight = list => [...list].sort((a, b) => a.height - b.height);
 const LINEUPS = {
   enemies: () => bySpecies(KINDS.filter(k => !k.guardian)).sort((a, b) => tallest(a) - tallest(b)),
   guardians: () => {
-    const side = byHeight(KINDS.filter(k => k.guardianRole === 'side'));
-    const descent = side.map(g => KINDS.find(k => k.guardianRole === 'descent' && !k.boss && k.species === g.species));
-    return [side, descent, byHeight(KINDS.filter(k => k.boss))];
+    const side = byHeight(KINDS.filter(k => k.guardianRole === 'side')), half = Math.ceil(side.length / 2);
+    return [side.slice(0, half), side.slice(half)];
   },
 };
 const LINE = { front: 2, back: N - 0.6, width: N - 2, room: 1.2, gap: 2 };
@@ -230,8 +231,32 @@ function shores(spec) {
     note: 'a stair into a lake, a bridge on legs over it, a ladder up out of it' });
 }
 
-const BUILD = { water_hill: waterHill, fluids, climb, shores, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians') };
-// spec: { key, depth, seed, biome (the depth's theme) }
+// The boss of the depth (core/bosses.js) in his own arena: the depth's descent arena as the
+// generator builds it (cubegen/guardian.js: the arena type a boss brings, Squarlo's tidal hills
+// and their water, Totnar's braziers, the fight zone), the very one of this world, made a test
+// room: no portals (the entrance and the well are plain ground), no gate, no guardian of the
+// map's own. The boss stands in the lineup on the guardian's spot, facing the entrance, where
+// you arrive: idle until hit, back after a death, never remembered (game/devspawn.js).
+// spec.arena: the world's spec of that arena (world/world.js descentSpec).
+// learn: enemies.html#boss-fight (see learn/README.md)
+function bossRoom(spec) {
+  const boss = spec.arena?.guardian?.boss;
+  if (!boss) throw new Error(`No boss at depth ${spec.depth}`);
+  const m = generateGuardian(spec.arena), g = m.guardian, door = m.portals.find(p => p.dir < 4);
+  const [dx, dz] = DIRS[door.dir], x = door.x + 0.5 - dx * 1.5, z = door.z + 0.5 - dz * 1.5;
+  const top = m.cols[idx(Math.floor(x), Math.floor(z))].at(-1);
+  const arrival = { x, z, y: floorY(top, x % 1, z % 1), yaw: Math.atan2(g.x - x, g.z - z) };
+  const name = testRoomOf(spec.key);
+  Object.assign(m.stats, { mode: `test room (${name}, ${m.arena.type} arena)` });
+  return { ...m, key: spec.key, portals: [], exit: null, guardian: null, moves: [], routes: [],
+    gateKeys: [null, null, null, null], trialFaces: [null, null, null, null], archetype: 'test', roomRole: null,
+    populationScale: 0, horde: null,
+    testRoom: { name, arrival, note: `${ENEMY_KINDS[boss].label} in his ${m.arena.type} arena, idle until hit`,
+      lineup: [{ type: boss, x: g.x, z: g.z, yaw: g.yaw }] } };
+}
+
+const BUILD = { water_hill: waterHill, fluids, climb, shores, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians'), boss: bossRoom };
+// spec: { key, depth, seed, biome (the depth's theme); arena: the boss room's (bossRoom) }
 export function generateTestRoom(spec) {
   const name = testRoomOf(spec.key);
   if (!BUILD[name]) throw new Error('No test room ' + spec.key);

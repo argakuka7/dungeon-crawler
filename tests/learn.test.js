@@ -98,9 +98,11 @@ test('the game modules the demos and live values import still export what they u
     for (const [, names, from] of src.matchAll(/import\s*\{([^}]+)\}\s*from\s*'(\.\.\/\.\.\/[^']+)'/g)) {
       const file = resolve(LEARN, 'demos', from);
       assert.ok(existsSync(file), `${demo}: ${from} does not exist`);
-      // the audio player needs a browser; check its exports by reading the source
+      // the audio player needs a browser, and so do the models (three.js, an import map's): check
+      // their exports by reading the source
       const text = readFileSync(file, 'utf8');
-      const mod = /\bwindow\b|\bdocument\b|\blocalStorage\b|addEventListener/.test(text) ? null : await import(pathToFileURL(file));
+      const mod = /\bwindow\b|\bdocument\b|\blocalStorage\b|addEventListener/.test(text) ? null
+        : await import(pathToFileURL(file)).catch(e => { if (/'three'/.test(e.message)) return null; throw e; });
       for (const name of names.split(',').map(n => n.trim().split(/\s+as\s+/)[0]).filter(Boolean)) {
         const ok = mod ? name in mod : new RegExp(`export\\s+(?:const|let|function|class|async function)\\s+${name}\\b`).test(text);
         assert.ok(ok, `${demo}: ${from} does not export ${name}`);

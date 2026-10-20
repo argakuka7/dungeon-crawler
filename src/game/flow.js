@@ -23,6 +23,7 @@ import { villagersReady } from '../render/villagers.js';
 import { createPlayerStats, createRun, takeDamage } from '../core/progression.js';
 import { clearEffects } from '../core/potions.js';
 import { restoreDefeated, gateLocked, guardianLockMessage } from '../core/guardians.js';
+import { guardianKind } from './enemyspawn.js';
 import { respawnCube, unpackKills } from '../core/respawn.js';
 import { syncEquippedWeapon } from './equipment.js';
 import { clearInput } from './inputstate.js';
@@ -280,7 +281,7 @@ export function settleIn(neighbors = true) {
   showStats(c.map, state.cubeKey, state.cubes.seed, c.visits);
   noteDepth(c.map, state.cubes.seed);   // the first time this deep: into the chronicle
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
-  if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map));
+  if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map, guardianKind(state.map)?.label));
   prefetchAround(c);
 }
 

@@ -63,6 +63,7 @@ import { trackLight, untrackLight } from './lightpool.js';
 import { glow, soft, emit, rand } from './particles.js';
 import { wetTrail, removeTrail } from './trails.js';
 import { dressEnemy, paintParts } from './enemymodel.js';
+import { findTentacles, shakeTentacles, findShed, hideShed, findBall, turnBall } from './bossbones.js';
 import { attackOf, makeEnemy, ENEMY_KINDS } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
@@ -201,17 +202,11 @@ function glints(v, e, dt) {
 }
 const angleTo = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
-// the tentacles' own frantic shaking, on top of the clip (life: 1 alive, down to 0 dead)
-const flailAxis = new THREE.Vector3(1, 0, 0), flailAxis2 = new THREE.Vector3(0, 0, 1);
+// the tentacles' own frantic shaking, on top of the clip (life: 1 alive, down to 0 dead;
+// render/bossbones.js)
 function flail(v, e, life) {
   if (!v.tentacles.length || life <= 0) return;
-  const t = clock + v.seed, k = (e.profile.flail ?? 1) * life * (e.mode === 'split' ? 1.8 : 1);
-  for (const { bone, i, j } of v.tentacles) {
-    const amp = k * (0.2 + 0.14 * j);
-    const a = amp * (Math.sin(t * (11 + i * 1.3) + i * 2.1 + j * 0.9) + 0.5 * Math.sin(t * (23 + i * 0.7) + i));
-    const b = amp * (Math.sin(t * (13 + i * 0.9) + i * 1.3 + j * 1.4) + 0.4 * Math.sin(t * (29 - i) + 2 * i));
-    bone.quaternion.multiply(wobble.setFromAxisAngle(flailAxis, a)).multiply(wobble.setFromAxisAngle(flailAxis2, b));
-  }
+  shakeTentacles(v.tentacles, clock + v.seed, (e.profile.flail ?? 1) * life * (e.mode === 'split' ? 1.8 : 1));
 }
 // a puff of cloud where e is (a proxy felled, a body gone or come back)
 const PUFF = { colors: ['#ffffff', '#e8edf5', '#cdd3de'], size: 1 }, MINION_PUFF = { colors: ['#e0f6ff', '#9fdcff', '#ffffff'], size: 0.5 };
@@ -327,29 +322,14 @@ function shudder(v, e, dt) {
 }
 
 // Totnar's parts lost by stage ({ stage: [bone names] } -> [{ stage, bones }])
-function findShed(model, shed) {
-  if (!shed) return null;
-  return Object.entries(shed).map(([stage, names]) => ({ stage: +stage, bones: names.map(n => model.getObjectByName(n)).filter(Boolean) }));
-}
-// the bone that rolls (`brush`) and the axis it rolls about in its own frame: the model's +x (a
-// forward roll), found in the rest pose
-function findBall(model, radius) {
-  const bone = radius ? model.getObjectByName('brush') : null;
-  if (!bone) return null;
-  model.updateMatrixWorld(true);
-  return { bone, axis: new THREE.Vector3(1, 0, 0).applyQuaternion(bone.getWorldQuaternion(new THREE.Quaternion()).invert()).normalize() };
-}
-const HIDDEN = 1e-4, BONE_BITS = ['#efe6cf', '#ffffff', '#cfc4a8'], STICK_BITS = ['#8a6440', '#5a3e26', '#7d8a3c'];
+const BONE_BITS = ['#efe6cf', '#ffffff', '#cfc4a8'], STICK_BITS = ['#8a6440', '#5a3e26', '#7d8a3c'];
 // what e has lost by its stage, scaled away; what it loses now bursts apart first: bone shards
 // for a skull, sticks and leaves for a shell, a crack and a flash of its heart
 function shedParts(v, e) {
   if (!v.shed) return;
   const stage = e.stage ?? 1;
-  for (const s of v.shed) {
-    if (s.stage > stage) continue;
-    if (s.stage > v.stage) burst(v, e, s.bones);
-    for (const b of s.bones) b.scale.setScalar(HIDDEN);
-  }
+  for (const s of v.shed) if (s.stage <= stage && s.stage > v.stage) burst(v, e, s.bones);
+  hideShed(v.shed, stage);
   if (stage > v.stage) v.flash2 = 1;
   v.stage = Math.max(v.stage, stage);
 }
@@ -384,7 +364,7 @@ function tumble(v, e, dt) {
   v.tumble += (rate - v.tumble) * Math.min(1, dt * 12);
   v.rolled = { x: e.x, z: e.z };
   v.turned = (v.turned + v.tumble * dt) % (2 * Math.PI);
-  v.ball.bone.quaternion.multiply(spin.setFromAxisAngle(v.ball.axis, v.turned));
+  turnBall(v.ball, v.turned);
   const rolling = roll && e.t >= roll.from && e.t < roll.to, near = Math.hypot(e.x - player.x, e.z - player.z) < 14;
   if (rolling && v.lastYaw !== undefined && Math.abs(Math.atan2(Math.sin(e.yaw - v.lastYaw), Math.cos(e.yaw - v.lastYaw))) > 0.6) {
     sfx('thud', { at: e, pitch: 0.6 }); sfx('rustle', { at: e });
@@ -462,7 +442,7 @@ function makeView(e, prefab) {
   const color = guardianColor(e.guardianRole);
   const hpBar = makeBar(e.guardian ? { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } : {}), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, e.guardian ? { color, title: guardianTitle(e.guardianRole, e.boss && e.profile.label) } : {});
+  const label = makeLevelLabel(e.level, e.guardian ? { color, title: guardianTitle(e.guardianRole, e.profile.label) } : {});
   label.position.y = e.profile.height + .33; group.add(label);
   const mark = makeAlertMark(); mark.position.y = e.profile.height + .62; group.add(mark);
   const fx = GLOW[e.profile.fx ?? e.profile.species] ?? (e.guardian ? { light: [color, 2, 3, .5], pulse: .35 } : null), flames = [];
@@ -474,8 +454,7 @@ function makeView(e, prefab) {
     trackLight(light, group);
   }
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
-  const tentacles = [];
-  if (e.profile.flail) model.traverse(o => { const m = o.isBone && /^tentacle(\d+)_(\d+)$/.exec(o.name); if (m) tentacles.push({ bone: o, i: +m[1], j: +m[2] }); });
+  const tentacles = e.profile.flail ? findTentacles(model) : [];
   if (e.proxy || e.summoned) poof(e, puffOf(e));   // it turns up
   return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,

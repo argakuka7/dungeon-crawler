@@ -115,8 +115,9 @@ Two dev test rooms (`?dev=1`, then `/testroom enemies` or `/testroom guardians`,
 [console.md](console.md)) line up every kind in the game itself, recoloured and lit as
 everywhere else and dressed as the depth you came from (or `/testroom enemies 17` for
 another). `enemies` has a row per species: the base kind, its kinds and the bosses' minions of
-it. `guardians` has the side guardians in front, the descent guardians behind them (a species'
-two in one column) and the bosses at the back. The shortest stand in front, all facing you.
+it. `guardians` has the side guardians, in two rows. The shortest stand in front, all facing
+you. The descent guardians (the Temp Bosses) wait for bosses of their own; each boss has a test
+room of his own, in his arena (`/testroom boss gusto`, [bosses.md](bosses.md#dev)).
 
 They stand idle (`dormant`, game/devspawn.js `spawnLineup`) at the level the depth gives them,
 until one is hit: that one wakes and fights, the others stay. `/passive on` keeps the woken

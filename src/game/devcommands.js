@@ -14,7 +14,7 @@ import { commands } from './commands.js';
 import { spawnEnemies, killEnemies, clearEnemies } from './devspawn.js';
 import { goTo, goHorde, goArena, goAdjacent, goSpan, goFeature, goStructure, goSpot, goTrial, goBoss, goTestRoom, leaveTestRoom, FEATURES } from './dev.js';
 import { BOSSES } from '../core/bosses.js';
-import { TEST_ROOMS, isTestRoom } from '../world/testrooms.js';
+import { TEST_ROOMS, isTestRoom, testRoomDepth } from '../world/testrooms.js';
 import { TRIALS, TRIAL_KINDS } from '../core/trials.js';
 import { devTrial } from './trials.js';
 import { SPOT_KINDS } from '../world/spots.js';
@@ -143,14 +143,16 @@ dev({
 });
 addType(commands, { name: 'testroom', values: () => [...Object.entries(TEST_ROOMS).map(([k, hint]) => ({ value: k, label: k, hint })),
   { value: 'leave', label: 'leave', hint: 'back to where you were' }] });
+// where a test room is dressed: a depth, or a boss (his depth; the boss room: him)
+addType(commands, { name: 'where', values: () => [...commands.types.get('boss').values(), ...commands.types.get('depth').values()] });
 dev({
-  name: 'testroom', help: 'into a test room, dressed as this depth (or that one); leave: back out; none: the list',
-  args: [{ name: 'room', type: 'testroom', optional: true }, { name: 'depth', type: 'depth', optional: true }],
-  async run({ room, depth }) {
+  name: 'testroom', help: 'into a test room, dressed as this depth (or that one, or a boss\'s); boss: a boss in his arena; leave: back out; none: the list',
+  args: [{ name: 'room', type: 'testroom', optional: true }, { name: 'where', type: 'where', optional: true }],
+  async run({ room, where }) {
     if (room === 'leave') { await leaveTestRoom(); return; }
-    if (room) { await goTestRoom(room, depth === undefined ? undefined : Math.max(1, Number(depth))); return; }
+    if (room) return goTestRoom(room, where === undefined ? undefined : testRoomDepth(where));
     return [...Object.entries(TEST_ROOMS).map(([k, what]) => `${k}: ${what}`),
-      isTestRoom(state.cubeKey) ? '/testroom leave: back out' : '/testroom <room> [depth]'].join('\n');
+      isTestRoom(state.cubeKey) ? '/testroom leave: back out' : '/testroom <room> [depth or boss], /testroom boss <boss or depth>'].join('\n');
   },
 });
 dev({

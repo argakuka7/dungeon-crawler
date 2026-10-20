@@ -108,7 +108,7 @@ function hordeBroken() {
 // Every enemy that died since the last look: its XP, and its loot dropped. Playing together,
 // every player there gets the XP, whoever struck the blow: each game looks at its own enemies
 // (or at the ones it is shown). The loot is shared: only the killer's game drops it
-// (droppedHere). true: a guardian's gate opened.
+// (droppedHere). Truthy (the guardian's name): a guardian's gate opened.
 // learn: architecture.html#swing-journey, code.html#loops (see learn/README.md)
 function awardKills(list) {
   let xp = 0, levels = 0, killed = 0, unlocked = false;
@@ -118,14 +118,14 @@ function awardKills(list) {
       xp += reward.xp; levels += reward.levels; killed++;
       if (droppedHere(e)) dropLoot(e, reward.coins);
       if (e.guardianGate) {
-        unlocked = true;
+        unlocked = e.profile.label;
         log('guardian', { label: e.profile.label, level: e.level, depth: state.map.depth, boss: !!e.boss }, { share: true });
       }
       relay.defeated?.(e);
     }
   }
   if (killed) {
-    setStatus(`${unlocked ? 'Guardian defeated · Gate unlocked!' : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
+    setStatus(`${unlocked ? `${unlocked} defeated · Gate unlocked!` : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
     log('kill', { count: killed, xp });
   }
   if (levels) log('level', { level: player.level }, { share: true });

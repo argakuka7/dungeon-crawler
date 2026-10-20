@@ -36,6 +36,7 @@ export function resetGustos() {
   addGustos(enemySpots(state.map, GUSTO).filter(s => !state.run.defeated.has(s.id)).map((s, i) => makeEnemy(s, s.kind ?? GUSTO, i)));
 }
 // Gustos to fight: this cube's, or spawned with the dev tools
+// learn: enemies.html#boss-fight (see learn/README.md)
 export function addGustos(list) {
   for (const e of list) {
     e.hpFloor = splitHp(e.profile.hp);

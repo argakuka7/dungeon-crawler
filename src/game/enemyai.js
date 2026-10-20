@@ -205,14 +205,17 @@ function decide(e) {
   e.target = chooseTarget(e);
   const p = foe(e), cfg = e.profile, target = playerFloor(cfg.height, p);
   const alive = !p.ragdoll && p.hp > 0 && !state.transitioning, dist = Math.hypot(p.x - e.x, p.z - e.z);
-  if (e.defence) {
+  // a boss, once hurt or once it has struck, fights on wherever the player goes: in his arena
+  // his room says so (game/defence.js), anywhere else (a dev spawn, the boss test room) he does
+  const relentless = !e.defence && e.boss && !e.proxy && (e.hp < cfg.hp || e.attacks > 0);
+  if (e.defence || relentless) {
     if (e.mode === 'attack') return;   // never cancel a committed wind-up
     // it engages when its room says so, or for a while after a hit: shot at from beyond its
     // post's reach, it goes for the shooter (to their floor, else where it can strike them from)
     // rather than stand there as a target; with no way to them it keeps to its post
-    const engage = alive && (e.defence.engage || e.provoked > 0);
+    const engage = alive && (relentless || e.defence.engage || e.provoked > 0);
     const route = engage && ((target && findPath(e.f, target, FAR, cfg.height)) || postPath(e, p, FAR));
-    e.path = route || findPath(e.f, e.defence.post, 40, cfg.height);
+    e.path = route || findPath(e.f, e.defence?.post ?? e.home, 40, cfg.height);
     e.mode = route ? 'chase' : 'defend'; e.lost = 0;
     return;
   }
@@ -469,7 +472,8 @@ export function stepEnemies(list, dt) {
   for (const e of list) {
     knockback(e, dt);
     if (e.mode === 'dead') { e.deadT += dt; continue; }
-    if (e.hp < (e.lastHp ?? e.hp)) { e.dormant = false; provoke(e); }
+    // (a dormant one hurt before it was ever stepped wakes too)
+    if (e.hp < (e.lastHp ?? e.hp) || e.dormant && e.hp < e.profile.hp) { e.dormant = false; provoke(e); }
     e.lastHp = e.hp;
     e.cool = Math.max(0, e.cool - dt); e.hurtT = Math.max(0, e.hurtT - dt); e.poised = Math.max(0, (e.poised || 0) - dt);
     e.provoked = Math.max(0, (e.provoked || 0) - dt);

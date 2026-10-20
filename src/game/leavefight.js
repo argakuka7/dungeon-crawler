@@ -9,6 +9,7 @@ import { clearInput } from './inputstate.js';
 import { clearMouseInput } from './orders.js';
 import { startTravel } from './travel.js';
 import { guardianName } from '../core/guardians.js';
+import { guardianKind } from './enemyspawn.js';
 
 const $ = id => document.getElementById(id);
 const overlay = $('leave-overlay');
@@ -18,7 +19,7 @@ export const leaveAsked = () => !!state.leaveAsk;
 export function askLeave(dir) {
   if (state.leaveAsk) return;
   state.leaveAsk = { key: state.cubeKey, dir };
-  $('leave-text').textContent = `${guardianName(state.map)} still stands. Leave the arena?`;
+  $('leave-text').textContent = `${guardianName(state.map, guardianKind(state.map)?.label)} still stands. Leave the arena?`;
   overlay.hidden = false;
   clearInput(); clearMouseInput();   // nothing walks on by itself meanwhile
 }

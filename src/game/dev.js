@@ -5,7 +5,7 @@
 //   Alt + WASD / arrows: go to the adjacent cube on that side of the screen
 // None of them wait for guardians: locked portals are taken anyway (the gate stays locked).
 // The console's developer commands (game/devcommands.js: /find, /goto, /horde, /arena, /go) do the same.
-import { BOSS_ARENAS, BOSSES } from '../core/bosses.js';
+import { BOSS_ARENAS, BOSSES, bossAt } from '../core/bosses.js';
 import { guardianId } from '../core/guardians.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 import { testRoomKey, isTestRoom } from '../world/testrooms.js';
@@ -263,11 +263,18 @@ export async function goBoss(kind) {
 }
 
 // Into a dev test room (world/testrooms.js, cubegen/testrooms.js) dressed as a depth (default:
-// this one's, the first below the town), at its arrival. Where we came from is kept for
-// leaveTestRoom (going from one test room into another keeps it).
+// this one's, the first below the town), at its arrival. The boss room is a depth's with a boss
+// (core/bosses.js; default: this one's, else the first). Where we came from is kept for
+// leaveTestRoom (going from one test room into another keeps it). Returns what went wrong, if.
 let testReturn = null;
-export async function goTestRoom(name, depth = Math.max(1, state.map?.depth ?? 1)) {
+export async function goTestRoom(name, depth) {
   if (state.transitioning || state.inventoryOpen) return;
+  const here = state.map?.depth ?? 0;
+  if (name === 'boss') {
+    depth ??= bossAt(here) ? here : Number(Object.keys(BOSSES)[0]);
+    if (!bossAt(depth)) return `No boss at depth ${depth} yet: ${Object.entries(BOSSES).map(([d, k]) => `${ENEMY_KINDS[k].label} (${d})`).join(', ')}`;
+  }
+  depth ??= Math.max(1, here);
   const cubes = state.cubes;
   if (!isTestRoom(state.cubeKey)) testReturn = { cubes, key: state.cubeKey, x: player.x, y: player.y, z: player.z, yaw: player.yaw };
   clearMouseInput(); state.transitioning = true;

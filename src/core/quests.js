@@ -233,7 +233,7 @@ const KINDS = {
           : pick(R, [`The way down from ${where} is guarded by something big. Beat the guardian of the well and come back to tell me.`,
             `A guardian sits by the well at the end of ${where}. Nobody gets down while it is there. Beat it, then come back.`]),
         target: { role: t.role },
-        stages: [{ goal: 'guardian', depth: t.depth, key: t.key, text: `Defeat ${boss ?? 'the descent guardian'} on ${where}` }],
+        stages: [{ goal: 'guardian', depth: t.depth, key: t.key, text: `Defeat ${boss ?? 'the Temp Boss'} on ${where}` }],
       };
       const which = t.sides > 1 ? `the ${ORDINAL[t.nth] ?? 'next'} guardian` : 'the guardian';
       return {

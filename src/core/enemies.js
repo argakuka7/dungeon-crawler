@@ -731,15 +731,17 @@ const guardianMods = (base, t) => ({
 // `.descent`: colours, glow, `finish` and the like, in place of these): the Wolk's are grey and
 // silver.
 export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
-  type: 'guardian' + base.type, label: 'Guardian ' + base.label.toLowerCase(), guardian: true, guardianRole: 'side', bossPlaceholder: false,
+  type: 'guardian' + base.type, label: 'Guardian ' + base.label, guardian: true, guardianRole: 'side', bossPlaceholder: false,
   colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'pink.vivid']))),
   light: '#ff3fa8', sparks: ['#ff3fa8', '#ffd0ee'], ichor: ['#ff3fa8', '#9b165d'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.side.poise), mods: guardianMods(base, GUARDIAN_TIERS.side),
   ...base.guardianLooks?.side,
 })]));
-// Explicit future-boss hook: a separate kind, not a level-dependent recolouring.
+// Explicit future-boss hook: a separate kind, not a level-dependent recolouring. Players know a
+// descent guardian as a Temp Boss: it holds the place of the depth's real boss to come
+// (core/bosses.js); a side guardian as the Guardian of its species.
 export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
-  type: 'descentGuardian' + base.type, label: 'Descent guardian ' + base.label.toLowerCase(),
+  type: 'descentGuardian' + base.type, label: 'Temp Boss ' + base.label,
   guardian: true, guardianRole: 'descent', bossPlaceholder: true,
   colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'amber.vivid']))),
   light: '#ff9b35', sparks: ['#ff9b35', '#fff0cc'], ichor: ['#ff9b35', '#9b4b16'],

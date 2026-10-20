@@ -93,8 +93,7 @@ export function guardianSpots(map) {
   const R = mulberry32(hash32(map.seed ^ 0x6a7d1a)), guard = map.guardian;
   const role = guard.role ?? 'descent';
   if (guard.boss) return [bossSpot(map, ENEMY_KINDS[guard.boss], role)];
-  const chosen = species[Math.floor(R() * species.length)];
-  const kind = (role === 'descent' ? DESCENT_GUARDIAN_KINDS : GUARDIAN_KINDS)[chosen];
+  const { chosen, kind } = promoted(species, role, R);
   // the guardian's level follows the depth alone (core/enemies.js guardianLevel); its coins
   // still come from the arena's seeded roll
   const f = guard.floor, R2 = mulberry32(hash32(map.seed ^ 0x6a7d1b)), level = guardianLevel(map.depth, role);
@@ -125,6 +124,21 @@ export function guardianSpots(map) {
       y: groundY(f, f.x + .5, f.z + .5), yaw: guard.yaw });
   }
   return spots;
+}
+
+// the species an arena promotes to its guardian (the stream's first draw), and that guardian's kind
+function promoted(species, role, R) {
+  const chosen = species[Math.floor(R() * species.length)];
+  return { chosen, kind: (role === 'descent' ? DESCENT_GUARDIAN_KINDS : GUARDIAN_KINDS)[chosen] };
+}
+// The kind of map's guardian (a boss's, or the one guardianSpots promotes), without placing
+// anyone: what the messages call it (core/guardians.js). null: no guardian.
+export function guardianKind(map) {
+  const guard = map?.guardian;
+  if (!guard) return null;
+  if (guard.boss) return ENEMY_KINDS[guard.boss];
+  const species = [...population(map).keys()];
+  return species.length ? promoted(species, guard.role ?? 'descent', mulberry32(hash32(map.seed ^ 0x6a7d1a))).kind : null;
 }
 
 // A real boss (core/bosses.js) stands on the guardian's spot alone, at the guardian's level, with

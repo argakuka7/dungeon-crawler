@@ -24,9 +24,10 @@ export function engage(b) {
 export function put(b, s) {
   Object.assign(b, { f: s, x: s.x + 0.5, z: s.z + 0.5, y: groundY(s, s.x + 0.5, s.z + 0.5), path: null, kbx: 0, kbz: 0 });
 }
-// floors a body of kind `cfg` fits on (in a guardian's arena, its fight zone)
+// floors a body of kind `cfg` fits on (in a guardian's arena, its fight zone; the boss test
+// room is one too, cubegen/testrooms.js)
 export function fitting(cfg) {
-  const arena = !!state.map.guardian, h = cfg.height, r = cfg.radius;
+  const arena = !!state.map.arena, h = cfg.height, r = cfg.radius;
   return state.map.floors.filter(f => (!arena || f.encounter) && walkable(f, h)
     && [[r, 0], [-r, 0], [0, r], [0, -r]].every(([dx, dz]) => floorAt(f, f.x + 0.5 + dx, f.z + 0.5 + dz, h)));
 }

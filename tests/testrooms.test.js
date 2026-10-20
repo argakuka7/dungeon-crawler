@@ -4,7 +4,8 @@ import { N, LH, CHAR_R, HEAD_Y, WATER, LAVA, ACID } from '../src/core/constants.
 import { state } from './fixtures.js';
 import { World } from '../src/world/world.js';
 import { interiorKey } from '../src/world/town.js';
-import { TEST_ROOM_NAMES, testRoomKey, testRoomOf, isTestRoom } from '../src/world/testrooms.js';
+import { TEST_ROOM_NAMES, testRoomKey, testRoomOf, isTestRoom, testRoomDepth } from '../src/world/testrooms.js';
+import { BOSSES, BOSS_ARENAS, bossAt } from '../src/core/bosses.js';
 import { LADDER_STYLES } from '../src/themes/builds.js';
 import { depthOf } from '../src/themes/depth.js';
 import { player } from '../src/game/state.js';
@@ -55,10 +56,12 @@ test('test room keys are off the grid, keep their depth and are told apart from 
 
 test('every test room builds at every depth, dressed in its theme, with nothing in it but itself', () => {
   const w = new World(5);
-  for (const name of TEST_ROOM_NAMES) for (let d = 1; d <= 20; d++) {
+  // (the boss room: at the depths with a boss)
+  const depths = name => name === 'boss' ? Object.keys(BOSSES).map(Number) : Array.from({ length: 20 }, (_, i) => i + 1);
+  for (const name of TEST_ROOM_NAMES) for (const d of depths(name)) {
     const k = testRoomKey(name, d), m = w.cube(k).map;
-    assert.equal(m.key, k); assert.equal(m.depth, d); assert.equal(m.biome, w.layout(d).theme.props);
-    assert.deepEqual(m.portals, []); assert.equal(m.populationScale, 0); assert.deepEqual(m.authoredProps, []);
+    assert.equal(m.key, k); assert.equal(m.depth || 0, d); assert.equal(m.biome, w.layout(d).theme.props);
+    assert.deepEqual(m.portals, []); assert.equal(m.populationScale, 0); assert.deepEqual(m.authoredProps ?? [], []);
     assert.equal(m.testRoom.name, name);
     for (let c = 0; c < N * N; c++) assert.ok(m.cols[c].some(f => f.layer === 0 && f.bottom === 0), `${name}: ground in every cell`);
     m.floors.forEach((f, i) => assert.equal(f.id, i));
@@ -66,7 +69,7 @@ test('every test room builds at every depth, dressed in its theme, with nothing 
     const a = m.testRoom.arrival;
     state.map = m;
     assert.ok(supportedPoint(a.x, a.y, a.z), `${name}: arrive on dry, supported ground`);
-    if (d === 1 || d === 20) buildCubeGeometry(m);
+    if (d <= 1 || d === 20) buildCubeGeometry(m);
   }
 });
 
@@ -153,11 +156,12 @@ test('climb: every ladder style, the hanging ones hanging too, and every ladder 
   }
 });
 
-test('enemies and guardians: every kind lined up once, on the ground, apart, the shortest in front', () => {
+test('enemies and guardians: every kind lined up once (the Temp Bosses not yet, the bosses in their room), on the ground, apart, the shortest in front', () => {
   const w = new World(6), rooms = ['enemies', 'guardians'].map(n => w.cube(testRoomKey(n, 5)).map);
+  const bosses = Object.keys(BOSSES).map(d => w.cube(testRoomKey('boss', +d)).map.testRoom.lineup.map(l => l.type)).flat();
   const all = rooms.flatMap(m => m.testRoom.lineup.map(l => l.type));
-  assert.deepEqual([...all].sort(), Object.keys(ENEMY_KINDS).sort(), 'every kind, once');
-  assert.ok(rooms[1].testRoom.lineup.every(l => ENEMY_KINDS[l.type].guardian));
+  assert.deepEqual([...all, ...bosses].sort(), Object.keys(ENEMY_KINDS).filter(k => !ENEMY_KINDS[k].bossPlaceholder).sort(), 'every kind, once');
+  assert.ok(rooms[1].testRoom.lineup.every(l => ENEMY_KINDS[l.type].guardianRole === 'side'));
   assert.ok(rooms[0].testRoom.lineup.every(l => !ENEMY_KINDS[l.type].guardian));
   for (const m of rooms) {
     const line = m.testRoom.lineup, a = m.testRoom.arrival;
@@ -170,8 +174,39 @@ test('enemies and guardians: every kind lined up once, on the ground, apart, the
     }
     // row by row (front to back), never shorter than the row before
     const rows = [...new Set(line.map(l => l.z))].sort((p, q) => p - q).map(z => Math.max(...line.filter(l => l.z === z).map(l => ENEMY_KINDS[l.type].height)));
-    if (m === rooms[0]) rows.forEach((h, i) => assert.ok(!i || h >= rows[i - 1]));
+    rows.forEach((h, i) => assert.ok(!i || h >= rows[i - 1]));
   }
+});
+
+test('boss: each boss alone in the very arena of his depth, made a test room; no boss, no room', () => {
+  const w = new World(8);
+  for (const [d, boss] of Object.entries(BOSSES)) {
+    const k = testRoomKey('boss', +d), m = w.cube(k).map, real = w.cube(w.descentSpec(+d).key).map;
+    assert.equal(testRoomOf(k), 'boss'); assert.equal(m.depth || 0, +d); assert.equal(m.key, k);
+    // the generator's arena (cubegen/guardian.js), as in the world: its type, its water, its props
+    assert.deepEqual(m.arena, real.arena);
+    if (BOSS_ARENAS[boss]?.type) assert.equal(m.arena.type, BOSS_ARENAS[boss].type);
+    assert.deepEqual(m.tide, real.tide);
+    assert.equal(!!m.tide, BOSS_ARENAS[boss]?.type === 'tidal');
+    assert.deepEqual(m.floors.map(f => [f.top, f.encounter]), real.floors.map(f => [f.top, f.encounter]));
+    assert.equal(m.arenaPlacements.length, real.arenaPlacements.length);
+    // nothing leads out, no gate, no guardian of its own, nobody else
+    assert.deepEqual(m.portals, []); assert.equal(m.exit, null); assert.equal(m.guardian, null); assert.equal(m.populationScale, 0);
+    // the boss alone, on the guardian's spot, facing the entrance, where you arrive on the fight's ground
+    assert.deepEqual(m.testRoom.lineup, [{ type: boss, x: real.guardian.x, z: real.guardian.z, yaw: real.guardian.yaw }]);
+    const a = m.testRoom.arrival, door = real.portals.find(p => p.dir < 4);
+    assert.ok(Math.hypot(a.x - door.x - 0.5, a.z - door.z - 0.5) < 2, 'beside the entrance');
+    state.map = m;
+    assert.ok(walkable(groundAt(a.x, a.z, 99, 0).s, 0.85), 'arrives on walkable ground');
+    assert.ok(Math.abs(Math.atan2(real.guardian.x - a.x, real.guardian.z - a.z) - a.yaw) < 1e-9, 'facing him');
+  }
+  for (let d = 0; d < 20; d++) if (!bossAt(d)) assert.throws(() => w.cube(testRoomKey('boss', d)), /No boss at depth/);
+});
+
+test('/testroom: a depth, or a boss for his depth', () => {
+  for (const [d, boss] of Object.entries(BOSSES)) { assert.equal(testRoomDepth(boss), +d); assert.equal(testRoomDepth(boss.toUpperCase()), +d); }
+  assert.equal(testRoomDepth('0'), 0); assert.equal(testRoomDepth('7'), 7); assert.equal(testRoomDepth(3), 3);
+  assert.equal(testRoomDepth('nobody'), null);
 });
 
 test('fluids: the lake\'s shore slopes up out of the water inside its cells, and its tops know it', () => {
