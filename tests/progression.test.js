@@ -255,6 +255,11 @@ test('health regeneration waits five hit-free seconds and restores a share of th
   regenerate(p, 99, 21); assert.equal(p.hp, 110);
   takeDamage(p, 1000, 22); regenerate(p, 99, 30); assert.equal(p.hp, 0);
 });
+test('god mode (dev /god) takes no health', () => {
+  const p = createPlayerStats(); p.god = true; takeDamage(p, 1000, 5);
+  assert.equal(p.hp, 100); assert.notEqual(p.lastDamageAt, 5);
+  p.god = false; takeDamage(p, 30, 6); assert.equal(p.hp, 70);
+});
 test('every weapon has real assets, damage, reach and synchronized attack timing', () => {
   for (const w of WEAPONS) {
     assert.ok(existsSync(assetPath(w.model)));

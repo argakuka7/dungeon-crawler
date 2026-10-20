@@ -149,7 +149,7 @@
     "src/game/music.js#updateMusic": "b924f084",
     "src/game/party.js#chooseTarget": "06dc8852",
     "src/game/pointer.js#pickFloor": "e7c1622f",
-    "src/game/state.js#player": "589c41c8",
+    "src/game/state.js#player": "e215c1b7",
     "src/game/state.js#state": "ffc776f9",
     "src/game/sword.js#hitEnemy": "47cd9246",
     "src/game/sword.js#hitWithSword": "d18ef82b",

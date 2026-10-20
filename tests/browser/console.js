@@ -91,8 +91,10 @@ export async function runConsoleChecks() {
     check(player.xp > xp && chronicle.entries.some(e => e.kind === 'kill'), '/kill must pay XP and the kill go into the chronicle');
     await runCommand('/passive on'); check(state.devPassive, '/passive on');
     await runCommand('/passive'); check(!state.devPassive, '/passive again wakes them up');
+    await runCommand('/god on'); check(player.god, '/god on');
+    await runCommand('/god off'); check(!player.god, '/god off');
     await runCommand('/level 5'); check(player.level === 5 && player.hp === player.maxHp, '/level 5');
-    results.push('/spawn, /kill, /passive, /level');
+    results.push('/spawn, /kill, /passive, /god, /level');
 
     // the chronicle: a new depth, and a death with what did it
     await runCommand('/goto down');
@@ -113,5 +115,5 @@ export async function runConsoleChecks() {
     check(!chatOpen() && chronicle.entries.some(e => e.kind === 'chat' && e.data.text === 'hello' && !e.who), 'A chat line must be kept');
     results.push('chat lines are kept');
     return results;
-  } finally { closeChat(); clearInput(); state.devPassive = false; await newWorld(3); }
+  } finally { closeChat(); clearInput(); state.devPassive = false; player.god = false; await newWorld(3); }
 }

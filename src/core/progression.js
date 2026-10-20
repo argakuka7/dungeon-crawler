@@ -97,9 +97,10 @@ export function awardKill(p, run, enemy) {
   if (enemy.guardian && enemy.guardianGate) run.unlockedGates.add(enemy.guardianGate);
   return { xp, coins, levels };
 }
+// p.god (dev: /god on, game/devcommands.js): nothing takes any health
 export function takeDamage(p, amount, time) {
   if (!Number.isFinite(amount) || amount < 0) throw new RangeError('Invalid damage');
-  if (amount > 0) { p.hp = Math.max(0, p.hp - amount); p.lastDamageAt = time; }
+  if (amount > 0 && !p.god) { p.hp = Math.max(0, p.hp - amount); p.lastDamageAt = time; }
 }
 // no regeneration while poisoned (core/status.js)
 export function regenerate(p, dt, time) {

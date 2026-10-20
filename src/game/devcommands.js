@@ -225,6 +225,15 @@ dev({
   },
 });
 dev({
+  name: 'god', help: 'invincible: nothing takes any health, fluids put you back on safe ground (again: mortal)',
+  args: [{ name: 'on|off', type: 'toggle', optional: true }],
+  run({ 'on|off': on }) {
+    player.god = on ? on === 'on' : !player.god;
+    if (player.god && player.hp > 0 && !player.down) player.hp = player.maxHp;
+    return player.god ? 'God mode on: invincible' : 'God mode off: mortal again';
+  },
+});
+dev({
   name: 'level', help: 'become this level (health full)', args: [{ name: 'level', type: 'int', min: 1, max: 99 }],
   run({ level }) {
     player.xp = xpForLevel(level); player.level = levelFromXP(player.xp);

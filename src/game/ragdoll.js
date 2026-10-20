@@ -46,6 +46,7 @@ const FLUID_DEATH_TIME = 2.2;   // keep the body around long enough for the effe
 export function dieInFluid(fluid, surface) {
   if (player.hp <= 0) return;
   if (rescues(fluid) && lavaRescue()) return;   // Foggery's lava: it burns, magic pulls you out (game/lavarescue.js)
+  if (player.god) { setStatus(deathReason(fluid) + ' (god mode: back to safety)'); recover(); return; }   // dev: /god on
   player.swimming = false; player.fluid = 0;
   const { x, z } = player;   // before a no-asset fallback respawns the player
   player.lastHurt = { reason: deathReason(fluid), by: null };
