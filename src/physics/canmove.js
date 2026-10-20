@@ -1,5 +1,5 @@
 // Can the character's body move to a new position? Cliffs, walls, structures and fences.
-import { N, STEP, SWIM_STEP } from '../core/constants.js';
+import { N, STEP, SWIM_STEP, STEEP } from '../core/constants.js';
 import { clamp, edgeKey } from '../core/util.js';
 import { topOf } from '../core/surfaces.js';
 import { player, state } from '../game/state.js';
@@ -66,9 +66,12 @@ export function canMove(nx, nz, axis, sign) {
     // physics/fluid.js wadeable) or a hole through the cube (nothing to land on below) while
     // walking, but never act as an invisible wall for jumps/falls.
     // Query the landing surface so bridges and stacked dry floors above fluids or voids
-    // remain walkable. Rim probes keep the body off the edge.
+    // remain walkable. Rim probes keep the body off the edge. This looks for drops, not rises:
+    // a rim probe ahead on a steep (but walkable) slope lies more than a step above the feet,
+    // so it may look as high as the steepest slope rises from the center to it (rises at a
+    // cell edge are hopBlocked's).
     if (player.grounded && !player.swimming) {
-      const gr = groundAt(sx, sz, y, step);
+      const gr = groundAt(sx, sz, y, step + STEEP * Math.hypot(sx - nx, sz - nz));
       if (!gr.s || !wadeable(gr)) return false;
     }
     if (hopBlocked(rx, rz, sx, sz, y, step)) return false;

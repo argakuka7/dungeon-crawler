@@ -34,6 +34,7 @@ export const SWIM_STEP = 1.1;   // climbing out of water is more generous
 // learn: physics.html#adding (see learn/README.md)
 export const GRAV = 22;
 export const SNAP = 0.25;       // stick to the ground when walking downhill
+export const STEEP = 3;         // a slope steeper than this (rise per unit) slides the body down
 
 // character controller
 export const CHAR_SCALE = 0.55; // the rig is ~2 m tall -> ~1.1 units

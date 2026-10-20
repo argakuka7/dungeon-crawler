@@ -179,7 +179,7 @@
     "src/net/sync.js#Timeline": "7a168a9a",
     "src/physics/enemynav.js#clearLine": "4f7677b3",
     "src/physics/enemynav.js#findPath": "b71d5599",
-    "src/physics/move.js#horizontal": "5cc216a8",
+    "src/physics/move.js#horizontal": "c71d6ac4",
     "src/physics/move.js#jumping": "2c2efdd2",
     "src/physics/move.js#LEAP": "58d96809",
     "src/physics/move.js#movePlayer": "3d542b54",

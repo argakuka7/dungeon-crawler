@@ -1,5 +1,5 @@
 // Character controller: walk / run / swim, jumping, gravity, ceilings and slopes.
-import { STEP, SWIM_STEP, GRAV, SNAP, ACID, WALK_SPEED, RUN_SPEED, SWIM_SPEED, JUMP_V, RUN_RAMP, BRAKE, HEAD_Y, WADE_SLOW } from '../core/constants.js';
+import { STEP, SWIM_STEP, GRAV, SNAP, STEEP, ACID, WALK_SPEED, RUN_SPEED, SWIM_SPEED, JUMP_V, RUN_RAMP, BRAKE, HEAD_Y, WADE_SLOW } from '../core/constants.js';
 import { player } from '../game/state.js';
 import { groundAt, ceilingAt, slopeAt } from './collide.js';
 import { canMove } from './canmove.js';
@@ -21,7 +21,7 @@ function horizontal(dt, dx, dz, run) {
     const up = (tx * gx + tz * gz) / speed;
     if (up > 0) { tx /= 1 + 0.35 * up; tz /= 1 + 0.35 * up; }
     // too steep to stand on (stairs excepted): slide down
-    if (g > 3 && p.support.kind !== 'stair') { const s = 2.5 * (g - 3) + 0.5; tx -= gx / g * s; tz -= gz / g * s; }
+    if (g > STEEP && p.support.kind !== 'stair') { const s = 2.5 * (g - STEEP) + 0.5; tx -= gx / g * s; tz -= gz / g * s; }
   }
   if (p.grounded && !p.swimming) {
     // on the ground the speed ramps up (RUN_RAMP) and brakes quickly; the direction follows
