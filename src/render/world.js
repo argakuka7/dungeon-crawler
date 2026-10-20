@@ -46,7 +46,7 @@ export function buildWorld(m, showPath, seen, geo = buildCubeParts(m), open = []
   // the people out in the world (m.npcs, game/npcs.js) are colliders where they stand, like the villagers
   const people = indexBlockers((m.npcs || []).map(n => ({ x: n.x, z: n.z, r: NPC_R, bottom: n.y, top: n.y + NPC_H, npc: n.id })));
   m.blockers = placed.blockers.map((list, i) => [...(m.staticBlockers?.[i] || []), ...list, ...people[i]]);
-  buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group);
+  buildProps(placed.out.map(q => opened?.has(q.site) ? openedChest(q) : q), group, water);
   const villagers = buildVillagers([...(m.villagers || []), ...(m.npcs || [])], group);
   addGhosts(group);
   const trialView = buildTrialView(m, group, water);   // a trial room's parts and rising fluid (render/trials.js)

@@ -680,6 +680,16 @@ fainter, its lines leaning towards teal (never into the greens).
   `render/watercells.js`, each only while shown): water's wandering cells; lava's crust, big
   slow dark plates hotter towards the glowing cracks, a hot seam along the banks; acid's
   sludge, cells with bubbles blowing up and popping, a green stain on the banks.
+- **Under the clear fluids** (water, acid; `render/underwater.js`, the active cube's terrain,
+  structures and props only): each vertex under the low-water line (the lowest the surface
+  sinks) is pushed sideways by the slope of the waves over it, the more the deeper it lies (a
+  vertex shader edit, no extra pass). The solids are split along that line when the cube is
+  built (`render/cubegeo.js`), so a bank or a bridge's pier bends under the water only, never
+  over it; a prop moves as a whole, and only if it lies all under the line; a standing fluid
+  (trials, tides) pushes nothing. And
+  caustics play on what lies there: water's baked cells again, where the sunlight through the
+  surface lands, softer and fainter deeper down. `UNDERWATER.shift` / `.glow` (uniforms) tune or
+  turn off either live.
 - **Dev:** `?palette=classic` (the old look) or `?palette=<seed>` (another world's),
   `/palette [seed|classic]` re-rolls them live and names the ones here;
   `tests/browser/palettes.html?seed=<n>` shows a world's palettes. **Checks:**

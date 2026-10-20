@@ -13,7 +13,7 @@
 // SINK - lift + tide + ripple (lava 0.09, acid 0.13 world units) under where physics has it.
 //
 // Pure (no three.js): the world worker builds the cube's fluids with it.
-import { LH, WATER, LAVA, ACID } from '../core/constants.js';
+import { N, LH, WATER, LAVA, ACID } from '../core/constants.js';
 
 // How each fluid's surface moves: the whole of it rises and falls with the tide, `tide` from high
 // to low water (world units) every `period` seconds, a minor pattern of waves `ripple` high
@@ -36,17 +36,20 @@ export const restY = level => level - SINK;
 // tide and the waves under it: their crests reach `lift`), swellG the waves' slope, finer ripples
 // too (for the shading only).
 const TAU = Math.PI * 2;
-export const swellGLSL = S => `
+// (the waves' slope alone, the same for every fluid: also for what lies under them, render/underwater.js)
+export const WAVES_GLSL = `
   const vec2 SW1 = vec2(1.71, 0.76), SW2 = vec2(-0.9, 1.62), SW3 = vec2(1.26, -1.44), SW4 = vec2(3.4, -2.0), SW5 = vec2(-2.3, -3.6);
+  vec2 swellG(vec2 p, float tm) {
+    return (0.45 * SW1 * cos(dot(p, SW1) + tm * 1.3) + 0.35 * SW2 * cos(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * SW3 * cos(dot(p, SW3) + tm * 1.7 + 2.1)
+      + 0.12 * SW4 * cos(dot(p, SW4) + tm * 2.3 + 0.7) + 0.1 * SW5 * cos(dot(p, SW5) + tm * 2.0 + 4.0)) * 0.55;
+  }
+`;
+export const swellGLSL = S => WAVES_GLSL + `
   float tideY(float tm) { return ${S.lift.toFixed(4)} + ${(S.tide / 2).toFixed(4)} * (sin(tm * ${(TAU / S.period).toFixed(5)}) - 1.0); }
   float swellW(vec2 p, float tm) {
     return 0.45 * sin(dot(p, SW1) + tm * 1.3) + 0.35 * sin(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * sin(dot(p, SW3) + tm * 1.7 + 2.1);
   }
   float swellY(vec2 p, float tm) { return tideY(tm) + ${(S.ripple / 2).toFixed(4)} * (swellW(p, tm) - 1.0); }
-  vec2 swellG(vec2 p, float tm) {
-    return (0.45 * SW1 * cos(dot(p, SW1) + tm * 1.3) + 0.35 * SW2 * cos(dot(p, SW2) + tm * 1.05 + 1.3) + 0.2 * SW3 * cos(dot(p, SW3) + tm * 1.7 + 2.1)
-      + 0.12 * SW4 * cos(dot(p, SW4) + tm * 2.3 + 0.7) + 0.1 * SW5 * cos(dot(p, SW5) + tm * 2.0 + 4.0)) * 0.55;
-  }
 `;
 export const tideY = (S, tm) => S.lift + S.tide / 2 * (Math.sin(tm * TAU / S.period) - 1);
 // The wet line: how high the banks are still wet, for every fluid alike (the cube's own,
@@ -63,6 +66,19 @@ export const surfaceRange = (t, level) => {
   const S = FLUID_MOTION[t];
   return [restY(level) + S.lift - S.tide - S.ripple, restY(level) + S.lift];
 };
+
+// The low-water line of the clear fluids (water, acid) in each cell of map m: the lowest their
+// surface ever sinks to (surfaceRange), and their bed; null where none (the top fluid of a column,
+// as render/wet.js waterUniforms fixed). What lies under it wavers with the waves, what stands
+// over it never does (render/underwater.js), so the solids are split along it (cubegeo.js).
+// What lies down to BELOW under the bed moves with it, deeper nothing does.
+export const CLEAR = [WATER, ACID], BELOW = 0.15;
+export function lowWaterLines(m) {
+  return m.cols.slice(0, N * N).map(col => {
+    const f = col.filter(g => g.fluid && !g.crust).at(-1);
+    return f && CLEAR.includes(f.fluid) ? { low: surfaceRange(f.fluid, f.surf * LH)[0], bed: Math.min(...f.cs) } : null;
+  });
+}
 
 // Two fluids in one place: a standing fluid (a trial's, a boss's tide) over the cube's own. In a
 // column where the cube's own fluid takes the standing one's level (its bed under it, its own

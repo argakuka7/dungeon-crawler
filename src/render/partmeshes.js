@@ -7,6 +7,7 @@ import { PARTS } from './parts.js';
 import { partMaterial, swayMaterial, fluidLook } from './materials.js';
 import { cutMaterial, capTwin } from './section.js';
 import { wetMaterial } from './wet.js';
+import { underwaterMaterial } from './underwater.js';
 
 // one part's arrays as geometry, in units of the cube's `scale` (the mesh or instance scales it)
 export function partGeometry(p) {
@@ -35,8 +36,10 @@ export function partMeshes(geo, group, shadowless = [], water = null) {
     const arrays = geo.parts[part.name];
     if (!arrays) continue;
     const cut = cutMaterial(partMaterial(part, 'full'), part.cap || false);
-    // (the terrain is wet by bands in the fluids' meshes, render/floors.js)
-    const material = part.kind === 'solid' ? (water && part.name !== 'terrain' ? wetMaterial(cut, water) : cut) : fluidLook(cut, part, water);
+    // (the terrain is wet by bands in the fluids' meshes, render/floors.js; what lies under the
+    // water wavers, lit by its caustics: render/underwater.js)
+    const wet = m => water && part.name !== 'terrain' ? wetMaterial(m, water) : m, under = m => water ? underwaterMaterial(m, water) : m;
+    const material = part.kind === 'solid' ? under(wet(cut)) : fluidLook(cut, part, water);
     const sway = m => part.sway ? swayMaterial(m, geo.scale) : m;
     const mesh = new THREE.Mesh(partGeometry(arrays), sway(material));
     mesh.scale.setScalar(geo.scale);

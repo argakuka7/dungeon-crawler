@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cutMaterial } from './section.js';
+import { underwaterMaterial } from './underwater.js';
 import { buildChests } from './chests.js';
 import { loadGLB } from './gltf.js';
 import { PROP_FILES } from '../core/propmetadata.js';
@@ -106,8 +107,10 @@ export function propBatchGeometry(p, glow) {
 }
 
 const fireSeed = q => (q.x * 1.7 + q.z * 2.3) % 6.28;   // (a fire's flame and light flicker as one)
-// placed: [{ name, x, y, z, yaw, s, tint }] -> instanced meshes (and light sources) in group
-export function buildProps(placed, group) {
+// placed: [{ name, x, y, z, yaw, s, tint }] -> instanced meshes (and light sources) in group;
+// water: the cube's (render/wet.js waterUniforms): what lies all under it wavers with the bed
+// (render/underwater.js)
+export function buildProps(placed, group, water = null) {
   const byName = new Map();
   for (const q of placed) { if (!byName.has(q.name)) byName.set(q.name, []); byName.get(q.name).push(q); }
   const m4 = new THREE.Matrix4(), col = new THREE.Color(), flames = [], fireLights = [];
@@ -118,6 +121,7 @@ export function buildProps(placed, group) {
     if (!p?.parts) continue;
     for (const part of p.parts) {
       const c = cutMaterial(part.material.clone(), 'self', true);
+      if (water) underwaterMaterial(c, water, p.maxY ?? p.height ?? 0);
       const mesh = new THREE.InstancedMesh(part.geometry, p.sway ? swayMaterial(c, p.sway) : c, list.length);
       mesh.name = p.name;
       mesh.userData.sharedGeo = true;   // the catalog owns the geometry

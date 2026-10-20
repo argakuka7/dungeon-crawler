@@ -10,11 +10,32 @@ import { themeOf } from '../themes/depth.js';
 import { buildFloors } from './floors.js';
 import { buildStructures } from './structures.js';
 import { buildInteriorWalls } from './interior.js';
+import { lowWaterLines } from './surface.js';
+
+// The solids are split along the low-water line of the clear fluids in the cells a triangle
+// touches (render/surface.js lowWaterLines): what stands out of the water (a bank, a bridge's
+// pier) then wavers under it only, never over it (render/underwater.js: the same cells, the same
+// line, a vertex on it never moves).
+function waterCuts(m) {
+  const lines = lowWaterLines(m);
+  if (!lines.some(Boolean)) return null;
+  return (a, b, c) => {
+    const y0 = Math.min(a[1], b[1], c[1]), y1 = Math.max(a[1], b[1], c[1]), out = [];
+    const x0 = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]) - 0.01)), x1 = Math.min(N - 1, Math.floor(Math.max(a[0], b[0], c[0]) + 0.01));
+    const z0 = Math.max(0, Math.floor(Math.min(a[2], b[2], c[2]) - 0.01)), z1 = Math.min(N - 1, Math.floor(Math.max(a[2], b[2], c[2]) + 0.01));
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+      const w = lines[z * N + x];
+      if (w && w.low > y0 && w.low < y1 && !out.includes(w.low)) out.push(w.low);
+    }
+    return out;
+  };
+}
 
 export function buildCubeGeometry(m) {
   usePalette(themeOf(m));
+  const cutAt = waterCuts(m);
   const layers = Array.from({ length: m.K }, () => ({
-    terrain: new GeoBuilder(), stone: new GeoBuilder(), wood: new GeoBuilder(), flags: new GeoBuilder({ sway: true }),
+    terrain: new GeoBuilder({ cutAt }), stone: new GeoBuilder({ cutAt }), wood: new GeoBuilder({ cutAt }), flags: new GeoBuilder({ sway: true }),
     fluids: Object.fromEntries(FLUIDS.map(t => [t, new GeoBuilder({ uvs: true })])),
   }));
   // bedrock under every column that is not open to the depth below

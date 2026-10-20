@@ -4,11 +4,13 @@
 // made with { uvs: true } keeps the uv in `uvNow` for every vertex drawn (the fluids' surfaces,
 // render/floors.js fluidVolume), the palette row in `palNow` (themes/fluids.js), and what
 // `shoreAt(vertex)` says of the ground under it (four numbers, render/shore.js; none: 0, 0, 0, 1).
+// cutAt(a, b, c), if given, names heights to split each triangle along (render/cubegeo.js: the
+// clear fluids' low-water lines, so what stands out of them bends under them only).
 import * as THREE from '../../vendor/three/three.core.js';   // plain path, no renderer: also loads in the world worker
 
 export class GeoBuilder {
-  constructor({ sway = false, uvs = false } = {}) {
-    this.pos = []; this.nor = []; this.col = []; this.smoothKeys = [];
+  constructor({ sway = false, uvs = false, cutAt = null } = {}) {
+    this.pos = []; this.nor = []; this.col = []; this.smoothKeys = []; this.cutAt = cutAt;
     if (sway) { this.uv = []; this.swayAt = () => 0; }
     else if (uvs) { this.uv = []; this.uvNow = [0, 0]; this.pal = []; this.palNow = 0; this.shore = []; this.shoreAt = null; }
   }
@@ -22,6 +24,10 @@ export class GeoBuilder {
     const len = Math.hypot(nx, ny, nz);
     if (len < 1e-9) return;
     if (want && nx * want[0] + ny * want[1] + nz * want[2] < 0) { [b, c] = [c, b]; nx = -nx; ny = -ny; nz = -nz; }
+    if (this.cutAt) for (const y of this.cutAt(a, b, c)) {
+      const parts = splitTri(a, b, c, y);
+      if (parts) { for (const [p, q, r] of parts) this.tri(p, q, r, col, [nx, ny, nz], smooth); return; }
+    }
     const base = this.pos.length / 3;
     for (const v of [a, b, c]) {
       this.pos.push(v[0], v[1], v[2]);
@@ -86,6 +92,27 @@ export class GeoBuilder {
   }
 
   build() { return toGeometry(this.arrays()); }
+}
+
+// triangle a b c split along the height y into three (or two, through a corner on it), wound the
+// same way; null if it does not cross y
+const ON = 1e-4;
+function splitTri(a, b, c, y) {
+  const V = [a, b, c], s = V.map(v => v[1] - y);
+  if (s.every(d => d > -ON) || s.every(d => d < ON)) return null;
+  const at = (p, q) => { const t = (y - p[1]) / (q[1] - p[1]); return [p[0] + (q[0] - p[0]) * t, y, p[2] + (q[2] - p[2]) * t]; };
+  for (let i = 0; i < 3; i++) if (Math.abs(s[i]) < ON) {
+    const A = V[i], B = V[(i + 1) % 3], C = V[(i + 2) % 3], P = at(B, C);
+    return [[A, B, P], [A, P, C]];
+  }
+  for (let i = 0; i < 3; i++) {
+    const A = V[i], B = V[(i + 1) % 3], C = V[(i + 2) % 3];
+    if (Math.sign(s[i]) !== Math.sign(s[(i + 1) % 3]) && Math.sign(s[i]) !== Math.sign(s[(i + 2) % 3])) {
+      const P = at(A, B), Q = at(C, A);
+      return [[A, P, Q], [P, B, C], [P, C, Q]];
+    }
+  }
+  return null;
 }
 
 export function toGeometry(a) {
