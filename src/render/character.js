@@ -8,7 +8,7 @@ import { scene, camera } from './scene.js';
 import { state } from '../game/state.js';
 import { ceilingAt, insideSolid, cellAt } from '../physics/collide.js';
 import { prepareHeld } from './held.js';
-import { rigReady } from './figure.js';
+import { rigReady, overGhost } from './figure.js';
 import { ownShadowDepth } from './skinned.js';
 import { setSkinMap, skinTexture } from './skin.js';
 import { readSkinFile, skinImage } from '../game/skinfiles.js';
@@ -88,7 +88,7 @@ export function mountWeapon(bones, weapon) {
   weapon.scale.setScalar(d.mount_scale ?? 1);
   if (d.mount_quat_gltf) weapon.quaternion.fromArray(d.mount_quat_gltf);
   else weapon.rotation.set(Math.PI / 3, 0, 0);   // +Y blade axis -> 60 degrees from forearm
-  weapon.traverse(o => { if (o.isMesh) o.castShadow = true; });   // rigid on a bone: culled by its own bounds
+  weapon.traverse(o => { if (o.isMesh) { o.castShadow = true; overGhost(o); } });   // rigid on a bone: culled by its own bounds; after the silhouette
   return item;
 }
 

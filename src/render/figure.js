@@ -147,6 +147,7 @@ export function wear(f, id, opts = {}) {
     });
     if (o.material.length === 1) o.material = o.material[0];
     o.castShadow = true;   // (rigid on a bone: culled by its own bounds, like any mesh)
+    overGhost(o);
     o.userData.sharedGeo = true;   // the template owns the geometry
   });
   f.bones[d.socket ?? 'hand.R'].add(object);
@@ -155,6 +156,16 @@ export function wear(f, id, opts = {}) {
   f.worn[def.slot] = { id, object, objects: [object], hold: d.hold ?? null, float: d.float ?? 0, glowing, shine: null,
     at: object.position.clone(), mount: object.quaternion.clone() };
   return true;
+}
+
+// What a figure wears or holds is drawn after its silhouette (the player's and the others' see-
+// through ghost, render/character.js, render/partner.js: renderOrder 999, then the body 1000):
+// drawn before it, a shield or a helm would count as terrain hiding the body, and the silhouette
+// would shine through it. So it goes into the transparent pass too (fully opaque, writing depth),
+// after both.
+export function overGhost(mesh) {
+  mesh.renderOrder = 1001;
+  for (const m of [].concat(mesh.material)) { m.transparent = true; m.forceSinglePass = true; }
 }
 
 // a part of an armor model: its own meshes, not the parts hanging off it
@@ -185,6 +196,7 @@ function wearArmor(f, id, template, { rarity = null, back = false } = {}) {
       o.material = [].concat(o.material).map(m => { m = m.clone(); materials.push(m); return m; });
       if (o.material.length === 1) o.material = o.material[0];
       o.castShadow = true;
+      overGhost(o);
       o.userData.sharedGeo = true;   // the template owns the geometry
     });
     bone.add(object);
