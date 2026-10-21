@@ -132,6 +132,10 @@ Change a number, then run `node tools/balance.mjs` and `npm test`. Useful checks
   `ILVL_DAMAGE`.
 - *Guardian seconds and brawl*: tune `GUARDIAN_TIERS`.
 - The rarity odds per item level: `node tools/loot-table.mjs`.
+- *What a depth pays*: the simulation also prints the copper (kills and chests) and crystals
+  found at each depth, beside what the Enchanter and the Smith ask for weapons of its item level
+  (`core/crafting.js`). An enchantment should stay about a quarter of a depth's copper, a re-roll
+  a few percent; about two crystals of each kind a depth.
 
 Items keep what they rolled (rarity, item level, affixes) but their stats are computed when
 read, so retuning bases, rarity factors or item-level growth changes weapons already found;

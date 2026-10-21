@@ -16,12 +16,14 @@ any character can wear them; for now only the villagers do (and the player throu
 | alchemist | in front of the potion tent (merchant camp) | wizard hat |
 | enchanter | in front of the herb tent (merchant camp) | headscarf, a floating crystal ball |
 
-There is no enchanting tent yet; the enchanter keeps the herb stall (`town_merchant_b`). The
-alchemist trades: she sells potions ([potions.md](potions.md), `core/shops.js`). All six give
+There is no enchanting tent yet; the enchanter keeps the herb stall (`town_merchant_b`). Three
+of them trade (`core/shops.js`): the alchemist sells potions ([potions.md](potions.md)), the
+enchanter enchants weapons for copper and crystals and the smith re-rolls their affixes for copper
+([loot.md](loot.md#enchanting-and-re-rolling)). All six give
 quests ([quests.md](quests.md)). Hovered, a villager has a gold label (a `!` in front: a quest for
 you, a `?`: one to hand in; then the label always shows); a click walks up to them, and so does
 the action key beside them, to talk (`game/inventory.js talkTo`): the panel opens on the Quests tab
-when they have news for you, else (the alchemist) on the bag with her wares.
+when they have news for you, else (the three who trade) on the bag with their wares or work.
 
 ## Wearing things
 

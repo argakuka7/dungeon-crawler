@@ -61,7 +61,7 @@ import { Runner, Viewer, canBeHit } from './foes.js';
 import { setOthers } from '../game/party.js';
 import { allEnemies, adoptEnemies, shareDefeat } from '../game/enemies.js';
 import { hitEnemy } from '../game/sword.js';
-import { afflictEnemy } from '../game/statuses.js';
+import { afflictEnemy, AFFLICTIONS } from '../game/statuses.js';
 import { hitPlayer } from '../game/enemycombat.js';
 import { mirrorProjectile, endMirrored } from '../game/projectiles.js';
 import { ghostShot } from '../game/shots.js';
@@ -492,7 +492,7 @@ function together() {
   relay.afflict = (e, status, spec) => {
     if (!(foes instanceof Viewer)) return;
     const key = e.id + status, now = performance.now();
-    if (now - (told.get(key) ?? -Infinity) < AFFLICT_EVERY) return;
+    if (status !== 'zapped' && now - (told.get(key) ?? -Infinity) < AFFLICT_EVERY) return;   // (a zap is rare, and over at once)
     told.set(key, now);
     post({ t: 'afflict', id: e.id, status, spec }, foes.runner);
   };
@@ -520,6 +520,11 @@ const validState = s => s && typeof s.id === 'string' && [s.x, s.y, s.z, s.yaw, 
 // an enemy as it is now, for another game to take over (game/enemies.js adoptEnemies)
 const stateOf = e => ({ id: e.id, x: e.x, y: e.y, z: e.z, yaw: e.yaw, hp: e.hp, mode: e.mode });
 const finite = (...xs) => xs.every(Number.isFinite);
+// a status's spec from another's game, as afflictEnemy takes it (game/statuses.js): a burn or a
+// poison, a chill (an enchanted weapon slows by at most half) or a zap (a short stun)
+const validAffliction = (status, s) => !!s && typeof s === 'object' && finite(s.time) && s.time > 0 && s.time <= 30
+  && (status === 'chilled' ? finite(s.slow) && s.slow >= 0.49 && s.slow <= 1
+    : status === 'zapped' ? s.time <= 1 : finite(s.damage, s.ticks) && s.damage >= 0 && s.ticks >= 1);
 
 // a message from another player (not `me`; the host's own word was handled before)
 function handle(m) {
@@ -673,7 +678,7 @@ function runnerReceive(m, p) {
     if (!e) return;
     const before = e.hp;
     if (damageEnemy(e, m.damage)) hitEnemy(e, { damage: before - e.hp, crit: !!m.crit }, before, m.dx, m.dz, m.kb, p.body);
-  } else if (m.t === 'afflict' && (m.status === 'burning' || m.status === 'toxic') && m.spec && typeof m.spec === 'object') {
+  } else if (m.t === 'afflict' && AFFLICTIONS.includes(m.status) && validAffliction(m.status, m.spec)) {
     const e = enemy(m.id);
     if (e && afflictEnemy(e, m.status, m.spec)) { e.target = p.body; e.lastHit = p.slot; }
   }

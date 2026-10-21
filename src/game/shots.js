@@ -11,6 +11,7 @@ import { hitEnemy, rolls } from './sword.js';
 import { shotFx } from './juice.js';
 import { drawShots, removeShotViews } from '../render/shots.js';
 import { relay } from '../net/online.js';
+import { enchantHit } from './enchants.js';
 
 export let shots = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -42,6 +43,7 @@ function strike(shot, e, share = 1) {
   // knocked back along the flight (a burst: away from where it went off)
   const [dx, dz] = share < 1 ? [e.x - shot.x, e.z - shot.z] : [shot.vx, shot.vz];
   hitEnemy(e, hit, before, dx, dz, shot.stats.knockback ?? 1);
+  enchantHit(e, hit, shot.stats);
   if (e.hp) setStatus(`Hit Lv ${e.level} ${e.profile.label} (${e.hp}/${e.profile.hp})`);
 }
 

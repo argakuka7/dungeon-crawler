@@ -36,6 +36,7 @@ import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt
 import { launchProjectile } from './projectiles.js';
 import { fireBeam } from './beams.js';
 import { tryHordeAttack } from './hordes.js';
+import { enemySlow } from '../core/status.js';
 
 const THINK = 0.2;         // s between decisions
 export const AHEAD = -0.2; // ahead: the cosine of the angle to the player is above this (about 100 degrees each way)
@@ -490,22 +491,26 @@ function knockback(e, dt) {
   e.kbx *= k; e.kbz *= k;
   if (Math.hypot(e.kbx, e.kbz) < 0.05) e.kbx = e.kbz = 0;
 }
+// A chilled enemy (an enchanted weapon's, game/statuses.js) lives slower: all it does, moving,
+// thinking and striking, takes longer by its chill.
 // learn: enemies.html#decide-code #fair (see learn/README.md)
-export function stepEnemies(list, dt) {
+export function stepEnemies(list, realDt) {
   for (const e of list) {
-    knockback(e, dt);
-    if (e.mode === 'dead') { e.deadT += dt; continue; }
+    knockback(e, realDt);
+    if (e.mode === 'dead') { e.deadT += realDt; continue; }
+    const slow = enemySlow(e), dt = realDt * slow;
     // (a dormant one hurt before it was ever stepped wakes too)
     if (e.hp < (e.lastHp ?? e.hp) || e.dormant && e.hp < e.profile.hp) { e.dormant = false; provoke(e); }
     e.lastHp = e.hp;
-    e.cool = Math.max(0, e.cool - dt); e.hurtT = Math.max(0, e.hurtT - dt); e.poised = Math.max(0, (e.poised || 0) - dt);
+    e.cool = Math.max(0, e.cool - dt); e.hurtT = Math.max(0, e.hurtT - realDt); e.poised = Math.max(0, (e.poised || 0) - realDt);
     e.provoked = Math.max(0, (e.provoked || 0) - dt);
-    if (e.stun > 0) { e.stun -= dt; e.speed = 0; continue; }
+    if (e.stun > 0) { e.stun -= realDt; e.speed = 0; continue; }
     // passive (/passive), or dormant (a test room's lineup, game/devspawn.js: till it is hit), or
     // waiting for its fight to start it (Foggery at the foot of his tower, game/foggery.js)
     if (state.devPassive || e.dormant || e.waiting) { e.speed = 0; e.path = null; if (e.mode !== 'idle') { e.mode = 'idle'; e.t = 1; } continue; }
     if ((e.think -= dt) <= 0) { e.think = THINK * (0.8 + Math.random() * 0.4); decide(e); }
     if (e.profile.burrow) burrow(e, dt);
     act(e, dt);
+    if (slow < 1) e.speed *= slow;   // (its speed over its own slower time: how fast it really goes)
   }
 }

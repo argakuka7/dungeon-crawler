@@ -13,6 +13,7 @@ import { throwFlask } from './throws.js';
 import { cooldownLeft } from '../core/potions.js';
 import { relay } from '../net/online.js';
 import { absent } from '../core/enemies.js';
+import { enchantHit } from './enchants.js';
 
 const BUFFER = 0.3;   // s a queued attack waits for the current swing to allow the next
 // the critical-hit roll of each blade hit, in 0..1 (browser checks pin it to keep numbers exact)
@@ -83,6 +84,7 @@ export function hitWithSword(list) {
     const before = e.hp, hit = swordHit(p, e, rolls.crit());
     if (!hit) continue;
     hitEnemy(e, hit, before, e.x - p.x, e.z - p.z, p.sword.stats?.knockback ?? 1);
+    enchantHit(e, hit, p.sword.stats);
     if (e.hp) setStatus(`Slashed Lv ${e.level} ${e.profile.label} (${e.hp}/${e.profile.hp})`);
   }
 }

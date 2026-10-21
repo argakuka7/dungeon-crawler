@@ -4,7 +4,7 @@
 // ignite makes: `{ time, damage, ticks }` dealt in equal ticks over `time`. Catching it again
 // restarts it, so lingering sources (a burning patch, a poison cloud) only catch what is not
 // already affected. While poisoned the player does not regenerate (core/progression.js).
-import { ignite, burnStep, burntOut } from './projectiles.js';
+import { ignite, burnStep, burntOut, chillFactor } from './projectiles.js';
 
 export const STATUSES = ['burning', 'toxic'];
 // a status of `spec` ({ time, damage, ticks }); reason: what the player is told when it kills
@@ -25,3 +25,12 @@ export const immuneTo = (e, status) => status === 'burning' && !!e.profile?.fire
 export const toxinOf = (spec, damage) => spec ? { time: spec.time, ticks: spec.ticks, damage: Math.max(1, Math.round(damage * spec.share)) } : null;
 // acid falls poison too (physics/hazards.js), for a share of the maximum health
 export const ACID_TOXIN = { time: 4, ticks: 4, share: 0.12 };
+
+// What enchanted weapons do to enemies besides burning and poisoning them (core/gear/enchants.js,
+// game/enchants.js): `chilled` ({ time, slow, t }, core/projectiles.js chillFrom) slows all it does
+// (moving, winding up, striking) by `slow`, thawing at the end like the player's chill; `zapped`
+// (s left) holds it still: it is stunned (`stun`) that long. Guardians and bosses take half of a
+// slow; bosses are not stunned, nor is anything that cannot be staggered.
+export const bigFoe = e => !!(e.guardian || e.boss);
+export const enemySlow = e => e.chilled?.time ? chillFactor(e.chilled) : 1;
+export const zappable = e => !e.boss && !e.profile?.steadfast;

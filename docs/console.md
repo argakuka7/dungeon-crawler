@@ -98,6 +98,7 @@ Developer (`?dev=1`):
 | `/menu` | save and quit to the main menu |
 | `/give <item> [count]` | things into the bag (a weapon: a common one, equipped) |
 | `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default unusual, item level 8) |
+| `/enchant <enchantment\|off>` | enchant the equipped weapon for free (Toasty, Icky, Nippy, Zappy, Shiny: `core/gear/enchants.js`), or take it off |
 | `/wear <thing\|off>` | headwear on or off |
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |

@@ -3,6 +3,7 @@
 import { COINS, ITEMS } from './items.js';
 import { coinCounts, whole } from './inventory.js';
 import { RARITY } from './gear/rarities.js';
+import { ENCHANT } from './gear/enchants.js';
 
 export const WALK_RADIUS = 0.45;   // walking over a pickup takes it
 export const MAGNET_RADIUS = 1;    // coins pull themselves in this close (cells)
@@ -45,7 +46,7 @@ export const steppedOn = (p, x, y, z) => Math.hypot(p.x - x, p.z - z) <= WALK_RA
 // come over the wire (net/session.js) or out of a save (core/save.js)
 const finite = (...xs) => xs.every(Number.isFinite);
 export const validGen = g => !!g && typeof g === 'object' && Object.hasOwn(RARITY, g.rarity) && Number.isFinite(g.ilvl)
-  && Array.isArray(g.affixes) && typeof g.name === 'string';
+  && Array.isArray(g.affixes) && typeof g.name === 'string' && (g.enchant === undefined || Object.hasOwn(ENCHANT, g.enchant));
 export function validPickup(m) {
   return !!m && typeof m.id === 'string' && typeof m.itemId === 'string' && Object.hasOwn(ITEMS, m.itemId)
     && Number.isInteger(m.count) && m.count > 0 && finite(m.x, m.y, m.z, m.toss)

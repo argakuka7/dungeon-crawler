@@ -31,6 +31,9 @@ export const KINDS = {
   horde: { group: 'events' },    // {}: a horde woke up
   trial: { group: 'events' },    // { name, depth, what: 'resolved' | 'failed' }: a trial room (core/trials.js) met or failed
   trade: { group: 'events' },    // { item, price }: bought something
+  craft: { group: 'events' },    // { what: 'enchant' | 'reroll', item, name, into?, price }: the Enchanter or the
+                                 // Smith worked on a weapon (core/crafting.js): enchanted it `name`, or
+                                 // re-rolled its affix `name` (into: what it became)
   quest: { group: 'events' },    // { title, what, giver?, xp?, coins? }: a quest taken ('taken'), its goals done
                                  // ('ready'), handed in and paid ('done'), failed or started again
   party: { group: 'events' },    // { text }: someone joined or left
@@ -111,6 +114,8 @@ export function describe({ kind, data: d = {}, who }) {
     case 'horde': return 'A horde woke up!';
     case 'trial': return d.what === 'failed' ? `${S} failed ${d.name} on depth ${d.depth}` : `${S} mastered ${d.name} on depth ${d.depth}: the way on is open`;
     case 'trade': return `Bought ${d.item} for ${d.price}`;
+    case 'craft': return d.what === 'enchant' ? `The Enchanter made ${d.item} ${d.name} for ${d.price}`
+      : `The Smith re-rolled ${d.item}'s ${d.name}${d.into && d.into !== d.name ? ` into ${d.into}` : ''} for ${d.price}`;
     case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to ${d.giver}`,
       done: `Quest complete: ${d.title}${d.xp ? ` · +${d.xp} XP` : ''}${d.coins ? ` · ${d.coins}` : ''}`, failed: `Quest failed: ${d.title}`,
       restarted: `Quest started again: ${d.title}` }[d.what] ?? `Quest: ${d.title}`;

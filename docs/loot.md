@@ -1,9 +1,11 @@
 # Loot
 
-Enemies drop coins, now and then a weapon or a potion; guardians always drop weapons and
-potions; treasure chests at reward sites hold all three. Weapons are generated: each one is an
-instance of a base weapon (a sword, bow, crossbow or staff) with its own rarity, item level,
-affixes and name. The generator lives
+Enemies drop coins, now and then a weapon, a potion or a crystal; guardians always drop weapons,
+potions and crystals; treasure chests at reward sites hold all four. Weapons are generated: each
+one is an instance of a base weapon (a sword, bow, crossbow or staff) with its own rarity, item
+level, affixes and name. In town the Enchanter puts an enchantment on a weapon (for copper and
+crystals) and the Smith re-rolls its affixes (for copper): see [Enchanting and
+re-rolling](#enchanting-and-re-rolling). The generator lives
 in `src/core/gear/` and is pure and seeded; the floor, pickup and inventory code in
 `src/game/loot.js`, `src/game/lootlabels.js`, `src/game/inventory.js` and `src/render/loot.js`;
 chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is and why:
@@ -59,11 +61,13 @@ A bag slot or pickup holding a weapon carries its own `gen`:
 
 ```js
 { itemId: 'weapon_sword_long', count: 1,
-  gen: { v: 1, rarity: 'unusual', ilvl: 7, affixes: [{ id: 'swift', tier: 2, value: 8 }, ...], name: 'Duskfang' } }
+  gen: { v: 1, rarity: 'unusual', ilvl: 7, affixes: [{ id: 'swift', tier: 2, value: 8 }, ...], name: 'Duskfang',
+    enchant: 'toasty' } }
 ```
 
 Items keep what they rolled (not a seed), so retuning the tables does not change weapons
-already found; `v` is the generator version. `core/gear/stats.js` `itemStats` turns an item
+already found; `v` is the generator version. `enchant` (optional) is the Enchanter's: only which
+enchantment, its strength follows from the weapon (see below). `core/gear/stats.js` `itemStats` turns an item
 into the stats combat reads; nothing else looks at base weapon stats. A weapon without `gen`
 (dev grants, tests) counts as Vanilla. The run starts with one Vanilla **Old Sword**.
 
@@ -156,11 +160,16 @@ is the enemy's level.
 
 - Which potion is drawn by the item level from those that drop there, weighted, health
   potions the likeliest (`potionTable`, [potions.md](potions.md)); chests likewise.
-- Ordinary enemies: a weapon 5% and a potion 3% of the time, both × √(the kind's
-  level-1 XP / 30): a spider 4% / 2.5%, a Stunder 8% / 5%, a Triangle 10% / 6%.
-- Side guardians: one weapon, at least Decent (Unusual from level 10), luck 0.1; one potion.
+- Ordinary enemies: a weapon 5%, a potion 3% and a crystal 1.5% of the time, all × √(the
+  kind's level-1 XP / 30): a spider 4% / 2.5% / 1.2%, a Stunder 8% / 5% / 2.4%, a Triangle 10% /
+  6% / 3%. Kinds with drops of their own (a boss's minions) drop no crystals.
+- Side guardians: one weapon, at least Decent (Unusual from level 10), luck 0.1; one potion; one
+  crystal.
 - Descent guardians: two weapons, at least Decent (Unusual from level 5, Remarkable from 14),
-  luck 0.2; two potions.
+  luck 0.2; two potions; two crystals.
+- Crystals (ruby, emerald, sapphire, amethyst, diamond: `core/items.js CRYSTALS`) are each as
+  likely, rolled on a stream of their own (`crystalDrops`), so weapon and potion drops are as
+  they were. They stack to 99 and are taken like potions (walking over them, collecting).
 - OMG drops only from guardians.
 
 ## Chests
@@ -170,12 +179,12 @@ two basic, one uncommon and one rare (now and then exceptional). `chestLoot(site
 in `core/chests.js` decides what one holds, seeded by the site (its weapons lean towards your
 kind like drops do); `CHESTS` is the table:
 
-| Site | Item level | Copper at level 1 | Potions | Weapons |
-|---|---|---|---|---|
-| Basic | depth | 25–45 | 0–1 | one, at least Vanilla |
-| Uncommon | depth + 1 | 50–90 | 1 | one, at least Decent |
-| Rare | depth + 1 | 100–160 | 1–2 | at least Unusual and at least Decent |
-| Exceptional | depth + 2 | 180–280 | 2 | at least Remarkable and at least Unusual |
+| Site | Item level | Copper at level 1 | Potions | Crystals | Weapons |
+|---|---|---|---|---|---|
+| Basic | depth | 25–45 | 0–1 | 0–1 | one, at least Vanilla |
+| Uncommon | depth + 1 | 50–90 | 1 | 1 | one, at least Decent |
+| Rare | depth + 1 | 100–160 | 1–2 | 1–2 | at least Unusual and at least Decent |
+| Exceptional | depth + 2 | 180–280 | 2 | 2–3 | at least Remarkable and at least Unusual |
 
 (The site prestiges, basic to exceptional, are not rarities: they rank reward sites, `world/sites.js`.)
 
@@ -184,12 +193,65 @@ Copper grows like enemy coins. Weapons roll with luck (0.1 to 0.45 by prestige).
 played out, spills the loot in front of it (pickups wait hidden until then). The chest stays open for the run and what it spilled is `kept`: a death takes neither
 back.
 
+## Enchanting and re-rolling
+
+Two villagers in town work on your weapons (`core/shops.js` `service`, the rules in
+`core/crafting.js`). Talk to them (click, or the action key beside them) and the bag opens; the
+weapon they work on is the last one selected in the bag, at first the equipped one (a teal ring
+marks it while something else is selected). Selecting a weapon makes them comment on its
+rarity ("I can enchant this. I'd rather nobody watched." for Crap, "...I need to sit down." for
+OMG: `ENCHANTER_SAYS`, `SMITH_SAYS`).
+
+**The Enchanter** (merchant camp, by the herb stall) puts one enchantment on a weapon. Her
+column shows the five, each as its crystal (dimmed when you cannot have it now, ringed when the
+weapon has it); one selected says what it would do on that weapon and what it costs, and
+**Enchant** (Enter, a double-click) does it. A weapon has one enchantment at most: a new one
+replaces the old. Enchantments are separate from affixes and loot never rolls them
+(`core/gear/enchants.js`):
+
+| Enchantment | Crystal | What a hit does | Tier 1 | Tier 7 |
+|---|---|---|---|---|
+| Toasty | ruby | sets it burning for a share of the hit over 3 s, unless it burns already (fire does not hurt the fiery kinds) | 60% | 120% |
+| Icky | emerald | adds a share of the hit to its poison, spread over the next 4 s: it piles up | 8% | 20% |
+| Nippy | sapphire | slows all it does (moving, thinking, striking) for 2 s; at most 50% | 15% | 33% |
+| Zappy | amethyst | a chance to stun it for 0.6 s (not bosses, nor what cannot be staggered) | 6% | 12% |
+| Shiny | diamond | more coins from what dies while it is equipped | 15% | 50% |
+
+The weapon keeps only which enchantment it has (`gen.enchant`); its strength follows from the
+weapon: the tier from its item level like an affix's (Impossible and OMG one or two above),
+times the rarity's damage factor (×0.75 on Crap up to ×1.4 on OMG). Guardians and bosses take
+half of a slow and of a stun. Toasty suits slow, heavy blows (one burn at a time), Icky quick
+ones (every hit adds). The hits: `game/enchants.js`, called after our own blade hits and shots
+land; the statuses on enemies: `game/statuses.js` (`chilled`, `zapped`), the slow in
+`game/enemyai.js stepEnemies`, frost and sparks in `render/statuses.js`; Shiny in
+`game/loot.js dropLoot`. Each enchantment is worth roughly one mid-tier affix.
+
+It costs copper and crystals of the enchantment's kind: one crystal, two from item level 8,
+three from 16; copper `300 × (1 + 0.75 × (item level − 1))`, rounded to two figures (300 at
+item level 1, 2300 at 10, 4400 at 19). That is about a quarter of what the depth of the weapon
+pays (`node tools/balance.mjs` prints both).
+
+**The Smith** (at the anvil in town) re-rolls one affix: with a weapon selected, every affix
+line has a **Re-roll** button. The line becomes a fresh affix that may roll on the weapon and is
+not on it already (the same one again too, with a new value), keeping the prefix and suffix
+limits and the old line's tier (`core/gear/affixes.js rerollAffix`). Weapons without affixes
+(Crap to Unremarkable) have nothing to re-roll. It costs copper only:
+`80 × (1 + 0.75 × (item level − 1))` × the rarity's factor (Decent 1, Unusual 1.25, Remarkable 1.5,
+Fabled 2, Impossible 2.5, OMG 3), a few percent of what a depth pays.
+
+Both are all or nothing, and replace the item's `gen` rather than change it. The chronicle
+notes them (`craft`). With `?dev=1`, `/enchant <enchantment|off>` enchants the equipped weapon
+for free.
+
 ## Extending
 
 - A new rarity: a row in `RARITIES` (weight, gate, affix count, tier bonus, damage factor,
   colour, glow). The tests check the ordering.
 - A new affix: an entry in `AFFIXES` whose `stat` `itemStats` applies (add the stat there and
   in combat if it is new). Every tier is validated by `tests/gear.test.js`.
+- A new enchantment: an entry in `ENCHANTS` (its crystal, tiers, text and quip), what its hit
+  does in `game/enchants.js`, and the Enchanter's line in `ENCHANTED_SAYS`
+  (`tests/enchanting.test.js` checks them).
 - A new dropping weapon: the item in `core/items.js` (model, kind, base stats), then a
   row in `BASES` with its item level; its tags (its kind, melee or ranged) come from its kind.
   Affixes roll on bases whose tags they list. A new kind also needs its timing and clip
@@ -209,7 +271,9 @@ does the same from the browser's devtools.
 
 `tests/gear.test.js` covers rarity odds and gates, deterministic JSON items, affix validity
 and tiers, names, stats, item-level growth, drop and potion rates and guardian floors, item
-instances in the bag, crits and life on hit; `tests/chests.test.js` the chest table. In the
+instances in the bag, crits and life on hit; `tests/chests.test.js` the chest table;
+`tests/enchanting.test.js` enchantments, crystal drops, the Enchanter's and the Smith's prices
+and work. In the
 browser console:
 
 ```js

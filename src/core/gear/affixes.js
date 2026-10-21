@@ -63,4 +63,18 @@ export function rollAffixes(rng, count, ilvl, tags, tierBonus = 0) {
   // prefixes first, then suffixes, each in table order: a stable reading order
   return out.sort((x, y) => AFFIXES.indexOf(AFFIX[x.id]) - AFFIXES.indexOf(AFFIX[y.id]));
 }
+// The Smith's re-roll (core/crafting.js): affix `index` of `affixes` becomes a fresh one, any that
+// may roll on `tags` and is not on the item already (the same one again too, with a new value),
+// keeping the prefix and suffix limits and its tier. A new list, in reading order.
+export function rerollAffix(rng, affixes, index, tags) {
+  const old = affixes[index];
+  if (!old) return affixes;
+  const rest = affixes.filter((_, i) => i !== index), kinds = { prefix: 0, suffix: 0 }, max = { prefix: MAX_PREFIXES, suffix: MAX_SUFFIXES };
+  for (const a of rest) kinds[AFFIX[a.id].kind]++;
+  const open = AFFIXES.filter(a => a.tags.some(t => tags.includes(t)) && !rest.some(o => o.id === a.id) && kinds[a.kind] < max[a.kind]);
+  const a = open[Math.floor(rng() * open.length)] ?? AFFIX[old.id];
+  const tier = Math.max(1, Math.min(MAX_TIER, old.tier || 1));
+  return [...rest, { id: a.id, tier, value: rollAffixValue(a, tier, rng) }]
+    .sort((x, y) => AFFIXES.indexOf(AFFIX[x.id]) - AFFIXES.indexOf(AFFIX[y.id]));
+}
 export const describeAffix = a => AFFIX[a.id].text(a.value);

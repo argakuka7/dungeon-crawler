@@ -267,6 +267,13 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #inventory-item-base { color: #8f9aaa; font-size: 15px; }
 #inventory-item-affixes { margin: 4px 0; padding: 0; list-style: none; color: #8fb6ff; font-size: 15px; }
 #inventory-item-affixes .affix-name { color: #6f7f99; font-style: italic; }
+/* the Enchanter's enchantment on a weapon, and the Smith's re-roll buttons (game/inventory.js) */
+#inventory-item-affixes .enchant { color: #8fe3d6; }
+#inventory-item-affixes .reroll-cost { color: #9ea9b6; font-size: 14px; margin-top: 4px; }
+#inventory-item-affixes .rerollable { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+#inventory-panel #inventory-item-affixes button.reroll { flex: none; margin-left: auto; height: 24px; padding: 0 8px; font-size: 13px; }
+/* the weapon the Enchanter or the Smith works on, while something else is selected */
+#inventory-panel .inventory-slot.work { box-shadow: 0 0 0 1px #10141c, 0 0 0 3px #8fe3d6; }
 #inventory-item-compare { font-size: 15px; color: #9ea9b6; margin: 8px 0; padding-top: 6px; border-top: 1px solid #2c3442; }
 #inventory-item-compare p { margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 1px 6px; }

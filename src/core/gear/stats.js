@@ -6,9 +6,11 @@
 //   range: (+ reach in cells) × (1 + percent); arc: the base's × (1 + percent)
 //   crit / critDamage: chance (0..1, CRIT_CHANCE without affixes) and multiplier; leech: life on
 //   hit; knockback: multiplier; pierce / burst / color: the base's (core/items.js)
+//   enchant: { id, value }, only when it has one: the Enchanter's (core/gear/enchants.js, game/enchants.js)
 import { ITEMS } from '../items.js';
 import { AFFIX, describeAffix } from './affixes.js';
 import { rarityOf } from './rarities.js';
+import { ENCHANT, enchantOf, describeEnchant } from './enchants.js';
 import { namesBase } from './names.js';
 
 export const ARC = Math.PI * 0.42;   // the basic swing arc (core/combat.js SWORD.arc)
@@ -33,7 +35,7 @@ export function itemStats(item) {
     const { stat, op } = AFFIX[a.id];
     sum[op === 'pct' && (stat === 'damage' || stat === 'range') ? stat + 'Pct' : stat] += a.value;
   }
-  const kind = w.kind ?? 'sword';
+  const kind = w.kind ?? 'sword', enchant = enchantOf(item);
   return {
     kind, ranged: kind !== 'sword',
     damage: Math.max(1, Math.round((w.damage * ilvlDamage(item.gen?.ilvl) * rarityOf(item).damage + sum.damage) * (1 + sum.damagePct / 100))),
@@ -45,6 +47,7 @@ export function itemStats(item) {
     leech: sum.leech,
     knockback: 1 + sum.knockback / 100,
     pierce: w.pierce ?? 0, burst: w.burst ?? 0, ...(w.color && { color: w.color }),
+    ...(enchant && { enchant }),
   };
 }
 
@@ -54,5 +57,10 @@ export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? ITEMS
 export const affixLines = item => (item?.gen?.affixes ?? []).map(describeAffix);
 // ... with each affix's name: [{ name: 'Pointy', text: '+5 damage' }]
 export const affixEntries = item => (item?.gen?.affixes ?? []).map(a => ({ name: AFFIX[a.id].name, text: describeAffix(a) }));
+// ... and its enchantment: { name: 'Toasty', text: 'Sets things burning ...' } or null
+export function enchantEntry(item) {
+  const e = enchantOf(item);
+  return e && { id: e.id, name: ENCHANT[e.id].name, text: describeEnchant(e.id, e.value) };
+}
 // damage per second, counting crits: what to compare weapons by
 export const weaponDps = s => s.damage * (1 + s.crit * (s.critDamage - 1)) / s.interval;

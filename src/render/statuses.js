@@ -1,11 +1,13 @@
 // Statuses that show (core/status.js): enemies on fire lick with flames, poisoned ones (and the
-// poisoned player) seep green bubbles and a sickly mist. The player's own burning is
-// render/burning.js.
+// poisoned player) seep green bubbles and a sickly mist, chilled ones glitter with frost and
+// zapped ones crackle with sparks (enchanted weapons, game/enchants.js). The player's own
+// burning is render/burning.js, its chill render/chilled.js, its shock render/shocked.js.
 import { glow, soft, emit, rand, ring } from './particles.js';
 import { player } from '../game/state.js';
 import { FIRE_COLORS } from './flames.js';
 
-const FLAMES = FIRE_COLORS, GREENS = ['#c8ff7a', '#8fdc3c', '#5f9f2a'];
+const FLAMES = FIRE_COLORS, GREENS = ['#c8ff7a', '#8fdc3c', '#5f9f2a'], FROST = ['#ffffff', '#d8f4ff', '#9fdcff'],
+  SPARKS = ['#ffffff', '#fff3a0', '#9fd0ff'];
 
 function flames(x, y, z, r, h, dt) {
   for (let i = Math.floor(70 * dt + Math.random()); i > 0; i--) {
@@ -27,13 +29,30 @@ function poison(x, y, z, r, h, dt) {
   }
 }
 
+function frost(x, y, z, r, h, dt) {
+  for (let i = Math.floor(30 * dt + Math.random()); i > 0; i--) {
+    const [dx, dz] = ring(r);
+    emit(glow, x + dx, y + rand(0.05, h), z + dz, { v: [dx * 0.3, rand(-0.3, 0.1), dz * 0.3], spread: 0.1, life: rand(0.4, 0.7),
+      size: rand(0.05, 0.09), color: FROST[i % 3], gravity: 0.6, drag: 1.5 });
+  }
+}
+function sparks(x, y, z, r, h, dt) {
+  for (let i = Math.floor(50 * dt + Math.random()); i > 0; i--) {
+    const [dx, dz] = ring(r);
+    emit(glow, x + dx, y + rand(0.05, h), z + dz, { v: [rand(-1.5, 1.5), rand(-0.5, 1.5), rand(-1.5, 1.5)], life: rand(0.06, 0.14),
+      size: rand(0.04, 0.08), color: SPARKS[i % 3], drag: 4 });
+  }
+}
+
 export function tickStatuses(enemies, dt) {
   if (dt <= 0) return;
   for (const e of enemies) {
-    if (e.mode === 'dead' || (!e.burning && !e.toxic)) continue;
+    if (e.mode === 'dead' || (!e.burning && !e.toxic && !e.chilled && !(e.zapped > 0))) continue;
     const r = e.profile.radius * 0.8, h = e.profile.bodyHeight;
     if (e.burning) flames(e.x, e.y, e.z, r, h, dt);
     if (e.toxic) poison(e.x, e.y, e.z, r, h, dt);
+    if (e.chilled) frost(e.x, e.y, e.z, r, h, dt);
+    if (e.zapped > 0) sparks(e.x, e.y, e.z, r, h, dt);
   }
   if (player.toxic && !player.ragdoll) poison(player.x, player.visY, player.z, 0.25, 1, dt);
 }

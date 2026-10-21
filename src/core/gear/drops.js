@@ -11,6 +11,9 @@
 //   a kind with its own `drops` ({ weapons: false, potion: chance, potions: [item ids] }: Gusto's
 //     Custo triangles) drops no weapons and one of `potions` at that chance
 // Guardians also roll with luck (rarer results) and are the only source of OMG items.
+// Crystals (for the Enchanter, core/gear/enchants.js) on a stream of their own: ordinary enemies
+// one 1.5% of the time (× the same √ of their XP), side guardians one, descent guardians two;
+// each of the five kinds as likely. Kinds with their own `drops` drop none.
 // Which potion is drawn by the enemy's level (core/potions.js potionTable): mostly health
 // potions, the stronger ones and the rest deeper down.
 // favor: the kind of weapon the player fights with; drops lean towards it (gear/bases.js).
@@ -18,6 +21,7 @@ import { mulberry32, hash32 } from '../util.js';
 import { RARITY } from './rarities.js';
 import { rollWeapon } from './generate.js';
 import { rollPotions } from '../potions.js';
+import { CRYSTALS } from '../items.js';
 
 // learn: loot.html#drops (see learn/README.md)
 export const WEAPON_CHANCE = 0.05, POTION_CHANCE = 0.03;
@@ -25,6 +29,8 @@ export const WEAPON_CHANCE = 0.05, POTION_CHANCE = 0.03;
 const worth = xp => Math.sqrt(Math.max(1, xp ?? 30) / 30);
 export const dropChance = xp => Math.min(0.15, WEAPON_CHANCE * worth(xp));
 export const potionChance = xp => Math.min(0.1, POTION_CHANCE * worth(xp));
+export const CRYSTAL_CHANCE = 0.015;
+export const crystalChance = xp => Math.min(0.05, CRYSTAL_CHANCE * worth(xp));
 
 // learn: loot.html#drops (see learn/README.md)
 export function guardianDrops(role, level) {
@@ -51,6 +57,19 @@ export function weaponDrops(enemy, seed = 0, favor = null) {
   for (let i = 0; i < g.count; i++) out.push(rollWeapon(R, level, { ...g, favor }));
   return out;
 }
+// `n` crystals drawn with rng R, each kind as likely: [{ itemId, count }], one entry per kind
+export function rollCrystals(R, n) {
+  const counts = new Map();
+  for (let i = 0; i < n; i++) { const id = CRYSTALS[Math.floor(R() * CRYSTALS.length)].id; counts.set(id, (counts.get(id) ?? 0) + 1); }
+  return [...counts].map(([itemId, count]) => ({ itemId, count }));
+}
+export function crystalDrops(enemy, seed = 0) {
+  const R = stream(enemy, seed, 0xc4157a1);
+  if (enemy.kind?.drops) return [];
+  const n = enemy.guardian ? (enemy.guardianRole ?? 'descent') === 'descent' ? 2 : 1
+    : R() < crystalChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? 1 : 0;
+  return rollCrystals(R, n);
+}
 // potions, on a stream of their own (so weapon drops do not depend on them)
 export function potionDrops(enemy, seed = 0) {
   const R = stream(enemy, seed, 0x9071), level = Math.max(1, enemy.level || 1), own = enemy.kind?.drops;
@@ -60,4 +79,4 @@ export function potionDrops(enemy, seed = 0) {
   return rollPotions(R, level, n);
 }
 // everything but the coins
-export const enemyDrops = (enemy, seed = 0, favor = null) => [...weaponDrops(enemy, seed, favor), ...potionDrops(enemy, seed)];
+export const enemyDrops = (enemy, seed = 0, favor = null) => [...weaponDrops(enemy, seed, favor), ...potionDrops(enemy, seed), ...crystalDrops(enemy, seed)];

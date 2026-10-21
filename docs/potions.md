@@ -88,7 +88,8 @@ wares in a column beside it. Select a ware to see what it does, its price and ho
 have; **Buy**, Enter or a double-click buys one for its price in coins, change given, all or
 nothing (not enough coins, or no room in the bag). Bought potions go on the quick bar like
 found ones. The alchemist in the wizard hat (merchant camp, `town_merchant_c`) sells every
-potion and flask. With `?dev=1` a run starts with 5000 gold.
+potion and flask. With `?dev=1` a run starts with 5000 gold. The enchanter and the smith trade
+too, working on weapons instead ([loot.md](loot.md#enchanting-and-re-rolling)).
 
 ## The quick bar
 

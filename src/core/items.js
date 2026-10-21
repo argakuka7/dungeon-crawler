@@ -100,13 +100,24 @@ export const POTIONS = [
     'It bursts into a poison cloud that lingers; everything in it is poisoned.'),
 ];
 export const HEALTH_POTION = POTIONS.find(p => p.id === 'item_potion_health');
-// Mana and stamina potions and the materials have inventory definitions only (no mana or
+// Mana and stamina potions and the sticks have inventory definitions only (no mana or
 // stamina yet); no use or crafting.
 const stackables = [
   ['item_potion_mana', 'Mana potion'], ['item_potion_stamina', 'Stamina potion'],
   ['item_stick_short', 'Short stick'], ['item_stick_long', 'Long stick'], ['item_stick_forked', 'Forked stick'],
-  ...['ruby', 'diamond', 'emerald', 'sapphire', 'amethyst'].map(s => [`item_crystal_${s}`, s[0].toUpperCase() + s.slice(1)]),
 ].map(([id, name]) => ({ id, name, category: 'item', stackLimit: 99, model: model(id) }));
+// Crystals: enemies, guardians and chests drop them (core/gear/drops.js, core/chests.js); the
+// Enchanter in town wants one kind for each enchantment (core/gear/enchants.js, core/crafting.js).
+// No use of their own.
+export const CRYSTALS = [
+  ['ruby', 'Warm to the touch. The Enchanter makes weapons Toasty with it.'],
+  ['emerald', 'Smells faintly of swamp. The Enchanter makes weapons Icky with it.'],
+  ['sapphire', 'Always a little frosty. The Enchanter makes weapons Nippy with it.'],
+  ['amethyst', 'It tingles. The Enchanter makes weapons Zappy with it.'],
+  ['diamond', 'Very sparkly. The Enchanter makes weapons Shiny with it.'],
+].map(([s, description]) => ({ id: `item_crystal_${s}`, name: s[0].toUpperCase() + s.slice(1), category: 'item', stackLimit: 99,
+  model: model(`item_crystal_${s}`), crystal: true, description }));
+stackables.push(...CRYSTALS);
 // Tools are used, not consumed. `bound`: never leaves the bag (no Drop); `use`: what using it
 // does (game/quickbar.js useItem). They never lie on the floor, so they have no `model`; their
 // `picture` is the model the bag shows them as (render/itemviews.js). `together`: the name and

@@ -6,7 +6,7 @@ import { RARITIES, RARITY, rarityOdds, rollRarity } from '../src/core/gear/rarit
 import { AFFIXES, AFFIX, MAX_PREFIXES, MAX_SUFFIXES, MAX_TIER, affixTier, describeAffix } from '../src/core/gear/affixes.js';
 import { BASES, FAVOR } from '../src/core/gear/bases.js';
 import { rollWeapon, fixedWeapon, GEN_VERSION } from '../src/core/gear/generate.js';
-import { weaponDrops, potionDrops, enemyDrops, dropChance, potionChance, guardianDrops } from '../src/core/gear/drops.js';
+import { weaponDrops, potionDrops, crystalDrops, enemyDrops, dropChance, potionChance, guardianDrops } from '../src/core/gear/drops.js';
 import { itemStats, displayName, baseLine, affixLines, affixEntries, weaponDps, ilvlDamage, ARC, CRIT_CHANCE, CRIT_DAMAGE } from '../src/core/gear/stats.js';
 import { createInventory, addInstance, takeItem, equipItem, equippedItem, hasRoom } from '../src/core/inventory.js';
 import { createPlayerStats } from '../src/core/progression.js';
@@ -180,7 +180,7 @@ test('drops: seeded per enemy and world, likelier from tougher kinds, guardians 
   assert.ok(Object.values(ENEMY_KINDS).every(k => dropChance(k.xp) <= 0.15 && potionChance(k.xp) <= 0.1));
   const e = { id: '0,-4,0:spider:17', level: 3, kind: SPIDER };
   assert.deepEqual(weaponDrops(e, 9), weaponDrops(e, 9));
-  assert.deepEqual(enemyDrops(e, 9), [...weaponDrops(e, 9), ...potionDrops(e, 9)]);
+  assert.deepEqual(enemyDrops(e, 9), [...weaponDrops(e, 9), ...potionDrops(e, 9), ...crystalDrops(e, 9)]);
   for (const kind of [SPIDER, STUNDER, TRIANGLE]) {
     const n = 20000, ids = many(n, i => ({ id: `k:${kind.type}:${i}`, level: 6, kind }));
     const weapons = ids.reduce((a, x) => a + weaponDrops(x, 1).length, 0), potions = ids.reduce((a, x) => a + potionDrops(x, 1).length, 0);

@@ -20,7 +20,7 @@ import { guardianId } from '../core/guardians.js';
 import { STAGE_PROFILES, enemyProfile } from '../core/enemies.js';
 import { followMovers } from '../game/movers.js';
 import { Timeline, lerpAngle, PREDICT } from './sync.js';
-import { MODES, BURNING, TOXIC, rosterOf, rowOf } from './protocol.js';
+import { MODES, BURNING, TOXIC, CHILLED, ZAPPED, rosterOf, rowOf } from './protocol.js';
 
 const ASK_AGAIN = 1000;   // ms: a viewer without a roster asks the runner again
 
@@ -145,6 +145,8 @@ export class Viewer {
       e.lastHit = e.predUntil > now ? null : Number.isInteger(b[13]) ? b[13] : null;
       e.burning = b[11] & BURNING ? e.burning || { shown: true } : null;
       e.toxic = b[11] & TOXIC ? e.toxic || { shown: true } : null;
+      e.chilled = b[11] & CHILLED ? e.chilled || { shown: true } : null;
+      e.zapped = b[11] & ZAPPED ? 1 : 0;
       if (Number.isInteger(b[14]) && b[14] > 0) e.stage = b[14];   // a boss's stage and light (game/totnar.js)
       e.dark = b[15] === 1 ? 1 : 0;
       // a boss whose stages are profiles of their own (Squarlo a giant, game/squarlo.js), his tide

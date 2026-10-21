@@ -7,7 +7,12 @@
 // details or a tap on a quick bar slot put the selected bag item on the quick bar (again on the
 // same slot: off; game/quickbar.js); Use (Enter or a double-click on a bag item, after Equip)
 // uses it (and closes the bag): drinks a potion, takes a flask in hand. Trading with a villager (game/orders.js) opens it with their wares in a column
-// of their own (core/shops.js): Buy, Enter or a double-click buys one.
+// of their own (core/shops.js): Buy, Enter or a double-click buys one. The Enchanter and the
+// Smith work on a weapon from the bag instead (core/crafting.js): the last weapon selected in the
+// bag (at first the equipped one) is the one they work on (`work`). The Enchanter's column holds
+// her enchantments, each shown as its crystal: one selected says what it would do on that weapon
+// and what it costs, Enchant (Enter, a double-click) does it. At the Smith every affix of the
+// selected weapon has a Re-roll button.
 // Two tabs: the bag, and the quests (game/questpanel.js; U opens the panel there). Talking to a
 // villager (talkTo) opens the quests when they have something new for you (an offer, a quest to
 // hand in) or nothing to sell, else the bag with their wares; the other tab is a click away.
@@ -24,7 +29,9 @@ import { shopOf, priceOf, buy as buyWare } from '../core/shops.js';
 import { flaskStats, cooldownLeft } from '../core/potions.js';
 import { xpProgress, levelDamage } from '../core/progression.js';
 import { rarityOf } from '../core/gear/rarities.js';
-import { itemStats, baseLine, affixEntries, weaponDps } from '../core/gear/stats.js';
+import { itemStats, baseLine, affixEntries, enchantEntry, weaponDps } from '../core/gear/stats.js';
+import { ENCHANT, enchantValue, describeEnchant } from '../core/gear/enchants.js';
+import { enchantCost, canEnchant, enchantWeapon, rerollCost, rerollWeapon, ENCHANTER_SAYS, SMITH_SAYS, ENCHANTED_SAYS, REROLLED_SAYS } from '../core/crafting.js';
 import { itemName, defDescription } from './itemnames.js';
 import { together } from '../net/online.js';
 import { equipmentAllowed, equipOwnedWeapon, syncEquippedWeapon } from './equipment.js';
@@ -43,8 +50,9 @@ import { openQuests, closeQuests, drawQuests, onQuestChange } from './questpanel
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // selected: { from: 'bag', id: instanceId } | { from: 'floor', id: pickup id } |
-// { from: 'shop', id: item id } | null; trader: the villager whose wares are shown (or null)
-let selected = null, signature = '', shown = null, previousFocus = null, floorMode = false, trader = null;
+// { from: 'shop', id: item id (an enchantment's at the Enchanter) } | null; trader: the villager
+// whose wares are shown (or null); work: the weapon (instanceId) the Enchanter or the Smith works on
+let selected = null, signature = '', shown = null, previousFocus = null, floorMode = false, trader = null, work = null;
 // tab: 'bag' or 'quests'
 let tab = 'bag';
 
@@ -64,12 +72,13 @@ export function setInventoryOpen(open, villager = null, view = 'bag') {
   if (open) {
     trader = shopOf(villager) ? villager : null;
     floorMode = !trader && floorItems().length > 0; previousFocus = document.activeElement;
-    const first = floorMode && floorItems()[0], ware = trader && shopOf(trader).wares[0];
+    const first = floorMode && floorItems()[0], ware = trader && !shopOf(trader).service && shopOf(trader).wares[0];
+    work = player.inventory.equipped;
     selected = ware ? { from: 'shop', id: ware } : first ? { from: 'floor', id: first.id }
       : player.inventory.equipped ? { from: 'bag', id: player.inventory.equipped } : null;
     openQuests(villager);
     showTab(view);
-  } else { trader = null; closeQuests(); previousFocus?.focus(); }
+  } else { trader = null; work = null; closeQuests(); previousFocus?.focus(); }
 }
 // show tab `view` ('bag' or 'quests'), with the focus on its first thing
 function showTab(view) {
@@ -101,7 +110,7 @@ export function talkTo(v) {
   const quests = !!giver && (news || !shop);
   if (quests) for (const q of mine) if (q.state === 'offered') seenOffers.add(q.id);
   setInventoryOpen(true, v, quests ? 'quests' : 'bag');
-  if (state.inventoryOpen) setStatus(said ?? (quests ? `${v.title ?? GIVERS[giver]?.title}: ${news ? 'hello there!' : 'hello again.'}` : `${shop.title}: what will it be?`));
+  if (state.inventoryOpen) setStatus(said ?? (quests ? `${v.title ?? GIVERS[giver]?.title}: ${news ? 'hello there!' : 'hello again.'}` : `${shop.title}: ${shop.hello}`));
 }
 export const openShop = talkTo;
 // I (or V): the bag, open or closed (from the quests tab: over to the bag)
@@ -132,8 +141,27 @@ const floorPickup = id => floorItems().find(p => p.id === id) || null;
 function selectedItem() {
   if (selected?.from === 'bag') return ownedItem(player.inventory, selected.id);
   if (selected?.from === 'floor') return floorPickup(selected.id);
-  if (selected?.from === 'shop' && trader && shopOf(trader).wares.includes(selected.id)) return { itemId: selected.id, count: 1 };
+  if (selected?.from === 'shop' && trader && shopOf(trader).wares.includes(selected.id))
+    return ENCHANT[selected.id] ? { itemId: ENCHANT[selected.id].crystal, count: 1, enchant: selected.id } : { itemId: selected.id, count: 1 };
   return null;
+}
+// the weapon the Enchanter or the Smith works on (null: none, or not a weapon)
+function workItem() {
+  const w = work && ownedItem(player.inventory, work);
+  return w?.gen && ITEMS[w.itemId]?.weapon ? w : null;
+}
+const service = () => shopOf(trader)?.service ?? null;
+const pick = list => list[Math.floor(Math.random() * list.length)];
+// an enchantment selected at the Enchanter: what it would do on the weapon, what it costs
+function enchantText(id) {
+  const e = ENCHANT[id], w = workItem(), lines = [];
+  if (!w) return `${e.quip}\nSelect a weapon in your bag to enchant it.`;
+  const cost = enchantCost(w, id), now = enchantEntry(w), have = countOf(player.inventory, cost.crystal);
+  lines.push(describeEnchant(id, enchantValue(w, id)), e.quip,
+    `Costs ${cost.count} ${ITEMS[cost.crystal].name} (you have ${have}) and ${formatCoins(cost.copper)}`);
+  if (now?.id === id) lines.push(`It is ${e.name} already`);
+  else if (now) lines.push(`Replaces ${now.name}`);
+  return lines.join('\n');
 }
 // a potion or flask: what it does (a flask's numbers at the player's level, buffs included),
 // its cooldown, how many you have; in a shop its price
@@ -192,6 +220,21 @@ function compareText(item) {
     row('Critical chance %', s => Math.round(s.crit * 100))].join('')}</div>`;
 }
 
+// the colour enchantments are named in (the Enchanter's tint, a little brighter)
+const ENCHANT_CSS = '#8fe3d6';
+// a weapon's affix lines with their names, then its enchantment; at the Smith (reroll) each
+// affix with a Re-roll button, and what one costs
+function affixesHtml(item, reroll) {
+  const cost = reroll ? rerollCost(item) : null, copper = copperTotal(player.inventory);
+  const lines = affixEntries(item).map((a, i) => cost === null ? `<li>${esc(a.text)} <span class="affix-name">${esc(a.name)}</span></li>`
+    : `<li class="rerollable"><span>${esc(a.text)} <span class="affix-name">${esc(a.name)}</span></span><button class="reroll" data-reroll="${i}"${copper < cost
+      ? ' disabled title="Not enough coins"' : ` title="Re-roll ${esc(a.name)} · ${formatCoins(cost)}"`}>Re-roll</button></li>`);
+  const e = enchantEntry(item);
+  if (e) lines.push(`<li class="enchant">${esc(e.text)} <span class="affix-name">${esc(e.name)}</span></li>`);
+  if (cost !== null) lines.push(`<li class="reroll-cost">A re-roll: ${formatCoins(cost)} · the line becomes another (or itself, rolled anew)</li>`);
+  return lines.join('');
+}
+
 export function updateInventory() {
   $('inventory-overlay').hidden = !state.inventoryOpen;
   if (!state.inventoryOpen) return;
@@ -200,7 +243,7 @@ export function updateInventory() {
   const inv = player.inventory, equipped = equippedItem(inv), allowed = equipmentAllowed(), floor = floorMode ? floorItems() : [];
   if (selected && !selectedItem()) selected = null;
   const item = selectedItem(), sel = selected ? `${selected.from}:${selected.id}` : '';
-  const next = `${inv.version}:${sel}:${floorMode}:${trader?.name}:${floor.map(p => p.id)}:${allowed}:${state.equipping}:${player.hp}:${player.xp}:${state.statusMsg}:${together()}`;
+  const next = `${inv.version}:${sel}:${work}:${floorMode}:${trader?.name}:${floor.map(p => p.id)}:${allowed}:${state.equipping}:${player.hp}:${player.xp}:${state.statusMsg}:${together()}`;
   if (next !== signature || inv !== shown) draw(next, inv, equipped, allowed, floor, item);
   // the hero and the selected item turning (render/itemviews.js; real time: the game is paused)
   drawLiveViews($('inventory-panel'), (readiedFlask(player) ?? equippedWeapon(player))?.id ?? null, performance.now() / 1000);
@@ -208,9 +251,10 @@ export function updateInventory() {
 function draw(next, inv, equipped, allowed, floor, item) {
   signature = next; shown = inv;
   const xp = xpProgress(player), shop = shopOf(trader);
-  $('inventory-panel').classList.toggle('with-floor', floorMode || !!shop);
+  const column = !!shop?.wares.length, w = workItem();
+  $('inventory-panel').classList.toggle('with-floor', floorMode || column);
   $('inventory-floor-col').hidden = !floorMode;
-  $('inventory-shop-col').hidden = !shop;
+  $('inventory-shop-col').hidden = !column;
   $('inventory-progress').textContent = `Level ${player.level} · XP ${xp.current}/${xp.required} · HP ${Math.ceil(player.hp)}/${player.maxHp}`;
   // the loadout under the hero
   const color = equipped?.gen ? ` style="color:${rarityOf(equipped).css}"${rarityOf(equipped).glow?.rainbow ? ' class="rainbow"' : ''}` : '';
@@ -222,11 +266,18 @@ function draw(next, inv, equipped, allowed, floor, item) {
   const focusSlot = focus?.slot, focusFloor = focus?.floor, focusWare = focus?.ware;
   // the floor and the wares: a strip of square slots beside the bag (a row over it on a phone)
   const picture = (itemId, on) => on && itemModelReady(itemId) ? `<canvas data-live-item="${itemId}"></canvas>` : `<img src="${itemPicture(itemId)}" alt="">`;
-  if (shop) {
+  if (column) {
     const copper = copperTotal(inv);
     $('inventory-shop-title').textContent = shop.title;
     $('inventory-shop-title').title = `${shop.title} · ${shop.trade}`;
-    $('inventory-shop').innerHTML = shop.wares.map(id => {
+    // the Enchanter's: each enchantment as its crystal, dimmed when it cannot be had now, ringed
+    // when the weapon has it
+    if (shop.service === 'enchant') $('inventory-shop').innerHTML = shop.wares.map(id => {
+      const e = ENCHANT[id], on = selected?.from === 'shop' && selected.id === id, has = w?.gen.enchant === id;
+      const poor = !has && (!w || canEnchant(inv, w.instanceId, id) !== 'ok');
+      return `<button class="inventory-slot side-slot${on ? ' selected' : ''}${poor ? ' poor' : ''}${has ? ' worn' : ''}" role="option" aria-selected="${on}" data-ware="${id}" aria-label="${esc(e.name)}${has ? ', on it' : ''}" title="${esc(e.name)} · ${esc(ITEMS[e.crystal].name)}">${picture(e.crystal, on)}<span class="price">${esc(e.name)}</span></button>`;
+    }).join('');
+    else $('inventory-shop').innerHTML = shop.wares.map(id => {
       const def = ITEMS[id], on = selected?.from === 'shop' && selected.id === id, price = priceOf(id);
       return `<button class="inventory-slot side-slot${on ? ' selected' : ''}${copper < price ? ' poor' : ''}" role="option" aria-selected="${on}" data-ware="${id}" aria-label="${esc(def.name)}, ${formatCoins(price)}" title="${esc(def.name)} · ${formatCoins(price)}">${picture(id, on)}<span class="price">${formatCoins(price)}</span></button>`;
     }).join('');
@@ -243,7 +294,8 @@ function draw(next, inv, equipped, allowed, floor, item) {
     const worn = s && (s.instanceId === inv.equipped || s.itemId === inv.readied);
     // the border says how it is used (equipped or in hand: light blue; on the quick bar: dark
     // blue), the backdrop its rarity
-    return `<button class="inventory-slot${on ? ' selected' : ''}${rainbow(s) ? ' rainbow' : ''}${worn ? ' worn' : key >= 0 ? ' on-bar' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(itemName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? itemName(s) : 'Empty')}">${s ? `${picture(s.itemId, on)}${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
+    const worked = !!s && !on && !!w && s.instanceId === w.instanceId && !!shop?.service;   // what the Enchanter or the Smith works on
+    return `<button class="inventory-slot${on ? ' selected' : ''}${worked ? ' work' : ''}${rainbow(s) ? ' rainbow' : ''}${worn ? ' worn' : key >= 0 ? ' on-bar' : ''}"${rarity} data-slot="${i}" aria-pressed="${on}" aria-label="${def ? `${esc(itemName(s))}, ${s.count}${s.instanceId === inv.equipped ? ', equipped' : ''}${s.itemId === inv.readied ? ', in hand' : ''}${key >= 0 ? `, quick bar ${key + 1}` : ''}` : `Empty slot ${i + 1}`}" title="${esc(def ? itemName(s) : 'Empty')}">${s ? `${picture(s.itemId, on)}${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}${worn ? '<span class="equipped">E</span>' : ''}${key >= 0 ? `<span class="bar-key">${key + 1}</span>` : ''}` : ''}</button>`;
   }).join('');
   if (focusSlot !== undefined) $('inventory-grid').querySelector(`[data-slot="${focusSlot}"]`)?.focus();
   if (focusFloor !== undefined) ($('inventory-floor').querySelector(`[data-floor="${focusFloor}"]`)
@@ -253,10 +305,11 @@ function draw(next, inv, equipped, allowed, floor, item) {
   if (def) itemPicture(def.id);
   view.style.visibility = def && itemModelReady(def.id) ? '' : 'hidden';
   if (def) view.dataset.liveItem = def.id; else delete view.dataset.liveItem;
-  $('inventory-item-name').textContent = item ? itemName(item) : 'Select an item';
-  $('inventory-item-name').style.color = item?.gen ? rarityOf(item).css : '';
+  const ench = item?.enchant ?? null;   // an enchantment at the Enchanter
+  $('inventory-item-name').textContent = ench ? ENCHANT[ench].name : item ? itemName(item) : 'Select an item';
+  $('inventory-item-name').style.color = ench ? ENCHANT_CSS : item?.gen ? rarityOf(item).css : '';
   $('inventory-item-name').classList.toggle('rainbow', rainbow(item));
-  $('inventory-item-base').textContent = item ? baseLine(item) ?? '' : '';
+  $('inventory-item-base').textContent = ench ? (w ? `Enchantment for ${itemName(w)}` : 'Enchantment') : item ? baseLine(item) ?? '' : '';
   // the Quick bar row: the slot it is on lit (again: off)
   const barKey = selected?.from === 'bag' ? barIndexOf(inv, item) : -1, barShown = !!item && selected?.from === 'bag' && barAllowed(item.itemId);
   $('inventory-bar').style.visibility = barShown ? '' : 'hidden';   // (its room stays: the dialog keeps its size)
@@ -265,23 +318,32 @@ function draw(next, inv, equipped, allowed, floor, item) {
     b.setAttribute('aria-pressed', String(i === barKey));
     b.title = i === barKey ? `Take it off quick bar slot ${i + 1}` : `Put it on quick bar slot ${i + 1}`;
   });
-  $('inventory-item-stats').textContent = (def?.weapon ? weaponText(item)
+  $('inventory-item-stats').textContent = (ench ? enchantText(ench)
+    : def?.weapon ? weaponText(item)
     : def?.effect || def?.flask ? potionText(item, selected?.from)
     : def?.use ? `${def.stackLimit > 1 ? `Count ${item.count}\n` : ''}${defDescription(def)}${def.bound ? '\nBound: it cannot be dropped' : ''}`
-    : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\nNo use action yet` : selected ? '' : 'Select a bag slot to inspect it.');
-  $('inventory-item-compare').hidden = !def?.weapon;
-  $('inventory-item-affixes').innerHTML = item ? affixEntries(item).map(a => `<li>${esc(a.text)} <span class="affix-name">${esc(a.name)}</span></li>`).join('') : '';
-  $('inventory-item-compare').innerHTML = def?.weapon ? compareText(item) : '';
+    : def ? `Count ${item.count}\nStack limit ${def.stackLimit}\n${def.description ?? 'No use action yet'}` : selected ? '' : 'Select a bag slot to inspect it.');
+  $('inventory-item-compare').hidden = !def?.weapon || !!ench;
+  $('inventory-item-affixes').innerHTML = item && !ench ? affixesHtml(item, selected?.from === 'bag' && service() === 'reroll') : '';
+  $('inventory-item-compare').innerHTML = def?.weapon && !ench ? compareText(item) : '';
   const inBag = selected?.from === 'bag', isEquipped = inBag && item?.instanceId === inv.equipped;
   const equip = $('inventory-equip'), take = $('inventory-take'), drop = $('inventory-drop'), use = $('inventory-use'), buy = $('inventory-buy');
   use.hidden = !inBag || !def?.use;
   use.textContent = def?.use === 'drink' ? 'Drink' : def?.use === 'throw' ? (inv.readied === def.id ? 'Put away' : 'Take in hand') : 'Use';
-  const fromShop = selected?.from === 'shop' && !!item, poor = fromShop && copperTotal(inv) < priceOf(item.itemId);
+  const fromShop = selected?.from === 'shop' && !!item && !ench, poor = fromShop && copperTotal(inv) < priceOf(item.itemId);
   const full = fromShop && !hasRoom(inv) && !inv.slots.some(s => s?.itemId === item.itemId && s.count < ITEMS[s.itemId].stackLimit);
-  buy.hidden = !fromShop;
-  buy.disabled = poor || full;
-  buy.textContent = fromShop ? `Buy · ${formatCoins(priceOf(item.itemId))}` : 'Buy';
-  buy.title = poor ? 'Not enough coins' : full ? 'Your bag is full' : '';
+  buy.hidden = !fromShop && !ench;
+  if (ench) {   // the Enchanter's Enchant
+    const why = w ? canEnchant(inv, w.instanceId, ench) : 'unknown', cost = w && enchantCost(w, ench);
+    buy.disabled = why !== 'ok';
+    buy.textContent = w ? `Enchant · ${formatCoins(cost.copper)}` : 'Enchant';
+    buy.title = { poor: 'Not enough coins', crystals: w && `Needs ${cost.count} ${ITEMS[cost.crystal].name}`, same: `It is ${ENCHANT[ench].name} already`,
+      unknown: 'Select a weapon in your bag first' }[why] ?? '';
+  } else {
+    buy.disabled = poor || full;
+    buy.textContent = fromShop ? `Buy · ${formatCoins(priceOf(item.itemId))}` : 'Buy';
+    buy.title = poor ? 'Not enough coins' : full ? 'Your bag is full' : '';
+  }
   equip.hidden = !inBag || !def?.weapon;
   equip.disabled = !allowed || isEquipped;
   equip.textContent = isEquipped ? 'Equipped' : 'Equip';
@@ -321,10 +383,37 @@ async function drop() {
   selected = next ? { from: 'bag', id: next.instanceId } : null;
   refresh();
 }
-// buy one of the selected ware
+// the Enchanter puts enchantment `id` on the weapon she works on
+function enchant(id) {
+  const w = workItem();
+  if (!w) { setStatus('Select a weapon in your bag first'); return; }
+  const cost = enchantCost(w, id), was = enchantEntry(w), done = enchantWeapon(player.inventory, w.instanceId, id);
+  if (done === 'ok') {
+    sfx('spell', { pitch: 1.2 }); sfx('coin', { pitch: 0.8 });
+    setStatus(`Enchanter: ${ENCHANTED_SAYS[id]}${was ? ` (${was.name} wandered off, offended.)` : ''}`);
+    log('craft', { what: 'enchant', item: itemName(w), name: ENCHANT[id].name, price: formatCoins(cost.copper) });
+  } else setStatus({ poor: 'Not enough coins', crystals: `Not enough ${ITEMS[cost.crystal].name} (${cost.count} needed)`,
+    same: `It is ${ENCHANT[id].name} already`, unknown: 'That cannot be enchanted' }[done]);
+  refresh();
+}
+// the Smith re-rolls affix i of the selected weapon
+function reroll(i) {
+  const w = selected?.from === 'bag' && ownedItem(player.inventory, selected.id);
+  if (!w || service() !== 'reroll') return;
+  const cost = rerollCost(w), before = affixEntries(w).map(a => a.name), was = before[i], done = rerollWeapon(player.inventory, w.instanceId, i);
+  if (done === 'ok') {
+    sfx('hit', { pitch: 1.5 }); sfx('clink', { pitch: 0.7 }); sfx('coin', { pitch: 0.8 });
+    const rest = before.filter((_, j) => j !== i), into = affixEntries(w).map(a => a.name).find(n => !rest.includes(n)) ?? was;
+    setStatus(`Smith: ${pick(REROLLED_SAYS)} (${was} → ${into})`);
+    log('craft', { what: 'reroll', item: itemName(w), name: was, into, price: formatCoins(cost) });
+  } else setStatus(done === 'poor' ? 'Not enough coins' : 'Nothing to re-roll');
+  refresh();
+}
+// buy one of the selected ware (at the Enchanter: enchant the weapon with it)
 function buy() {
   const id = selected?.from === 'shop' && selected.id;
   if (!id || !trader) return;
+  if (service() === 'enchant') { enchant(id); return; }
   const done = buyWare(player.inventory, id);
   if (done === 'ok') {
     autoBar(player.inventory, id);
@@ -370,7 +459,16 @@ $('inventory-grid').addEventListener('click', e => {
   if (!button) return;
   const s = player.inventory.slots[Number(button.dataset.slot)];
   selected = s ? { from: 'bag', id: s.instanceId } : null;
+  // at the Enchanter or the Smith a weapon is what they work on now, and they say so
+  if (service() && s?.gen && ITEMS[s.itemId]?.weapon && work !== s.instanceId) {
+    work = s.instanceId;
+    setStatus(`${shopOf(trader).title}: ${(service() === 'enchant' ? ENCHANTER_SAYS : SMITH_SAYS)[rarityOf(s).id]}`);
+  }
   refresh();
+});
+$('inventory-item-affixes').addEventListener('click', e => {
+  const b = e.target.closest('[data-reroll]');
+  if (b && !b.disabled) reroll(Number(b.dataset.reroll));
 });
 $('inventory-grid').addEventListener('dblclick', e => { if (e.target.closest('[data-slot]')) act(); });
 $('inventory-floor').addEventListener('click', e => {

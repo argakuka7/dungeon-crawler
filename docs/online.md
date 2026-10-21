@@ -125,6 +125,10 @@ being helped up and getting back in. Up to four players, co-op.
 - A viewer fights what it is shown with its own weapons and rules. Its hits and statuses go to
   the runner (`hit`, `afflict`, via `net/online.js relay` from `game/sword.js hitEnemy` and
   `game/statuses.js`), which applies them (no hit pause or camera kick for a friend's hits).
+  Statuses are burning, poison, chill and zap (enchanted weapons, `game/enchants.js`); a
+  viewer tells the runner about each at most every 0.5 s per enemy (a zap every time), so an
+  Icky weapon's poison piles up a little slower on another's enemies. The rows carry which
+  statuses an enemy shows (`protocol.js` `BURNING`, `TOXIC`, `CHILLED`, `ZAPPED`).
   For 1.5 s the viewer's own result beats older rows from the runner; a death it saw first
   stays.
 - Blows on a viewer (bites, projectiles, beams) are decided on the runner against its

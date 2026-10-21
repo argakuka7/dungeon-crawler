@@ -43,7 +43,7 @@
 //                                      stays defeated for you; gate: a guardian's, now open;
 //                                      cube, n: one that comes back, its cube and life)
 //   hit     { id, damage, crit, dx, dz, kb }  viewer -> runner: I hurt enemy `id`
-//   afflict { id, status, spec }       viewer -> runner: I set it burning or poisoned
+//   afflict { id, status, spec }       viewer -> runner: I set it burning, poisoned, chilled or zapped
 //   hurt    { blow, fx, fz, nx, nz }   runner -> viewer: an enemy's blow landed on you
 //   shot    { n, id, spec, at }        runner -> viewers: enemy `id` threw projectile n
 //   landed  { n, end }                 runner -> viewers: ... and it ended
@@ -222,7 +222,8 @@ export function isMe(m) {
 // (new modes go at the end: an older game reads one it does not know as idle)
 // ('gone' and 'split': a boss away, or splitting, game/gusto.js)
 export const MODES = ['idle', 'walk', 'home', 'alert', 'chase', 'attack', 'search', 'defend', 'dead', 'hide', 'gone', 'split'];
-export const BURNING = 1, TOXIC = 2;
+// the statuses an enemy shows (bits of its row; enchanted weapons' chill and zap: game/enchants.js)
+export const BURNING = 1, TOXIC = 2, CHILLED = 4, ZAPPED = 8;
 const r2 = x => Math.round(x * 100) / 100;
 
 // What the guest needs to know about each enemy in this cube. Profiles (core/enemies.js, plain
@@ -263,7 +264,7 @@ const renewRow = e => [Math.round((e.clock ?? 0) * 1000) / 1000, e.rewinding ? 1
 export function rowOf(e, i, runner = 0) {
   const b = e.beam;
   return [i, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), Math.max(0, MODES.indexOf(e.mode)), r2(e.mode === 'dead' ? e.deadT : e.t),
-    e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0),
+    e.attacks, e.attack, r2(e.speed), e.hp, (e.burning ? BURNING : 0) | (e.toxic ? TOXIC : 0) | (e.chilled ? CHILLED : 0) | (e.zapped > 0 ? ZAPPED : 0),
     b ? beamRow(b) : 0, e.lastHit ?? runner, e.stage ?? 0, e.dark ? 1 : 0, e.bolts?.length ? e.bolts.map(beamRow) : 0,
     e.tide ? r2(e.tide) : 0, e.under ? 1 : 0, ...e.turns !== undefined ? [flipRow(e)] : e.eyes !== undefined ? [0, foggeryRow(e)]
       : e.boss === 'renew' && e.clock !== undefined ? [0, 0, renewRow(e)] : []];

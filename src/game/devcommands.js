@@ -4,10 +4,11 @@
 import { addCommand, addType } from '../core/commands.js';
 import { ITEMS } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
-import { addItem } from '../core/inventory.js';
+import { addItem, equippedItem } from '../core/inventory.js';
 import { xpForLevel, levelFromXP, maxHealth } from '../core/progression.js';
 import { MAX_ILVL } from '../core/gear/generate.js';
 import { RARITY } from '../core/gear/rarities.js';
+import { ENCHANTS, ENCHANT, enchantOf, describeEnchant } from '../core/gear/enchants.js';
 import { online } from '../net/online.js';
 import { player, state } from './state.js';
 import { commands } from './commands.js';
@@ -200,6 +201,19 @@ dev({
     const name = `${ITEMS[weapon].name} (${RARITY[rarity].name}, item level ${level})`;
     if (drop) return devDropWeapon(weapon, rarity, level) ? `Dropped: ${name}` : 'Could not drop it here';
     return await devSwapWeapon(weapon, rarity, level) ? `Equipped: ${name}` : 'Could not equip it (bag full, or busy)';
+  },
+});
+addType(commands, { name: 'enchant', values: () => [...ENCHANTS.map(e => ({ value: e.id, label: e.name })), { value: 'off', label: 'off' }] });
+dev({
+  name: 'enchant', help: 'enchant the equipped weapon, for free (off: take it off)', args: [{ name: 'enchantment', type: 'enchant' }],
+  run({ enchantment }) {
+    const w = equippedItem(player.inventory);
+    if (!w?.gen) return 'No weapon equipped';
+    const { enchant, ...gen } = w.gen;
+    w.gen = enchantment === 'off' ? gen : { ...gen, enchant: enchantment };
+    player.inventory.version++;
+    const e = enchantOf(w);
+    return e ? `${ENCHANT[e.id].name}: ${describeEnchant(e.id, e.value)}` : 'Not enchanted any more';
   },
 });
 dev({

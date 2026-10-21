@@ -18,7 +18,8 @@ docs that explain how the game works, from the big ideas down to the real code:
 
 - `index.html`, `style.css`, `src/`: the game.
   - `src/core/`: pure rules and data (constants, combat, items, inventory, ...);
-    `src/core/gear/` is the weapon generator (rarities, affixes, names, drops; `docs/loot.md`).
+    `src/core/gear/` is the weapon generator (rarities, affixes, names, drops, enchantments;
+    `docs/loot.md`); `src/core/crafting.js` is the town's Enchanter and Smith working on weapons.
   - `src/world/`: the world graph and everything shared between cubes (layout, WFC, faces,
     falls across faces, sites, town plan, the trial rooms' plan), plus the worker that owns it.
     Trial rooms (`docs/trials.md`): planned in `src/world/trials.js`, built in `src/cubegen/trials/`,

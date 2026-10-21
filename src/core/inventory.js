@@ -145,6 +145,18 @@ export function removeItem(inv, instanceId, count = 1) {
   inv.version++;
   return true;
 }
+// `count` of item `itemId` out of the bag, from as many stacks as it takes (the last ones first);
+// all or nothing: false when there are fewer
+export function spendItem(inv, itemId, count = 1) {
+  whole(count);
+  if (countOf(inv, itemId) < count) return false;
+  let left = count;
+  for (let i = inv.slots.length - 1; left && i >= 0; i--) {
+    const s = inv.slots[i];
+    if (s?.itemId === itemId) { const take = Math.min(left, s.count); removeItem(inv, s.instanceId, take); left -= take; }
+  }
+  return true;
+}
 
 // Quick bar: weapons (equip on use) and items with a use action.
 export const barAllowed = itemId => !!(ITEMS[itemId]?.weapon || ITEMS[itemId]?.use);

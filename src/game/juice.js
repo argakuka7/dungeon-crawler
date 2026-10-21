@@ -286,6 +286,12 @@ function boltFx(b, what) {
 export function zappedFx() {
   floatText('Zapped!', q => q.set(player.x, player.visY + 1.65, player.z), { color: '#fff3a0', size: 0.22, life: 0.9, rise: 0.6 });
 }
+// an enemy stunned by a Zappy weapon (game/enchants.js); its sparks: render/statuses.js
+export function enemyZappedFx(e) {
+  if (e.proxy) return;
+  floatText('Zap!', { x: e.x, y: e.y + e.profile.bodyHeight + 0.35, z: e.z }, { color: '#fff3a0', size: 0.2, life: 0.7, rise: 0.6 });
+  sfx('zap', { at: e, volume: 0.6, pitch: 1.3 });
+}
 // squashed flat by a giant landing on us (game/enemycombat.js, a blow's `daze`): the hero goes
 // flat as a pancake and springs back (render/animator.js), dazed, seeing stars (render/shocked.js)
 export const FLAT = 0.9;   // s the squash shows

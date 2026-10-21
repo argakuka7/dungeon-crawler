@@ -8,6 +8,8 @@
 // unluckiest tenth of the runs (the level and damage per second only 10% arrive below), and
 // `rng%` the runs that have seen a bow, crossbow or staff drop by then (kept or not). `trials`:
 // the trial rooms on the way (docs/trials.md) and the minutes they take (core/trials.js trialTime).
+// Then what each depth pays (copper from kills and chests, crystals) beside what the Enchanter
+// and the Smith ask for weapons of its item level (core/crafting.js).
 //   node tools/balance.mjs farm [respawns, default 6] [seeds, default 200]
 // Farming the road out of town before Gusto: every ordinary enemy of depth 0 (not the side
 // guardian's arena) is killed once a life, as often as they come back (core/respawn.js: every
@@ -19,7 +21,7 @@ const { enemyFreeAt } = await import('../src/world/town.js');
 const { population } = await import('../src/core/spawns.js');
 const { BOSSES } = await import('../src/core/bosses.js');
 const { swarmKind } = await import('../src/core/hordes.js');
-const { ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, enemyProfile, enemyRoll, guardianLevel, threat, attackDamage, depthLevel } =
+const { ENEMY_KINDS, GUARDIAN_KINDS, DESCENT_GUARDIAN_KINDS, enemyProfile, enemyRoll, guardianLevel, threat, attackDamage, depthLevel, coinRange } =
   await import('../src/core/enemies.js');
 const { enemyDrops } = await import('../src/core/gear/drops.js');
 const { chestLoot } = await import('../src/core/chests.js');
@@ -32,6 +34,7 @@ const { RESPAWN } = await import('../src/core/respawn.js');
 const { ITEMS } = await import('../src/core/items.js');
 const { trialTime } = await import('../src/core/trials.js');
 const { hordeKinds, hordeSize } = await import('../src/world/hordes.js');
+const { enchantCost, rerollCost } = await import('../src/core/crafting.js');
 
 const ranged = item => ITEMS[item.itemId]?.weapon?.kind !== 'sword';
 const SEEDS = Number(process.argv[2] || 8), SHARE = Number(process.argv[3] || 0.6);
@@ -50,7 +53,7 @@ let beforeBoss = 0;   // runs that saw a ranged weapon drop before fighting the 
 for (let seed = 1; seed <= SEEDS; seed++) {
   const R = mulberry32(hash32(seed * 7919)), layouts = makeLayouts(seed);
   const p = { ...P.createPlayerStats(), x: 0, y: 0, z: 0, yaw: 0, stun: 0, sword: swordState() }, run = P.createRun();
-  let serial = 0, potions = 0, copper = 0, row = null, seenRanged = false;
+  let serial = 0, potions = 0, row = null, seenRanged = false;
   const offer = (item, from) => {   // keep a weapon when it beats the one in hand
     if (ranged(item)) seenRanged = true;
     const before = dps(p), id = addInstance(p.inventory, item), was = p.inventory.equipped;
@@ -59,11 +62,12 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     if (dps(p) > before) { takeItem(p.inventory, was); row.upgrades[from]++; }
     else { equipItem(p.inventory, was); takeItem(p.inventory, id); }
   };
-  const take = (items, from) => { for (const i of items) if (i.gen) offer(i, from); else potions += i.count; };
+  const take = (items, from) => { for (const i of items) if (i.gen) offer(i, from); else if (ITEMS[i.itemId].crystal) row.crystals += i.count; else potions += i.count; };
   const kill = (kind, level, extra = {}) => {
     const e = { id: `s${seed}:${serial++}`, level, kind, mode: 'dead', hp: 0, profile: enemyProfile(kind, level), coinDrop: 0, ...extra };
     const before = p.xp;
     P.awardKill(p, run, e);
+    const [lo, hi] = coinRange(kind, level); row.copper += (lo + hi) / 2;
     row.xpShare += (p.xp - before) / e.profile.xp; row.kills++;
     take(enemyDrops(e, seed, favoredKind(p)), extra.guardian ? 'guardian' : 'enemy');
   };
@@ -71,7 +75,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
     const L = layouts(depth), s = combatStats(p);
     row = rows[depth] ??= { depth, n: 0, level: 0, hp: 0, hit: 0, dps: 0, interval: 0, kills: 0, xp: 0, xpShare: 0, potions: 0, chests: 0,
       upgrades: { enemy: 0, guardian: 0, chest: 0 }, weapons: new Map(), kinds: new Map(), guards: { side: [], descent: [] },
-      levels: [], dpss: [], ranged: 0, trials: 0, trialTime: 0 };
+      levels: [], dpss: [], ranged: 0, trials: 0, trialTime: 0, copper: 0, crystals: 0 };
     row.n++; row.level += p.level; row.hp += p.maxHp; row.hit += s.damage; row.dps += dps(p); row.interval += s.interval;
     row.levels.push(p.level); row.dpss.push(dps(p)); row.ranged += seenRanged;
     const w = equippedItem(p.inventory), wl = `${w.gen.rarity} ${w.itemId.replace('weapon_', '').replace('_', ' ')} i${w.gen.ilvl}`;
@@ -110,7 +114,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
         if (g.boss === BOSSES[0]) beforeBoss += seenRanged;
         kill(kind, level, { guardian: true, guardianRole: g.role });
       }
-      for (const site of L.sitePlans.get(k) || []) { const c = chestLoot(site, depth, seed, favoredKind(p)); take(c.items, 'chest'); copper += c.copper; row.chests++; }
+      for (const site of L.sitePlans.get(k) || []) { const c = chestLoot(site, depth, seed, favoredKind(p)); take(c.items, 'chest'); row.copper += c.copper; row.chests++; }
     }
     row.xp += p.xp - xp0; row.potions += potions - potions0;
   }
@@ -128,6 +132,13 @@ for (const r of rows) {
 const trialMinutes = rows.reduce((s, r) => s + r.trialTime / r.n, 0) / 60;
 console.log(`\nTrial rooms take about ${f(trialMinutes, 1)} minutes of a run (their own time, on top of the walking and the fights).`);
 console.log(`\nBefore Gusto, ${f(beforeBoss / SEEDS * 100)}% of the runs have seen a ranged weapon drop (node tools/balance.mjs farm: when farming).`);
+console.log('\nWhat a depth pays (copper from kills and chests, crystals of all kinds) and what the Enchanter and the Smith ask for its');
+console.log('weapons (item level = the depth\'s; a re-roll on an Unusual and on a Fabled one):');
+console.log('depth  copper  crystals   enchant         re-roll  unusual  fabled');
+for (const r of rows) {
+  const n = r.n, ilvl = depthLevel(r.depth), w = rarity => ({ itemId: 'weapon_sword_long', gen: { rarity, ilvl, affixes: [{}] } }), e = enchantCost(w('unusual'), 'toasty');
+  console.log(`${String(r.depth).padStart(5)} ${f(r.copper / n).padStart(7)} ${f(r.crystals / n, 1).padStart(9)}   ${`${e.copper}c + ${e.count}`.padEnd(14)}  ${String(rerollCost(w('unusual'))).padStart(15)}  ${String(rerollCost(w('fabled'))).padStart(6)}`);
+}
 console.log('\nOrdinary kinds on arrival: level, the hits it takes, the blows it needs to kill the player');
 for (const r of rows) {
   const n = r.n, hit = r.hit / n, hp = r.hp / n;
