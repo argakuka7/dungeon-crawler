@@ -66,7 +66,7 @@ import { beams } from './game/beams.js';
 import { tickBurning } from './render/burning.js';
 import { tickFlames } from './render/flames.js';
 import { tickChill } from './render/chilled.js';
-import { tickShock } from './render/shocked.js';
+import { tickShock, tickDaze } from './render/shocked.js';
 import { tickStatuses } from './render/statuses.js';
 import { updateEffects } from './game/effects.js';
 import { updateAim } from './game/throws.js';
@@ -141,7 +141,7 @@ function frame(now = performance.now()) {
   updateFootsteps();   // on the cycle the animator just advanced
   updateSounds(dt); updateAmbience(dt);
   tickFluidDeath(dt);
-  tickBurning(dt); tickChill(dt); tickShock(dt); tickStatuses(allEnemies(), dt);
+  tickBurning(dt); tickChill(dt); tickShock(dt); tickDaze(dt); tickStatuses(allEnemies(), dt);
   drawTravelEnemies(dt);
   updateLoot(dt, state.time);
   tickFloatText(dt);
@@ -218,7 +218,7 @@ function menuFrame(dt, start) {
   updateMenu();
   updateShowcase(dt);
   if (state.map && !state.transitioning) updateEnemies(dt);
-  tickBurning(dt); tickChill(dt); tickShock(dt); tickStatuses(allEnemies(), dt);
+  tickBurning(dt); tickChill(dt); tickShock(dt); tickDaze(dt); tickStatuses(allEnemies(), dt);
   tickFloatText(dt); tickParticles(dt);
   tickProps(state.time);
   tickFlames(dt, state.time, menuFocus);

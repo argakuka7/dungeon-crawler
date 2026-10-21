@@ -393,6 +393,12 @@ const SOUNDS = {
     noise(t, 0.5, filter('highpass', 3500 * p, 0.6, amp(t, 0.02, 0.25, 0.45, out)));
     tone('sine', 220 * p, 120 * p, t, 0.12, amp(t, 0.002, 0.3, 0.12, out));
   },
+  cannon(t, out, p) {    // a giant Squarlo's water cannon: a deep boom, then a long roaring gush of water
+    tone('sine', 80 * p, 40 * p, t, 0.5, amp(t, 0.005, 0.9, 0.5, out));
+    noise(t, 1.3, filter('lowpass', 1400 * p, 0.7, amp(t, 0.04, 0.7, 1.25, out)));
+    sweep(t, 1.3, 600 * p, 2400 * p, 900 * p, 0.6, 0.45, out, 0.05);
+    noise(t + 0.05, 1.1, filter('highpass', 3000 * p, 0.5, amp(t + 0.05, 0.05, 0.2, 1.05, out)));
+  },
   spit(t, out, p) {      // a Squirtle spitting water: a wet puh with a gulp before it
     tone('sine', 300 * p, 520 * p, t, 0.06, amp(t, 0.003, 0.3, 0.06, out));
     noise(t + 0.05, 0.12, filter('bandpass', 1800 * p, 1.2, amp(t + 0.05, 0.004, 0.55, 0.11, out)));

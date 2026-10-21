@@ -6,6 +6,9 @@ import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { muzzleAt } from '../core/beams.js';
 import { strikeBolt, eruptGeyser } from '../render/beams.js';
+import { cannonJet, jetSplash } from '../render/giantfx.js';
+import { groundAt } from '../physics/collide.js';
+import { N } from '../core/constants.js';
 
 let stop = 0;
 // world-space camera offset that springs back (camera.js)
@@ -22,6 +25,14 @@ export function timeScale(elapsed) {
 export function cameraKick(dx, dz, amount, dy = 0) {
   const l = Math.hypot(dx, dz) || 1;
   kick.x += dx / l * amount; kick.z += dz / l * amount; kick.y += dy;
+}
+// the ground shaking (camera.js trembles the view): `amount` rad at its strongest, dying away
+export const tremor = { a: 0, t: 0 };
+export function quake(amount) { tremor.a = Math.min(0.05, Math.max(tremor.a, amount)); }
+// a quake at (x, z) felt by our player: `amount` right there, nothing from `far` cells away
+export function quakeAt(x, z, amount, far) {
+  const d = Math.hypot(x - player.x, z - player.z);
+  if (d < far) quake(amount * (1 - d / far) ** 1.5);
 }
 
 // the player's blade hit enemy e for dmg (killed: that was the last of its health);
@@ -275,6 +286,15 @@ function boltFx(b, what) {
 export function zappedFx() {
   floatText('Zapped!', q => q.set(player.x, player.visY + 1.65, player.z), { color: '#fff3a0', size: 0.22, life: 0.9, rise: 0.6 });
 }
+// squashed flat by a giant landing on us (game/enemycombat.js, a blow's `daze`): the hero goes
+// flat as a pancake and springs back (render/animator.js), dazed, seeing stars (render/shocked.js)
+export const FLAT = 0.9;   // s the squash shows
+export function squashedFx() {
+  player.flat = FLAT;
+  floatText('Squashed!', q => q.set(player.x, player.visY + 1.3, player.z), { color: '#bff4ff', size: 0.28, life: 1.2, rise: 0.5, pop: 1 });
+  sfx('bonk', { at: player, pitch: 0.7 });
+  sfx('dizzy', { at: player });
+}
 
 // The Wolla's storm (game/gusts.js), spec g: lightning out of its cloud ('thunder', i: which
 // bolt), the blow starting ('blow'), and the gust blowing for a frame of dt ('gust'): wind
@@ -285,6 +305,7 @@ export function stormFx(e, g, what, arg = 0) {
   if (g.kind === 'vortex') { vortexFx(e, g, what, arg); return; }
   if (g.kind === 'jet') { jetFx(e, g, what, arg); return; }
   if (g.kind === 'inhale') { inhaleFx(e, g, what, arg); return; }
+  if (g.kind === 'cannon') { cannonFx(e, g, what, arg); return; }
   const size = e.profile.size ?? 1, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), dt = arg;
   if (what === 'thunder') {
     const at = muzzleAt(e, BOLTS[arg % 2].map(v => v * size));
@@ -328,22 +349,95 @@ export function stormFx(e, g, what, arg = 0) {
   }
 }
 
-// A giant's stomp (a beam of kind 'stomp', game/beams.js; its shadow: render/beams.js): when it
-// comes down ('burst'), a boom, the ground shaking, a ring of dust and spray running out from
-// the foot. (Started or put out: nothing to show.)
+// A giant's stomp or his landing (a beam of kind 'stomp', game/beams.js; its shadow:
+// render/beams.js): when it comes down ('burst'), a boom, the ground shaking, a ring of dust and
+// spray bursting out from under the foot (the shockwave running on: game/quakes.js, waveFx).
+// (Started or put out: nothing to show.)
 function stompFx(b, what) {
   if (what !== 'burst') return;
-  const { ex: x, ey: y, ez: z } = b, d = Math.hypot(x - player.x, z - player.z);
-  sfx('stomp', { at: { x, y, z } });
-  for (let i = 0; i < 48; i++) {
-    const a = rand(0, Math.PI * 2), s = rand(3, 6), r = b.spec.radius * 0.8;
-    emit(soft, x + Math.cos(a) * r, y + 0.1, z + Math.sin(a) * r, { v: [Math.cos(a) * s, rand(0.2, 1.2), Math.sin(a) * s], life: rand(0.5, 0.9),
-      size: rand(0.3, 0.55), grow: 1.4, color: i % 3 ? '#c9c0ae' : '#e8f6ff', alpha: 0.5, drag: 2.5 });
+  const { ex: x, ey: y, ez: z } = b, r = b.spec.radius, big = r / 1.15;
+  sfx('stomp', { at: { x, y, z }, pitch: 1.15 / Math.sqrt(big) });
+  for (let i = 0; i < 40 * big; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(3, 7) * Math.sqrt(big), d = r * rand(0.5, 0.9);
+    emit(soft, x + Math.cos(a) * d, y + 0.1, z + Math.sin(a) * d, { v: [Math.cos(a) * s, rand(0.3, 1.6), Math.sin(a) * s], life: rand(0.5, 0.9),
+      size: rand(0.3, 0.6), grow: 1.4, color: i % 3 ? '#c9c0ae' : '#e8f6ff', alpha: 0.55, drag: 2.5 });
   }
-  for (let i = 0; i < 24; i++)
-    emit(soft, x + rand(-0.6, 0.6), y + 0.15, z + rand(-0.6, 0.6), { v: [rand(-2.5, 2.5), rand(2, 5), rand(-2.5, 2.5)], life: rand(0.5, 0.9),
-      size: rand(0.06, 0.12), color: DROPS[i % 3], alpha: 0.9, gravity: 10, drag: 0.6 });
-  if (d < 10) cameraKick(0, 0, 0, 0.16 * (1 - d / 10));
+  for (let i = 0; i < 24 * big; i++)
+    emit(soft, x + rand(-r, r) * 0.6, y + 0.15, z + rand(-r, r) * 0.6, { v: [rand(-3, 3), rand(3, 6.5), rand(-3, 3)], life: rand(0.5, 0.9),
+      size: rand(0.06, 0.13), color: DROPS[i % 3], alpha: 0.9, gravity: 10, drag: 0.6 });
+  emit(glow, x, y + 0.2, z, { life: 0.18, size: 2.2 * r, grow: 1.2, color: '#fff6e0', alpha: 0.35 });
+  quakeAt(x, z, 0.03 * big, 18);
+  if (Math.hypot(x - player.x, z - player.z) < 10) cameraKick(0, 0, 0, 0.2 * big);
+}
+// a shockwave starts running out (game/quakes.js): a deep rumble rolling away under the floor
+export function waveFx(w) {
+  sfx('rumble', { at: w, pitch: 0.7, volume: 0.8 });
+  quakeAt(w.x, w.z, 0.022, 14);
+}
+// a giant springs off the floor (game/squarlo.js leap): a whump, a burst of dust from under his
+// feet, the ground jolting
+export function leapFx(e) {
+  const s = Math.sqrt(e.profile.size ?? 1);
+  sfx('whump', { at: e, pitch: 0.5 });
+  sfx('jump', { at: e, pitch: 0.45, volume: 0.9 });
+  for (let i = 0; i < 26; i++) {
+    const a = rand(0, Math.PI * 2), v = rand(1.5, 3.5);
+    emit(soft, e.x + Math.cos(a) * 0.3 * s, e.y + 0.1, e.z + Math.sin(a) * 0.3 * s, { v: [Math.cos(a) * v, rand(0.2, 1), Math.sin(a) * v],
+      life: rand(0.5, 0.8), size: rand(0.25, 0.45), grow: 1.3, color: i % 3 ? '#c9c0ae' : '#e8f6ff', alpha: 0.5, drag: 2.5 });
+  }
+  quakeAt(e.x, e.z, 0.012, 12);
+}
+// one of a giant's footfalls as he walks (render/enemies.js): a thud and a little jolt
+export function footfallFx(x, y, z, size) {
+  sfx('thud', { at: { x, y, z }, pitch: 0.45, volume: 0.55 });
+  for (let i = 0; i < 6; i++) {
+    const a = rand(0, Math.PI * 2), v = rand(0.6, 1.4);
+    emit(soft, x + Math.cos(a) * 0.4, y + 0.06, z + Math.sin(a) * 0.4, { v: [Math.cos(a) * v, rand(0.1, 0.5), Math.sin(a) * v],
+      life: rand(0.4, 0.7), size: rand(0.18, 0.3), grow: 1.2, color: '#c9c0ae', alpha: 0.4, drag: 2.5 });
+  }
+  quakeAt(x, z, 0.004 * Math.sqrt(size), 12);
+}
+
+// A giant's water cannon (a gust of kind 'cannon', game/gusts.js), blasted down from his hands
+// onto the floor ahead, sweeping across: water swirling into his cupped hands while it gathers
+// ('inhale'), a burst and a roar as it starts ('blow'), and while it blasts ('gust', for a frame
+// of dt) the jet arching down (render/giantfx.js), spray thrown up where it lands and water
+// rushing on along the floor to the end of its reach, the ground rumbling under it.
+function cannonFx(e, g, what, dt) {
+  const o = muzzleAt(e, g.muzzle), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), sx = fz, sz = -fx, size = Math.sqrt(e.profile.size ?? 1);
+  if (what === 'inhale') {
+    for (let n = Math.floor(60 * dt + Math.random()); n > 0; n--) {
+      const a = rand(0, Math.PI * 2), r = rand(0.6, 1.4), life = rand(0.25, 0.4);
+      const x = o.x + Math.cos(a) * r, y = o.y + rand(-0.6, 0.5), z = o.z + Math.sin(a) * r;
+      emit(soft, x, y, z, { v: [(o.x - x) / life - Math.sin(a) * 2, (o.y - y) / life, (o.z - z) / life + Math.cos(a) * 2], life,
+        size: rand(0.08, 0.15), color: DROPS[n % 3], alpha: 0.85 });
+    }
+    return;
+  }
+  if (what === 'blow') {
+    sfx('cannon', { at: o });
+    emit(glow, o.x, o.y, o.z, { life: 0.25, size: 2.2, grow: 1.4, color: '#e8fbff', alpha: 0.5 });
+    if (Math.hypot(o.x - player.x, o.z - player.z) < 12) cameraKick(fx, fz, 0.1, 0.05);
+    quakeAt(o.x, o.z, 0.012, 14);
+    return;
+  }
+  if (what !== 'gust') return;
+  // it lands about two thirds of its reach out (short of the cube's edge), on the floor there; the
+  // water runs on from there
+  const edge = (p, f) => f > 1e-6 ? (N - 0.3 - p) / f : f < -1e-6 ? (0.3 - p) / f : Infinity;
+  const land = Math.max(1, Math.min(g.range * 0.62, edge(o.x, fx), edge(o.z, fz)));
+  const gx = o.x + fx * land, gz = o.z + fz * land, gh = groundAt(gx, gz, e.y + 1, 0).h;
+  const floor = Number.isFinite(gh) ? gh : e.y;
+  const at = cannonJet(e, o, fx, fz, floor, land, size, e.t);
+  jetSplash(at, fx, fz, dt, size * 0.6);
+  for (let n = Math.floor(50 * dt + Math.random()); n > 0; n--) {   // spray along its whole reach
+    const s = rand(g.near, g.range), w = (g.width + g.spread * s) * rand(-1, 1), v = rand(2, 5);
+    const x = o.x + fx * s + sx * w, z = o.z + fz * s + sz * w;
+    emit(soft, x, floor + 0.08, z, { v: [fx * v, rand(0.3, 1.4), fz * v], life: rand(0.35, 0.6), size: rand(0.16, 0.3), grow: 1.3,
+      color: n % 3 ? '#e6f8ff' : '#9fdcf2', alpha: 0.55, drag: 1.5, gravity: 2 });
+  }
+  if (Math.random() < dt * 20) sfx('spray', { at, pitch: rand(0.5, 0.7), volume: 0.5 });
+  quakeAt(o.x, o.z, 0.004, 12);
 }
 // Squarlo starts calling the tide (game/gusts.js): a deep swell of sound and water welling up
 // in a ring round him

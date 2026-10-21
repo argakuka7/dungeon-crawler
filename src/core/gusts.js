@@ -5,15 +5,18 @@
 // heading. A body (a vertical capsule: x, y, z, r, h) is in it while it is no more than
 // spec.range ahead of the mouth, within spec.width + spec.spread × (how far ahead) either side
 // of the gust's line (its radius included), and the mouth is level with it give or take
-// RISE.
+// RISE. One blown `down` from high up (Squarlo's water cannon) comes down onto the floor ahead:
+// it catches a body from spec.near ahead on, anywhere under the mouth and no further below the
+// enemy's feet than RISE.
 import { muzzleAt } from './beams.js';
 
 export const RISE = 0.6;   // cells above its head or below its feet the gust still catches a body
 export function inGust(e, spec, p) {
   const o = muzzleAt(e, spec.muzzle), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
   const dx = p.x - o.x, dz = p.z - o.z, ahead = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx);
-  if (ahead < -p.r || ahead > spec.range + p.r) return false;
+  if (ahead < (spec.near ?? 0) - p.r || ahead > spec.range + p.r) return false;
   if (side > spec.width + spec.spread * Math.max(0, ahead) + p.r) return false;
+  if (spec.down) return p.y < o.y && p.y > e.y - RISE;
   return o.y > p.y - RISE && o.y < p.y + p.h + RISE;
 }
 // which way it blows a body it caught (unit [x, z]): along the gust, turned a little outwards

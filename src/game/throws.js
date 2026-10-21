@@ -23,7 +23,7 @@ import { douses } from '../core/douse.js';
 import { screenToWorld, aimReach } from '../core/stick.js';
 import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
-import { absent } from '../core/enemies.js';
+import { absent, hurtBy } from '../core/enemies.js';
 
 export let flasks = [], areas = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -77,7 +77,7 @@ function burst(f, enemies) {
   for (const { e, share } of f.ghost ? [] : burstVictims(at, s.radius, enemies)) {
     if (!clearLine(at.x, at.y + 0.25, at.z, e.x, e.y + e.profile.bodyHeight * 0.5, e.z)) continue;
     if (s.blast) {
-      const before = e.hp, damage = Math.max(1, Math.round(s.blast * share));
+      const before = e.hp, damage = Math.max(1, Math.round(s.blast * share * hurtBy(e)));
       if (damageEnemy(e, damage)) hitEnemy(e, { damage, crit: false }, before, e.x - at.x, e.z - at.z, s.burn ? 0.4 : 1.8);
     }
     if (s.burn) afflictEnemy(e, 'burning', s.burn);

@@ -25,6 +25,8 @@ export const player = {
   gust: null,      // blown back by a Wolla's storm (core/gusts.js pushStep)
   pull: null,      // drawn in by Gusto breathing in (game/gusts.js, physics/move.js)
   shocked: 0,      // stunned by a Wolk's bolt: how long its sparks still crackle (render/shocked.js)
+  dazed: 0,        // squashed flat by a giant (Squarlo): how long the stars still circle (render/shocked.js)
+  flat: 0,         // ... and how long the squash still shows on the hero (render/animator.js)
   // event counters the animator watches
   jumpCount: 0, landCount: 0, landImpact: 0,
   ragdoll: null, getUp: null,   // getting up after a ragdoll (game/ragdoll.js)

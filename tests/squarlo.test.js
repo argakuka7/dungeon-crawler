@@ -4,9 +4,10 @@ import { state } from './fixtures.js';
 import { World } from '../src/world/world.js';
 import { BOSSES, bossAt, BOSS_ARENAS } from '../src/core/bosses.js';
 import { SQUARLO, SQUARLO_GIANT, SQUIRTLE, TIDE_SQUIRTLE, CORAL_SQUIRTLE, ENEMY_KINDS, GUARDIAN_TIERS, STAGE_PROFILES,
-  makeEnemy, guardianLevel, attacksInReach, blowOf, fireAt, exposedBy, wardedNow, absent } from '../src/core/enemies.js';
-import { SQUARLO_FIGHT, splitHp, summonCount, newTide, stepTide, raiseTide, drainTide, tideLevel, barred } from '../src/core/squarlo.js';
-import { damageEnemy } from '../src/core/combat.js';
+  makeEnemy, guardianLevel, attacksInReach, blowOf, waveBlowOf, fireAt, exposedBy, hurtBy, airborne, wardedNow, absent } from '../src/core/enemies.js';
+import { SQUARLO_FIGHT, splitHp, summonCount, newTide, stepTide, raiseTide, drainTide, tideLevel, barred, jumpLift, waveRadius, waveOver, inWave } from '../src/core/squarlo.js';
+import { damageEnemy, weaponHit, SWORD } from '../src/core/combat.js';
+import { inGust } from '../src/core/gusts.js';
 import { createRun } from '../src/core/progression.js';
 import { guardianId, gateLocked, guardianTitle, guardianLockMessage } from '../src/core/guardians.js';
 import { population, speciesIn, kindsIn, DEPTH_SPAWNS } from '../src/core/spawns.js';
@@ -128,7 +129,7 @@ test('he is as strong as a descent guardian, tiny and fast; a giant of six cells
   assert.equal(SQUARLO_GIANT.hp, SQUARLO.hp); assert.ok(SQUARLO_GIANT.giant);
   assert.deepEqual(STAGE_PROFILES.squarlo, [SQUARLO, SQUARLO_GIANT]);
   assert.deepEqual(SQUARLO.attacks.map(a => a.name), ['blow', 'tide', 'summon', 'rest']);
-  assert.deepEqual(SQUARLO_GIANT.attacks.map(a => a.name), ['stomp', 'tide', 'summon', 'rest']);
+  assert.deepEqual(SQUARLO_GIANT.attacks.map(a => a.name), ['stomp', 'jump', 'kick', 'cannon', 'tide', 'summon', 'rest']);
   for (const a of [...SQUARLO.attacks, ...SQUARLO_GIANT.attacks]) assert.ok(a.attackTime > a.hitAt, a.name);
   // the jet hurts and knocks back; the tide and the rest are cast from anywhere
   const jet = blowOf(SQUARLO, named('blow'));
@@ -137,7 +138,69 @@ test('he is as strong as a descent guardian, tiny and fast; a giant of six cells
   // the stomp: its shadow shows long before, then holds still; the foot knocks the player down
   const stomp = SQUARLO_GIANT.attacks[0];
   assert.ok(fireAt(stomp) < 0.6 && stomp.beam.lock > 0.3 && blowOf(SQUARLO_GIANT, stomp).knockDown);
-  assert.ok(stomp.beam.clear === false && stomp.beam.sky > 6);
+  assert.ok(stomp.beam.clear === false && stomp.beam.sky > 6 && stomp.beam.foot && stomp.trackUntil <= stomp.hitAt - stomp.beam.lock + 1e-9,
+    'its shadow is where his foot comes down: it stops when he stops turning');
+});
+
+test('the giant: nothing staggers him, blows hurt him less unless he is exposed', () => {
+  const e = makeEnemy({ id: 'q', x: 5, y: 0, z: 5, level: 4 }, SQUARLO_GIANT);
+  assert.ok(damageEnemy(e, 10)); assert.equal(e.staggered, false);
+  assert.ok(e.mode !== 'chase' || e.stun === 0, 'not stunned');
+  const p = { hp: 100 }, stats = { ...SWORD, damage: 100, crit: 0 };
+  assert.equal(hurtBy(e), SQUARLO_GIANT.armour);
+  assert.equal(weaponHit(p, stats, e, 1).damage, Math.round(100 * SQUARLO_GIANT.armour));
+  const i = SQUARLO_GIANT.attacks.findIndex(a => a.name === 'stomp'), stomp = SQUARLO_GIANT.attacks[i];
+  Object.assign(e, { mode: 'attack', attack: i, t: stomp.hitAt + 0.1 });
+  assert.equal(weaponHit(p, stats, e, 1).damage, Math.round(100 * stomp.exposed.damage), 'stuck: his guard is down');
+  assert.ok(SQUARLO_GIANT.armour < 1 && !SQUARLO.armour && !SQUARLO.steadfast);
+});
+
+test('the giant jumps onto the player, kicks them away and blasts his water cannon', () => {
+  const named = name => SQUARLO_GIANT.attacks.find(a => a.name === name), at = name => SQUARLO_GIANT.attacks.findIndex(a => a.name === name);
+  // the jump: from afar, up onto a hill too; landing on the player squashes and dazes them
+  const jump = named('jump'), j = jump.jump;
+  assert.ok(attacksInReach(SQUARLO_GIANT, 8, 2).includes(at('jump')), 'onto a player far off, up a hill');
+  assert.ok(!attacksInReach(SQUARLO_GIANT, 1.5, 0).includes(at('jump')), 'not onto one at his feet');
+  const squash = blowOf(SQUARLO_GIANT, jump);
+  assert.equal(squash.daze, 3); assert.ok(!squash.knockDown && squash.damage > blowOf(SQUARLO_GIANT, named('kick')).damage);
+  assert.ok(j.track < RUN_SPEED, 'a player who keeps running gets out from under his shadow');
+  assert.ok(fireAt(jump) < j.from && j.from < jump.hitAt - jump.beam.lock, 'the shadow shows before he springs off, holds still before he lands');
+  assert.equal(jumpLift(j, 0), 0); assert.ok(Math.abs(jumpLift(j, 1)) < 1e-9);
+  const top = Math.max(...Array.from({ length: 41 }, (_, i) => jumpLift(j, i / 40)));
+  assert.ok(Math.abs(top - j.height) < 0.01 && jumpLift(j, 0.4) > jumpLift(j, 0.6), 'up fast, down faster');
+  const e = makeEnemy({ id: 'q', x: 5, y: 0, z: 5, level: 4 }, SQUARLO_GIANT);
+  Object.assign(e, { mode: 'attack', attack: at('jump'), t: 0.3 });
+  assert.ok(!airborne(e)); e.t = j.from + 0.1; assert.ok(airborne(e)); e.t = jump.hitAt; assert.ok(!airborne(e));
+  // the kick: at his legs, flinging the player away
+  const kick = named('kick');
+  assert.ok(Math.abs(kick.reach - 2.8) < 1e-9 && kick.hitReach > kick.reach);
+  assert.ok(attacksInReach(SQUARLO_GIANT, 1.5, 0).includes(at('kick')) && !attacksInReach(SQUARLO_GIANT, 4, 0).includes(at('kick')));
+  assert.ok(blowOf(SQUARLO_GIANT, kick).knockDown && kick.knock >= 8);
+  // the cannon: down onto the floor ahead, from a little way out to its reach, up a hill too
+  const cannon = named('cannon'), g = cannon.gust;
+  Object.assign(e, { yaw: 0, x: 5, y: 1, z: 2 });
+  const body = (dz, y = 1, dx = 0) => ({ x: 5 + dx, y, z: 2 + dz, r: 0.3, h: 0.9 });
+  assert.ok(inGust(e, g, body(6)) && inGust(e, g, body(9, 2)), 'on the floor ahead, and up a hill');
+  assert.ok(!inGust(e, g, body(1)) && !inGust(e, g, body(-3)) && !inGust(e, g, body(6, 1, 3)), 'not at his feet, behind him or off to the side');
+  assert.ok(!inGust(e, g, body(6, -1)), 'not down in a pit');
+  assert.ok(g.sweep > 0.5 && blowOf(SQUARLO_GIANT, cannon).push.speed > 9);
+});
+
+test('a stomp or a landing sends out a shockwave over the floor', () => {
+  const spec = SQUARLO_GIANT.attacks.find(a => a.name === 'jump').wave, w = { x: 0, y: 0, z: 0, t: 0, spec };
+  const dt = 1 / 30, p = { x: 4, y: 0, z: 0, r: 0.3 }, hill = { ...p, y: 1 }, far = { ...p, x: spec.reach + 1.5 };
+  let caught = null, high = false, beyond = false;
+  for (let i = 0; i < 120 && !waveOver(w); i++) {
+    const r0 = waveRadius(w);
+    w.t += dt;
+    if (inWave(w, r0, p) && caught === null) caught = w.t;
+    high ||= inWave(w, r0, hill); beyond ||= inWave(w, r0, far);
+  }
+  assert.ok(waveOver(w), 'it spends itself');
+  assert.ok(Math.abs(caught - (4 - 0.3) / spec.speed) < 2 * dt, 'it reaches a body at its speed: ' + caught);
+  assert.ok(!high && !beyond, 'not one up a step, nor one past its reach');
+  const blow = waveBlowOf(SQUARLO_GIANT, { wave: spec });
+  assert.ok(blow.knockDown && blow.damage > 0);
 });
 
 test('the fight: split at half, a ward while he calls the tide, exposed while he rests', () => {
@@ -152,11 +215,11 @@ test('the fight: split at half, a ward while he calls the tide, exposed while he
   e.t = 1; assert.ok(exposedBy(e) > 1);
   assert.equal(summonCount(1, 1), 2); assert.equal(summonCount(2, 2), 0);
   // what he may start
-  assert.deepEqual([...barred({ tideDue: true })].sort(), ['blow', 'rest', 'stomp', 'summon']);
-  assert.deepEqual([...barred({ restDue: true })].sort(), ['blow', 'stomp', 'summon', 'tide']);
+  assert.deepEqual([...barred({ tideDue: true })].sort(), ['blow', 'cannon', 'jump', 'kick', 'rest', 'stomp', 'summon']);
+  assert.deepEqual([...barred({ restDue: true })].sort(), ['blow', 'cannon', 'jump', 'kick', 'stomp', 'summon', 'tide']);
   assert.ok(barred({ waterUp: true, summonDue: true }).has('blow'));
   assert.ok(!barred({ waterUp: false, summonDue: true }).has('summon'));
-  assert.ok(!barred({}).has('stomp'));
+  for (const n of ['stomp', 'jump', 'kick', 'cannon']) assert.ok(!barred({ waterUp: true }).has(n), n);
 });
 
 test('the tide rises, stands and falls; his death drains it', () => {

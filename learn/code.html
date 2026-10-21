@@ -330,8 +330,8 @@ import { fixedWeapon } from './gear/generate.js';</code></pre>
         <li lang="de"><code>crit ? A : B</code>: ein kurzes <code>if</code>. Wenn <code>crit</code> wahr ist, nimm A (mal 1,5 oder mehr: mehr Schaden), sonst B (mal 1: gleich viel).</li>
         <li lang="en"><code>Math.max(1, Math.round(...))</code>: round to a whole number, but never less than 1. (<code>share</code> is 1 for a full hit; a spell's burst only does half to the monsters around it.)</li>
         <li lang="de"><code>Math.max(1, Math.round(...))</code>: auf eine ganze Zahl runden, aber nie weniger als 1. (<code>share</code> ist 1 bei einem vollen Treffer; die Explosion eines Zaubers macht bei den Monstern drumherum nur die Hälfte.)</li>
-        <li lang="en"><code>exposedBy(enemy)</code>: usually 1. But if Gusto lies face down after missing a grab, it's more than 1, and every hit does more damage.</li>
-        <li lang="de"><code>exposedBy(enemy)</code>: meistens 1. Aber wenn Gusto nach einem verfehlten Griff mit dem Gesicht am Boden liegt, ist es mehr als 1, und jeder Treffer macht mehr Schaden.</li>
+        <li lang="en"><code>hurtBy(enemy)</code>: usually 1. But if Gusto lies face down after missing a grab, it's more than 1, and every hit does more damage. And for Squarlo as a giant it's less than 1: his thick skin takes some of every hit, unless he's stuck or winded.</li>
+        <li lang="de"><code>hurtBy(enemy)</code>: meistens 1. Aber wenn Gusto nach einem verfehlten Griff mit dem Gesicht am Boden liegt, ist es mehr als 1, und jeder Treffer macht mehr Schaden. Und bei Squarlo als Riese ist es weniger als 1: Seine dicke Haut schluckt einen Teil jedes Treffers, außer er steckt fest oder ist außer Atem.</li>
         <li lang="en"><code>damageEnemy(...)</code>: another machine takes the health off.</li>
         <li lang="de"><code>damageEnemy(...)</code>: eine andere Maschine zieht die Gesundheit ab.</li>
         <li lang="en"><code>return { damage, crit }</code>: the answer is a small object, so the game knows what number to show, and if it should be golden.</li>

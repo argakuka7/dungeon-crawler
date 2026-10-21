@@ -1,7 +1,7 @@
 // Knocking the player over: the body turns into a ragdoll; once it has settled the player
 // either gets up where the body lies (GetUpBack / GetUpFront, see render/animator.js) or respawns.
 import { Ragdoll } from '../physics/ragdoll.js';
-import { rescues, lavaRescue } from './lavarescue.js';
+import { fluidRescue } from './fluidrescue.js';
 import { groundAt } from '../physics/collide.js';
 import { canMove } from '../physics/canmove.js';
 import { WATER, LAVA, LH, STEP, GET_UP_SPEED } from '../core/constants.js';
@@ -45,7 +45,7 @@ const FLUID_DEATH_TIME = 2.2;   // keep the body around long enough for the effe
 
 export function dieInFluid(fluid, surface) {
   if (player.hp <= 0) return;
-  if (rescues(fluid) && lavaRescue()) return;   // Foggery's lava: it burns, magic pulls you out (game/lavarescue.js)
+  if (fluidRescue(fluid)) return;   // a boss's lava or tide: it hurts, magic pulls you out (game/fluidrescue.js)
   if (player.god) { setStatus(deathReason(fluid) + ' (god mode: back to safety)'); recover(); return; }   // dev: /god on
   player.swimming = false; player.fluid = 0;
   const { x, z } = player;   // before a no-asset fallback respawns the player

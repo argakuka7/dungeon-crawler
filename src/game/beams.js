@@ -25,8 +25,9 @@ const target = e => { const p = e.target?.here ? e.target : player; return alive
 export function fireBeam(e, a) {
   const p = target(e), spec = a.beam, blow = { ...blowOf(e.profile, a), by: attacker(e) };
   const one = (offset, quiet) => {
-    // (one beside the player passes them by: only the one at them stops at their body)
-    const b = castBeam(startBeam(e, spec, aimPoint(p ?? player, spec, offset)), solid, offset ? null : p);
+    // (one beside the player passes them by: only the one at them stops at their body; a giant's
+    // foot's shadow lies on the floor, round their feet)
+    const b = castBeam(startBeam(e, spec, aimPoint(p ?? player, spec, offset)), solid, offset || spec.kind === 'stomp' ? null : p);
     Object.assign(b, { enemy: e, attack: e.attacks, blow, profile: e.profile, offset, quiet });
     beams.push(b);
     beamFx(b, 'start');
@@ -52,7 +53,7 @@ export function updateBeams(dt) {
     b.t += dt;
     if (p && aiming(b)) aimBeam(b, aimPoint(p, b.spec, b.offset), dt);
     Object.assign(b, originOf(e, b.spec, { x: b.ax, y: b.ay, z: b.az }));
-    castBeam(b, solid, b.offset ? null : p);
+    castBeam(b, solid, b.offset || b.spec.kind === 'stomp' ? null : p);
     if (b.t < b.spec.time) return true;
     if (p && beamHits(b, p)) {
       const dx = p.x - b.x, dz = p.z - b.z, l = Math.hypot(dx, dz) || 1;

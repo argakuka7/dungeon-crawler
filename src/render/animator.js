@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { clamp } from '../core/util.js';
 import { DIRS } from '../core/constants.js';
 import { player } from '../game/state.js';
+import { FLAT } from '../game/juice.js';
 import { SWORD, swingClipTime, swingClipFrom } from '../core/combat.js';
 import { character } from './character.js';
 import { applyRagdollPose } from './ragdollpose.js';
@@ -58,11 +59,20 @@ function applyMorph(dt) {
   if (k <= 0) morph = null;
 }
 
+// Squashed flat by a giant (game/juice.js squashedFx, player.flat: s left of it): the hero lies
+// flat as a pancake for a moment, then springs back up, wobbling
+function squash(group, p, dt) {
+  if (!(p.flat > 0)) { if (group.scale.y !== 1) group.scale.set(1, 1, 1); return; }
+  p.flat = Math.max(0, p.flat - dt);
+  const u = 1 - p.flat / FLAT, k = u < 0.3 ? 1 : Math.exp(-5 * (u - 0.3)) * Math.cos(9 * (u - 0.3));
+  const y = 1 - 0.7 * k;
+  group.scale.set(1 / Math.sqrt(Math.max(0.3, y)), y, 1 / Math.sqrt(Math.max(0.3, y)));
+}
 export function animateCharacter(dt, time) {
   const ch = character, p = player;
   if (!ch.ready) return;
   clean ??= Object.values(ch.bones).map(b => [b, b.quaternion.clone(), b.position.clone()]);
-  if (p.ragdoll) { applyRagdollPose(p.ragdoll.p); getUp = upAction = morph = null; ch.getUpWeight = 0; return; }
+  if (p.ragdoll) { p.flat = 0; ch.group.scale.set(1, 1, 1); applyRagdollPose(p.ragdoll.p); getUp = upAction = morph = null; ch.getUpWeight = 0; return; }
   if (p.getUp !== getUp) {
     getUp = p.getUp;
     if (getUp) {
@@ -82,6 +92,7 @@ export function animateCharacter(dt, time) {
   p.yaw = yaw;
   ch.group.position.set(p.x, p.visY, p.z);
   ch.group.rotation.y = yaw;
+  squash(ch.group, p, dt);
   ch.group.updateMatrixWorld(true);
 
   updateBlend(dt, speed, time);

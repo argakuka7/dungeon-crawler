@@ -398,13 +398,14 @@ test('Totnar: his clips match his attacks, the throw, summon and storm points co
   const sticks = j.materials.find(m => m.name === 'TotnarSticks').pbrMetallicRoughness.baseColorFactor;
   assert.ok(sticks[0] > sticks[2] * 1.5, 'brown sticks');
 });
-test('Squarlo: his clips match his attacks in both his sizes, the jet, the summon and the stomping foot come from them', () => {
+test('Squarlo: his clips match his attacks in both his sizes, the jet, the cannon, the summon and the stomping foot come from them', () => {
   const { json: j, duration } = glb('squarlo'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
-  assert.deepEqual(Object.keys(a).sort(), ['SquarloBlow', 'SquarloCast', 'SquarloDeath', 'SquarloRest', 'SquarloRun', 'SquarloStomp',
-    'SquarloStride', 'SquarloSummon', 'SquarloSwim']);
+  assert.deepEqual(Object.keys(a).sort(), ['SquarloBlow', 'SquarloCannon', 'SquarloCast', 'SquarloDeath', 'SquarloJump', 'SquarloKick', 'SquarloRest',
+    'SquarloRun', 'SquarloStomp', 'SquarloStride', 'SquarloSummon', 'SquarloSwim']);
   for (const loop of ['SquarloRun', 'SquarloSwim', 'SquarloStride']) assert.equal(a[loop].extras.loop, true, loop);
   assert.ok(Math.abs(duration(a.SquarloDeath) - SQUARLO.deathTime) < 1e-5); assert.equal(a.SquarloDeath.extras.hold_last_frame, true);
-  const clip = { blow: 'SquarloBlow', cast: 'SquarloCast', summon: 'SquarloSummon', rest: 'SquarloRest', stomp: 'SquarloStomp' };
+  const clip = { blow: 'SquarloBlow', cast: 'SquarloCast', summon: 'SquarloSummon', rest: 'SquarloRest', stomp: 'SquarloStomp',
+    jump: 'SquarloJump', kick: 'SquarloKick', cannon: 'SquarloCannon' };
   for (const at of [...SQUARLO.attacks, ...SQUARLO_GIANT.attacks]) {
     const c = a[clip[at.clip]];
     if (c.extras.hit_frame !== undefined) assert.equal(c.extras.hit_frame / 30, at.hitAt, at.name);
@@ -414,10 +415,18 @@ test('Squarlo: his clips match his attacks in both his sizes, the jet, the summo
   assert.deepEqual(b.muzzle, jet.muzzle);
   assert.ok(Math.abs((b.gust_end - b.hit_frame) / 30 - jet.time) < 1e-9);
   assert.deepEqual(a.SquarloSummon.extras.muzzle, SQUARLO.attacks.find(t => t.summon).summon.muzzle);
+  const k = SQUARLO_GIANT.size, near = (u, v) => u.every((x, i) => Math.abs(x - v[i]) < 1e-6);
+  // the giant's water cannon blasts out of his hands, for as long as the clip says
+  const cannon = SQUARLO_GIANT.attacks.find(t => t.name === 'cannon').gust, c = a.SquarloCannon.extras;
+  assert.ok(near(cannon.muzzle, c.muzzle.map(v => v * k)), 'the cannon from his hands');
+  assert.ok(Math.abs((c.gust_end - c.hit_frame) / 30 - cannon.time) < 1e-9);
   // the stomp's shadow is where the foot comes down (the beam's muzzle, grown with him)
-  const stomp = SQUARLO_GIANT.attacks.find(t => t.beam), foot = a.SquarloStomp.extras.foot, k = SQUARLO_GIANT.size;
+  const stomp = SQUARLO_GIANT.attacks.find(t => t.name === 'stomp'), foot = a.SquarloStomp.extras.foot;
   assert.ok(Math.abs(stomp.beam.muzzle[0] - foot[0] * k) < 1e-6 && Math.abs(stomp.beam.muzzle[2] - foot[2] * k) < 1e-6);
   assert.equal(a.SquarloStomp.extras.planted_until / 30, stomp.exposed.until);
+  // he springs off when the jump says, and lands on the hit frame
+  const jump = SQUARLO_GIANT.attacks.find(t => t.name === 'jump');
+  assert.equal(a.SquarloJump.extras.takeoff / 30, jump.jump.from);
   const names = new Set(j.materials.map(m => m.name));
   for (const m of Object.values(SQUARLO.parts).flat()) assert.ok(names.has(m), m);
   const body = j.materials.find(m => m.name === 'SquarloBody').pbrMetallicRoughness.baseColorFactor;

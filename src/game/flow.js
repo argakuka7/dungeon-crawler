@@ -45,7 +45,7 @@ import { setFluidPalettes } from '../render/fluidpal.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
-  Object.assign(player, { x, y, z, vy: 0, vx: 0, vz: 0, visY: y, grounded: true, swimming: false, support: null, ragdoll: null, down: null, getUp: null, fluidDeath: 0, stun: 0, climb: null, burning: null, chilled: null, toxic: null, gust: null, shocked: 0,
+  Object.assign(player, { x, y, z, vy: 0, vx: 0, vz: 0, visY: y, grounded: true, swimming: false, support: null, ragdoll: null, down: null, getUp: null, fluidDeath: 0, stun: 0, climb: null, burning: null, chilled: null, toxic: null, gust: null, shocked: 0, dazed: 0, flat: 0,
     flipping: null, vanished: false, pull: null });   // (Flip's world, game/flipworld.js)
   player.safe = respawnPoint({ x, y, z });
   const gr = groundAt(x, z, y + 0.05, 0);

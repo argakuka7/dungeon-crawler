@@ -7,10 +7,14 @@
 // While he casts nothing hurts him; at the cast's hit frame the water starts to rise (`rise` s,
 // from his arena's rest level to its high tide: cubegen/guardian.js map.tide), stands `high` s
 // and falls back (`fall` s). While it is up (rising, standing or falling) he blows no water.
-// After every tide, and after every `restAfter` other attacks, he has to rest: then nothing else.
+// After every tide, and after every `restAfter` other attacks (of his phase), he has to rest: then
+// nothing else.
 // At half his health he stops (no blow takes him below it): a fog rolls in and he grows into a
-// giant for `morphTime` s, nothing hurting him, and fights on stomping (phase 2), with up to
+// giant for `morphTime` s, nothing hurting him, and fights on (phase 2): stomping, jumping onto
+// the player, kicking and blasting his water cannon (core/enemies.js SQUARLO_GIANT), with up to
 // `minions[1]` Squirtles. His death drains the tide and takes the Squirtles along.
+// Drowning in his tide costs a quarter of one's health, and magic takes one up out of the water
+// (game/fluidrescue.js).
 export const SQUARLO_FIGHT = Object.freeze({
   split: 0.5,             // the share of his health he turns into a giant at
   morphTime: 3.2,         // s the fog rolls in and he grows
@@ -19,10 +23,11 @@ export const SQUARLO_FIGHT = Object.freeze({
   minions: [3, 2],        // the most Squirtles at once, phase 1 / 2: a summon fills up to that
   summonCool: [9, 11],    // s from one summon to the next, phase 1 / 2
   firstSummon: 4,         // s into the fight before his first summon
-  restAfter: 3,           // other attacks before he has to rest
+  restAfter: [3, 5],      // other attacks before he has to rest, phase 1 / 2
   leave: 0.5,             // s a Squirtle he takes along lingers, gone, before it is let go
+  rescue: 0.25,           // what drowning in his tide costs, of one's most health (game/fluidrescue.js)
 });
-const ALL = ['blow', 'tide', 'summon', 'rest', 'stomp'];
+const ALL = ['blow', 'tide', 'summon', 'rest', 'stomp', 'jump', 'kick', 'cannon'];
 
 // the health he turns into a giant at (and cannot be taken below before)
 export const splitHp = maxHp => Math.ceil(maxHp * SQUARLO_FIGHT.split);
@@ -60,4 +65,25 @@ export function barred({ tideDue, restDue, summonDue, waterUp }) {
   if (tideDue) return new Set(ALL.filter(n => n !== 'tide'));
   if (restDue) return new Set(ALL.filter(n => n !== 'rest'));
   return new Set(ALL.filter(n => n === 'tide' || n === 'rest' || (n === 'blow' && waterUp) || (n === 'summon' && !summonDue)));
+}
+
+// A giant's jump (core/enemies.js SQUARLO_GIANT's `jump`): how high over the straight line from
+// where he sprang off to where he lands he is at the share u (0..1) of the flight: up fast, a
+// little longer at the top, and down faster than up.
+export function jumpLift(jump, u) {
+  const v = Math.min(1, Math.max(0, u)) ** 0.8;
+  return jump.height * 4 * v * (1 - v);
+}
+
+// A shockwave (an attack's `wave`: a stomp, a landing; game/quakes.js) running out over the floor
+// from where it struck: { x, y, z, t (s since), spec }. Its front is `speed` × t out, up to `reach`;
+// it catches a body on the ground (the caller's: not one in the air) whose feet are within `rise`
+// of its level and whose body the front passed over between `r0` (its radius a step ago) and now,
+// `width` included.
+export const waveRadius = w => Math.min(w.spec.reach, w.spec.speed * w.t);
+export const waveOver = w => w.spec.speed * w.t >= w.spec.reach + w.spec.width;
+export function inWave(w, r0, p) {
+  const r = waveRadius(w), d = Math.hypot(p.x - w.x, p.z - w.z), pr = p.r ?? 0.3;
+  if (Math.abs(p.y - w.y) > w.spec.rise || r0 >= w.spec.reach) return false;
+  return d + pr >= Math.max(0, r0 - w.spec.width) && d - pr <= r;
 }

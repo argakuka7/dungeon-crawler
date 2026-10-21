@@ -13,7 +13,7 @@ import { equippedItem, readiedItem } from './inventory.js';
 import { levelDamage } from './progression.js';
 import { itemStats } from './gear/stats.js';
 import { effectMod, flaskStats } from './potions.js';
-import { absent, exposedBy, steadyNow, wardedNow } from './enemies.js';
+import { absent, exposedBy, hurtBy, steadyNow, wardedNow } from './enemies.js';
 
 // the clips' own timing (s): character.glb extras (blender/character.py)
 export const SLASH_CLIP = { duration: 32 / 30, activeStart: 15 / 30, activeEnd: 21 / 30 };
@@ -177,8 +177,8 @@ export function softTarget(p, enemies, yaw = p.yaw, visible = () => true, extra 
 // hurts (burning, poison ticks; core/status.js). A boss's own rules (core/gusto.js) bend this:
 // nothing hurts an enemy while it is `shield`ed (s), no blow takes it below its `hpFloor`, and
 // any hit at all fells a `proxy`. Nothing staggers an enemy in the `steady` part of an attack
-// (Totnar rolling, core/enemies.js steadyNow), and nothing hurts one in a `ward`ed one (Squarlo
-// calling the tide, wardedNow).
+// (Totnar rolling, core/enemies.js steadyNow), nor a `steadfast` one (Squarlo a giant), and
+// nothing hurts one in a `ward`ed one (Squarlo calling the tide, wardedNow).
 // learn: combat.html#damage #stagger-code (see learn/README.md)
 export function damageEnemy(enemy, amount, stagger = true) {
   if (absent(enemy) || enemy.shield > 0 || wardedNow(enemy)) return false;
@@ -186,7 +186,7 @@ export function damageEnemy(enemy, amount, stagger = true) {
   enemy.hp = Math.max(Math.min(enemy.hpFloor ?? 0, enemy.hp), enemy.hp - amount);
   enemy.hurtT = 0.22;
   if (!stagger && enemy.hp) return true;
-  if ((exposedBy(enemy) > 1 || steadyNow(enemy)) && enemy.hp) { enemy.staggered = false; return true; }   // lying helpless: it stays down
+  if ((exposedBy(enemy) > 1 || steadyNow(enemy) || enemy.profile.steadfast) && enemy.hp) { enemy.staggered = false; return true; }   // lying helpless: it stays down
   enemy.staggered = !enemy.hp || !(enemy.poised > 0) || amount >= HEAVY_HIT * enemy.profile.hp;
   if (!enemy.hp) {
     enemy.mode = 'dead'; enemy.deadT = 0; enemy.path = null; enemy.speed = 0;
@@ -208,11 +208,11 @@ export function swordHit(p, enemy, roll = Math.random()) {
 }
 // any weapon's hit on enemy with the attack stats `stats` (a swing's, or a shot's snapshot of
 // them), for `share` of its damage (a spell's burst: less): { damage, crit } or false. An enemy
-// lying helpless (core/enemies.js exposedBy) takes more.
+// lying helpless (core/enemies.js exposedBy) takes more, an armoured one less (hurtBy).
 // learn: code.html#whole (see learn/README.md)
 export function weaponHit(p, stats, enemy, roll = Math.random(), share = 1) {
   const crit = roll < (stats.crit ?? 0);
-  const damage = Math.max(1, Math.round(stats.damage * share * (crit ? stats.critDamage ?? 1.5 : 1) * exposedBy(enemy)));
+  const damage = Math.max(1, Math.round(stats.damage * share * (crit ? stats.critDamage ?? 1.5 : 1) * hurtBy(enemy)));
   if (!damageEnemy(enemy, damage)) return false;
   if (stats.leech && p.hp > 0) p.hp = Math.min(p.maxHp ?? Infinity, p.hp + stats.leech * (enemy.profile.leechScale ?? 1));
   return { damage, crit };

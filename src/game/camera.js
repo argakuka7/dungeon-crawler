@@ -14,7 +14,7 @@ import { standingAt } from '../physics/fluid.js';
 import { viewBlockedAt } from '../core/blockers.js';
 import { player, state, view } from './state.js';
 import { cameraMode } from './settings.js';
-import { kick } from './juice.js';
+import { kick, tremor } from './juice.js';
 
 // learn: drawing.html#camera (see learn/README.md)
 const pitch = THREE.MathUtils.degToRad(44);
@@ -116,6 +116,19 @@ function fadeHero() {
   m.depthWrite = a > 0.99;
 }
 
+// The ground shaking (game/juice.js quake: a giant's stomp, his landing): the view trembles
+// about where it looks, a jitter of a few sines (not noise: it rolls rather than buzzes), dying away
+const jolt = new THREE.Quaternion(), joltAngles = new THREE.Euler();
+function shake(dt) {
+  tremor.t += dt;
+  tremor.a *= Math.exp(-dt * 5);
+  if (tremor.a < 1e-4) { tremor.a = 0; return; }
+  const t = tremor.t, a = tremor.a;
+  joltAngles.set(a * (Math.sin(t * 41) + 0.6 * Math.sin(t * 67 + 1.3)) / 1.6, a * 0.6 * Math.sin(t * 29 + 2.1),
+    a * 0.8 * (Math.sin(t * 53 + 0.7) + 0.5 * Math.sin(t * 83)) / 1.5);
+  camera.quaternion.multiply(jolt.setFromEuler(joltAngles));
+}
+
 const ease = t => t * t * (3 - 2 * t);
 // the close view only while playing (the main menu shows the cube from above)
 const goal = () => (state.mode === 'play' && cameraMode() === 'close' ? 1 : 0);
@@ -140,6 +153,7 @@ export function updateCamera(dt) {
   if (t <= 0) { camera.position.copy(overPos); camera.quaternion.copy(overQuat); }
   else if (t >= 1) { camera.position.copy(closePos); camera.quaternion.copy(closeQuat); }
   else { camera.position.lerpVectors(overPos, closePos, t); camera.quaternion.slerpQuaternions(overQuat, closeQuat, t); }
+  shake(dt);
   const fov = OVERVIEW_FOV + (CLOSE_FOV - OVERVIEW_FOV) * t;
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   camera.updateMatrixWorld();

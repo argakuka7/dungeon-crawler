@@ -9,7 +9,8 @@
 // hp / damage / xp / coins are level-1 values; every species grows by GROWTH per level.
 // `poise`: for how long (s) after a hit staggers it a hit cannot stagger it again (0: every hit
 // does), so heavy species and guardians strike back even under a stream of blows. A heavy blow
-// (core/combat.js HEAVY_HIT) staggers anyway.
+// (core/combat.js HEAVY_HIT) staggers anyway. Nothing staggers a `steadfast` one (Squarlo a
+// giant). `armour`: the share of a blow's damage it takes (default all), unless it lies exposed.
 // `style`: how it fights between blows (game/enemyai.js). 'skirmish' backs off after a blow and
 // circles at `circle` cells (sidestepping, facing the player, if it `strafe`s; else walking
 // round), then darts in again; 'ranged' backs away inside keep[0] and sidesteps while its throw
@@ -430,9 +431,19 @@ export const TOTNAR = {
 // hurts and knocks back) and summons Squirtles; the tide (a `cast`: while he casts nothing hurts
 // him, `ward`) floods the flats, and only the hills stay dry. Every few attacks, and after
 // every tide, he has to sit and catch his breath (`rest`, `exposed`: blows hurt more).
-// Phase 2 (at half his health, SQUARLO_GIANT): he grows into a giant six cells tall and stomps
-// (a beam of kind 'stomp' out of the sky: his foot's shadow follows the player and stops, then the
-// foot comes down there; it stays planted a moment, `exposed`). The tide and the Squirtles stay.
+// Phase 2 (at half his health, SQUARLO_GIANT): he grows into a giant six cells tall. Nothing
+// staggers him (`steadfast`) and blows do only `armour` of their damage, unless he is `exposed`.
+// He stomps (a beam of kind 'stomp' out of the sky: his foot's shadow where it will come down, in
+// front of him, swinging round with him as he turns to the player; then the foot crashes down and
+// sticks a moment, `exposed`), jumps onto the player (`jump`: he springs off at jump.from and flies
+// to his shadow, which follows the player and holds still at the last; landing on a player squashes
+// them flat and dazes them for `daze` s), kicks a player at his legs away (a blow that knocks down
+// and flings them) and blasts his water cannon down at the floor ahead of him, sweeping it across
+// (a gust of kind 'cannon', `down`: it comes down from his hands onto whoever stands in its strip,
+// `near` cells from his hands on; `sweep` rad, game/squarlo.js). A stomp and a landing send out a
+// shockwave over the floor (`wave`: game/quakes.js): it runs out at wave.speed to wave.reach and
+// knocks down whoever it rolls under on the ground (not one in the air, nor one up a step).
+// The tide and the Squirtles stay.
 // An `exposed` attack's `from` (s) is when the exposure starts (default: at once); `say` is what
 // every game says then (game/gusts.js), `thud` crashes him down with a thump and dust.
 const SQUARLO_BLOW = {
@@ -455,12 +466,35 @@ const SQUARLO_REST = {
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Squarlo', cast: 'rest', recover: 0.3,
   exposed: { from: 0.2, until: 58 / 30, damage: 1.3, say: 'is out of breath! Hit him now' },
 };
+// (the giant's attacks are sized with him, like any kind's: a blow's reaches are given here in
+// cells over his size, GIANT; a beam's, a gust's and a cast's stay as they are)
+const GIANT = 6 / 0.68;
 const SQUARLO_STOMP = {
-  name: 'stomp', clip: 'stomp', weight: 3, reach: 5, hitAt: 57 / 30, trackUntil: 1.2, attackTime: 96 / 30, hitReach: 0,
+  name: 'stomp', clip: 'stomp', weight: 3, reach: 4.6, hitAt: 54 / 30, trackUntil: 39 / 30, attackTime: 90 / 30, hitReach: 0,
   arc: -1, power: 1.5, knock: 6, knockDown: true, hop: 4, reason: 'Stomped flat by Squarlo!',
-  beam: { kind: 'stomp', aim: 'feet', time: 1.5, track: 2.6, lock: 0.45, radius: 1, range: 14, sky: 7, clear: false,
-    muzzle: [-0.064, 0, 0.112] },
-  exposed: { from: 57 / 30, until: 87 / 30, damage: 1.4, say: 'is stuck! Hit his foot' },
+  beam: { kind: 'stomp', aim: 'feet', time: 42 / 30, track: 0, lock: 15 / 30, radius: 1.15, range: 14, sky: 7, clear: false,
+    foot: true, muzzle: [-0.07, 0, 0.124] },
+  wave: { speed: 7, reach: 4.8, width: 0.8, rise: 0.4, power: 0.55, knock: 6, hop: 3 },
+  exposed: { from: 54 / 30, until: 78 / 30, damage: 1.4, say: 'is stuck! Hit his foot' },
+};
+const SQUARLO_JUMP = {
+  name: 'jump', clip: 'jump', weight: 3, reach: 11, minReach: 3, rise: 3, hitAt: 51 / 30, trackUntil: 18 / 30, attackTime: 78 / 30, hitReach: 0,
+  arc: -1, power: 1.6, knock: 0, knockDown: false, hop: 0, daze: 3, reason: 'Squashed flat by Squarlo!',
+  beam: { kind: 'stomp', aim: 'feet', time: 39 / 30, track: 0, lock: 10 / 30, radius: 1.5, range: 16, sky: 9, clear: false,
+    muzzle: [0, 0, 0] },
+  jump: { from: 18 / 30, height: 3.6, track: 2.5 },
+  wave: { speed: 8, reach: 6.5, width: 0.9, rise: 0.4, power: 0.6, knock: 7, hop: 3.5 },
+  exposed: { from: 54 / 30, until: 69 / 30, damage: 1.3 },
+};
+const SQUARLO_KICK = {
+  name: 'kick', clip: 'kick', weight: 4, reach: 2.8 / GIANT, hitAt: 21 / 30, trackUntil: 15 / 30, attackTime: 39 / 30, hitReach: 3.3 / GIANT,
+  arc: 0.1, power: 1.2, knock: 10, knockDown: true, hop: 5, reason: 'Kicked away by Squarlo!',
+};
+const SQUARLO_CANNON = {
+  name: 'cannon', clip: 'cannon', weight: 2, reach: 11, minReach: 3.5, hitAt: 30 / 30, trackUntil: 27 / 30, attackTime: 78 / 30, hitReach: 0,
+  arc: 0.5, power: 0.9, knock: 4, knockDown: false, hop: 3, reason: "Blasted by Squarlo's water cannon!",
+  gust: { kind: 'cannon', time: 36 / 30, range: 11, near: 2.5, width: 0.5, spread: 0.04, push: 12, pushTime: 0.75, down: true,
+    sweep: 1.1, muzzle: [-0.005, 0.323, 0.21], thunder: [], inhale: 6 / 30 },
 };
 export const SQUARLO = {
   type: 'squarlo', species: 'squarlo', label: 'Squarlo', hp: 1000, damage: 24, knock: 3,
@@ -879,13 +913,14 @@ export const MOSS_SQUIRTLE = enemyKind(SQUIRTLE, {
   colors: paints({ body: 'moss.mid', belly: 'ochre.pale' }), ichor: ['#c8f0a0', '#4f8f2a'],
   mods: { hp: 1.2, damage: 1.15 },
 });
-// from half his health on: a giant, six cells tall (the model at `size`), who stomps; he walks
-// over the hills on the floors like any enemy, but keeps clear of the bank (game/squarlo.js)
+// from half his health on: a giant, six cells tall (the model at `size`), who stomps, jumps, kicks
+// and blasts; he walks over the hills on the floors like any enemy, but keeps clear of the bank
+// (game/squarlo.js); nothing staggers him and blows hurt him less, unless he is exposed
 export const SQUARLO_GIANT = enemyKind(SQUARLO, {
-  type: 'squarlogiant', label: 'Squarlo', mods: { size: 6 / 0.68 },
-  attacks: [SQUARLO_STOMP, SQUARLO_TIDE, SQUARLO_SUMMON, SQUARLO_REST],
-  radius: 0.9, height: 6, bodyHeight: 5.55, mass: 45, chase: 1.5, wander: 0.8, homeSpeed: 1.2, cooldown: 1.2,
-  style: 'brute', giant: true, phase: 2, gait: 'stride',
+  type: 'squarlogiant', label: 'Squarlo', mods: { size: GIANT },
+  attacks: [SQUARLO_STOMP, SQUARLO_JUMP, SQUARLO_KICK, SQUARLO_CANNON, SQUARLO_TIDE, SQUARLO_SUMMON, SQUARLO_REST],
+  radius: 0.9, height: 6, bodyHeight: 5.55, mass: 45, chase: 1.5, wander: 0.8, homeSpeed: 1.2, cooldown: 1,
+  style: 'brute', giant: true, phase: 2, gait: 'stride', steadfast: true, armour: 0.6,
 });
 // a boss's profile for each of its stages (game/squarlo.js; a friend's game swaps it by the stage
 // the runner sends, net/foes.js)
@@ -1046,6 +1081,18 @@ export function exposedBy(e) {
   const x = e.mode === 'attack' ? attackOf(e).exposed : null;
   return x && e.t >= (x.from ?? 0) && e.t < x.until ? x.damage : 1;
 }
+// the share of a blow's damage that e takes now: exposed, more (exposedBy); else its `armour`
+// (Squarlo a giant: less), or all of it
+export function hurtBy(e) {
+  const x = exposedBy(e);
+  return x > 1 ? x : e.profile.armour ?? 1;
+}
+// is e up in the air now (Squarlo a giant, jumping: between the jump's take-off and the landing,
+// game/squarlo.js lifts him): nothing touches him
+export function airborne(e) {
+  const j = e.mode === 'attack' ? attackOf(e).jump : null;
+  return !!j && e.t >= j.from && e.t < attackOf(e).hitAt;
+}
 // is e warded now (Squarlo casting the tide: an attack's `ward`): nothing hurts it
 export const wardedNow = e => e.mode === 'attack' && !!attackOf(e).ward;
 // is e in the `steady` part of an attack now (Totnar rolling): blows hurt it but do not stagger it
@@ -1067,11 +1114,12 @@ export const isRanged = profile => !!(shotOf(profile) || profile.attacks?.some(s
 // which attacks (indices; [0] for a species with one) can start against a target d away
 // across the floor and dy above or below: within the attack's reach (else the profile's) and
 // beyond its minReach; a throw (or a beam) allows more height, a blow enough for the next step
-// of a stair or a ramp, a cast any. A clear line for throws is the caller's.
+// of a stair or a ramp, a cast any, an attack with a `rise` that much (Squarlo jumping up onto a
+// hill). A clear line for throws is the caller's.
 export function attacksInReach(profile, d, dy) {
   const list = profile.attacks ?? [profile], out = [];
   list.forEach((a, i) => {
-    if (d < (a.reach ?? profile.reach) && d >= (a.minReach ?? 0) && dy < (a.cast ? Infinity : shotOf(a) ? 1.5 : 0.75)) out.push(i);
+    if (d < (a.reach ?? profile.reach) && d >= (a.minReach ?? 0) && dy < (a.rise ?? (a.cast ? Infinity : shotOf(a) ? 1.5 : 0.75))) out.push(i);
   });
   return out;
 }
@@ -1089,7 +1137,7 @@ export function lungeAt(lunge, t) {
 }
 
 // what a strike (or a projectile) does to the player; a gust's blow also pushes (`push`), a
-// bolt's stuns (`shock`, s)
+// bolt's stuns (`shock`, s), Squarlo landing on them squashes them and dazes them (`daze`, s)
 export function blowOf(profile, a = profile) {
   const damage = Math.round(profile.damage * (a.power ?? 1));
   return { damage, knock: a.knock ?? profile.knock,
@@ -1097,7 +1145,13 @@ export function blowOf(profile, a = profile) {
     chill: a.projectile?.chill ?? a.chill ?? null, toxin: toxinOf(a.toxin ?? profile.toxin, damage),
     ...(a.gust && { push: { speed: a.gust.push, time: a.gust.pushTime } }),
     ...(a.projectile?.push && { push: { speed: a.projectile.push, time: a.projectile.pushTime } }),
-    ...(a.beam?.shock && { shock: a.beam.shock }), ...(a.pop && { pop: a.pop }) };
+    ...(a.beam?.shock && { shock: a.beam.shock }), ...(a.pop && { pop: a.pop }), ...(a.daze && { daze: a.daze }) };
+}
+// what a shockwave (an attack's `wave`, game/quakes.js) does to a player it rolls under
+export function waveBlowOf(profile, a) {
+  const w = a.wave;
+  return { damage: Math.round(profile.damage * w.power), knock: w.knock, knockDown: true, hop: w.hop, reason: 'Thrown off your feet by the shockwave!',
+    burn: null, chill: null, toxin: null };
 }
 
 // a level-1 value grown to `level`

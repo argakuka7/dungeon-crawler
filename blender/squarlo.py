@@ -16,7 +16,8 @@ Clips, 30 fps, in place (the game supplies root motion):
                    (extras.speed; the game plays it fast: he runs four cells a second).
     SquarloSwim    24-frame loop: paddling with both hands in front, kicking (the game floats
                    him half under in deep water and plays it on time).
-    SquarloStride  40-frame loop: a giant's slow, heavy walk, knees high (phase 2).
+    SquarloStride  40-frame loop: a giant's slow, heavy walk, knees high, the body sinking onto
+                   each foot as it lands (phase 2; the feet come down at phases 0 and 0.5).
     SquarloBlow    1.6 s: cups his hands at his chest, leans back as the water gathers in them,
                    and at frame 24 (extras.hit_frame) thrusts them forward: the jet blows out of
                    them (extras.muzzle) until frame 39.
@@ -25,9 +26,22 @@ Clips, 30 fps, in place (the game supplies root motion):
     SquarloSummon  1.4 s: crouches, lifts his hands and slaps the floor in front of him at frame
                    24 (extras.hit_frame, extras.muzzle).
     SquarloRest    2.2 s: plops down on his bottom, panting, arms and cap drooping, and gets up.
-    SquarloStomp   3.2 s: leans onto his left foot and lifts the right one high (the tell),
-                   wobbling, stamps it down in front of him at frame 57 (extras.hit_frame; where
-                   it lands: extras.foot) and leaves it planted until frame 87.
+    SquarloStomp   3 s (a giant's): shifts onto his left foot and hauls the right one up high,
+                   leaning back, arms flung up (the tell), wobbling at the top; then slams it
+                   down, faster and faster, in front of him at frame 54 (extras.hit_frame; where
+                   it lands: extras.foot), the whole body crashing after it; the foot sticks
+                   there and he tugs at it until frame 78 (extras.planted_until).
+    SquarloJump    2.6 s (a giant's): crouches deep, arms back, and springs off at frame 18
+                   (extras.takeoff); in the air (the game lifts him: he plays in place) he tucks
+                   his legs, spreads his arms, then reaches his feet down and lands at frame 51
+                   (extras.hit_frame) in a huge squash, arms slamming down; squats, winded, and
+                   gets up.
+    SquarloKick    1.3 s (a giant's): draws his right foot back, leaning in, and kicks it out
+                   forward and up at frame 21 (extras.hit_frame), following through.
+    SquarloCannon  2.6 s (a giant's): cups his hands at his belly and leans far back while the
+                   water gathers, then thrusts them forward and down at frame 30
+                   (extras.hit_frame): the water cannon blasts out of them (extras.muzzle) until
+                   frame 66 (extras.gust_end), shaking him with its recoil.
     SquarloDeath   2.4 s: shudders, spins round and topples onto his back, legs in the air. Held.
 
 Headless:
@@ -53,7 +67,7 @@ FPS, D, TAU = K.FPS, K.D, K.TAU
 V = Vector
 SIDES = (("L", 1), ("R", -1))
 CLIPS = ("SquarloRun", "SquarloSwim", "SquarloStride", "SquarloBlow", "SquarloCast", "SquarloSummon",
-         "SquarloRest", "SquarloStomp", "SquarloDeath")
+         "SquarloRest", "SquarloStomp", "SquarloJump", "SquarloKick", "SquarloCannon", "SquarloDeath")
 
 BODY_HEX, CAP_HEX, EYE_HEX, NOSE_HEX = "#2fb5a3", "#23948a", "#e4fdff", "#174f4a"
 # (name, colour, emission); indices are the parts' `mat`
@@ -69,7 +83,10 @@ BLOW_FRAMES, BLOW_HIT, GUST_END = 48, 24, 39
 CAST_FRAMES, CAST_HIT = 72, 60
 SUMMON_FRAMES, SUMMON_HIT = 42, 24
 REST_FRAMES = 66
-STOMP_FRAMES, STOMP_HIT, STOMP_UP = 96, 57, 87
+STOMP_FRAMES, STOMP_HIT, STOMP_UP = 90, 54, 78
+JUMP_FRAMES, JUMP_OFF, JUMP_HIT = 78, 18, 51
+KICK_FRAMES, KICK_HIT = 39, 21
+CANNON_FRAMES, CANNON_HIT, CANNON_END = 78, 30, 66
 DEATH_FRAMES = 72
 
 # --- body plan -----------------------------------------------------------------
@@ -102,7 +119,7 @@ FOOT = {s: V((sign * 0.06, -0.012, 0.028)) for s, sign in SIDES}
 FOOT_RADII = (0.034, 0.048, 0.026)
 TOE = V((0, -0.016, -0.002))        # the foot's middle, from the ankle
 
-STOMP_AT = V((-0.064, -0.112, FOOT["R"].z))   # where the right foot comes down
+STOMP_AT = V((-0.07, -0.125, FOOT["R"].z))   # where the right foot comes down
 
 
 def box_sdf(P):
@@ -328,12 +345,20 @@ def blend(a, b, u):
     return out
 
 
+# how a key is reached from the one before it (a key's optional third item): eased in and out,
+# or speeding up into it (an impact: nothing slows down before it lands), or slowing down into it
+EASES = {"smooth": lambda u: u * u * (3 - 2 * u), "in": lambda u: u * u * u, "out": lambda u: 1 - (1 - u) ** 3,
+         "lin": lambda u: u}
+
+
 def keyed(t, keys):
     if t <= keys[0][0]:
         return keys[0][1]
-    for (t0, a), (t1, b) in zip(keys, keys[1:]):
+    for k0, k1 in zip(keys, keys[1:]):
+        (t0, a), (t1, b) = k0[:2], k1[:2]
         if t <= t1:
-            return blend(a, b, C.smoothstep(t0, t1, t))
+            u = min(max((t - t0) / (t1 - t0), 0.0), 1.0)
+            return blend(a, b, EASES[k1[2] if len(k1) > 2 else "smooth"](u))
     return keys[-1][1]
 
 
@@ -387,20 +412,25 @@ def swim(f):
 
 
 def stride(f):
+    """A giant's walk: each foot lands at the front of its step (the left at phase 0, the right
+    at 0.5) and the whole body sinks onto it, squashing a little, then rises over it; the body
+    sways onto the foot it stands on, the arms swing heavily against the legs."""
     n, T = STRIDE_FRAMES, STRIDE_FRAMES / FPS
     ph = (f / n) % 1
     w = TAU * ph
     duty, length = 0.62, STRIDE_SPEED * 0.62 * T
     feet, hands, dirs = {}, {}, {}
     for s, sign in SIDES:
-        y, z = C.foot_track((ph + (0.5 if s == "R" else 0)) % 1, duty, length, 0.075, STRIDE_SPEED, T, skew=1.2)
+        y, z = C.foot_track((ph + (0.5 if s == "R" else 0)) % 1, duty, length, 0.09, STRIDE_SPEED, T, skew=1.3)
         feet[s] = FOOT[s] + V((0, y, z))
         swing = math.sin(w + (0 if s == "R" else math.pi))
-        hands[s] = V((sign * 0.2, -0.02 - 0.04 * swing, 0.34))
-        dirs[s] = V((sign * 0.4, -0.5, 0.6)).normalized()
-    return params(t=f / FPS, pos=V((0.012 * math.sin(w), 0, -0.03 + 0.012 * math.cos(2 * w))),
-                  pitch=D(6), roll=D(6) * math.sin(w), yaw=D(4) * math.sin(w),
-                  feet=feet, hands=hands, dirs=dirs, cap=(D(8) * math.sin(2 * w - 0.8), D(12) * math.sin(w - 0.6)))
+        hands[s] = V((sign * 0.21, -0.02 - 0.07 * swing, 0.33 + 0.015 * abs(swing)))
+        dirs[s] = V((sign * 0.4, -0.5 - 0.3 * swing, 0.5)).normalized()
+    land = max(0.0, math.cos(2 * w - 0.45)) ** 3        # just after a foot comes down: the weight lands on it
+    return params(t=f / FPS, pos=V((0.016 * math.sin(w), 0, -0.032 - 0.016 * land + 0.008 * math.cos(2 * w + 2.2))),
+                  pitch=D(7) + D(2.5) * land, roll=D(7) * math.sin(w), yaw=D(5) * math.sin(w),
+                  squash=(1 + 0.03 * land, 1 - 0.035 * land),
+                  feet=feet, hands=hands, dirs=dirs, cap=(D(14) * land - D(4) + D(5) * math.sin(2 * w - 1.2), D(12) * math.sin(w - 0.6)))
 
 
 def blow_keys():
@@ -488,28 +518,136 @@ def rest(f):
             "pitch": p["pitch"] + D(3) * pant * s}
 
 
+ARMS_UP = dict(hands=per_side(lambda s, sign: (sign * 0.23, -0.01, 0.6)),
+               dirs=per_side(lambda s, sign: (sign * 0.8, -0.1, 0.8)),
+               elbows=per_side(lambda s, sign: (sign * 0.7, 0.4, -0.6)))
+
+
 def stomp_keys():
-    hit, planted = STOMP_HIT / FPS, STOMP_UP / FPS
-    lean = pose(REST, pos=V((0.02, 0, 0)), roll=D(-7), cap=(0, D(12)),
-                feet={"L": FOOT["L"] + V((-0.01, 0, 0))})
-    lifted = pose(lean, pitch=D(-9), squash=(0.98, 1.03), cap=(D(-14), D(10)),
-                  feet={"R": V((-0.06, -0.035, 0.16))}, knees=V((0, -1, 0.3)),
-                  hands=per_side(lambda s, sign: (sign * 0.22, -0.02, 0.52)),
-                  dirs=per_side(lambda s, sign: (sign * 1, -0.2, 0.4)),
-                  elbows=per_side(lambda s, sign: (sign * 0.6, 0.4, -0.8)))
-    down = pose(REST, pos=V((0, -0.04, -0.025)), pitch=D(14), roll=D(-3), squash=(1.05, 0.95), cap=(D(32), D(-4)),
-                feet={"R": STOMP_AT, "L": FOOT["L"] + V((0, 0.015, 0))},
-                hands=per_side(lambda s, sign: (sign * 0.2, -0.08, 0.3)),
-                dirs=per_side(lambda s, sign: (sign * 0.6, -0.4, -0.6)))
-    return [(0, REST), (0.45, lean), (1.25, lifted), (hit - 0.12, pose(lifted, pitch=D(-12), feet={"R": V((-0.06, -0.04, 0.17))})),
-            (hit, down), (planted, pose(down, squash=(1.03, 0.97))), (STOMP_FRAMES / FPS - 0.04, REST), (STOMP_FRAMES / FPS, REST)]
+    hit, planted, end = STOMP_HIT / FPS, STOMP_UP / FPS, STOMP_FRAMES / FPS
+    # like a sumo wrestler's stamp: the weight over the left foot, the right leg hauled up high
+    # out to the side, where it shows from anywhere
+    shift = pose(REST, pos=V((0.035, 0.005, -0.015)), roll=D(6), squash=(1.02, 0.98), cap=(D(6), D(14)),
+                 feet={"L": FOOT["L"] + V((-0.01, 0, 0))},
+                 hands=per_side(lambda s, sign: (sign * 0.23, -0.04, 0.42)),
+                 dirs=per_side(lambda s, sign: (sign * 1, -0.3, 0.2)))
+    lifted = pose(shift, pos=V((0.04, 0.01, -0.005)), pitch=D(-8), roll=D(15), squash=(0.97, 1.04), cap=(D(-18), D(22)),
+                  feet={"R": V((-0.15, -0.04, 0.19))}, knees=V((-0.9, -0.5, 0.3)), **ARMS_UP)
+    top = pose(lifted, pitch=D(-11), roll=D(19), squash=(0.96, 1.05), cap=(D(-24), D(26)), feet={"R": V((-0.17, -0.05, 0.23))})
+    slam = pose(REST, pos=V((0.0, -0.035, -0.055)), pitch=D(18), roll=D(-3), squash=(1.12, 0.86), cap=(D(45), D(-6)),
+                feet={"R": STOMP_AT, "L": FOOT["L"] + V((0, 0.02, 0))},
+                hands=per_side(lambda s, sign: (sign * 0.21, -0.1, 0.2)),
+                dirs=per_side(lambda s, sign: (sign * 0.5, -0.5, -0.8)),
+                elbows=per_side(lambda s, sign: (sign * 1, 0.3, 0.3)))
+    rebound = pose(slam, pos=V((0.0, -0.025, -0.03)), pitch=D(11), squash=(0.97, 1.03), cap=(D(10), D(4)))
+    tug = pose(slam, pos=V((0.01, 0.0, -0.025)), pitch=D(-6), roll=D(4), squash=(1.0, 1.0), cap=(D(-8), D(8)),
+               hands=per_side(lambda s, sign: (sign * 0.22, 0.02, 0.4)),
+               dirs=per_side(lambda s, sign: (sign * 1, 0.1, 0.3)))
+    return [(0, REST), (0.45, shift), (1.15, lifted), (hit - 0.22, top, "out"), (hit, slam, "in"), (hit + 0.12, rebound, "out"),
+            (hit + 0.4, tug), (planted, pose(tug, pitch=D(-9), pos=V((0.01, 0.01, -0.02)))), (end, REST)]
 
 
 def stomp(f):
     t = f / FPS
     p = keyed(t, STOMP_KEYS)
-    wobble = C.smoothstep(1.0, 1.25, t) * (1 - C.smoothstep(STOMP_HIT / FPS - 0.2, STOMP_HIT / FPS - 0.12, t))
-    return {**p, "t": t, "roll": p["roll"] + D(4) * wobble * math.sin(TAU * 2.2 * t), "pos": p["pos"] + V((0.01 * wobble * math.sin(TAU * 2.2 * t), 0, 0))}
+    hit, planted = STOMP_HIT / FPS, STOMP_UP / FPS
+    # wobbling on one foot at the top, and tugging at the stuck foot afterwards
+    wobble = C.smoothstep(0.9, 1.2, t) * (1 - C.smoothstep(hit - 0.3, hit - 0.2, t))
+    tug = C.smoothstep(hit + 0.3, hit + 0.45, t) * (1 - C.smoothstep(planted - 0.1, planted, t))
+    w = math.sin(TAU * 2.4 * t)
+    return {**p, "t": t, "roll": p["roll"] + D(5) * wobble * w + D(4) * tug * math.sin(TAU * 3.5 * t),
+            "pitch": p["pitch"] + D(3) * tug * math.sin(TAU * 3.5 * t + 1),
+            "pos": p["pos"] + V((0.012 * wobble * w, 0, 0))}
+
+
+def jump_keys():
+    off, hit, end = JUMP_OFF / FPS, JUMP_HIT / FPS, JUMP_FRAMES / FPS
+    crouch = pose(REST, pos=V((0, 0.025, -0.075)), pitch=D(20), squash=(1.12, 0.86), cap=(D(28), 0),
+                  hands=per_side(lambda s, sign: (sign * 0.2, 0.12, 0.26)),
+                  dirs=per_side(lambda s, sign: (sign * 0.3, 0.7, -0.5)),
+                  elbows=per_side(lambda s, sign: (sign * 1, -0.2, 0.4)), knees=V((0, -1, 0.15)))
+    deep = pose(crouch, pos=V((0, 0.03, -0.085)), pitch=D(24), squash=(1.15, 0.83))
+    launch = pose(REST, pos=V((0, -0.01, 0.012)), pitch=D(-4), squash=(0.88, 1.16), cap=(D(-32), 0), **ARMS_UP)
+    tuck = pose(launch, pos=V((0, 0, 0.02)), pitch=D(-6), squash=(1.0, 1.0), cap=(D(-24), D(6)),
+                feet=per_side(lambda s, sign: FOOT[s] + V((sign * 0.012, -0.035, 0.1))), knees=V((0, -1, 0.6)),
+                hands=per_side(lambda s, sign: (sign * 0.27, 0.0, 0.52)),
+                dirs=per_side(lambda s, sign: (sign * 1, 0, 0.3)))
+    apex = pose(tuck, pitch=D(10), cap=(D(-10), D(-6)), feet=per_side(lambda s, sign: FOOT[s] + V((sign * 0.016, -0.025, 0.085))))
+    reach = pose(apex, pos=V((0, 0, 0.0)), pitch=D(4), squash=(0.96, 1.06), cap=(D(-42), D(4)),
+                 feet=per_side(lambda s, sign: FOOT[s] + V((sign * 0.012, -0.005, 0.004))), knees=V((0, -1, 0.1)), **ARMS_UP)
+    land = pose(REST, pos=V((0, -0.01, -0.085)), pitch=D(16), squash=(1.22, 0.78), cap=(D(50), 0),
+                feet=per_side(lambda s, sign: FOOT[s] + V((sign * 0.014, 0, 0))), knees=V((0, -1, 0.1)),
+                hands=per_side(lambda s, sign: (sign * 0.24, -0.08, 0.16)),
+                dirs=per_side(lambda s, sign: (sign * 0.6, -0.4, -0.8)),
+                elbows=per_side(lambda s, sign: (sign * 1, 0.3, 0.3)))
+    rebound = pose(land, pos=V((0, -0.005, -0.04)), squash=(0.96, 1.05), pitch=D(8), cap=(D(5), D(5)))
+    squat = pose(land, pos=V((0, 0.0, -0.055)), pitch=D(12), squash=(1.06, 0.94), cap=(D(38), D(-12)),
+                 hands=per_side(lambda s, sign: (sign * 0.2, -0.03, 0.2)),
+                 dirs=per_side(lambda s, sign: (sign * 0.3, -0.2, -1)))
+    return [(0, REST), (0.3, crouch), (off - 0.1, deep, "out"), (off, launch, "in"), (off + 0.28, tuck, "out"),
+            (off + 0.55, apex), (hit - 0.16, reach), (hit, land, "in"), (hit + 0.12, rebound, "out"), (hit + 0.32, squat),
+            (end - 0.35, pose(squat, pitch=D(9))), (end, REST)]
+
+
+def jump(f):
+    t = f / FPS
+    p = keyed(t, JUMP_KEYS)
+    hit, end = JUMP_HIT / FPS, JUMP_FRAMES / FPS
+    # winded after the landing: the body heaves
+    pant = C.smoothstep(hit + 0.3, hit + 0.45, t) * (1 - C.smoothstep(end - 0.45, end - 0.3, t))
+    s = math.sin(TAU * 3 * t)
+    return {**p, "t": t, "squash": (p["squash"][0] * (1 + 0.03 * pant * s), p["squash"][1] * (1 - 0.035 * pant * s))}
+
+
+def kick_keys():
+    hit, end = KICK_HIT / FPS, KICK_FRAMES / FPS
+    wind = pose(REST, pos=V((0.025, 0.02, -0.02)), pitch=D(12), roll=D(-6), yaw=D(-14), squash=(1.03, 0.97), cap=(D(18), D(10)),
+                feet={"R": V((-0.06, 0.11, 0.09)), "L": FOOT["L"] + V((-0.01, 0, 0))}, knees=V((0, -1, -0.2)),
+                hands=per_side(lambda s, sign: (sign * 0.17, -0.13, 0.42)),
+                dirs=per_side(lambda s, sign: (sign * 0.4, -1, 0.2)))
+    cocked = pose(wind, pitch=D(16), yaw=D(-18), feet={"R": V((-0.06, 0.14, 0.12))}, cap=(D(24), D(12)))
+    kick = pose(wind, pos=V((0.02, 0.0, 0.0)), pitch=D(-18), yaw=D(14), squash=(0.96, 1.04), cap=(D(-30), D(-12)),
+                feet={"R": V((-0.05, -0.2, 0.17))}, knees=V((0, -1, 0.3)),
+                hands=per_side(lambda s, sign: (sign * 0.21, 0.07, 0.46)),
+                dirs=per_side(lambda s, sign: (sign * 0.8, 0.5, 0.3)))
+    follow = pose(kick, pitch=D(-21), yaw=D(18), feet={"R": V((-0.05, -0.2, 0.2))}, cap=(D(-20), D(-16)))
+    return [(0, REST), (0.4, wind), (hit - 0.12, cocked, "out"), (hit, kick, "in"), (hit + 0.15, follow, "out"),
+            (end - 0.25, pose(REST, pos=V((0, 0, -0.02)), squash=(1.04, 0.96))), (end, REST)]
+
+
+def kick(f):
+    return {**keyed(f / FPS, KICK_KEYS), "t": f / FPS}
+
+
+def cannon_keys():
+    hit, gust_end, end = CANNON_HIT / FPS, CANNON_END / FPS, CANNON_FRAMES / FPS
+    cup = dict(hands=per_side(lambda s, sign: (sign * 0.04, -0.11, 0.3)),
+               dirs=per_side(lambda s, sign: (-sign * 0.6, -0.4, 0.4)),
+               elbows=per_side(lambda s, sign: (sign * 1, 0.3, -0.4)))
+    gather = pose(REST, pos=V((0, 0.03, -0.02)), pitch=D(-16), squash=(1.05, 0.97), cap=(D(-16), 0), **cup)
+    wound = pose(gather, pos=V((0, 0.035, -0.03)), pitch=D(-22), squash=(1.07, 0.95), cap=(D(-22), 0))
+    blast = pose(REST, pos=V((0, -0.02, -0.03)), pitch=D(10), squash=(0.97, 1.03), cap=(D(24), D(4)),
+                 hands=per_side(lambda s, sign: (sign * 0.03, -0.21, 0.33)),
+                 dirs=per_side(lambda s, sign: (-sign * 0.2, -1, -0.45)),
+                 elbows=per_side(lambda s, sign: (sign * 1, 0, -0.1)),
+                 feet={"L": FOOT["L"] + V((0.01, -0.03, 0)), "R": FOOT["R"] + V((-0.01, 0.03, 0))})
+    brace = pose(blast, pos=V((0, -0.01, -0.035)), pitch=D(4), cap=(D(-6), D(4)))
+    return [(0, REST), (0.35, gather), (hit - 0.1, wound, "out"), (hit, blast, "in"), (hit + 0.25, brace, "out"),
+            (gust_end, pose(brace, pitch=D(2))), (end - 0.05, REST), (end, REST)]
+
+
+def cannon(f):
+    t = f / FPS
+    p = keyed(t, CANNON_KEYS)
+    hit, gust_end = CANNON_HIT / FPS, CANNON_END / FPS
+    # the water swirling in his hands while it gathers, then the recoil shaking him while it blasts
+    gather = C.smoothstep(0.3, 0.45, t) * (1 - C.smoothstep(hit - 0.15, hit - 0.05, t))
+    shake = C.smoothstep(hit, hit + 0.05, t) * (1 - C.smoothstep(gust_end - 0.1, gust_end, t))
+    hands = {s: p["hands"][s] + V((sign * 0.012 * math.sin(TAU * 5 * t), 0, 0.012 * math.sin(TAU * 6 * t))) * gather
+             for s, sign in SIDES}
+    return {**p, "t": t, "hands": hands, "roll": p["roll"] + D(2.5) * shake * math.sin(TAU * 13 * t),
+            "pitch": p["pitch"] - D(2) * shake * (0.5 + 0.5 * math.sin(TAU * 9 * t)),
+            "pos": p["pos"] + V((0, 0.006 * shake * math.sin(TAU * 11 * t), 0))}
 
 
 def death(f):
@@ -557,12 +695,13 @@ def foot_point(rig, action, frame):
     return rig.matrix_world @ rig.pose.bones["shin.R"].tail
 
 
-BLOW_KEYS = CAST_KEYS = SUMMON_KEYS = REST_KEYS = STOMP_KEYS = None
+BLOW_KEYS = CAST_KEYS = SUMMON_KEYS = REST_KEYS = STOMP_KEYS = JUMP_KEYS = KICK_KEYS = CANNON_KEYS = None
 
 
 def animate(rig, obj):
-    global BLOW_KEYS, CAST_KEYS, SUMMON_KEYS, REST_KEYS, STOMP_KEYS
+    global BLOW_KEYS, CAST_KEYS, SUMMON_KEYS, REST_KEYS, STOMP_KEYS, JUMP_KEYS, KICK_KEYS, CANNON_KEYS
     BLOW_KEYS, CAST_KEYS, SUMMON_KEYS, REST_KEYS, STOMP_KEYS = blow_keys(), cast_keys(), summon_keys(), rest_keys(), stomp_keys()
+    JUMP_KEYS, KICK_KEYS, CANNON_KEYS = jump_keys(), kick_keys(), cannon_keys()
     rig.animation_data_create()
     K.ground_clip(rig, obj, "SquarloRun", solver(rig, run), RUN_FRAMES, cyclic=True, extras={"speed": RUN_SPEED})
     K.ground_clip(rig, obj, "SquarloSwim", solver(rig, swim), SWIM_FRAMES, cyclic=True, extras={"speed": SWIM_SPEED})
@@ -576,15 +715,23 @@ def animate(rig, obj):
     K.ground_clip(rig, obj, "SquarloRest", solver(rig, rest), REST_FRAMES, extras={"attack_style": "rest"})
     st = K.ground_clip(rig, obj, "SquarloStomp", solver(rig, stomp), STOMP_FRAMES,
                        extras={"attack_style": "stomp", "hit_frame": STOMP_HIT, "hit_time": STOMP_HIT / FPS, "planted_until": STOMP_UP})
+    j = K.ground_clip(rig, obj, "SquarloJump", solver(rig, jump), JUMP_FRAMES,
+                      extras={"attack_style": "jump", "hit_frame": JUMP_HIT, "hit_time": JUMP_HIT / FPS, "takeoff": JUMP_OFF})
+    k = K.ground_clip(rig, obj, "SquarloKick", solver(rig, kick), KICK_FRAMES,
+                      extras={"attack_style": "kick", "hit_frame": KICK_HIT, "hit_time": KICK_HIT / FPS})
+    cn = K.ground_clip(rig, obj, "SquarloCannon", solver(rig, cannon), CANNON_FRAMES,
+                       extras={"attack_style": "cannon", "hit_frame": CANNON_HIT, "hit_time": CANNON_HIT / FPS, "gust_end": CANNON_END})
     K.ground_clip(rig, obj, "SquarloDeath", solver(rig, death), DEATH_FRAMES,
                   extras={"hold_last_frame": True, "hold_from": 2.0}, settle_from=round(1.7 * FPS))
-    for act, mark, frame in ((b, "Blow", BLOW_HIT), (c, "Tide", CAST_HIT), (s, "Slap", SUMMON_HIT), (st, "Stomp", STOMP_HIT)):
+    for act, mark, frame in ((b, "Blow", BLOW_HIT), (c, "Tide", CAST_HIT), (s, "Slap", SUMMON_HIT), (st, "Stomp", STOMP_HIT),
+                             (j, "Takeoff", JUMP_OFF), (j, "Land", JUMP_HIT), (k, "Kick", KICK_HIT), (cn, "Blast", CANNON_HIT)):
         act.pose_markers.new(mark).frame = frame
     K.register(rig, CLIPS)
     b["muzzle"] = game(between_hands(rig, "SquarloBlow", BLOW_HIT + 2, 0.03))
     s["muzzle"] = game(between_hands(rig, "SquarloSummon", SUMMON_HIT))
     st["foot"] = game(foot_point(rig, "SquarloStomp", STOMP_HIT + 3))
-    return {"blow": list(b["muzzle"]), "summon": list(s["muzzle"]), "foot": list(st["foot"])}
+    cn["muzzle"] = game(between_hands(rig, "SquarloCannon", CANNON_HIT + 2, 0.03))
+    return {"blow": list(b["muzzle"]), "summon": list(s["muzzle"]), "foot": list(st["foot"]), "cannon": list(cn["muzzle"])}
 
 
 # --- previews ----------------------------------------------------------------
@@ -594,8 +741,12 @@ def preview(scene, rig, path):
              ("SquarloSwim", 6, (1.4, -1.5, 0.8)), ("SquarloBlow", BLOW_HIT + 3, (1.5, -1.5, 0.7)),
              ("SquarloCast", 35, (0.9, -1.9, 0.8)), ("SquarloCast", CAST_HIT + 2, (1.6, -1.4, 0.8)),
              ("SquarloSummon", SUMMON_HIT, (1.6, -1.4, 0.8)), ("SquarloRest", 30, (1.2, -1.7, 0.8)),
-             ("SquarloStomp", 45, (1.7, -1.3, 0.7)), ("SquarloStomp", STOMP_HIT + 4, (1.7, -1.3, 0.7)),
-             ("SquarloStride", 10, (1.4, -1.6, 0.8)), ("SquarloDeath", DEATH_FRAMES, (1.2, -1.2, 1.3))]
+             ("SquarloStomp", 45, (1.7, -1.3, 0.7)), ("SquarloStomp", STOMP_HIT + 1, (1.7, -1.3, 0.7)),
+             ("SquarloStride", 10, (1.4, -1.6, 0.8)), ("SquarloDeath", DEATH_FRAMES, (1.2, -1.2, 1.3)),
+             ("SquarloJump", JUMP_OFF - 3, (1.6, -1.4, 0.7)), ("SquarloJump", JUMP_OFF + 12, (1.6, -1.4, 0.7)),
+             ("SquarloJump", JUMP_HIT - 3, (1.6, -1.4, 0.7)), ("SquarloJump", JUMP_HIT + 1, (1.6, -1.4, 0.7)),
+             ("SquarloKick", KICK_HIT - 4, (1.9, -0.6, 0.7)), ("SquarloKick", KICK_HIT + 2, (1.9, -0.6, 0.7)),
+             ("SquarloCannon", CANNON_HIT - 3, (1.7, -1.2, 0.7)), ("SquarloCannon", CANNON_HIT + 8, (1.7, -1.2, 0.7))]
     K.contact_sheet(scene, rig, shots, path, (0, 0, 0.3), size=360, cols=4)
     return [path]
 

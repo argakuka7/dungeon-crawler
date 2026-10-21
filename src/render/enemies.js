@@ -72,7 +72,7 @@ import { attackOf, makeEnemy, ENEMY_KINDS } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { player } from '../game/state.js';
-import { cameraKick } from '../game/juice.js';
+import { cameraKick, footfallFx } from '../game/juice.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
@@ -351,6 +351,18 @@ function wardLook(v, e, dt) {
   }
   if (Math.random() < dt * 8) emit(glow, e.x, e.y + h * 0.5, e.z, { life: 0.3, size: 0.9 * s, grow: 0.6, color: '#9feaff', alpha: 0.35 });
 }
+// A giant striding (Squarlo grown: the gait `stride`, whose feet come down at phases 0 and 0.5,
+// blender/squarlo.py): each footfall thuds and jolts the ground a little
+function footfalls(v, e, gait) {
+  const was = v.stepPhase ?? v.phase;
+  v.stepPhase = v.phase;
+  if (gait !== 'stride' || e.mode === 'attack' || !(e.speed > 0.01) || Math.hypot(e.x - player.x, e.z - player.z) > 16) return;
+  for (const [h, side] of [[0.5, -1], [1, 1]]) {   // (the right foot, the left: phase 1 is the next loop's 0)
+    if (!(was < h && (v.phase >= h || v.phase < was))) continue;
+    const s = Math.sin(e.yaw), c = Math.cos(e.yaw), x = 0.06 * side * v.size;
+    footfallFx(e.x + x * c, e.y, e.z - x * s, v.size);
+  }
+}
 // splitting: shaking, steaming
 function shudder(v, e, dt) {
   const k = 0.06 * v.size;
@@ -611,6 +623,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     if (e.profile.hover || gait === 'swim') v.phase = (v.phase + dt / W.getClip().duration * (gait === 'swim' ? 0.6 + 0.4 * Math.min(1, e.speed / walkSpeed) : 1)) % 1;   // keeps hovering (paddling)
     else if (!attack && e.speed > 0.01) v.phase = (v.phase + dt * e.speed / stride) % 1;
     else if (!attack) v.phase = 0; // idle on both planted feet, not frozen mid-step
+    footfalls(v, e, gait);
     W.time = v.phase * W.getClip().duration;
     if (A.fast) A.fast.time = v.phase * A.fast.getClip().duration;
     if (attack) strike.time = Math.min(e.t, strike.getClip().duration);

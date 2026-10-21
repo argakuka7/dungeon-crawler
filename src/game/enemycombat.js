@@ -4,7 +4,7 @@
 import { player, state, setStatus } from './state.js';
 import { takeDamage } from '../core/progression.js';
 import { flash } from './hud.js';
-import { playerHurtFx, burnHurtFx, poisonHurtFx, zappedFx } from './juice.js';
+import { playerHurtFx, burnHurtFx, poisonHurtFx, zappedFx, squashedFx } from './juice.js';
 import { knockDown } from './ragdoll.js';
 import { canMove } from '../physics/canmove.js';
 import { walkable, stepEnemy } from '../physics/enemynav.js';
@@ -12,10 +12,11 @@ import { attackOf, blowOf } from '../core/enemies.js';
 import { ignite, burnStep, burntOut, chillFrom, chillStep } from '../core/projectiles.js';
 import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
-import { absent } from '../core/enemies.js';
+import { absent, airborne } from '../core/enemies.js';
+import { SIT_IMPACT } from '../core/constants.js';
 import { grabPlayer } from './grab.js';
 
-export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.pull = null; player.shocked = 0; player.held = null; };
+export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.pull = null; player.shocked = 0; player.dazed = 0; player.flat = 0; player.held = null; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
 export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
@@ -30,7 +31,9 @@ export function poisonPlayer(toxin, reason, by = null) {
 export const playerFloor = (height, p = player) => p.grounded && !p.swimming && walkable(p.support, height) ? p.support : null;
 // a blow (core/enemies.js blowOf) from (fx, fz) that shoves the player along (nx, nz); a gust's
 // blow (its `push`) goes on blowing the player that way for a moment (physics/move.js), and a
-// bolt's (its `shock`) stuns: no moving, jumping or striking for that long (render/shocked.js).
+// bolt's (its `shock`) stuns: no moving, jumping or striking for that long (render/shocked.js), and
+// one that squashes (its `daze`: a giant landing on us) knocks us flat onto our bottom, dazed and
+// seeing stars, as long.
 // A grab's (its `grab`: the id of the enemy that caught us) is carried out by game/grab.js; held
 // in its hands, nothing else hurts us.
 export function hitPlayer(blow, fx, fz, nx, nz) {
@@ -55,6 +58,12 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   if (blow.pop > 0 && blow.pop < 12 && !p.climb) { p.vy = blow.pop; p.grounded = false; }
   const shock = blow.shock;
   if (shock > 0 && shock < 3) { p.stun = Math.max(p.stun, shock); p.shocked = shock; zappedFx(); }
+  const daze = blow.daze;
+  if (daze > 0 && daze <= 5 && !p.climb && !p.swimming) {
+    p.vx = p.vz = 0; p.stun = Math.max(p.stun, daze); p.dazed = daze;
+    p.landImpact = SIT_IMPACT + 1; p.landCount++;   // (down on our bottom: render/blendtree.js sits)
+    squashedFx();
+  }
   const push = blow.push;
   if (push && push.speed > 0 && push.speed < 30 && push.time > 0 && push.time < 3)
     p.gust = { vx: nx * push.speed, vz: nz * push.speed, t: push.time, time: push.time };
@@ -116,7 +125,7 @@ function pushPlayer(dx, dz) {
 export function contactEnemies(list, dt, moveEnemies = true) {
   const p = player;
   for (const e of list) {
-    if (absent(e) || p.ragdoll || p.held || p.flipping) continue;
+    if (absent(e) || airborne(e) || p.ragdoll || p.held || p.flipping) continue;
     const dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz), body = p.r + e.profile.radius;
     if (d >= body || p.y >= e.y + e.profile.bodyHeight || p.y + p.h <= e.y) continue;
     const nx = d ? dx / d : 1, nz = d ? dz / d : 0, depth = body - d;
@@ -127,7 +136,7 @@ export function contactEnemies(list, dt, moveEnemies = true) {
   if (!moveEnemies) return;
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
     const a = list[i], b = list[j];
-    if (absent(a) || absent(b) || Math.abs(a.y - b.y) > 0.6) continue;
+    if (absent(a) || absent(b) || airborne(a) || airborne(b) || Math.abs(a.y - b.y) > 0.6) continue;
     const dx = a.x - b.x, dz = a.z - b.z, d = Math.hypot(dx, dz), r = a.profile.radius + b.profile.radius;
     if (d >= r) continue;
     const nx = d ? dx / d : 1, nz = d ? dz / d : 0, push = Math.min(r - d, dt * 1.5);

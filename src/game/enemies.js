@@ -33,6 +33,8 @@ import { removeEnemyViews } from '../render/enemies.js';
 import { updateProjectiles, drawAllProjectiles, clearProjectiles } from './projectiles.js';
 import { updateBeams, drawAllBeams, clearBeams } from './beams.js';
 import { updateGusts } from './gusts.js';
+import { updateQuakes, drawQuakes, clearQuakes } from './quakes.js';
+import { drawJets, clearJets } from '../render/giantfx.js';
 import { hitWithSword } from './sword.js';
 import { updateShots, drawAllShots, clearShots } from './shots.js';
 import { updateThrows, drawThrows, clearThrows } from './throws.js';
@@ -85,7 +87,7 @@ export function mirrorEnemies(m) {
     resetEnemies();
   } else if (!m && mirror) {   // and come back
     removeEnemyViews(mirror.list);
-    clearProjectiles(); clearBeams();
+    clearProjectiles(); clearBeams(); clearQuakes();
     mirror = null;
     if (state.map) resetEnemies();
   }
@@ -94,7 +96,7 @@ export function mirrorEnemies(m) {
 export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...gustos, ...totnars, ...squarlos, ...flips, ...foggerys, ...renews, ...spawned];
 export function resetEnemies() {
   resetFlipWorld(); clearBlackHoles();   // (Flip's box the right way up again: game/flipworld.js)
-  resetEnemyCombat(); clearProjectiles(); clearBeams(); clearShots(); clearThrows(); resetCalls();
+  resetEnemyCombat(); clearProjectiles(); clearBeams(); clearQuakes(); clearJets(); clearShots(); clearThrows(); resetCalls();
   state.dark = 0; state.mist = 0; resetTide(); resetMovers();   // (Foggery's platforms back under his lava, game/movers.js)
   resetRewind();   // (Renew's time: the hero's tape and echoes, game/rewind.js)
   removeEnemyViews(spawned); spawned = [];
@@ -212,7 +214,7 @@ export function updateEnemies(dt) {
   // a boss's tide (game/tide.js): it drowns, but those that swim float
   updateTide(allEnemies(), dt);
   if (state.tide != null) { drownEnemies(allEnemies()); floatSwimmers(allEnemies()); }
-  updateProjectiles(dt); updateBeams(dt); updateGusts(allEnemies(), dt); updateBlackHoles(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  updateProjectiles(dt); updateBeams(dt); updateQuakes(allEnemies(), dt); updateGusts(allEnemies(), dt); updateBlackHoles(allEnemies(), dt); updateBurning(dt); updateChill(dt); updateToxic(dt);
   if (!turning()) contactEnemies(allEnemies(), dt);   // (all frozen while Flip's world turns)
   // (last: whatever moved them, those lava does not burn stand on it, game/tide.js)
   if (state.tide != null) walkOnLava(allEnemies());
@@ -231,17 +233,20 @@ function followEnemies(dt) {
   updateFlipWorld(list, dt, false);
   hitWithSword(list); updateShots(dt, list); updateThrows(dt, list);
   awardKills(list);
-  updateProjectiles(dt); updateGusts(list, dt, false); updateBlackHoles(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
+  updateProjectiles(dt); updateQuakes(list, dt, false); updateGusts(list, dt, false); updateBlackHoles(list, dt, false); updateBurning(dt); updateChill(dt); updateToxic(dt);
   if (!turning()) contactEnemies(list, dt, false);
   updateTide(list, dt);
   state.dark = darkness(list); state.mist = misty(list);
   updateRewind(dt, list);
 }
-export function drawEnemies(dt, off) { animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawAllShots(dt, off); drawThrows(dt, off); drawRewind(dt, off); }
+export function drawEnemies(dt, off = { x: 0, y: 0, z: 0 }) {
+  animateEnemies(allEnemies(), dt, off); drawAllProjectiles(dt, off); drawAllBeams(dt, off); drawQuakes(dt, off); drawJets(dt);
+  drawAllShots(dt, off); drawThrows(dt, off); drawRewind(dt, off);
+}
 function detachSpawned() { const list = spawned; spawned = []; return list; }
 // projectiles and shots in flight do not travel along
 export function detachEnemies() {
-  clearProjectiles(); clearBeams(); clearShots(); clearThrows(); hordeGroups = [];
+  clearProjectiles(); clearBeams(); clearQuakes(); clearJets(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
     ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachFlips(), ...detachFoggerys(), ...detachRenews(), ...detachSpawned()];

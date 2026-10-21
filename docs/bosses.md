@@ -242,15 +242,17 @@ times as big (`SQUARLO_GIANT` `size`): a giant six cells tall.
 
 Profiles: `SQUARLO` and `SQUARLO_GIANT` in `src/core/enemies.js` (`STAGE_PROFILES`: one for each
 of his stages); the fight's rules in `src/core/squarlo.js` (`SQUARLO_FIGHT`); the fight itself in
-`src/game/squarlo.js`, his water in `src/game/tide.js`.
+`src/game/squarlo.js`, his water in `src/game/tide.js`, the giant's shockwaves in
+`src/game/quakes.js` (drawn with his water cannon by `render/giantfx.js`), drowning's rescue in
+`src/game/fluidrescue.js`.
 
 | | Level 4 |
 |---|---|
 | Health | 1510 (the descent tier's floor, grown three levels) |
-| Damage | 31 (jet ×0.85 and a push, stomp ×1.5 and a knock-down; the tide, summons and rests: none) |
+| Damage | 31 (jet ×0.85 and a push; a giant's stomp ×1.5, landing ×1.6, kick ×1.2, cannon ×0.9, shockwave ×0.55–0.6; the tide, summons and rests: none) |
 | XP | 650 grown; coins 150–260 at level 1; two weapons and two potions like a descent guardian |
 | Speed | 4.2 cells/s (the player runs 2.8); a giant 1.5 |
-| Poise | 2 s |
+| Poise | 2 s; a giant: nothing staggers him, and blows do ×0.6 unless he is exposed |
 
 He `swims`: no water drowns him, and in water deeper than half his body he floats in it,
 paddling (`game/tide.js floatSwimmers`, the clip `SquarloSwim`).
@@ -280,7 +282,11 @@ there, slowed by the water, takes less time than the tide does to get over the h
 The water is a standing fluid like a flood trial's (`physics/fluid.js setTide`; drawn like the
 trial's rising water, `render/trials.js`, only in its box): its level follows his `tide` (0 at
 rest .. 1 at high tide, `core/squarlo.js tideLevel`). It drowns what it goes over the head of
-(see [Water](#water-wading-and-drowning)), enemies too (without rewards).
+(see [Water](#water-wading-and-drowning)), enemies too (without rewards). **A player it goes over
+the head of does not die** (`game/fluidrescue.js`, `game/ragdoll.js dieInFluid`): it costs a
+quarter of their most health (`SQUARLO_FIGHT.rescue`), and magic pulls them up out of the water:
+where they last stood if even the high tide stays under the head there, else onto the nearest
+such floor of the fight (a hill). Only if that quarter is all they have left does it drown them.
 
 ### Phase 1 (full health to half)
 
@@ -311,17 +317,55 @@ nothing hurting him until 0.6 s after. Then he fights on as `SQUARLO_GIANT` (his
 
 ### Phase 2 (half health to death)
 
-- He walks the floors like any enemy, over the hills (the clip `SquarloStride`), but keeps his
-  body off the bank (`keepIn`). Only his legs are in reach of a blade; a player on a hill
-  higher than his feet reaches him only with a bow, a crossbow or a staff.
-- **Stomp** (within 5 cells, clip `SquarloStomp`, 3.2 s): he leans onto his left foot and
-  lifts the right one high, wobbling (the tell). From 0.4 s his foot's shadow (a beam of kind
-  `stomp` out of the sky, `core/beams.js`, `render/beams.js`) follows the player at 2.6 cells/s,
-  for the last 0.45 s it holds still, flashing; his foot moves with him to over the shadow
-  (`plant`). At 1.9 s it comes down there: whoever is within a cell of it is stomped (47 at
-  level 4) and knocked down; a boom, the ground shaking, a ring of dust and spray. The foot
-  stays planted until 2.9 s: every blow does ×1.4 meanwhile ("Squarlo is stuck! Hit his foot").
-- The tide, the Squirtles (up to **two**, every 11 s at most) and the rests, as before.
+- He walks the floors like any enemy, over the hills (the clip `SquarloStride`: the body sinks
+  onto each foot as it lands, and every footfall thuds and jolts the view a little,
+  `render/enemies.js footfalls`), but keeps his body off the bank (`keepIn`). Only his legs are
+  in reach of a blade; a player on a hill higher than his feet reaches him only with a bow, a
+  crossbow or a staff.
+- **Nothing staggers him** (`steadfast`, `core/combat.js damageEnemy`): no blow cuts a wind-up
+  short. Blows do only ×0.6 (`armour`, `core/enemies.js hurtBy`), unless he is exposed (stuck,
+  landed, resting): then ×1.3–1.4 as the attack says.
+- **Stomp** (within 4.6 cells, clip `SquarloStomp`, 3 s): like a sumo wrestler, he shifts onto
+  his left foot, hauls the right one up high out to the side, leans back with his arms flung up
+  and wobbles at the top (the tell). From 0.4 s his foot's shadow (a beam of kind `stomp` out of
+  the sky, `core/beams.js`, `render/beams.js`) lies where the foot will come down: in front of
+  him, a little to his right (`foot`, the clip's `extras.foot`; `game/squarlo.js footShadow`). It
+  swings round with him while he turns to the player, and holds still, flashing, for the last
+  0.5 s, when he stops turning. At 1.8 s the foot crashes down there, faster and faster, the whole
+  body after it: whoever is within 1.15 cells of it is stomped (47 at level 4) and knocked down;
+  a boom, a ring of dust and spray, the view shaking (`game/juice.js quake`, `game/camera.js`),
+  and a **shockwave** runs out from the foot. The foot sticks until 2.6 s while he tugs at it:
+  every blow does ×1.4 meanwhile ("Squarlo is stuck! Hit his foot").
+- **Jump** (from 3 to 11 cells, up a hill too, clip `SquarloJump`, 2.6 s): he crouches deep,
+  arms back, and from 0.4 s his shadow shows on the floor he can land on nearest the player
+  (`fitting`, in the arena, clear of the bank) and follows them there at 2.5 cells/s (slower than
+  they run), holding still for the last 0.33 s. At 0.6 s he springs off and flies, in place in
+  the clip but lifted by the game (`core/squarlo.js jumpLift`, up to 3.6 cells over the line),
+  onto it, landing at 1.7 s in a huge squash, the ground shaking. Nothing touches him in the air
+  (`airborne`: no shoving, no blade reaches that high). Whoever he lands on (within 1.5 cells) is
+  **squashed flat** (50 at level 4): down on their bottom, flat as a pancake for a moment
+  (`render/animator.js`), **dazed for 3 s** with stars circling over their head
+  (`render/shocked.js tickDaze`): no moving, jumping or striking. A **shockwave** runs out from
+  under him. He squats winded until 2.3 s: every blow does ×1.3 meanwhile.
+- **Kick** (within 2.8 cells: a player at his legs, clip `SquarloKick`, 1.3 s): he draws his
+  right foot back, leaning in, and at 0.7 s kicks it out: a player within 3.3 cells in front of
+  him is kicked away (37 at level 4), flung off their feet.
+- **Water cannon** (from 3.5 to 11 cells, clip `SquarloCannon`, 2.6 s): he cups his hands at his
+  belly and leans far back while water swirls into them; aiming at the player until 0.9 s, he
+  swings round to one side of them, and from 1 s blasts a thick jet down onto the floor ahead
+  for 1.2 s (a gust of kind `cannon`, `down`: from 2.5 cells ahead to 11, on his level or up a
+  hill), sweeping it across them to the other side (`sweep`, 1.1 rad, `game/squarlo.js`). A player
+  it catches is hit once (28 at level 4) and blown away at 12 cells/s (off a hill too). Drawn as
+  an arching jet with spray where it lands and water rushing on along the floor
+  (`render/giantfx.js`).
+- **Shockwaves** (a stomp's and a landing's `wave`, `game/quakes.js`, `core/squarlo.js inWave`):
+  a ring of churned-up dust runs out over the floor from where he struck, at 7 (8) cells/s, to
+  4.8 (6.5) cells. Whoever it rolls under on the ground is thrown off their feet (17–19 at level
+  4), once a wave; one in the air (jumping over it), up a step from it, already down, or inside
+  the shadow the blow itself came down on it passes by. Every game starts and shows them from his
+  attack clock; only the one that runs him hurts anyone.
+- The tide, the Squirtles (up to **two**, every 11 s at most) and the rests (after the tide, and
+  after every five other attacks), as before.
 
 His death drains the water and takes his Squirtles along.
 
@@ -537,7 +581,7 @@ Profiles: `FOGGERY` (the frog, phase 1) and `FOGGERY_BALL` (phases 2 and 3; `STA
 `src/core/enemies.js`; the fight's rules, his tower and the platforms' puzzle in
 `src/core/foggery.js` (`FOGGERY_FIGHT`, `TOWER`, `PLATFORMS`); the fight in `src/game/foggery.js`,
 the platforms in `src/game/movers.js` (drawn by `render/movers.js`), the lava's rescue in
-`src/game/lavarescue.js`.
+`src/game/fluidrescue.js`.
 
 | | Level 6 |
 |---|---|
@@ -604,7 +648,7 @@ the clock sees the same. They are surfaces like floors for the physics (`physics
 setMovers`: ground, walls, ceilings, solids). Walking off one stops at its edge like at any edge
 over lava; a jump goes across to a platform next to it (an empty slot between two is too far).
 
-**Falling into the lava** (`game/lavarescue.js`, `game/ragdoll.js dieInFluid`) costs a quarter of
+**Falling into the lava** (`game/fluidrescue.js`, `game/ragdoll.js dieInFluid`) costs a quarter of
 your most health (`FOGGERY_FIGHT.rescue`), and magic pulls you out to safe ground: where you last
 stood if the lava is still well under it (or it is the top of the tower), else the nearest floor of
 the fight well above the lava, else (the top drowned) the nearest platform. Only if that quarter is

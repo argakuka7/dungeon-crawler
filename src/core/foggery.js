@@ -23,7 +23,7 @@
 // platforms, from one to another, so a blade reaches them there too.
 // His death drains the lava away for good and takes his minions along.
 // Falling into his lava costs a quarter of one's health, and magic takes one back to safe ground
-// (game/foggery.js lavaRescue).
+// (game/fluidrescue.js).
 import { mulberry32 } from './util.js';
 
 export const FOGGERY_FIGHT = Object.freeze({

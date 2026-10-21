@@ -1,5 +1,5 @@
 // The player stunned by a Wolk's bolt (game/enemycombat.js): sparks crackling over the body and
-// little arcs jumping between them, dying down as the stun wears off.
+// little arcs jumping between them, dying down as the stun wears off. Dazed: stars (tickDaze).
 import { glow, emit, rand, ring } from './particles.js';
 import { player } from '../game/state.js';
 
@@ -21,5 +21,21 @@ export function tickShock(dt) {
       emit(glow, x + ax + (bx - ax) * u + rand(-0.03, 0.03), y + ay + (by - ay) * u + rand(-0.03, 0.03), z + az + (bz - az) * u,
         { life: 0.07, size: 0.05, color: '#ffffff' });
     }
+  }
+}
+
+// Squashed flat by a giant (game/enemycombat.js, a blow's `daze`): sitting dazed, little stars
+// circle over the head, slowing and fading as the daze wears off.
+const STARS = ['#fff6a0', '#ffffff', '#ffe066'];
+let spin = 0;
+export function tickDaze(dt) {
+  if (!(player.dazed > 0) || dt <= 0) return;
+  player.dazed = Math.max(0, player.dazed - dt);
+  const k = Math.min(1, player.dazed / 0.6), n = 4, y = player.visY + 0.75;
+  spin += dt * (3 + 3 * k);
+  for (let i = 0; i < n; i++) {
+    const a = spin + i * Math.PI * 2 / n, x = player.x + Math.cos(a) * 0.28, z = player.z + Math.sin(a) * 0.28;
+    emit(glow, x, y + 0.05 * Math.sin(a * 2), z, { life: 0.12, size: 0.09 * (0.6 + 0.4 * k), color: STARS[i % 3], alpha: k });
+    if (Math.random() < dt * 6) emit(glow, x, y, z, { v: [rand(-0.3, 0.3), rand(0, 0.4), rand(-0.3, 0.3)], life: 0.25, size: 0.04, color: '#ffffff', alpha: k });
   }
 }
