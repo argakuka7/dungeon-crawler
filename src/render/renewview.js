@@ -95,9 +95,9 @@ function makeView(e) {
   const clean = Object.values(f.bones).map(b => [b, b.quaternion.clone(), b.position.clone()]);
   const standing = Object.fromEntries(SWING.map(n => [n, f.bones[n].quaternion.clone()]));
   const color = guardianColor('descent');
-  const hpBar = makeBar({ color, w: 1.2 }), bar = hpBar.group;
+  const hpBar = makeBar({ color, w: 1.2, onTop: true }), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, { color, title: guardianTitle('descent', e.profile.label) });
+  const label = makeLevelLabel(e.level, { color, onTop: true, title: guardianTitle('descent', e.profile.label) });
   label.position.y = e.profile.height + 0.33; group.add(label);
   const light = new THREE.PointLight(e.profile.light ?? '#bdf3ff', 1.1, 3.2, 2);
   light.position.y = 0.9;

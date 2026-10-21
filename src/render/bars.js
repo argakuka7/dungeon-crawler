@@ -1,4 +1,6 @@
-// Health bars and level labels floating over the player and the enemies.
+// Health bars and level labels floating over the player and the enemies. All of them that sit
+// over a body are drawn over the world (onTop: no depth test), so neither terrain nor the hero
+// ever hides them.
 import * as THREE from 'three';
 import { DISPLAY } from './fonts.js';
 
@@ -25,27 +27,34 @@ export function makeBar({ w = 0.66, h = 0.07, color = 0xf2a449, back = 0x231f25,
   return { group, set(f) { f = Math.min(1, Math.max(0, f)); fill.scale.x = fw * f; fill.position.x = -fw / 2 * (1 - f); } };
 }
 
-// "Lv N" as a sprite; setLevel redraws it only when the level changes
+// "Lv N" (or "<title> · Lv N") as a sprite; setLevel(n, title) redraws it only when the text
+// changes (title: the one it was made with, unless given: null for none)
 export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title = null } = {}) {
-  const canvas = document.createElement('canvas'); canvas.width = title ? 640 : 256; canvas.height = 64;
-  const ctx = canvas.getContext('2d'), texture = new THREE.CanvasTexture(canvas);
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false, depthTest: !onTop }));
-  sprite.scale.set((title ? 1.75 : .7) * LABEL_SCALE, .175 * LABEL_SCALE, 1);
+  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthWrite: false, depthTest: !onTop }));
+  sprite.scale.set(.7 * LABEL_SCALE, .175 * LABEL_SCALE, 1);
   if (onTop) sprite.renderOrder = 1202;
+  const made = title;
   let shown = null;
-  sprite.setLevel = n => {
-    if (n === shown) return;
-    shown = n;
+  sprite.setLevel = (n, title = made) => {
     const text = title ? `${title} · Lv ${n}` : `Lv ${n}`;
+    if (text === shown) return;
+    shown = text;
     ctx.font = `bold 48px ${DISPLAY}`;
-    // Long encounter titles must not clip at the old fixed Guardian label width.
-    canvas.width = Math.ceil(Math.max(title ? 640 : 256, ctx.measureText(text).width + 24));
+    // as wide as the text needs; a texture once uploaded keeps its size, so a new width needs a
+    // new one
+    const width = Math.ceil(Math.max(256, ctx.measureText(text).width + 24));
+    if (width !== canvas.width) {
+      canvas.width = width;
+      sprite.material.map.dispose(); sprite.material.map = new THREE.CanvasTexture(canvas);
+    } else ctx.clearRect(0, 0, canvas.width, canvas.height);
     sprite.scale.x = canvas.width / 256 * .7 * LABEL_SCALE;
     ctx.font = `bold 48px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const x = canvas.width / 2;
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText(text, x, 32);
     ctx.fillStyle = color; ctx.fillText(text, x, 32);
-    texture.needsUpdate = true;
+    sprite.material.map.needsUpdate = true;
   };
   sprite.setLevel(level);
   return sprite;
@@ -82,9 +91,9 @@ export function makeAlertMark() {
     ctx.font = `bold 56px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 10; ctx.strokeStyle = '#171c25'; ctx.strokeText('!', 32, 34);
     ctx.fillStyle = '#ffcf4a'; ctx.fillText('!', 32, 34);
-    alertMaterial = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthWrite: false });
+    alertMaterial = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthWrite: false, depthTest: false });
   }
   const sprite = new THREE.Sprite(alertMaterial);
-  sprite.visible = false;
+  sprite.visible = false; sprite.renderOrder = 1202;   // over the world, like the labels
   return sprite;
 }

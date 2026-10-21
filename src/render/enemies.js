@@ -492,9 +492,9 @@ function makeView(e, prefab) {
     weights[name] = name === 'walk' ? 1 : 0;
   }
   const color = guardianColor(e.guardianRole);
-  const hpBar = makeBar(e.guardian ? { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } : {}), bar = hpBar.group;
+  const hpBar = makeBar({ onTop: true, ...e.guardian && { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } }), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, e.guardian ? { color, title: guardianTitle(e.guardianRole, e.profile.label) } : {});
+  const label = makeLevelLabel(e.level, { onTop: true, ...e.guardian && { color, title: guardianTitle(e.guardianRole, e.profile.label) } });
   label.position.y = e.profile.height + .33; group.add(label);
   const mark = makeAlertMark(); mark.position.y = e.profile.height + .62; group.add(mark);
   const fx = GLOW[e.profile.fx ?? e.profile.species] ?? (e.guardian ? { light: [color, 2, 3, .5], pulse: .35 } : null), flames = [];
@@ -625,6 +625,9 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.parts.forEach((p, i) => v.colors[i].copy(baseColor(v, p)).lerp(flash > 0.1 || !e.hovered ? white : hover, Math.max(flash, e.hovered ? 0.22 : 0)));
     v.bar.visible = !!e.guardian || !!e.hovered || !e.hordeId && e.hp < e.profile.hp;
     v.label.visible = v.bar.visible || !e.hordeId && Math.hypot(e.x - player.x, e.z - player.z) < e.profile.aggro + 1;
+    // a guardian always says what it is; any other enemy while hovered (or locked on: what a
+    // click goes for, game/pointer.js), else only its level
+    if (!e.guardian) v.label.setLevel(e.level, e.hovered ? e.profile.label : null);
     inverseYaw.setFromAxisAngle(up, -v.yaw);
     v.bar.quaternion.copy(inverseYaw).multiply(camera.quaternion);
     v.hpBar.set(e.hp / e.profile.hp);
