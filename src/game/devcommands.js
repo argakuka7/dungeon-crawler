@@ -2,11 +2,11 @@
 // clearing enemies, getting about, items and the hero. They do what the dev tools always did
 // (game/devspawn.js, game/dev.js, game/equipment.js), now by name: /help lists them.
 import { addCommand, addType } from '../core/commands.js';
-import { ITEMS } from '../core/items.js';
+import { ITEMS, TOOLS } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
-import { addItem, equippedItem } from '../core/inventory.js';
+import { addItem, addInstance, autoBar, countOf, equippedItem } from '../core/inventory.js';
 import { xpForLevel, levelFromXP, fullHealth } from '../core/progression.js';
-import { MAX_ILVL } from '../core/gear/generate.js';
+import { MAX_ILVL, rollWeapon, rollArmor } from '../core/gear/generate.js';
 import { RARITY } from '../core/gear/rarities.js';
 import { ENCHANTS, ENCHANT, enchantOf, describeEnchant } from '../core/gear/enchants.js';
 import { online } from '../net/online.js';
@@ -188,10 +188,21 @@ dev({
 dev({
   name: 'give', help: 'put things in the bag (weapons: /weapon, armor: /armor)', args: [{ name: 'item', type: 'item' }, { name: 'count', type: 'int', optional: true, min: 1, max: 9999 }],
   async run({ item, count = 1 }) {
-    const def = ITEMS[item];
-    if (def.weapon) return await devSwapWeapon(item, 'vanilla', 1) ? `Equipped: ${def.name} (Vanilla)` : 'No room in the bag';
-    if (def.armor) return devWearArmor(item, 'vanilla', 1) ? `Wearing: ${def.name} (Vanilla)` : 'No room in the bag';
-    return addItem(player.inventory, item, count) ? `+${count} ${def.name}` : 'No room in the bag';
+    const def = ITEMS[item], inv = player.inventory;
+    // every hero carries the tools (core/progression.js carryTools); a second one could never be dropped
+    if (TOOLS.includes(def)) return countOf(inv, item) ? `You carry the ${def.name} already` : addItem(inv, item) ? `+1 ${def.name}` : 'No room in the bag';
+    // gear: Vanilla, item level 1; the first one equipped (or put on), the rest into the bag
+    if (def.weapon || def.armor) {
+      if (inv.slots.filter(s => !s).length < count) return 'No room in the bag';
+      const on = def.weapon ? await devSwapWeapon(item, 'vanilla', 1) : devWearArmor(item, 'vanilla', 1);
+      if (!on) return def.weapon ? 'Could not equip it now' : 'Could not put it on';
+      const roll = def.weapon ? rollWeapon : rollArmor;
+      for (let i = 1; i < count; i++) addInstance(inv, roll(Math.random, 1, { itemId: item, rarity: 'vanilla' }));
+      return `${def.weapon ? 'Equipped' : 'Wearing'}: ${def.name} (Vanilla)${count > 1 ? `, ${count - 1} more in the bag` : ''}`;
+    }
+    if (!addItem(inv, item, count)) return 'No room in the bag';
+    autoBar(inv, item);   // a potion goes on the quick bar, as when picked up
+    return `+${count} ${def.name}`;
   },
 });
 dev({

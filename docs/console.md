@@ -96,7 +96,7 @@ Developer (`?dev=1`):
 | `/testroom [room\|leave] [depth or boss]` | into a test room (`world/testrooms.js`, built by `cubegen/testrooms.js`), dressed as this depth (or that one; a boss: his depth, `world/testrooms.js testRoomDepth`); `leave`: back to where you were; none: the list. `water_hill`: a hill standing in a lake to halfway up, with a shallow shelf to its east to wade down until the water stops you just under the head, deep water past it; `fluids`: a waterfall off a cliff into a lake that shelves, a lava pool, an acid pool; `climb`: a tower for every ladder style, and the hanging styles hanging from a floating platform; `enemies`: every species with its kinds (and the bosses' minions), a row each; `guardians`: every side guardian. In those two every kind stands idle until hit (docs/enemy-kinds.md "Previewing"); `boss`: a boss alone in his own arena, idle until hit (`/testroom boss gusto`, `/testroom boss 1`: Totnar, the boss of depth 1; a depth without a boss has none; no depth: this one's boss, else Gusto; docs/bosses.md "Dev"). They are cubes off the grid (no portals, no props, no enemies of their own: `/spawn` some), never saved as where the hero is |
 | `/newworld [seed]` | a new world (N), not saved; a saved hero comes along as it is |
 | `/menu` | save and quit to the main menu |
-| `/give <item> [count]` | things into the bag (a weapon: a common one, equipped) |
+| `/give <item> [count]` | things into the bag as if found: a potion goes on the quick bar, coins into the purse; a weapon or a piece of armor is Vanilla, item level 1, the first equipped or put on and the rest in the bag; a portal scroll only if the hero lacks it (every hero carries one, and it cannot be dropped) |
 | `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default unusual, item level 8) |
 | `/enchant <enchantment\|off>` | enchant the equipped weapon for free (Toasty, Icky, Nippy, Zappy, Shiny: `core/gear/enchants.js`), or take it off |
 | `/armor <armor> [rarity] [level] [drop]` | roll a piece of armor and put it on, or drop it at your feet (default unusual, item level 8; `docs/armor.md`) |
@@ -123,7 +123,7 @@ What was typed is matched against a value's id and its name, ignoring case (`sco
 
 1. the very one (the name, the id, or the id without `item_` / `weapon_` / `wear_` / `held_`): 100
 2. the name starts with it (`rec` → Recurve Bow): 80
-3. every typed word starts a word of the name, in order (`gr he` → Greater health potion): 60;
+3. every typed word starts a word of the name, in order (`gr hea` → Greater health potion): 60;
    of the id: 55
 4. the id starts with it (`flask_f` → `item_flask_fire`): 50
 5. its letters come in this order (`grsw` → Greatsword): 30 from the first letter, else 20
@@ -139,7 +139,7 @@ rarity's colour, a depth's theme), how the command goes with the argument being 
 and greyed out after the cursor the rest of the highlighted value (or what it is). **Tab** puts
 the highlighted value (its id) in place of the word. **Enter** runs the line: an argument that
 clearly fits one value (the only one, or a better fit than any other) is read as that one, so
-`/give gr he` + Enter works without Tab; when it could be several, the box says which. A
+`/give gr hea` + Enter works without Tab; when it could be several, the box says which. A
 suggestion picked with Up / Down is taken by Enter as well (`/height`, Down to `spiral`, Enter).
 
 ## Files and checks

@@ -11,8 +11,9 @@ import { hitPlayer } from '../../src/game/enemycombat.js';
 import { allEnemies } from '../../src/game/enemies.js';
 import { chronicle, clearChronicle } from '../../src/game/log.js';
 import { chatOpen, closeChat, openChat } from '../../src/game/console.js';
-import { runCommand } from '../../src/game/commands.js';
-import { countOf } from '../../src/core/inventory.js';
+import { runCommand, commands } from '../../src/game/commands.js';
+import { countOf, copperTotal, takeItem, isBound, isWorn } from '../../src/core/inventory.js';
+import { ITEMS, TOOLS } from '../../src/core/items.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -57,7 +58,7 @@ export async function runConsoleChecks() {
     key('Tab', 'Tab', input());
     check(input().value === '/give ', 'Tab must take /give: ' + JSON.stringify(input().value));
     check(!$('chat-usage').hidden && $('chat-usage').querySelector('b')?.textContent === '<item>', 'The usage must show the item is next');
-    type('gr he');
+    type('gr hea');
     check(popup()[0] === 'Greater health potion', 'Several words must find the Greater health potion: ' + popup());
     const potions = countOf(player.inventory, 'item_potion_health_greater');
     key('Enter', 'Enter', input());
@@ -66,7 +67,7 @@ export async function runConsoleChecks() {
     check(!chatOpen() && $('chat-popup').hidden, 'After a command the box and its suggestions must close');
     openChat('');
     key('ArrowUp', 'ArrowUp', input());
-    check(input().value === '/give gr he', 'Up must bring the last line back: ' + input().value);
+    check(input().value === '/give gr hea', 'Up must bring the last line back: ' + input().value);
     const typed = JSON.parse(localStorage.getItem('cube-crawler-history'));
     key('ArrowUp', 'ArrowUp', input());
     check(input().value === (typed.at(-2) ?? typed.at(-1)), 'Going through the history goes on through it, not into the suggestions');
@@ -95,6 +96,26 @@ export async function runConsoleChecks() {
     await runCommand('/god off'); check(!player.god, '/god off');
     await runCommand('/level 5'); check(player.level === 5 && player.hp === player.maxHp, '/level 5');
     results.push('/spawn, /kill, /passive, /god, /level');
+
+    // every base /give offers lands: in the bag (a potion on the quick bar), on the hero (gear),
+    // in the purse (coins); a tool the hero carries already is not given twice
+    const inv = player.inventory, empty = () => inv.slots.forEach(s => {
+      if (s && !isBound(s.itemId) && s.instanceId !== inv.equipped && !isWorn(inv, s.instanceId)) takeItem(inv, s.instanceId);
+    });
+    for (const { value: id } of commands.types.get('item').values()) {
+      empty();
+      const def = ITEMS[id], had = countOf(inv, id), copper = copperTotal(inv);
+      await runCommand(`/give ${id} 2`);
+      await delay(def.weapon ? 30 : 0);
+      if (TOOLS.includes(def)) check(countOf(inv, id) === 1 && /already/.test(last().data.text), `/give ${id}: not a second one`);
+      else if (def.category === 'currency') check(copperTotal(inv) === copper + 2 * def.value, `/give ${id} 2: into the purse`);
+      else check(countOf(inv, id) === had + 2, `/give ${id} 2: ${last().data.text}`);
+      if (def.weapon) check(ITEMS[inv.slots.find(s => s?.instanceId === inv.equipped)?.itemId] === def, `/give ${id}: equipped`);
+      if (def.armor) check(inv.slots.some(s => s?.itemId === id && isWorn(inv, s.instanceId)), `/give ${id}: worn`);
+      // (unless another of its family is there already, or the bar is full: core/inventory.js autoBar)
+      if (def.family) check(inv.bar.some(r => r?.itemId && ITEMS[r.itemId].family === def.family) || !inv.bar.includes(null), `/give ${id}: on the quick bar`);
+    }
+    results.push('/give: every base lands');
 
     // the chronicle: a new depth, and a death with what did it
     await runCommand('/goto down');
