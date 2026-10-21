@@ -200,7 +200,11 @@ Two villagers in town work on your weapons (`core/shops.js` `service`, the rules
 weapon they work on is the last one selected in the bag, at first the equipped one (a teal ring
 marks it while something else is selected). Selecting a weapon makes them comment on its
 rarity ("I can enchant this. I'd rather nobody watched." for Crap, "...I need to sit down." for
-OMG: `ENCHANTER_SAYS`, `SMITH_SAYS`).
+OMG: `ENCHANTER_SAYS`, `SMITH_SAYS`). Below the description the details show exactly what it costs,
+every coin and crystal with its picture and how many you have (red when it is not enough,
+`game/inventory.js priceHtml`), only for what you would do: a selected enchantment its price on
+the weapon, at the Smith what one re-roll of the selected weapon costs (the alchemist's wares
+show their price the same way).
 
 **The Enchanter** (merchant camp, by the herb stall) puts one enchantment on a weapon. Her
 column shows the five, each as its crystal (dimmed when you cannot have it now, ringed when the

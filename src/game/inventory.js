@@ -24,7 +24,7 @@ import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS, COINS } from '../core/items.js';
 import { BURST_SHARE } from '../core/shots.js';
-import { BAR_SIZE, equippedItem, ownedItem, assignBar, barAllowed, barIndexOf, countOf, copperTotal, formatCoins, hasRoom, autoBar } from '../core/inventory.js';
+import { BAR_SIZE, equippedItem, ownedItem, assignBar, barAllowed, barIndexOf, countOf, copperTotal, formatCoins, coinCounts, hasRoom, autoBar } from '../core/inventory.js';
 import { shopOf, priceOf, buy as buyWare } from '../core/shops.js';
 import { flaskStats, cooldownLeft } from '../core/potions.js';
 import { xpProgress, levelDamage } from '../core/progression.js';
@@ -40,7 +40,7 @@ import { clearInput } from './inputstate.js';
 import { cancelCast } from './townportal.js';
 import { useItem } from './quickbar.js';
 import { log } from './log.js';
-import { keyLabel, barKeysText, onSettingsChange } from './settings.js';
+import { keyLabel, onSettingsChange } from './settings.js';
 import { itemPicture, itemModelReady, onItemPictures, drawLiveViews } from '../render/itemviews.js';
 import { readiedFlask, equippedWeapon } from '../core/combat.js';
 import { GIVERS, giverQuests, giverOf } from '../core/quests.js';
@@ -87,7 +87,6 @@ function showTab(view) {
   $('inventory-title').textContent = tab === 'quests' ? 'Quests' : 'Inventory';
   document.querySelector('#inventory-panel .inventory-body').hidden = tab !== 'bag';
   $('quests-body').hidden = tab !== 'quests';
-  $('inventory-footer').hidden = tab !== 'bag';
   $('quests-footer').hidden = tab !== 'quests';
   showKeys();
   signature = ''; updateInventory();
@@ -155,10 +154,9 @@ const pick = list => list[Math.floor(Math.random() * list.length)];
 // an enchantment selected at the Enchanter: what it would do on the weapon, what it costs
 function enchantText(id) {
   const e = ENCHANT[id], w = workItem(), lines = [];
-  if (!w) return `${e.quip}\nSelect a weapon in your bag to enchant it.`;
-  const cost = enchantCost(w, id), now = enchantEntry(w), have = countOf(player.inventory, cost.crystal);
-  lines.push(describeEnchant(id, enchantValue(w, id)), e.quip,
-    `Costs ${cost.count} ${ITEMS[cost.crystal].name} (you have ${have}) and ${formatCoins(cost.copper)}`);
+  if (!w) return e.quip;
+  const now = enchantEntry(w);
+  lines.push(describeEnchant(id, enchantValue(w, id)), e.quip);
   if (now?.id === id) lines.push(`It is ${e.name} already`);
   else if (now) lines.push(`Replaces ${now.name}`);
   return lines.join('\n');
@@ -178,7 +176,7 @@ function potionText(item, from) {
   }
   const wait = cooldownLeft(player, def.id, state.time);
   lines.push(`One every ${def.cooldown} s${wait > 0 ? ` (ready in ${wait.toFixed(1)} s)` : ''}`);
-  if (from === 'shop') lines.push(`Price ${formatCoins(def.price)} · you have ${have}`);
+  if (from === 'shop') lines.push(`You have ${have}`);
   return lines.join('\n');
 }
 
@@ -231,8 +229,42 @@ function affixesHtml(item, reroll) {
       ? ' disabled title="Not enough coins"' : ` title="Re-roll ${esc(a.name)} · ${formatCoins(cost)}"`}>Re-roll</button></li>`);
   const e = enchantEntry(item);
   if (e) lines.push(`<li class="enchant">${esc(e.text)} <span class="affix-name">${esc(e.name)}</span></li>`);
-  if (cost !== null) lines.push(`<li class="reroll-cost">A re-roll: ${formatCoins(cost)} · the line becomes another (or itself, rolled anew)</li>`);
   return lines.join('');
+}
+
+// What things cost where the villagers trade, under the description: every coin and crystal
+// with its picture, and what you have of it (red when it is not enough).
+const icon = id => `<img src="${itemPicture(id)}" alt="">`;
+function coinsHtml(copper) {
+  const parts = coinCounts(copper).map((n, i) => n ? `<span class="price-part">${icon(COINS[i].id)}${n} ${COINS[i].name.toLowerCase()}</span>` : '').filter(Boolean);
+  return parts.length ? parts.join(' ') : `<span class="price-part">${icon(COINS[2].id)}0 copper</span>`;
+}
+// a row: what it takes, and what you have (`have`: text, `short`: not enough)
+const priceRow = (what, have, short) => `<div class="price-row"><span class="price-what">${what}</span><span class="price-have${short ? ' short' : ''}">${have}</span></div>`;
+const coinRow = copper => { const have = copperTotal(player.inventory); return priceRow(coinsHtml(copper), `you have ${formatCoins(have)}`, have < copper); };
+const crystalRow = (crystal, count) => {
+  const have = countOf(player.inventory, crystal);
+  return priceRow(`<span class="price-part">${icon(crystal)}${count} ${esc(ITEMS[crystal].name)}</span>`, `you have ${have}`, have < count);
+};
+const priceBox = (title, rows, note = '') => `<h3>${esc(title)}</h3>${rows.join('')}${note ? `<p class="price-note">${esc(note)}</p>` : ''}`;
+// the price block for what the selected thing would be bought or done for: a ware, an
+// enchantment (on the weapon worked on), a re-roll at the Smith; '' for none
+function priceHtml(item, def) {
+  const shop = shopOf(trader), w = workItem();
+  if (!shop || !item) return '';
+  if (item.enchant) {
+    if (!w) return priceBox('Price', [], 'Select a weapon in your bag: the price depends on it.');
+    const cost = enchantCost(w, item.enchant);
+    return priceBox(`Price for ${itemName(w)}`, [crystalRow(cost.crystal, cost.count), coinRow(cost.copper)]);
+  }
+  if (selected?.from === 'shop' && def?.price) return priceBox('Price', [coinRow(def.price)]);
+  if (selected?.from !== 'bag' || !def?.weapon || !item.gen) return '';
+  if (shop.service === 'reroll') {
+    const cost = rerollCost(item);
+    if (cost === null) return priceBox('Re-rolling', [], 'Nothing to re-roll: only Decent and better weapons have lines to hammer.');
+    return priceBox('Each re-roll costs', [coinRow(cost)], 'The line becomes another affix (or itself, rolled anew).');
+  }
+  return '';
 }
 
 export function updateInventory() {
@@ -326,6 +358,9 @@ function draw(next, inv, equipped, allowed, floor, item) {
   $('inventory-item-compare').hidden = !def?.weapon || !!ench;
   $('inventory-item-affixes').innerHTML = item && !ench ? affixesHtml(item, selected?.from === 'bag' && service() === 'reroll') : '';
   $('inventory-item-compare').innerHTML = def?.weapon && !ench ? compareText(item) : '';
+  const price = priceHtml(item, def);
+  $('inventory-item-price').hidden = !price;
+  $('inventory-item-price').innerHTML = price;
   const inBag = selected?.from === 'bag', isEquipped = inBag && item?.instanceId === inv.equipped;
   const equip = $('inventory-equip'), take = $('inventory-take'), drop = $('inventory-drop'), use = $('inventory-use'), buy = $('inventory-buy');
   use.hidden = !inBag || !def?.use;
@@ -449,7 +484,6 @@ function showKeys() {
     b.title = key ? `${b.textContent} · ${key}` : b.textContent;
   }
   $('quests-key-text').textContent = quests || 'The Quests tab';
-  $('inventory-bar-keys-text').textContent = barKeysText();
 }
 showKeys();
 onSettingsChange(showKeys);
