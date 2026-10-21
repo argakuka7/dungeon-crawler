@@ -36,8 +36,12 @@ const nameOf = path => path.slice(path.lastIndexOf('/') + 1);
 //   stores all of it or nothing; meta is { kind, size, chunks, mtimeMs }
 
 // IndexedDB: store "files" (path -> meta), "chunks" ([path, n] -> bytes), "meta" ("owner" -> token)
-export async function idbVolume(name) {
+// When another tab deletes the database ("Forget everything"), this page lets go of it at once and
+// calls onGone: an open connection blocks the delete, and a blocked delete holds every later open
+// (in every tab) forever.
+export async function idbVolume(name, { onGone = () => {}, timeoutMs = 10_000 } = {}) {
   const db = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('the tutor storage did not open (another tab of the guide may be holding it; close the other tabs)')), timeoutMs);
     const req = indexedDB.open(name, 1);
     req.onupgradeneeded = () => {
       const d = req.result;
@@ -45,9 +49,14 @@ export async function idbVolume(name) {
       d.createObjectStore('chunks');
       d.createObjectStore('meta');
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('the tutor storage is busy in another tab'));
+    req.onsuccess = () => {
+      clearTimeout(timer);
+      const d = req.result;
+      d.onversionchange = () => { d.close(); onGone(); };
+      resolve(d);
+    };
+    req.onerror = () => { clearTimeout(timer); reject(req.error); };
+    req.onblocked = () => { clearTimeout(timer); reject(new Error('the tutor storage is busy in another tab')); };
   });
   // randomUUID only exists in secure contexts (not on plain http over a LAN IP)
   const token = crypto.randomUUID?.()
@@ -90,7 +99,14 @@ export async function idbVolume(name) {
     },
     async destroy() {
       db.close();
-      await new Promise((resolve, reject) => { const r = indexedDB.deleteDatabase(name); r.onsuccess = resolve; r.onerror = () => reject(r.error); r.onblocked = resolve; });
+      // other pages close their connections when asked (onversionchange), so this finishes; if
+      // one does not, do not hang on it
+      await new Promise((resolve, reject) => {
+        const r = indexedDB.deleteDatabase(name);
+        r.onsuccess = resolve;
+        r.onerror = () => reject(r.error);
+        r.onblocked = () => setTimeout(resolve, 3000);
+      });
     },
     close() { db.close(); },
   };

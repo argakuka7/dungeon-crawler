@@ -68,8 +68,10 @@ function lock(steal, onLost) {
 function boot(steal = false) {
   return tutor ??= (async () => {
     const [pi, files, agent, models] = await Promise.all([import(VENDOR), import('./files.js'), import('./agent.js'), import('./models.js')]);
-    await lock(steal, () => failed(t('The Teacher moved to another tab.', 'Der Lehrer ist in einen anderen Tab umgezogen.'), true));
-    const volume = await files.idbVolume(DB);
+    let volume = null;
+    // let go of the storage too, so the other tab can use it (and delete it) freely
+    await lock(steal, () => { volume?.close(); failed(t('The Teacher moved to another tab.', 'Der Lehrer ist in einen anderen Tab umgezogen.'), true); });
+    volume = await files.idbVolume(DB, { onGone: () => failed(t('The Teacher was reset in another tab.', 'Der Lehrer wurde in einem anderen Tab zurückgesetzt.'), true) });
     const fs = await files.openFiles(volume);
     const faux = dev ? pi.fauxProvider() : null;
     const ms = models.tutorModels(faux ? [faux.provider] : []);
