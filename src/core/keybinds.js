@@ -34,7 +34,6 @@ export const ACTIONS = [
   { id: 'zoomOut', label: 'Zoom out', group: 'View', keys: ['KeyL', null] },
   { id: 'path', label: 'Show the generator path', group: 'View', keys: ['KeyP', null] },
   { id: 'menu', label: 'Menu (Esc too)', group: 'Game', keys: ['KeyO', null] },
-  { id: 'help', label: 'All the controls', group: 'Game', keys: ['?', '/'] },
   { id: 'chat', label: 'Chat', group: 'Game', keys: ['Enter', 'NumpadEnter'] },
   { id: 'command', label: 'Type a command', group: 'Game', keys: ['Backquote', null] },
   { id: 'music', label: 'Music on / off', group: 'Game', keys: ['KeyM', null] },

@@ -24,7 +24,6 @@ import { spawnEntry, nextCube } from './flow.js';
 import { knockDown } from './ragdoll.js';
 import { toggleInventory, toggleQuests, setInventoryOpen, talkTo } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
-import { helpOpen, setHelpOpen, toggleHelp } from './help.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
 import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart, canTrade } from './orders.js';
 import { hoveredPickup, hoveredChest, hoveredVillager, hoveredPart, toggleLabels, updateLootLabels } from './lootlabels.js';
@@ -65,7 +64,7 @@ const ours = (a, b) => [a, b].some(c => keys.has(c) && actionsFor(bindings(), c,
 const foreign = e => e.metaKey || (e.ctrlKey && !ours('ControlLeft', 'ControlRight')) || (e.altKey && !ours('AltLeft', 'AltRight'));
 
 // what a press does (the hold actions are read every frame: inputDir, wantsWalk, autoAttackHeld;
-// the inventory, the quick bar, the help and the menu are handled before, as they work with
+// the inventory, the quick bar and the menu are handled before, as they work with
 // panels open)
 const PRESS = {
   jump: () => { controls.jumpPressed = true; },
@@ -114,8 +113,8 @@ addEventListener('keydown', e => {
     if (move && e.ctrlKey && !e.metaKey && !e.altKey && !state.inventoryOpen) { keys.add(e.code); typed.set(e.code, e.key); e.preventDefault(); }
     return;
   }
-  if (is('inventory')) { if (!e.repeat) { setHelpOpen(false); toggleInventory(); } e.preventDefault(); return; }
-  if (is('quests')) { if (!e.repeat) { setHelpOpen(false); toggleQuests(); } e.preventDefault(); return; }
+  if (is('inventory')) { if (!e.repeat) toggleInventory(); e.preventDefault(); return; }
+  if (is('quests')) { if (!e.repeat) toggleQuests(); e.preventDefault(); return; }
   if (e.code === 'Escape' && state.inventoryOpen) { setInventoryOpen(false); e.preventDefault(); return; }
   // the quick bar (with the inventory open: put the selected item there); not while typing
   // (the teleport scroll asking where to, game/teleportmenu.js: the keys pick there; Esc closes it)
@@ -128,8 +127,6 @@ addEventListener('keydown', e => {
   if (state.inventoryOpen) return;
   // the camera key: what it does is decided when it is let go (or the mouse moves)
   if (is('camera')) { if (!e.repeat) cameraKeyDown(e.code); e.preventDefault(); return; }
-  if (is('help')) { if (!e.repeat) toggleHelp(); e.preventDefault(); return; }
-  if (e.code === 'Escape' && helpOpen()) { setHelpOpen(false); e.preventDefault(); return; }
   // Esc with nothing else open, and the menu key: the menu (play together and the settings are in it)
   if (e.code === 'Escape' || is('menu')) { if (!e.repeat) toggleMenu(); e.preventDefault(); return; }
   keys.add(e.code); typed.set(e.code, e.key);

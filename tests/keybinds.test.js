@@ -13,7 +13,6 @@ test('the defaults are the keys the game always had, each key on one action', ()
   assert.deepEqual(b.walk, ['ControlLeft', null]);
   assert.deepEqual(b.action, ['KeyF', 'ControlRight']);
   assert.deepEqual(b.attack, ['ShiftLeft', 'ShiftRight']);
-  assert.deepEqual(b.help, ['?', '/']);
   for (const a of ACTIONS) {
     assert.ok(GROUPS.includes(a.group), a.id);
     assert.equal(a.keys.length, 2, a.id);
@@ -31,9 +30,9 @@ test('a key given to another action is taken from the one that had it', () => {
   assert.deepEqual(moved.bindings.inventory, ['KeyV', null]);
   assert.deepEqual(moved.lost, []);
   // a typed character that types the same: taken too
-  const slash = assignKey(defaultBindings(), 'labels', 1, 'Slash', '/');
-  assert.deepEqual(slash.bindings.help, ['?', null]);
-  assert.deepEqual(slash.lost, [{ id: 'help', key: '/' }]);
+  const slash = assignKey(resolveBindings({ path: ['?', '/'] }), 'labels', 1, 'Slash', '/');
+  assert.deepEqual(slash.bindings.path, ['?', null]);
+  assert.deepEqual(slash.lost, [{ id: 'path', key: '/' }]);
   // Escape is never bound
   assert.deepEqual(assignKey(defaultBindings(), 'jump', 0, 'Escape').bindings.jump, ['Space', null]);
   assert.deepEqual(clearKey(defaultBindings(), 'jump', 0).jump, [null, null]);
@@ -57,10 +56,10 @@ test('only changes are stored, and stored keys win over the defaults', () => {
 });
 
 test('a key event finds its action by code first, then by the character typed', () => {
-  const b = defaultBindings();
+  const b = resolveBindings({ path: ['?', null] });
   assert.deepEqual(actionsFor(b, 'KeyW', 'w'), ['moveUp']);
-  assert.deepEqual(actionsFor(b, 'Slash', '?'), ['help']);      // US: Shift+/
-  assert.deepEqual(actionsFor(b, 'Minus', '?'), ['help']);      // German: Shift+ß
+  assert.deepEqual(actionsFor(b, 'Slash', '?'), ['path']);      // US: Shift+/
+  assert.deepEqual(actionsFor(b, 'Minus', '?'), ['path']);      // German: Shift+ß
   assert.deepEqual(actionsFor(b, 'KeyZ', 'z'), []);
   const { bindings } = assignKey(b, 'labels', 0, 'Slash', '/');
   assert.deepEqual(actionsFor(bindings, 'Slash', '?'), ['labels']);

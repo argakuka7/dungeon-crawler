@@ -102,16 +102,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #chat-popup .label { flex: none; }
 #chat-popup .hint { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #8a96a8; font-size: 14px; }
 
-#help-overlay { position: fixed; inset: 0; z-index: 26; display: grid; place-items: center; padding: var(--pad); pointer-events: none; }
-#help-panel { pointer-events: auto; box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
-  padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px; }
-#help-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #8a96a8; font-size: 14px; }
-#help-panel h1 { margin: 0 0 10px; color: #fff; font-size: 16px; letter-spacing: 3px; }
-#help-panel h2 { margin: 14px 0 6px; color: #c5cdbc; font-size: 13px; }
-#help-panel .keys { display: grid; grid-template-columns: 11em 1fr; gap: 5px 14px; margin: 0; }
-#help-panel dt { color: #e6e9ef; }
-#help-panel kbd { white-space: nowrap; margin-bottom: 2px; }
-#help-panel dd { margin: 0; color: #aab3c2; }
 /* the Esc menu (game/escmenu.js): over the game, dimmed; alone the game waits meanwhile */
 #menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
 #menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
@@ -140,8 +130,6 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
 #menu-status { margin: 0 !important; color: #cfe2ff !important; text-align: center; }
 #menu-status:empty { display: none; }
-#help-panel .help-note { margin: 10px 0 0; color: #6f7a8c; font-size: 14px; }
-#help-panel dt i { color: #6f7a8c; }
 /* "Leave the fight?" (game/leavefight.js): over the game, under the Esc menu */
 #leave-overlay { position: fixed; inset: 0; z-index: 23; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
 #leave-panel { box-sizing: border-box; width: min(360px, 100%); padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c;
@@ -192,9 +180,6 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #settings-keys button.empty { color: #5a6678; }
 #settings-keys button.waiting { color: #1a1408; background: #ffcf7a; border-color: #ffcf7a; }
 #settings-feedback { min-height: 1.4em; margin: 12px 0 0; color: #cfe2ff; }
-#legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; color: #aab3c2; }
-#legend div { display: flex; align-items: center; gap: 6px; }
-#legend i { display: inline-block; width: 11px; height: 11px; border: 1px solid #0006; }
 #inventory-overlay { position: fixed; inset: 0; z-index: 20; background: #080c13b8; display: grid; place-items: center; padding: 16px 16px 84px; }
 /* game/inventory.js: the hero | (floor or shop) | the bag and the actions underneath | the details. Nothing in it changes
    its size with the selection: the details scroll inside their column, the actions keep their rows. */

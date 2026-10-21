@@ -19,7 +19,6 @@
 // hero, with the weapon in its hand (render/portrait.js, in the box heroBox gives): a click on
 // it is Choose Character. No hero, or one without a world: random cubes.
 import { state, view, player } from './state.js';
-import { setHelpOpen } from './help.js';
 import { openSettings, closeSettings } from './settingsmenu.js';
 import { fadeOut } from './hud.js';
 import { endWorld } from './flow.js';
@@ -96,7 +95,7 @@ function closeMainMenu() {
   fadeOut();
   overlay.hidden = true;
   document.body.classList.remove('in-menu');
-  setHelpOpen(false); closeSettings();
+  closeSettings();
   stopShowcase();
   showPortrait(false); $('title-hero').hidden = true;
   view.yaw = view.yawTarget = -Math.PI / 4; view.zoom = view.zoomTarget = DEFAULT_ZOOM;

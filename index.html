@@ -35,36 +35,6 @@
     <div id="chat-field"><div id="chat-ghost" aria-hidden="true"></div><input id="chat-input" type="text" maxlength="160" autocomplete="off" spellcheck="false" aria-label="Chat, or a command after /"></div>
   </div>
 </div>
-<div id="help-overlay" hidden>
-  <section id="help-panel" role="dialog" aria-labelledby="help-title">
-    <header><h1 id="help-title">Controls</h1><span id="help-close"></span></header>
-    <dl class="keys" id="help-keys"></dl>
-    <p class="help-note">The keys can be changed in the menu's settings.</p>
-    <div class="dev-only" hidden>
-      <h2>Developer</h2>
-      <dl class="keys">
-        <dt>click portal</dt><dd>take it, even past a guardian</dd>
-        <dt><kbd>G</kbd></dt><dd>go to the next way down</dd>
-        <dt><kbd>N</kbd></dt><dd>a new world (not saved; a saved hero comes along)</dd>
-        <dt><kbd>PgDn</kbd> <kbd>PgUp</kbd></dt><dd>change depth</dd>
-        <dt><kbd>Alt</kbd> + <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>jump to the cube up-right / up-left / down-left / down-right</dd>
-        <dt><kbd>`</kbd></dt><dd>developer commands: /spawn, /kill, /weapon, /give, /goto ... (/help)</dd>
-      </dl>
-    </div>
-    <h2>Legend</h2>
-    <div id="legend">
-      <div><i style="background:#ffc94a"></i>portal, unexplored</div>
-      <div><i style="background:#5fd3ff"></i>portal, explored</div>
-      <div><i style="background:#70d6aa"></i>open connection</div>
-      <div><i style="background:#b98cff"></i>town portal</div>
-      <div><i style="background:#2e86de"></i>water (deadly)</div>
-      <div><i style="background:#ff5a00"></i>lava (deadly)</div>
-      <div><i style="background:#7dff3a"></i>acid (deadly)</div>
-      <div><i style="background:#c9bfae"></i>stairs</div>
-      <div><i style="background:#a0703f"></i>bridge / fence</div>
-    </div>
-  </section>
-</div>
 <div id="menu-overlay" hidden>
   <section id="menu-panel" role="dialog" aria-modal="true" aria-labelledby="menu-title">
     <header><h1 id="menu-title">Menu</h1><span id="menu-paused">Paused</span><button id="menu-close" aria-label="Close">Esc</button></header>

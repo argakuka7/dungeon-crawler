@@ -12,7 +12,6 @@
 import { state } from './state.js';
 import { clearInput } from './inputstate.js';
 import { clearMouseInput } from './orders.js';
-import { setHelpOpen } from './help.js';
 import { savedHero } from './save.js';
 import { NAME_MAX } from '../core/save.js';
 import { ADJECTIVES } from '../core/names.js';
@@ -33,7 +32,6 @@ export function setMenuOpen(open) {
   state.menuOpen = open;
   overlay.hidden = !open;
   if (open) {
-    setHelpOpen(false);
     clearInput(); clearMouseInput();   // nothing walks on by itself while the menu is open
     confirmUntil = quitUntil = 0;
     render();
