@@ -422,11 +422,12 @@ async function drop() {
 function enchant(id) {
   const w = workItem();
   if (!w) { setStatus('Select a weapon in your bag first'); return; }
-  const cost = enchantCost(w, id), was = enchantEntry(w), done = enchantWeapon(player.inventory, w.instanceId, id);
+  // its name before: once enchanted the name carries the enchantment ("made Duskfang Toasty")
+  const cost = enchantCost(w, id), was = enchantEntry(w), name = itemName(w), done = enchantWeapon(player.inventory, w.instanceId, id);
   if (done === 'ok') {
     sfx('spell', { pitch: 1.2 }); sfx('coin', { pitch: 0.8 });
     setStatus(`Enchanter: ${ENCHANTED_SAYS[id]}${was ? ` (${was.name} wandered off, offended.)` : ''}`);
-    log('craft', { what: 'enchant', item: itemName(w), name: ENCHANT[id].name, price: formatCoins(cost.copper) });
+    log('craft', { what: 'enchant', item: name, name: ENCHANT[id].name, price: formatCoins(cost.copper) });
   } else setStatus({ poor: 'Not enough coins', crystals: `Not enough ${ITEMS[cost.crystal].name} (${cost.count} needed)`,
     same: `It is ${ENCHANT[id].name} already`, unknown: 'That cannot be enchanted' }[done]);
   refresh();

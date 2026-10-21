@@ -146,7 +146,9 @@ sillier words mixed in: Crap to Unremarkable get a word and the base ("Soggy Lon
 ("Goblinbotherer"), Remarkable a compound and a title ("Frostbite the Mildly Cursed"), Fabled
 and Impossible a compound and an epithet ("Grimfang, Eater of Lunches", "Doomsong, That Should
 Not Be"), OMG an old root, a compound and an epithet ("Ur-Stormreaver, Mother of All Pointy
-Things"). The base type shows under the name where the name does not say it.
+Things"). The base type shows under the name where the name does not say it. An enchanted
+weapon shows its enchantment in front of the name ("Toasty Duskfang", `core/gear/stats.js
+displayName`); `gen.name` keeps the name it was found with, so a new enchantment renames it.
 
 ## Drops
 

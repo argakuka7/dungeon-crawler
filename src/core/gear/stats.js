@@ -51,8 +51,13 @@ export function itemStats(item) {
   };
 }
 
-// what to call it, and the base type to show under the name (null when the name says it)
-export const displayName = item => item?.gen?.name ?? ITEMS[item?.itemId]?.name ?? '';
+// what to call it, and the base type to show under the name (null when the name says it). An
+// enchanted weapon wears its enchantment in front of its name ("Toasty Duskfang"); the name it was
+// found with stays in `gen.name`, so a new enchantment renames it and an old save shows it too.
+export function displayName(item) {
+  const name = item?.gen?.name ?? ITEMS[item?.itemId]?.name ?? '', e = ENCHANT[item?.gen?.enchant];
+  return e && name ? `${e.name} ${name}` : name;
+}
 export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? ITEMS[item.itemId].name : null;
 export const affixLines = item => (item?.gen?.affixes ?? []).map(describeAffix);
 // ... with each affix's name: [{ name: 'Pointy', text: '+5 damage' }]

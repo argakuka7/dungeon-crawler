@@ -7,7 +7,7 @@ import { AFFIX, MAX_PREFIXES, MAX_SUFFIXES, MAX_TIER, rerollAffix } from '../src
 import { ENCHANTS, ENCHANT, enchantTier, enchantValue, enchantOf, describeEnchant, MAX_SLOW } from '../src/core/gear/enchants.js';
 import { rollWeapon } from '../src/core/gear/generate.js';
 import { baseTags } from '../src/core/gear/bases.js';
-import { itemStats, enchantEntry } from '../src/core/gear/stats.js';
+import { itemStats, enchantEntry, displayName } from '../src/core/gear/stats.js';
 import { crystalDrops, crystalChance, rollCrystals } from '../src/core/gear/drops.js';
 import { validGen } from '../src/core/loot.js';
 import { createInventory, addInstance, addItem, addCopper, copperTotal, countOf, ownedItem, spendItem } from '../src/core/inventory.js';
@@ -43,6 +43,9 @@ test('enchantments: one per crystal, growing by tier, stronger on better weapons
   w.gen = { ...w.gen, enchant: 'toasty' };
   assert.deepEqual(itemStats(w).enchant, { id: 'toasty', value: enchantValue(w, 'toasty') });
   assert.equal(enchantEntry(w).name, 'Toasty');
+  // ... and its name wears it, in front of the name it was found with (which it keeps)
+  assert.equal(displayName(w), `Toasty ${w.gen.name}`);
+  assert.equal(displayName({ ...w, gen: { ...w.gen, enchant: 'icky' } }), `Icky ${w.gen.name}`);
   assert.ok(validGen(w.gen)); assert.ok(!validGen({ ...w.gen, enchant: 'sparkly' }));
   assert.deepEqual(JSON.parse(JSON.stringify(w)), w);
 });
