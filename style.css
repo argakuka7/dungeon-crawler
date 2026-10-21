@@ -150,6 +150,7 @@ body.touch #leave-panel kbd { display: none; }
   padding: 16px 20px; background: #12161ef5; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px; }
 #settings-panel header { display: flex; align-items: baseline; gap: 12px; }
 #settings-panel h1 { margin: 0 0 4px; color: #fff; font-size: 16px; letter-spacing: 3px; }
+#settings-panel .settings-language { margin-top: 14px; }
 #settings-panel h2 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; padding-top: 12px; border-top: 1px solid #2a2f3a; color: #c5cdbc; font-size: 13px; }
 #settings-tabs { display: flex; gap: 2px; margin: 10px 0 0; border-bottom: 1px solid #444c5c; }
 #settings-panel #settings-tabs button { flex: 1; margin-bottom: -1px; padding: 6px 4px; color: #8a96a8; background: none; border: 1px solid transparent; border-radius: 4px 4px 0 0; }

@@ -1,4 +1,5 @@
-// The settings (the settings menu, game/settingsmenu.js, changes them): the frame rate cap
+// The settings (the settings menu, game/settingsmenu.js, changes them): the language (once
+// chosen; before that the browser's, src/i18n/i18n.js startLanguage), the frame rate cap
 // (main.js) and the anti-aliasing (render/msaa.js), the camera (the overview or the close view,
 // game/camera.js; the camera key switches it too, game/camerakey.js), the mouse look's speed and
 // whether up and down are inverted (game/mouselook.js), the music on or off, the music's and the sounds' volume, and the keys
@@ -9,8 +10,9 @@ import { resolveBindings, overrides, assignKey, clearKey, actionsFor, defaultBin
 import { setMusicEnabled } from '../audio/music.js';
 import { setVolume } from '../audio/context.js';
 import { clampLookSpeed } from '../core/view.js';
+import { SETTINGS_KEY, isLanguage, setLanguage, language } from '../i18n/i18n.js';
 
-const KEY = 'crawler.settings', OLD_MUSIC = 'crawler.music';
+const KEY = SETTINGS_KEY, OLD_MUSIC = 'crawler.music';
 const listeners = new Set();
 
 function read() {
@@ -30,6 +32,7 @@ export const CAMERAS = ['overview', 'close'];
 const oneOf = (list, v, fallback) => (list.includes(v) ? v : fallback);
 const stored = read();
 const settings = {
+  language: isLanguage(stored.language) ? stored.language : null,   // null: the browser's
   fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS), msaa: oneOf(ANTIALIAS, stored.msaa, DEFAULT_MSAA),
   camera: oneOf(CAMERAS, stored.camera, CAMERAS[0]),
   lookSpeed: clampLookSpeed(stored.lookSpeed), invertLook: stored.invertLook === true,
@@ -43,7 +46,7 @@ function changed() {
   setVolume('music', settings.musicVolume);
   setVolume('sounds', settings.soundVolume);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, fps: settings.fps, msaa: settings.msaa, camera: settings.camera,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, ...(settings.language && { language: settings.language }), fps: settings.fps, msaa: settings.msaa, camera: settings.camera,
       lookSpeed: settings.lookSpeed, invertLook: settings.invertLook, music: settings.music, musicVolume: settings.musicVolume,
       soundVolume: settings.soundVolume, keys: overrides(settings.keys) }));
   } catch { /* private mode: for this page only */ }
@@ -54,6 +57,15 @@ export function onSettingsChange(fn) { listeners.add(fn); return () => listeners
 setMusicEnabled(settings.music);
 setVolume('music', settings.musicVolume);
 setVolume('sounds', settings.soundVolume);
+
+// --- language ----------------------------------------------------------------------------------
+
+export const languageNow = () => language();
+// switch the game to it (the page's words, src/i18n/dom.js, follow at once) and keep the choice
+export async function chooseLanguage(code) {
+  settings.language = await setLanguage(code);
+  changed();
+}
 
 // --- graphics ----------------------------------------------------------------------------------
 

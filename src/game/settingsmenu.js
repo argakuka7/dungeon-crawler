@@ -1,5 +1,5 @@
 // The settings menu, from the Esc menu (game/escmenu.js) and the main menu (game/menu.js): the
-// frame rate cap and the anti-aliasing, the camera (overview or close view), the mouse look's speed
+// language, the frame rate cap and the anti-aliasing, the camera (overview or close view), the mouse look's speed
 // and inverting it up and down, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
@@ -12,8 +12,9 @@ import {
   FRAME_RATES, frameRate, setFrameRate, antialias, setAntialias, cameraMode, setCameraMode,
   lookSpeed, setLookSpeed, invertLook, setInvertLook,
   musicOn, setMusic, musicVolume, setMusicVolume, soundVolume, setSoundVolume,
-  keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange,
+  keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange, languageNow, chooseLanguage,
 } from './settings.js';
+import { tr, tc, LANGUAGES, onLanguageChange } from '../i18n/i18n.js';
 import { sfx } from '../audio/sfx.js';
 import { MSAA_LEVELS, msaaLevel } from '../render/msaa.js';
 
@@ -51,23 +52,28 @@ export function closeSettings() {
 function choice(box, options, current) {
   box.innerHTML = options.map(([v, label]) => `<button data-value="${v}" aria-pressed="${v === current}" class="${v === current ? 'on' : ''}">${esc(label)}</button>`).join('');
 }
+// each language by its own name, so whoever reads it finds theirs
+function renderLanguage() {
+  choice($('settings-language'), LANGUAGES.map(l => [l.code, l.name]), languageNow());
+  for (const b of $('settings-language').children) b.lang = b.dataset.value;
+}
 function renderGraphics() {
-  choice($('settings-fps'), FRAME_RATES.map(f => [f, f ? String(f) : 'Unlimited']), frameRate());
+  choice($('settings-fps'), FRAME_RATES.map(f => [f, f ? String(f) : tr('Unlimited')]), frameRate());
   // the levels this GPU can do; one asked for beyond them shows as the one used
-  choice($('settings-msaa'), MSAA_LEVELS.map(n => [n, n ? `${n}x` : 'Off']), msaaLevel(antialias()));
-  choice($('settings-camera'), [['overview', 'Overview'], ['close', 'Close']], cameraMode());
+  choice($('settings-msaa'), MSAA_LEVELS.map(n => [n, n ? `${n}x` : tc('toggle', 'Off')]), msaaLevel(antialias()));
+  choice($('settings-camera'), [['overview', tr('Overview')], ['close', tc('camera', 'Close')]], cameraMode());
 }
 function renderMouse() {
   const inverted = invertLook(), speed = Math.round(lookSpeed() * 100);
   $('settings-look-speed').value = String(speed);
   $('settings-look-level').textContent = `${speed}%`;
-  $('settings-invert').textContent = inverted ? 'On' : 'Off';
+  $('settings-invert').textContent = inverted ? tc('toggle', 'On') : tc('toggle', 'Off');
   $('settings-invert').setAttribute('aria-pressed', String(inverted));
   $('settings-invert').classList.toggle('on', inverted);
 }
 function renderSound() {
   const on = musicOn();
-  $('settings-music').textContent = on ? 'On' : 'Off';
+  $('settings-music').textContent = on ? tc('toggle', 'On') : tc('toggle', 'Off');
   $('settings-music').setAttribute('aria-pressed', String(on));
   $('settings-music').classList.toggle('on', on);
   for (const [bar, out, v] of [['settings-music-volume', 'settings-music-level', musicVolume()], ['settings-sound-volume', 'settings-sound-level', soundVolume()]]) {
@@ -77,21 +83,21 @@ function renderSound() {
 }
 function keyButton(a, slot) {
   const k = keysOf(a.id)[slot], on = waiting?.id === a.id && waiting.slot === slot;
-  const which = slot ? 'secondary' : 'primary';
+  const key = k === null ? tr('none') : nameOf(k), label = tr(a.label);
   return `<button data-id="${a.id}" data-slot="${slot}" class="${on ? 'waiting' : k === null ? 'empty' : ''}"`
-    + ` aria-label="${esc(`${a.label}, ${which} key: ${k === null ? 'none' : nameOf(k)}`)}">${on ? 'Press a key\u2026' : k === null ? '\u2014' : esc(nameOf(k))}</button>`;
+    + ` aria-label="${esc(slot ? tr('{label}, secondary key: {key}', { label, key }) : tr('{label}, primary key: {key}', { label, key }))}">${on ? esc(tr('Press a key…')) : k === null ? '\u2014' : esc(nameOf(k))}</button>`;
 }
 // the tabs keep the height of the longest, so the panel does not jump between them
 keysBox.style.setProperty('--rows', String(Math.max(...GROUPS.map(g => ACTIONS.filter(a => a.group === g).length))));
 function renderKeys() {
   tabs.innerHTML = GROUPS.map(g => `<button role="tab" id="settings-tab-${g}" data-tab="${g}" aria-selected="${g === tab}"`
-    + ` tabindex="${g === tab ? 0 : -1}" class="${g === tab ? 'on' : ''}">${g}</button>`).join('');
+    + ` tabindex="${g === tab ? 0 : -1}" class="${g === tab ? 'on' : ''}">${esc(tr(g))}</button>`).join('');
   keysBox.setAttribute('aria-labelledby', `settings-tab-${tab}`);
   keysBox.innerHTML = ACTIONS.filter(a => a.group === tab)
-    .map(a => `<div class="settings-key"><span>${esc(a.label)}</span>${keyButton(a, 0)}${keyButton(a, 1)}</div>`).join('');
+    .map(a => `<div class="settings-key"><span>${esc(tr(a.label))}</span>${keyButton(a, 0)}${keyButton(a, 1)}</div>`).join('');
   const reset = $('settings-reset'), sure = performance.now() < resetUntil;
   reset.classList.toggle('confirm', sure);
-  reset.textContent = sure ? 'Sure? Click again' : 'Reset keys';
+  reset.textContent = sure ? tr('Sure? Click again') : tr('Reset keys');
 }
 function render() {
   if (!settingsOpen()) return;
@@ -100,7 +106,7 @@ function render() {
   const onTab = document.activeElement?.closest?.('#settings-tabs');
   const pressed = document.activeElement?.closest?.('.settings-choice [data-value]');
   const chosen = pressed && { box: pressed.parentElement.id, value: pressed.dataset.value };
-  renderGraphics(); renderMouse(); renderSound(); renderKeys();
+  renderLanguage(); renderGraphics(); renderMouse(); renderSound(); renderKeys();
   // the focus stays on the key place, the tab or the choice it was on (they were drawn anew)
   if (chosen) $(chosen.box).querySelector(`[data-value="${chosen.value}"]`)?.focus();
   else if (place) keysBox.querySelector(`[data-id="${place.id}"][data-slot="${place.slot}"]`)?.focus();
@@ -112,12 +118,13 @@ function showTab(g) {
   render();
 }
 onSettingsChange(render);
+onLanguageChange(render);
 
 // --- doing --------------------------------------------------------------------------------------
 
 function wait(id, slot) {
   waiting = waiting?.id === id && waiting.slot === slot ? null : { id, slot };
-  say(waiting ? `${ACTION[id].label}: press the new key` : '');
+  say(waiting ? tr('{label}: press the new key', { label: tr(ACTION[id].label) }) : '');
   render();
 }
 // the key pressed while a place waits for one
@@ -126,14 +133,18 @@ function take(e) {
   if (e.code === 'Escape') { waiting = null; say(''); render(); return; }
   if (e.code === 'Backspace' || e.code === 'Delete') {
     waiting = null; unbindKey(id, slot);
-    say(`${ACTION[id].label}: no ${slot ? 'secondary' : 'primary'} key`);
+    const label = tr(ACTION[id].label);
+    say(slot ? tr('{label}: no secondary key', { label }) : tr('{label}: no primary key', { label }));
     return;
   }
-  if (!e.code || UNBINDABLE.has(e.code)) { say(`${nameOf(e.code) || 'That key'} cannot be used, try another`); return; }
+  if (!e.code || UNBINDABLE.has(e.code)) {
+    say(nameOf(e.code) ? tr('{key} cannot be used, try another', { key: nameOf(e.code) }) : tr('That key cannot be used, try another'));
+    return;
+  }
   waiting = null;
   const lost = bindKey(id, slot, e.code, e.key);
-  say(lost.length ? lost.map(l => `${nameOf(l.key)} is no longer ${ACTION[l.id].label}'s key`).join('. ')
-    : `${ACTION[id].label}: ${nameOf(e.code)}`);
+  say(lost.length ? lost.map(l => tr('{key} is no longer the key for {label}', { key: nameOf(l.key), label: tr(ACTION[l.id].label) })).join('. ')
+    : `${tr(ACTION[id].label)}: ${nameOf(e.code)}`);
   if (lost.length) sfx('use', { volume: 0.6 });
 }
 
@@ -162,6 +173,10 @@ keysBox.addEventListener('click', e => {
 });
 $('settings-close').onclick = () => closeSettings();
 overlay.addEventListener('pointerdown', e => { if (e.target === overlay) closeSettings(); });
+$('settings-language').addEventListener('click', e => {
+  const b = e.target.closest('[data-value]');
+  if (b) chooseLanguage(b.dataset.value);
+});
 $('settings-fps').addEventListener('click', e => {
   const b = e.target.closest('[data-value]');
   if (b) setFrameRate(Number(b.dataset.value));
@@ -189,5 +204,5 @@ $('settings-reset').onclick = () => {
   }
   resetUntil = 0; waiting = null;
   resetKeys();
-  say('All keys are back as they were at the start');
+  say(tr('All keys are back as they were at the start'));
 };

@@ -36,6 +36,7 @@ import { updateQuickbar } from './game/quickbar.js';
 import { updateTeleportMenu } from './game/teleportmenu.js';
 import { updateLeave } from './game/leavefight.js';
 import { updateTouch } from './game/touch.js';
+import './game/language.js';   // the page's own words in the game's language
 import './game/nozoom.js';   // the page never zooms, only the game's view
 import { updateLoot } from './game/loot.js';
 import { updateLootLabels } from './game/lootlabels.js';

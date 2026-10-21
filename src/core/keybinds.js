@@ -9,6 +9,8 @@
 //
 // hold: the action lasts while the key is held (moving, walking, auto-attack); the others
 // happen on the press. Escape is not bindable: it always opens the menu and closes what is open.
+// The groups and labels are English; the settings show them translated (src/i18n/sources.js).
+import { tr } from '../i18n/i18n.js';
 
 export const GROUPS = ['Moving', 'Fighting', 'Items', 'View', 'Game'];
 
@@ -107,12 +109,15 @@ export function actionsFor(b, code, key) {
 
 // --- names ----------------------------------------------------------------------------------
 
-const NAMES = {
+// the keys with names (translated: 'Space' is 'Leertaste' in German); then the ones with signs
+export const KEY_NAMES = {
   Space: 'Space', Enter: 'Enter', NumpadEnter: 'Num Enter', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Del',
   Insert: 'Ins', Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn', CapsLock: 'Caps Lock', Escape: 'Esc',
-  ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
   ShiftLeft: 'Left Shift', ShiftRight: 'Right Shift', ControlLeft: 'Left Ctrl', ControlRight: 'Right Ctrl',
   AltLeft: 'Left Alt', AltRight: 'Right Alt', MetaLeft: 'Left Cmd', MetaRight: 'Right Cmd',
+};
+const SIGNS = {
+  ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
   Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', IntlBackslash: '\\',
   Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/',
   NumpadAdd: 'Num +', NumpadSubtract: 'Num -', NumpadMultiply: 'Num *', NumpadDivide: 'Num /', NumpadDecimal: 'Num .',
@@ -121,12 +126,13 @@ const NAMES = {
 // layout map, where there is one), so a German keyboard's KeyZ shows as Y
 export function keyName(key, layout = null) {
   if (key === null || key === undefined) return '';
-  if (isChar(key)) return key === ' ' ? 'Space' : key.toUpperCase();
+  if (isChar(key)) return key === ' ' ? tr('Space') : key.toUpperCase();
   const own = layout?.get?.(key);
   if (own && own.trim()) return own.toUpperCase();
-  if (NAMES[key]) return NAMES[key];
+  if (KEY_NAMES[key]) return tr(KEY_NAMES[key]);
+  if (SIGNS[key]) return SIGNS[key];
   let m = /^Key([A-Z])$/.exec(key) ?? /^Digit(\d)$/.exec(key);
   if (m) return m[1];
-  if ((m = /^Numpad(\d)$/.exec(key))) return `Num ${m[1]}`;
+  if ((m = /^Numpad(\d)$/.exec(key))) return tr('Num {n}', { n: m[1] });
   return key;
 }

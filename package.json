@@ -6,6 +6,7 @@
     "serve": "uv run --no-project tools/serve.py",
     "prop-metadata": "node tools/prop-metadata.mjs",
     "compress-assets": "node tools/compress-assets.mjs",
-    "learn": "node tools/learn.mjs"
+    "learn": "node tools/learn.mjs",
+    "i18n": "node tools/i18n.mjs"
   }
 }

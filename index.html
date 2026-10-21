@@ -25,71 +25,74 @@
   <div id="dev-stats"></div>
   <div id="dev-hint"><kbd>`</kbd> commands: /spawn, /weapon, /give ... (/help lists them)</div>
 </div>
-<div id="chat" aria-label="Chat and what happened">
-  <div id="chat-tabs" hidden><button data-filter="all" class="on">All</button><button data-filter="chat">Chat</button><button data-filter="events">Events</button><span>Enter to send · Esc to close</span></div>
+<div id="chat" aria-label="Chat and what happened" data-t="aria-label">
+  <div id="chat-tabs" hidden><button data-filter="all" class="on" data-t>All</button><button data-filter="chat" data-t>Chat</button><button data-filter="events" data-t>Events</button><span data-t>Enter to send · Esc to close</span></div>
   <ol id="chat-log" role="log" aria-live="polite"></ol>
   <div id="chat-status" role="status"></div>
   <div id="chat-entry" hidden>
     <ul id="chat-popup" role="listbox" hidden></ul>
     <div id="chat-usage" hidden></div>
-    <div id="chat-field"><div id="chat-ghost" aria-hidden="true"></div><input id="chat-input" type="text" maxlength="160" autocomplete="off" spellcheck="false" aria-label="Chat, or a command after /"></div>
+    <div id="chat-field"><div id="chat-ghost" aria-hidden="true"></div><input id="chat-input" type="text" maxlength="160" autocomplete="off" spellcheck="false" aria-label="Chat, or a command after /" data-t="aria-label"></div>
   </div>
 </div>
 <div id="menu-overlay" hidden>
   <section id="menu-panel" role="dialog" aria-modal="true" aria-labelledby="menu-title">
-    <header><h1 id="menu-title">Menu</h1><span id="menu-paused">Paused</span><button id="menu-close" aria-label="Close">Esc</button></header>
+    <header><h1 id="menu-title" data-t>Menu</h1><span id="menu-paused">Paused</span><button id="menu-close" aria-label="Close" data-t="aria-label">Esc</button></header>
     <div id="menu-list">
-      <button id="menu-resume" class="menu-big menu-main">Resume</button>
-      <button id="menu-host" class="menu-big menu-main">Host this world</button>
-      <button id="menu-leave" class="menu-big" hidden>Stop hosting</button>
-      <div id="menu-room" class="menu-big" hidden title="Your friends join with this code (up to three)"><small>Join code</small><b id="menu-room-code"></b></div>
+      <button id="menu-resume" class="menu-big menu-main" data-t>Resume</button>
+      <button id="menu-host" class="menu-big menu-main" data-t>Host this world</button>
+      <button id="menu-leave" class="menu-big" hidden data-t>Stop hosting</button>
+      <div id="menu-room" class="menu-big" hidden title="Your friends join with this code (up to three)" data-t="title"><small data-t>Join code</small><b id="menu-room-code"></b></div>
       <button id="menu-copy" class="menu-big" hidden>Copy join link</button>
       <ul id="menu-players" hidden></ul>
       <p id="menu-status" role="status" aria-live="polite"></p>
-      <button id="menu-settings" class="menu-big">Settings</button>
-      <button id="menu-quit" class="menu-big">Save and quit to the menu</button>
+      <button id="menu-settings" class="menu-big" data-t>Settings</button>
+      <button id="menu-quit" class="menu-big" data-t>Save and quit to the menu</button>
     </div>
   </section>
 </div>
 <div id="leave-overlay" hidden>
   <section id="leave-panel" role="alertdialog" aria-modal="true" aria-labelledby="leave-title" aria-describedby="leave-text">
-    <h1 id="leave-title">Leave the fight?</h1>
+    <h1 id="leave-title" data-t>Leave the fight?</h1>
     <p id="leave-text"></p>
     <div class="leave-buttons">
-      <button id="leave-stay">Stay <kbd>Esc</kbd></button>
-      <button id="leave-go">Leave <kbd>Enter</kbd></button>
+      <button id="leave-stay" data-t>Stay <kbd>Esc</kbd></button>
+      <button id="leave-go" data-t>Leave <kbd>Enter</kbd></button>
     </div>
   </section>
 </div>
 <div id="settings-overlay" hidden>
   <section id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-    <header><h1 id="settings-title">Settings</h1><button id="settings-close" aria-label="Close settings">Done · Esc</button></header>
-    <h2>Graphics</h2>
+    <header><h1 id="settings-title" data-t>Settings</h1><button id="settings-close" aria-label="Close settings" data-t="text aria-label">Done · Esc</button></header>
+    <div class="settings-graphics settings-language">
+      <span id="settings-language-label" data-t>Language</span><div id="settings-language" class="settings-choice" role="group" aria-labelledby="settings-language-label"></div>
+    </div>
+    <h2 data-t>Graphics</h2>
     <div class="settings-graphics">
-      <span id="settings-fps-label">Frame rate</span><div id="settings-fps" class="settings-choice" role="group" aria-labelledby="settings-fps-label"></div>
-      <span id="settings-msaa-label">Anti-aliasing</span><div id="settings-msaa" class="settings-choice" role="group" aria-labelledby="settings-msaa-label"></div>
-      <span id="settings-camera-label">Camera</span><div id="settings-camera" class="settings-choice" role="group" aria-labelledby="settings-camera-label"></div>
+      <span id="settings-fps-label" data-t>Frame rate</span><div id="settings-fps" class="settings-choice" role="group" aria-labelledby="settings-fps-label"></div>
+      <span id="settings-msaa-label" data-t>Anti-aliasing</span><div id="settings-msaa" class="settings-choice" role="group" aria-labelledby="settings-msaa-label"></div>
+      <span id="settings-camera-label" data-t>Camera</span><div id="settings-camera" class="settings-choice" role="group" aria-labelledby="settings-camera-label"></div>
     </div>
-    <h2>Mouse</h2>
+    <h2 data-t>Mouse</h2>
     <div class="settings-sound">
-      <label for="settings-look-speed">Look speed</label><input id="settings-look-speed" type="range" min="20" max="300" step="10"><output id="settings-look-level" for="settings-look-speed"></output>
-      <span>Invert up / down</span><button id="settings-invert" aria-pressed="false">Off</button><span></span>
+      <label for="settings-look-speed" data-t>Look speed</label><input id="settings-look-speed" type="range" min="20" max="300" step="10"><output id="settings-look-level" for="settings-look-speed"></output>
+      <span data-t>Invert up / down</span><button id="settings-invert" aria-pressed="false">Off</button><span></span>
     </div>
-    <h2>Sound</h2>
+    <h2 data-t>Sound</h2>
     <div class="settings-sound">
-      <span>Music</span><button id="settings-music" aria-pressed="false">Off</button><span></span>
-      <label for="settings-music-volume">Music volume</label><input id="settings-music-volume" type="range" min="0" max="100" step="5"><output id="settings-music-level" for="settings-music-volume"></output>
-      <label for="settings-sound-volume">Sound volume</label><input id="settings-sound-volume" type="range" min="0" max="100" step="5"><output id="settings-sound-level" for="settings-sound-volume"></output>
+      <span data-t>Music</span><button id="settings-music" aria-pressed="false">Off</button><span></span>
+      <label for="settings-music-volume" data-t>Music volume</label><input id="settings-music-volume" type="range" min="0" max="100" step="5"><output id="settings-music-level" for="settings-music-volume"></output>
+      <label for="settings-sound-volume" data-t>Sound volume</label><input id="settings-sound-volume" type="range" min="0" max="100" step="5"><output id="settings-sound-level" for="settings-sound-volume"></output>
     </div>
-    <h2>Keys <button id="settings-reset">Reset keys</button></h2>
-    <p class="settings-note">Click a key, then press the new one (<kbd>Esc</kbd>: keep the old one, <kbd>Backspace</kbd>: no key). A key goes to one control only. <kbd>Esc</kbd> always opens the menu and closes what is open.</p>
-    <div id="settings-tabs" role="tablist" aria-label="Kinds of controls"></div>
+    <h2><span data-t>Keys</span> <button id="settings-reset">Reset keys</button></h2>
+    <p class="settings-note" data-t>Click a key, then press the new one (<kbd>Esc</kbd>: keep the old one, <kbd>Backspace</kbd>: no key). A key goes to one control only. <kbd>Esc</kbd> always opens the menu and closes what is open.</p>
+    <div id="settings-tabs" role="tablist" aria-label="Kinds of controls" data-t="aria-label"></div>
     <div id="settings-keys" role="tabpanel"></div>
     <p id="settings-feedback" role="status" aria-live="polite"></p>
   </section>
 </div>
 <div id="title-overlay" hidden>
-  <button id="title-hero" hidden aria-label="Choose Character"><span id="title-hero-view"></span><b id="title-hero-name"></b><small id="title-hero-level"></small></button>
+  <button id="title-hero" hidden aria-label="Choose Character" data-t="aria-label"><span id="title-hero-view"></span><b id="title-hero-name"></b><small id="title-hero-level"></small></button>
   <div id="title-box">
     <h1 id="title-logo">Cube Crawler</h1>
     <section id="title-panel" aria-live="polite"></section>
@@ -98,18 +101,18 @@
 <div id="loot-labels"></div>
 <div id="crosshair" hidden></div>
 <div id="lock-marker" hidden></div>
-<div id="look-hint" hidden>Click to look around</div>
+<div id="look-hint" hidden data-t>Click to look around</div>
 <div id="inventory-overlay" hidden>
   <section id="inventory-panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title" tabindex="-1">
-    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><div id="inventory-tabs" role="tablist" aria-label="Bag or quests"><button role="tab" data-tab="bag" aria-selected="true">Bag</button><button role="tab" data-tab="quests" aria-selected="false">Quests</button></div><div id="inventory-currency" aria-label="Currency"></div><button id="inventory-close" aria-label="Close inventory">Close · Esc</button></header>
+    <header><div><h1 id="inventory-title">Inventory</h1><div id="inventory-progress"></div></div><div id="inventory-tabs" role="tablist" aria-label="Bag or quests" data-t="aria-label"><button role="tab" data-tab="bag" aria-selected="true" data-t>Bag</button><button role="tab" data-tab="quests" aria-selected="false" data-t>Quests</button></div><div id="inventory-currency" aria-label="Currency" data-t="aria-label"></div><button id="inventory-close" aria-label="Close inventory" data-t="aria-label">Close · Esc</button></header>
     <div class="inventory-body">
-      <div id="inventory-hero-col"><h2>Hero</h2><canvas id="inventory-hero" data-live-hero aria-hidden="true"></canvas><div id="inventory-worn" role="group" aria-label="Armor worn"></div><div id="inventory-equipped"></div></div>
-      <div id="inventory-floor-col" hidden><h2 title="Within reach">Floor</h2><div id="inventory-floor" class="inventory-scroll" role="listbox" aria-label="Items on the floor"></div></div>
-      <div id="inventory-shop-col" hidden><h2 id="inventory-shop-title">For sale</h2><div id="inventory-shop" class="inventory-scroll" role="listbox" aria-label="Wares for sale"></div></div>
-      <div id="inventory-bag-col"><h2>Bag · 24 slots</h2><div id="inventory-grid"></div>
-        <div id="inventory-act" aria-label="Actions">
-          <div class="inventory-actions"><button id="inventory-buy" hidden>Buy</button><button id="inventory-equip" hidden>Equip</button><button id="inventory-use" hidden>Use</button><button id="inventory-take" hidden>Take</button><button id="inventory-drop" hidden>Drop</button></div>
-          <div id="inventory-bar" style="visibility: hidden"><span>Quick bar:</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot"></div></div>
+      <div id="inventory-hero-col"><h2 data-t>Hero</h2><canvas id="inventory-hero" data-live-hero aria-hidden="true"></canvas><div id="inventory-worn" role="group" aria-label="Armor worn" data-t="aria-label"></div><div id="inventory-equipped"></div></div>
+      <div id="inventory-floor-col" hidden><h2 title="Within reach" data-t="text title">Floor</h2><div id="inventory-floor" class="inventory-scroll" role="listbox" aria-label="Items on the floor" data-t="aria-label"></div></div>
+      <div id="inventory-shop-col" hidden><h2 id="inventory-shop-title">For sale</h2><div id="inventory-shop" class="inventory-scroll" role="listbox" aria-label="Wares for sale" data-t="aria-label"></div></div>
+      <div id="inventory-bag-col"><h2 data-t>Bag · 24 slots</h2><div id="inventory-grid"></div>
+        <div id="inventory-act" aria-label="Actions" data-t="aria-label">
+          <div class="inventory-actions"><button id="inventory-buy" hidden data-t>Buy</button><button id="inventory-equip" hidden data-t>Equip</button><button id="inventory-use" hidden data-t>Use</button><button id="inventory-take" hidden data-t>Take</button><button id="inventory-drop" hidden data-t>Drop</button></div>
+          <div id="inventory-bar" style="visibility: hidden"><span data-t>Quick bar:</span><div id="inventory-bar-keys" role="group" aria-label="Put on quick bar slot" data-t="aria-label"></div></div>
         </div></div>
       <aside id="inventory-details"><div class="inventory-details-inner">
         <canvas id="inventory-item-view" aria-hidden="true"></canvas><h2 id="inventory-item-name">Select an item</h2>
@@ -117,30 +120,30 @@
     </div>
     <div id="quests-body" hidden>
       <div id="quests-list-col"><div id="quests-talk" hidden></div>
-        <div id="quests-filter" role="group" aria-label="Which quests"><button data-filter="active" aria-pressed="true">Going on</button><button data-filter="done" aria-pressed="false">Done</button><button data-filter="archived" aria-pressed="false">Archived</button></div>
-        <div id="quests-list" role="listbox" aria-label="Quests"></div></div>
+        <div id="quests-filter" role="group" aria-label="Which quests" data-t="aria-label"><button data-filter="active" aria-pressed="true" data-t>Going on</button><button data-filter="done" aria-pressed="false" data-t>Done</button><button data-filter="archived" aria-pressed="false" data-t>Archived</button></div>
+        <div id="quests-list" role="listbox" aria-label="Quests" data-t="aria-label"></div></div>
       <aside id="quests-details"><div class="inventory-details-inner" id="quests-details-inner"></div></aside>
     </div>
-    <p id="inventory-feedback" role="status"></p><footer id="quests-footer" hidden>Game paused · Quests come from the villagers: a <b>!</b> over one has a quest for you, a <b>?</b> one to hand in · <span id="quests-key-text">U</span> opens the quests</footer>
+    <p id="inventory-feedback" role="status"></p><footer id="quests-footer" hidden><span data-t>Game paused · Quests come from the villagers: a <b>!</b> over one has a quest for you, a <b>?</b> one to hand in</span> · <span id="quests-key-text">U</span> <span data-t>opens the quests</span></footer>
   </section>
 </div>
-<div id="effects" aria-label="Potions at work"></div>
+<div id="effects" aria-label="Potions at work" data-t="aria-label"></div>
 <div id="quest-track" hidden aria-live="polite"></div>
 <div id="trial-hud" hidden aria-live="polite"><b id="trial-name"></b><span id="trial-line"></span><div id="trial-meter"><i id="trial-bar"></i></div></div>
 <div id="trial-banner" hidden><b></b><span></span></div>
 <div id="trial-tip" hidden></div>
-<div id="quickbar" aria-label="Quick bar"></div>
-<div id="teleport-menu" role="menu" aria-label="Teleport to" hidden></div>
+<div id="quickbar" aria-label="Quick bar" data-t="aria-label"></div>
+<div id="teleport-menu" role="menu" aria-label="Teleport to" hidden data-t="aria-label"></div>
 <div id="touch" hidden aria-hidden="true">
   <div id="touch-stick"><div id="touch-ring" hidden><div id="touch-knob"></div></div></div>
-  <button id="touch-turn-left" class="touch-turn" tabindex="-1" aria-label="Turn the view left"><svg viewBox="0 0 24 24"><path d="M8.6 5.2 4 9.8l4.6 4.6V11a7 7 0 0 1 9.9 6.4h2.4A9.4 9.4 0 0 0 8.6 8.6z"/></svg></button>
-  <button id="touch-turn-right" class="touch-turn" tabindex="-1" aria-label="Turn the view right"><svg viewBox="0 0 24 24"><path d="M15.4 5.2 20 9.8l-4.6 4.6V11a7 7 0 0 0-9.9 6.4H3.1a9.4 9.4 0 0 1 12.3-8.8z"/></svg></button>
-  <button id="touch-jump" tabindex="-1" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 4l-7 8h4.5v7h5v-7H19z"/></svg></button>
+  <button id="touch-turn-left" class="touch-turn" tabindex="-1" aria-label="Turn the view left" data-t="aria-label"><svg viewBox="0 0 24 24"><path d="M8.6 5.2 4 9.8l4.6 4.6V11a7 7 0 0 1 9.9 6.4h2.4A9.4 9.4 0 0 0 8.6 8.6z"/></svg></button>
+  <button id="touch-turn-right" class="touch-turn" tabindex="-1" aria-label="Turn the view right" data-t="aria-label"><svg viewBox="0 0 24 24"><path d="M15.4 5.2 20 9.8l-4.6 4.6V11a7 7 0 0 0-9.9 6.4H3.1a9.4 9.4 0 0 1 12.3-8.8z"/></svg></button>
+  <button id="touch-jump" tabindex="-1" aria-label="Jump" data-t="aria-label"><svg viewBox="0 0 24 24"><path d="M12 4l-7 8h4.5v7h5v-7H19z"/></svg></button>
   <button id="touch-use" tabindex="-1" aria-label="Use" hidden><img alt="" hidden><svg viewBox="0 0 24 24" hidden><path d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v9a2.5 2.5 0 0 1-2.5 2.5h-7.2L6.5 21.6v-4.1H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5z"/><circle cx="7.5" cy="10.5" r="1.5"/><circle cx="12" cy="10.5" r="1.5"/><circle cx="16.5" cy="10.5" r="1.5"/></svg><span id="touch-use-count" hidden></span></button>
   <button id="touch-action" tabindex="-1" aria-label="Attack"><img alt="" hidden><span id="touch-action-knob"></span></button>
   <div id="touch-hold"></div>
 </div>
-<div id="loading"><span></span>generating&hellip;</div>
+<div id="loading"><span></span><bdi data-t>generating…</bdi></div>
 <div id="flash"></div>
 <div id="rewind" aria-hidden="true"><b>&#9664;&#9664;</b></div>
 <div id="fade"></div>
