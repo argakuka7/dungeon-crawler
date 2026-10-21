@@ -1,13 +1,14 @@
 // A weapon instance's stats: its base type's, grown by its item level and scaled by rarity, then
 // changed by its affixes. Combat (core/combat.js) only ever reads these, never the base type.
-//   kind: sword, bow, crossbow or staff; ranged: it shoots (core/shots.js) rather than swings
+//   kind: sword, flail, bow, crossbow or staff; ranged: it shoots (core/shots.js) rather than swings
 //   damage: (base × item level growth × rarity + flat) × (1 + percent), rounded
 //   interval: the time between attacks, shortened by `speed` percent (every attack time with it)
 //   range: (+ reach in cells) × (1 + percent); arc: the base's × (1 + percent)
 //   crit / critDamage: chance (0..1, CRIT_CHANCE without affixes) and multiplier; leech: life on
-//   hit; knockback: multiplier; pierce / burst / color: the base's (core/items.js)
+//   hit; knockback: multiplier (the base's, a flail's heavier, × its affixes); pierce / burst /
+//   color / balls (a flail's: each strikes): the base's (core/items.js)
 //   enchant: { id, value }, only when it has one: the Enchanter's (core/gear/enchants.js, game/enchants.js)
-import { ITEMS } from '../items.js';
+import { ITEMS, isMelee } from '../items.js';
 import { AFFIX, describeAffix } from './affixes.js';
 import { rarityOf } from './rarities.js';
 import { ENCHANT, enchantOf, describeEnchant } from './enchants.js';
@@ -37,7 +38,7 @@ export function itemStats(item) {
   }
   const kind = w.kind ?? 'sword', enchant = enchantOf(item);
   return {
-    kind, ranged: kind !== 'sword',
+    kind, ranged: !isMelee(kind),
     damage: Math.max(1, Math.round((w.damage * ilvlDamage(item.gen?.ilvl) * rarityOf(item).damage + sum.damage) * (1 + sum.damagePct / 100))),
     interval: Math.round(w.interval * (1 - sum.speed / 100) * 1000) / 1000,
     range: Math.round((w.range + sum.range) * (1 + sum.rangePct / 100) * 100) / 100,
@@ -45,8 +46,8 @@ export function itemStats(item) {
     crit: CRIT_CHANCE + sum.crit / 100,
     critDamage: CRIT_DAMAGE + sum.critDamage / 100,
     leech: sum.leech,
-    knockback: 1 + sum.knockback / 100,
-    pierce: w.pierce ?? 0, burst: w.burst ?? 0, ...(w.color && { color: w.color }),
+    knockback: (w.knockback ?? 1) * (1 + sum.knockback / 100),
+    pierce: w.pierce ?? 0, burst: w.burst ?? 0, ...(w.color && { color: w.color }), ...(w.balls > 1 && { balls: w.balls }),
     ...(enchant && { enchant }),
   };
 }
@@ -67,8 +68,8 @@ export function enchantEntry(item) {
   const e = enchantOf(item);
   return e && { id: e.id, name: ENCHANT[e.id].name, text: describeEnchant(e.id, e.value) };
 }
-// damage per second, counting crits: what to compare weapons by
-export const weaponDps = s => s.damage * (1 + s.crit * (s.critDamage - 1)) / s.interval;
+// damage per second, counting crits (and every ball of a flail striking): what to compare weapons by
+export const weaponDps = s => s.damage * (s.balls ?? 1) * (1 + s.crit * (s.critDamage - 1)) / s.interval;
 
 // --- armor ---------------------------------------------------------------------------------------
 // A piece of armor's stats (core/items.js ARMORS), like a weapon's: its base armor grown by item

@@ -165,7 +165,8 @@ all for loot.
 These are the base types (`core/items.js`), five of each kind besides the Old Sword. A weapon
 instance scales the damage by its rarity and changes its stats with its affixes
 ([loot.md](loot.md)); combat reads only the instance's stats (`core/gear/stats.js`). How the
-ranged kinds attack: [combat.md](combat.md#bows-crossbows-and-staffs).
+ranged kinds attack: [combat.md](combat.md#bows-crossbows-and-staffs), the flails:
+[combat.md](combat.md#flails).
 
 ### Swords
 
@@ -185,6 +186,23 @@ and plant you for longer. Swing stats are captured at attack start, so even
 leveling up during a sweep cannot change its remaining hits. Blade arc, vertical
 overlap, line-of-sight and one-hit-per-target rules still apply. The greatsword
 currently uses the same one-handed prototype animation, not a new moveset.
+
+### Flails
+
+Morning stars: one, two or three spiked balls on chains, swung like a sword (the same Slash clip,
+`FLAIL` timing: slower to come round, a longer active window, [combat.md](combat.md#flails)),
+sweeping wider than any sword and shoving half again as hard (`knockback` ×1.5). With more than
+one ball each strikes in turn, so the damage is a ball's and the damage per second counts them
+all. They only drop from item level 7, Renew's level: he always drops one
+([bosses.md](bosses.md#renew)).
+
+| Flail | Damage | Balls | Interval | Per second | Reach | Arc | Drops from |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Ball and Chain | 46 | 1 | .58 | 79 | .95 | ×1.4 | 7 |
+| Morning Star | 53 | 1 | .62 | 85 | 1 | ×1.45 | 7 |
+| Twin Morning Star | 32 | 2 | .68 | 94 | 1 | ×1.5 | 8 |
+| Knight's Flail | 62 | 1 | .70 | 89 | 1.15 | ×1.35 | 9 |
+| Triple Flail | 24 | 3 | .74 | 97 | .95 | ×1.55 | 10 |
 
 ### Bows, crossbows and staffs
 

@@ -106,7 +106,7 @@ test('the tutor searches the code and keeps notes across rooms', async () => {
   const S = scripted();
   S.faux.setResponses([
     pi.fauxAssistantMessage([pi.fauxToolCall('search_code', { query: 'inSwordArc' }), pi.fauxToolCall('note', { text: 'Knows what a function is.' }),
-      pi.fauxToolCall('show_code', { ref: 'src/core/combat.js#inSwordArc', focus: '141' })], { stopReason: 'toolUse' }),
+      pi.fauxToolCall('show_code', { ref: 'src/core/combat.js#inSwordArc', focus: '156' })], { stopReason: 'toolUse' }),
     pi.fauxAssistantMessage('Where do you think it is used?'),
   ]);
   const T = await openTutor({ files: await openFiles(memoryStore().volume()), models: S.models, context: ctx, lang: 'en', onReport: () => {} });
@@ -118,8 +118,8 @@ test('the tutor searches the code and keeps notes across rooms', async () => {
   const shown = entries.find(e => e.kind === 'pi.tool-result' && e.model[0].toolName === 'show_code').model[0].details;
   assert.equal(shown.path, 'src/core/combat.js');
   assert.match(shown.code, /^(\/\/.*\n)*export function inSwordArc/);
-  assert.deepEqual(shown.focus, [141, 141]);
-  assert.ok(shown.start <= 141 && shown.end >= 141);
+  assert.deepEqual(shown.focus, [156, 156]);
+  assert.ok(shown.start <= 156 && shown.end >= 156);
   assert.deepEqual(await T.notes(), [{ room: 'index.html', text: 'Knows what a function is.' }]);
   assert.deepEqual((await T.harness.snapshot(NotebookDoc, ctx)).notes.length, 1);
   // the next question gets the page snapshot of the last one, to send only what changed

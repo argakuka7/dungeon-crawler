@@ -730,14 +730,15 @@ No model of his own: Renew is a hero like the player, the very figure (`figure`,
 'character'`: `render/renewview.js` draws him with the player's rig and the player's clips, Idle,
 Walk, Run, Slash, Cast, Shoot, Roll and Jump), tinted blue grey, in a hood (`wear_hood`), with his
 boss's bar, title and silhouette. In his hand is a weapon of the game's, one a phase: the **Medium
-Sword**, the **Broadsword**, the **Crystal Staff** and the **Hunting Bow** (`RENEW_FIGHT.weapons`,
-their item models, `mountWeapon`), the staff and the bow carried in the hero's own holds for them;
-the staff's stone glows as he casts, the bow's string is drawn with an arrow on it as he shoots
-(`render/held.js`). His legs go round by the way he moves along his
+Sword**, the **Hunting Bow**, the **Morning Star** and the **Twin Morning Star** (`RENEW_FIGHT.weapons`,
+their item models, `mountWeapon`; the flails, one ball and then two, are a kind of weapon of their
+own, [loot.md](loot.md)), the bow carried in the hero's own hold for it; the bow's string is drawn
+with an arrow on it as he shoots, the morning stars' balls swing on their chains (`render/held.js`).
+His legs go round by the way he moves along his
 heading, so when he is carried back in time he walks backwards. Beaten, he sinks down to sit and
 fades away in sparkles.
 
-Profiles: `RENEW`, `RENEW_BROAD`, `RENEW_STAFF` and `RENEW_BOW` (`STAGE_PROFILES.renew`, one per
+Profiles: `RENEW`, `RENEW_BOW`, `RENEW_FLAIL` and `RENEW_TWIN` (`STAGE_PROFILES.renew`, one per
 phase) in `src/core/enemies.js`; the fight's rules, the tapes and the echoes' events in
 `src/core/renew.js` (`RENEW_FIGHT`, `PHASES`); the fight in `src/game/renew.js`, the time as each
 game's own hero lives it (its tape, the rewind, the echoes and the ghosts of the fight, the dusk) in
@@ -746,8 +747,8 @@ game's own hero lives it (its tape, the rewind, the echoes and the ghosts of the
 | | Level 7 |
 |---|---|
 | Health | 727 a phase (360 at level 1), four phases: every rewind gives it all back |
-| Damage | 38 (slash ×0.6, lunge ×0.75; broadsword ×0.95, its lunge ×1.1 and a knock-down; spell ×0.6, volley ×0.45 a spell; arrow ×0.8, three at once ×0.55 each; an echo's blow ×0.45) |
-| XP | 650 grown; coins 180–320 at level 1; two weapons and two potions like a descent guardian |
+| Damage | 38 (slash ×0.6, lunge ×0.75; arrow ×0.8, three at once ×0.55 each; morning star ×0.9, its lunge ×1.05 and a knock-down; twin morning star ×0.62 a ball, its lunge ×0.72 a ball; an echo's blow ×0.45) |
+| XP | 650 grown; coins 180–320 at level 1; two weapons (the first always a flail, `ownWeapon`) and two potions like a descent guardian |
 | Speed | 2.5 cells/s (the player runs 2.8) |
 | Poise | 1.2 s |
 
@@ -764,7 +765,7 @@ fight adds (`game/renew.js`):
 - **Blows** at a player's pace, a little slower so they can be read (the Medium Sword's: a slash
   lands 0.3 s after he starts it, 1.1 cells; the player's lands at 0.16 s), and **chained**: as a
   blow ends he starts the next at once (`chain`), up to three in a row with the sword and two with
-  the broadsword (`combo`), then recovers like any enemy.
+  the morning stars (`combo`), then recovers like any enemy.
 - A **lunge** (`dash`, from 1.4 to 2.8 cells): he steps in up to 1.9 cells as he swings
   (`lunge`), as the player's swing steps in towards an enemy just out of reach.
 - A **roll** out of the way (`roll`, clip Roll, only ever as a dodge): when the player winds up a
@@ -772,8 +773,8 @@ fight adds (`game/renew.js`):
   cells aside and back, or straight back, wherever there is room; nothing hurts him for the first
   0.6 s of it.
 - Between blows he circles and darts in (`skirmish`).
-- With a weapon that reaches far (the staff, the bow: `ranged`) he keeps his distance, and
-  hard to catch: closer than he likes (`keep[0]`: 3 cells with the staff, 4 with the bow) he
+- With a weapon that reaches far (the bow: `ranged`) he keeps his distance, and
+  hard to catch: closer than he likes (`keep[0]`: 4 cells) he
   **runs backwards**, facing you, at his full speed (`backpedal`, `game/enemyai.js`: ready to shoot
   or not; his legs run backwards too), and once you are half a cell further in he **leaps back**
   (`leap`, clip Jump: 2.6 cells, straight back or a little aside, wherever there is room, up 0.9
@@ -810,7 +811,7 @@ But the hero was there all along, so now there are two of them: the hero's tape 
 **echo**, their past self (`render/renewview.js drawEchoes`: the figure in pale blue, see-through,
 with what they wore and the weapon they held), which does again what they did in that phase, at the
 room's clock: where its sword went through (`echoEvents` strikes) the hero is hurt if they are in
-its arc (×0.45 his damage, `inStrike`), and the shots it lets go (an arrow, a bolt, a spell: a pale gold orb
+its arc (×0.45 his damage, `inStrike`; a flail's every ball), and the shots it lets go (an arrow, a bolt, a spell: a pale gold orb
 for each) hurt the hero alone (`only`). Its tape over, it fades away. Every phase adds an echo (two in
 phase 3, the first doing phase 1 again; three in phase 4); the next rewind takes them back with
 everything else.
@@ -826,30 +827,33 @@ hits them; only the echo's blows count.
 
 - Slashes (three in a row), the lunge, the roll.
 
-### Phase 2: the broadsword
+### Phase 2: the bow
 
-- Slower, wider (about 190°) and harder blows, two in a row; the lunge knocks you down.
-- **Spiders cast out of the sky** (`summon`, a cast, clip Cast, 1.15 s): he raises the broadsword and
+- **Arrows** (`shoot`, 8 cells, clip Shoot, 1 s): he draws (0.62 s, a player's bow 0.42) and looses
+  the game's arrow at 11 cells/s (a player's flies at 16): step aside as he draws. Now and then
+  **three at once**, fanned out (`arrows`).
+- He keeps away: running backwards, leaping back.
+- **Spiders cast out of the sky** (`summon`, a cast, clip Cast, 1.15 s): he raises the bow and
   at 0.6 s spiders (`renspider`: plain Spiders, ×0.8 health, ×0.6 damage) fall out of the sky round
   him and the player, onto free floors of the fight within 6.5 cells (`falling`, 6–7.5 cells up,
   20 cells/s²), landing with a thump and dust: as many as fill up to **four**, every 10 s at most
   (the first 3 s into the phase). While they fall nothing steps them.
 - One echo.
 
-### Phase 3: the staff
+### Phase 3: the morning star
 
-- **Spells** (6.5 cells, an orb of pale blue light at 7 cells/s, `orb`: no model, drawn like the
-  player's spells), now and then a **volley** of three fanned out.
+- A flail of one ball, swung on the Slash clip like the sword: slower to come round (it lands at
+  0.5 s), wider (about 215°), further (1.4 cells) and harder, shoving you well back; two in a row;
+  the lunge (up to 2 cells) knocks you down.
 - **Fire-faces cast out of the sky** (`renface`: plain Fire-faces, ×0.55), up to **two**, every 13 s.
-- He keeps away: running backwards, leaping back.
 - Two echoes, and the ghosts of phases 1 and 2.
 
-### Phase 4: the bow
+### Phase 4: the twin morning star
 
-- **Arrows** (`shoot`, 8 cells, clip Shoot, 1 s): he draws (0.62 s, a player's bow 0.42) and looses
-  the game's arrow at 11 cells/s (a player's flies at 16): step aside as he draws. Now and then
-  **three at once**, fanned out (`arrows`).
-- No minions; he keeps further away than with the staff, running backwards and leaping back.
+- Two balls: every swing strikes **twice** (`twice`: at 0.46 s and again at 0.6 s,
+  `game/enemyai.js`), each ball lighter and shoving less than the morning star's, so the second
+  still catches you; the lunge strikes twice too and does not knock you down.
+- No minions.
 - Three echoes, and the ghosts of phases 1, 2 and 3.
 
 ### The end
@@ -860,7 +864,8 @@ back (`ascend`, `game/renew.js`): "One more time..." is all he had. A ghost now,
 see-through like his ghosts (`rising`), arms up, he rises 7 cells into the sky over 3.2 s
 (`RENEW_FIGHT.ascend`, `risenAt`), sparkling and fading as he goes; nothing hurts him. Then he is
 gone (`ascended`: no body is left), and what he had falls out of the sky where he went
-(`lootFrom`, `game/loot.js dropLoot`): his gate opens. Below him the echoes and the ghosts fight on
+(`lootFrom`, `game/loot.js dropLoot`), always a flail among it (`ownWeapon`, `core/gear/drops.js`:
+any of the five, the twin morning star too, however deep they otherwise drop): his gate opens. Below him the echoes and the ghosts fight on
 meanwhile, all four phases of the fight at once, the room's clock running on; harmless now, they
 fight on for 3.5 s more once he is gone (`outro`) and fade, and the light comes back. His minions
 went with the last rewind.
@@ -949,7 +954,7 @@ await (await import('./tests/browser/gusto.js')).runGustoChecks()   // the whole
 await (await import('./tests/browser/totnar.js')).runTotnarChecks() // Totnar's, in his
 await (await import('./tests/browser/squarlo.js')).runSquarloChecks() // Squarlo's, in his tidal hills
 await (await import('./tests/browser/foggery.js')).runFoggeryChecks()  // Foggery's, in his caldera: the lava, the climb, his cats, the platforms
-await (await import('./tests/browser/renew.js')).runRenewChecks()      // Renew's, in his arena: the rewinds, the echoes and ghosts, his minions, keeping away, the bow, the end, the dusk
+await (await import('./tests/browser/renew.js')).runRenewChecks()      // Renew's, in his arena: the rewinds, the echoes and ghosts, his minions, the bow and keeping away, the morning stars, the end and his flail, the dusk
 await (await import('./tests/browser/bossroom.js')).runBossRoomChecks() // each boss's test room: idle until hit
 ```
 

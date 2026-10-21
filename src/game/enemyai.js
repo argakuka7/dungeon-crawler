@@ -414,6 +414,8 @@ function act(e, dt) {
       else if (a.summon) e.summon?.(a); else if (a.cast) e.cast?.(a);
       else if (!a.gust && !a.pull && !a.roll && !strikePlayer(e) && a.miss) whiff(e, a);
     }
+    // a blow that strikes twice (Renew's twin morning star): again at its `twice`
+    if (a.twice && e.bit && e.again !== e.attacks && e.t >= a.twice) { e.again = e.attacks; strikePlayer(e); }
     if (e.t >= a.attackTime) { e.mode = 'chase'; e.cool = (a.recover ?? cfg.cooldown) * (0.8 + Math.random() * 0.4); e.side = side(); }
     return;
   }

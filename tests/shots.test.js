@@ -15,9 +15,9 @@ const hero = id => {
 const open = () => false;
 
 test('each kind has its clip, and attack times map onto its frames', () => {
-  assert.deepEqual(Object.keys(KINDS), ['sword', 'bow', 'crossbow', 'staff', 'throw']);
+  assert.deepEqual(Object.keys(KINDS), ['sword', 'flail', 'bow', 'crossbow', 'staff', 'throw']);
   for (const [id, clip] of [['weapon_bow_recurve', SHOOT_CLIP], ['weapon_crossbow_light', CROSSBOW_CLIP], ['weapon_staff_oak', CAST_CLIP],
-    ['weapon_sword_medium', SLASH_CLIP]]) {
+    ['weapon_sword_medium', SLASH_CLIP], ['weapon_flail_twin', SLASH_CLIP]]) {
     const s = combatStats(hero(id));
     assert.equal(KINDS[s.kind].clip, clip);
     assert.ok(s.activeStart < s.activeEnd && s.activeEnd <= s.moveCancel && s.moveCancel < s.chain && s.chain <= s.duration, id);

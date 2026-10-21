@@ -1,17 +1,19 @@
 // In devtools (?dev=1): await (await import('./tests/browser/renew.js')).runRenewChecks()
 // Renew's whole fight in his arena (docs/bosses.md): the fight starts and the room's clock runs; at
-// the end of each of the first two health bars he gathers time and rewinds it: the hero is carried
+// the end of each of the first three health bars he gathers time and rewinds it: the hero is carried
 // back along the way they went (nothing hurts anybody meanwhile) to where they stood when the phase
 // began, with the health they had, and an echo of them walks again; he takes up his next weapon
-// (broadsword, staff, bow), casts spiders and then Fire-faces out of the sky, and the light goes.
-// At the end of his last bar he rewinds once more and rises away as a ghost; his loot falls out of
-// the sky, the echoes fight on a while and fade, and the light comes back.
+// (a bow, a morning star, a twin morning star), casts spiders and then Fire-faces out of the sky,
+// and the light goes. At the end of his last bar he rewinds once more and rises away as a ghost;
+// his loot (a flail among it) falls out of the sky, the echoes fight on a while and fade, and the
+// light comes back.
 import { paused } from './combat.js';
 import { state, player } from '../../src/game/state.js';
 import { damageEnemy } from '../../src/core/combat.js';
 import { attackOf } from '../../src/core/enemies.js';
 import { projectiles } from '../../src/game/projectiles.js';
 import { RENEW_FIGHT } from '../../src/core/renew.js';
+import { ITEMS } from '../../src/core/items.js';
 import { allEnemies, updateEnemies } from '../../src/game/enemies.js';
 import { updatePlayer } from '../../src/game/update.js';
 import { queueAttack } from '../../src/game/sword.js';
@@ -75,7 +77,7 @@ export async function runRenewChecks() {
     let backwards = 0, wasClock = b.clock;
     const took = until(RENEW_FIGHT.rewind.max + 1, () => b.stage === 2, () => { if (b.clock < wasClock) backwards++; wasClock = b.clock; });
     check(took < Infinity && backwards > 20, `it ran back (${backwards} steps) and he took up his next weapon`);
-    check(b.profile.weapon === 'weapon_sword_broad' && b.hp === b.profile.hp && b.clock < 0.1, 'phase 2: a broadsword, his health whole again');
+    check(b.profile.weapon === 'weapon_bow_hunting' && b.hp === b.profile.hp && b.clock < 0.1, 'phase 2: a bow, his health whole again');
     check(!player.flipping && !document.body.classList.contains('rewinding'), 'the hero walks again');
     check(Math.hypot(player.x - start.x, player.z - start.z) < 0.3, `back where the hero stood when it began: ${Math.hypot(player.x - start.x, player.z - start.z).toFixed(2)}`);
     check(player.hp > hpThen, 'with the health they had then');
@@ -94,7 +96,7 @@ export async function runRenewChecks() {
       out.push(`the echo struck at ${strike.t.toFixed(1)} s`);
     } else out.push('(the hero struck no blow to do again)');
 
-    // phase 2: spiders cast out of the sky; it gets darker
+    // phase 2: the bow; spiders cast out of the sky; it gets darker
     const fell = until(20, () => minions('renspider').length > 0, tough);
     check(fell < Infinity, 'he casts spiders');
     check(minions('renspider').some(m => m.falling), 'they fall out of the sky');
@@ -102,18 +104,7 @@ export async function runRenewChecks() {
     check(state.dusk > 0.24, `dusk falls: ${state.dusk.toFixed(2)}`);
     run(2, tough);
     out.push(`spiders after ${fell.toFixed(1)} s: ${minions('renspider').length}`);
-
-    // the end of his second bar: rewound again, the spiders gone, two echoes, a staff
-    damageEnemy(b, b.hp);
-    check(until(RENEW_FIGHT.windup + RENEW_FIGHT.rewind.max + 2, () => b.stage === 3, tough) < Infinity, 'rewound again');
-    run(1, tough);
-    check(!minions('renspider').length, 'the spiders were not there when phase 2 began');
-    check(b.profile.weapon === 'weapon_staff_crystal' && rewindInfo().echoes === 2, 'phase 3: a staff, and two echoes');
-    check(until(12, () => echoesNow()[1].ghosts.some(g => g.type === 'renspider' && g.mode !== 'gone'), tough) < Infinity,
-      'the ghosts of the spiders fight the second echo');
-    check(until(25, () => minions('renface').length > 0, tough) < Infinity, 'he casts Fire-faces');
-    check(state.dusk > 0.49, `night falls: ${state.dusk.toFixed(2)}`);
-    // too close to him with his staff: he leaps back (or runs backwards)
+    // too close to him with his bow: he leaps back (or runs backwards)
     const keepsAway = () => {
       let leapt = false, far = 0;
       for (let i = 0; i < 4; i++) {
@@ -125,14 +116,6 @@ export async function runRenewChecks() {
       }
       return { leapt, far };
     };
-    const staffAway = keepsAway();
-    check(staffAway.leapt || staffAway.far > 1, `he keeps away with his staff: leapt ${staffAway.leapt}, ${staffAway.far.toFixed(1)} cells`);
-
-    // the end of his third bar: a bow, three echoes
-    damageEnemy(b, b.hp);
-    check(until(RENEW_FIGHT.windup + RENEW_FIGHT.rewind.max + 2, () => b.stage === 4, tough) < Infinity, 'rewound a third time');
-    check(b.profile.weapon === 'weapon_bow_hunting' && rewindInfo().echoes === 3, 'phase 4: a bow, and three echoes');
-    check(!minions('renface').length, 'the Fire-faces were not there when phase 3 began');
     const bowAway = keepsAway();
     check(bowAway.leapt || bowAway.far > 1, `he keeps away with his bow: leapt ${bowAway.leapt}, ${bowAway.far.toFixed(1)} cells`);
     // far off: arrows
@@ -140,7 +123,36 @@ export async function runRenewChecks() {
     spawnAt(far.x + 0.5, floorY(far, 0.5, 0.5), far.z + 0.5);
     const shot = until(12, () => projectiles.some(p => p.kind === 'arrow'), tough);
     check(shot < Infinity, 'he shoots arrows');
-    out.push(`kept away: staff ${staffAway.leapt ? 'leap' : 'ran'}, bow ${bowAway.leapt ? 'leap' : 'ran'}; arrow after ${shot.toFixed(1)} s`);
+    out.push(`kept away with his bow: ${bowAway.leapt ? 'leap' : 'ran'}; arrow after ${shot.toFixed(1)} s`);
+
+    // the end of his second bar: rewound again, the spiders gone, two echoes, a morning star
+    damageEnemy(b, b.hp);
+    check(until(RENEW_FIGHT.windup + RENEW_FIGHT.rewind.max + 2, () => b.stage === 3, tough) < Infinity, 'rewound again');
+    run(1, tough);
+    check(!minions('renspider').length, 'the spiders were not there when phase 2 began');
+    check(b.profile.weapon === 'weapon_flail_morningstar' && rewindInfo().echoes === 2, 'phase 3: a morning star, and two echoes');
+    check(until(12, () => echoesNow()[1].ghosts.some(g => g.type === 'renspider' && g.mode !== 'gone'), tough) < Infinity,
+      'the ghosts of the spiders fight the second echo');
+    check(until(25, () => minions('renface').length > 0, tough) < Infinity, 'he casts Fire-faces');
+    check(state.dusk > 0.49, `night falls: ${state.dusk.toFixed(2)}`);
+    // close to him: he swings it at the hero
+    const swings = () => {
+      const near = map.floors.filter(g => g.encounter && Math.hypot(g.x + 0.5 - b.x, g.z + 0.5 - b.z) < 1.4 && Math.hypot(g.x + 0.5 - b.x, g.z + 0.5 - b.z) > 0.7)[0];
+      if (near) spawnAt(near.x + 0.5, floorY(near, 0.5, 0.5), near.z + 0.5);
+      player.lastHurt = null;
+      return until(8, () => /morning star/.test(player.lastHurt?.reason ?? ''), () => { tough(); player.ragdoll = null; player.getUp = null; });
+    };
+    const smashed = swings();
+    check(smashed < Infinity, 'his morning star strikes the hero');
+
+    // the end of his third bar: a twin morning star, three echoes
+    damageEnemy(b, b.hp);
+    check(until(RENEW_FIGHT.windup + RENEW_FIGHT.rewind.max + 2, () => b.stage === 4, tough) < Infinity, 'rewound a third time');
+    check(b.profile.weapon === 'weapon_flail_twin' && rewindInfo().echoes === 3, 'phase 4: a twin morning star, and three echoes');
+    check(!minions('renface').length, 'the Fire-faces were not there when phase 3 began');
+    const battered = swings();
+    check(battered < Infinity, 'his twin morning star strikes the hero');
+    out.push(`morning star struck after ${smashed.toFixed(1)} s, the twin after ${battered.toFixed(1)} s`);
 
     // the end of his last bar: time runs back once more, but he does not come back: he rises away
     // into the sky as a ghost, then he is gone and his loot falls out of the sky; the echoes and
@@ -157,6 +169,7 @@ export async function runRenewChecks() {
     check(until(RENEW_FIGHT.ascend.time, () => b.mode === 'dead', tough) < Infinity && b.ascended, 'then he is gone');
     run(0.2);
     check(lootHere() > loot, 'his loot falls out of the sky');
+    check(state.run.loot.get(state.cubeKey).some(p => ITEMS[p.itemId]?.weapon?.kind === 'flail'), 'a flail among it');
     check(!gateLocked(map, state.run), 'his death opens the well');
     const hp = player.hp = player.maxHp;
     run(1);

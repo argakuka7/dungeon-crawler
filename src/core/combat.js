@@ -1,7 +1,8 @@
 // Pure attack rules. Jumping / body contact never call damageEnemy.
-// An attack (a sword swing, a bow or crossbow shot, a spell) is a quick wind-up, a short active
-// window and a recovery that a new attack (chaining) or movement can cut short. Swords hit in
-// the active window (inSwordArc); the ranged kinds let their shot go at its start (shotDue,
+// An attack (a sword or flail swing, a bow or crossbow shot, a spell) is a quick wind-up, a short
+// active window and a recovery that a new attack (chaining) or movement can cut short. Swords and
+// flails hit in the active window (inSwordArc; a flail of two or three balls strikes once with
+// each, one after the other: ballAt); the ranged kinds let their shot go at its start (shotDue,
 // core/shots.js). Each kind has its clip in character.glb, retimed to fit (swingClipTime): their
 // own frames are the *_CLIP below.
 // A weapon's `interval` is the time from one attack to the next when chaining (its attack
@@ -32,6 +33,9 @@ export const SWORD = {
   moveCancel: 0.3, chain: 0.42,         // walk out of the recovery / swing again from here
   duration: 0.62,
 };
+// a flail at the interval of a middling one: slower to come round than a sword (the ball trails
+// the hand), its sweep longer (room for each of its balls to strike in turn)
+export const FLAIL = { activeStart: 0.24, activeEnd: 0.38, moveCancel: 0.44, chain: 0.62, duration: 0.8 };
 // the ranged kinds at the interval of a middling one: activeStart is when the shot leaves
 export const BOW = { activeStart: 0.36, activeEnd: 0.4, moveCancel: 0.44, chain: 0.62, duration: 0.78 };
 export const CROSSBOW = { activeStart: 0.2, activeEnd: 0.24, moveCancel: 0.3, chain: 0.84, duration: 0.95 };
@@ -41,6 +45,7 @@ export const THROW = { activeStart: 0.3, activeEnd: 0.34, moveCancel: 0.38, chai
 // learn: combat.html#shoot (see learn/README.md)
 export const KINDS = {
   sword: { timing: SWORD, clip: SLASH_CLIP, shot: null, verb: 'Sword slash' },
+  flail: { timing: FLAIL, clip: SLASH_CLIP, shot: null, verb: 'Flail swing' },
   bow: { timing: BOW, clip: SHOOT_CLIP, shot: 'arrow', verb: 'Bow shot' },
   crossbow: { timing: CROSSBOW, clip: CROSSBOW_CLIP, shot: 'bolt', verb: 'Crossbow shot' },
   staff: { timing: STAFF, clip: CAST_CLIP, shot: 'spell', verb: 'Spell cast' },
@@ -57,9 +62,10 @@ export const LUNGE_REACH = 0.6;
 // The player's attack, whatever the weapon (named for the sword it once was).
 // requested: an attack is queued (buffer: for how much longer); target: what it aims at
 // (an enemy, a point {x, z} or null for straight ahead); fired: the shot of this attack left;
-// chained: it started while the one before was still going
+// chained: it started while the one before was still going; ball: which of a flail's balls
+// strikes now (hits: what it struck)
 export const swordState = () => ({ active: false, requested: false, buffer: 0, target: null,
-  t: 0, cool: 0, serial: 0, yaw: 0, stats: null, hits: new Set(), fired: false, chained: false });
+  t: 0, cool: 0, serial: 0, yaw: 0, stats: null, hits: new Set(), fired: false, chained: false, ball: 0 });
 // the equipped weapon instance (a bag slot), and its base type; a player without an
 // inventory (tests) holds a plain Old Sword
 export const equippedInstance = p => p.inventory ? equippedItem(p.inventory) : { itemId: OLD_SWORD.id, count: 1 };
@@ -120,7 +126,7 @@ export function startSwing(p, yaw = p.yaw) {
   const s = p.sword, stats = combatStats(p);
   if (!stats || s.cool > 0 || p.ragdoll || p.swimming || p.climb || p.stun > 0 || p.hp <= 0) return false;
   // Snapshot this swing: a level-up or later equipment change cannot alter a hit midway.
-  Object.assign(s, { chained: s.active, active: true, t: 0, cool: stats.chain, yaw, serial: s.serial + 1, stats, fired: false });
+  Object.assign(s, { chained: s.active, active: true, t: 0, cool: stats.chain, yaw, serial: s.serial + 1, stats, fired: false, ball: 0 });
   s.hits.clear();
   return true;
 }
@@ -134,7 +140,16 @@ export function advanceSwing(p, dt) {
   if (!s.active) return;
   if (p.ragdoll || p.swimming || p.climb || p.stun > 0 || p.hp <= 0) { cancelSwing(p); return; }
   s.t += dt;
-  if (s.t >= (s.stats || SWORD).duration) cancelSwing(p);
+  if (s.t >= (s.stats || SWORD).duration) { cancelSwing(p); return; }
+  const ball = ballAt(s.stats, s.t);
+  if (ball !== s.ball) { s.ball = ball; s.hits.clear(); }   // the next ball: it may strike them all again
+}
+// which of a flail's balls strikes at attack time t: its active window shared out between them
+// (0 for everything else, and before the window)
+export function ballAt(stats, t) {
+  const n = stats?.balls ?? 1;
+  if (n < 2 || t < stats.activeStart) return 0;
+  return Math.min(n - 1, Math.floor((t - stats.activeStart) / (stats.activeEnd - stats.activeStart) * n));
 }
 
 // learn: combat.html#arc-code #hit-test (see learn/README.md)

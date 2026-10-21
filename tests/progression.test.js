@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { assetsRoot } from './paths.js';
-import { ITEMS, WEAPONS, OLD_SWORD, COINS, TOWN_PORTAL, ROOM_PORTAL, HEALTH_POTION } from '../src/core/items.js';
+import { ITEMS, WEAPONS, OLD_SWORD, COINS, TOWN_PORTAL, ROOM_PORTAL, HEALTH_POTION, isMelee } from '../src/core/items.js';
 import { createInventory, addItem, addInstance, removeItem, takeItem, equipItem, equippedItem, addCopper, spendCopper, copperTotal, coinCounts,
   assignBar, autoBar, barEntry, barIndexOf, BAR_SIZE } from '../src/core/inventory.js';
 import { fixedWeapon } from '../src/core/gear/generate.js';
@@ -265,7 +265,7 @@ test('every weapon has real assets, damage, reach and synchronized attack timing
     assert.ok(existsSync(assetPath(w.model)));
     const p = hero(); equip(p, w.id); awardXP(p, xpForLevel(5));
     const stats = combatStats(p), T = KINDS[w.weapon.kind].timing;
-    assert.equal(stats.kind, w.weapon.kind); assert.equal(stats.ranged, w.weapon.kind !== 'sword');
+    assert.equal(stats.kind, w.weapon.kind); assert.equal(stats.ranged, !isMelee(w.weapon.kind));
     assert.equal(stats.damage, Math.round(w.weapon.damage * levelDamage(5))); assert.equal(stats.range, w.weapon.range);
     assert.equal(stats.chain, w.weapon.interval, 'attacks chain at the weapon interval');
     assert.ok(Math.abs(stats.activeStart / stats.duration - T.activeStart / T.duration) < 1e-9, 'every attack time scales with it');
@@ -285,6 +285,12 @@ test('every weapon has real assets, damage, reach and synchronized attack timing
     advanceSwing(p, stats.activeStart + .001); assert.deepEqual(swordHit(p, e, 1), { damage: stats.damage, crit: false });
     assert.equal(e.hp, STUNDER.hp - stats.damage);
     assert.equal(swordHit(p, e, 1), false);
+    // each of a flail's other balls strikes again, in its share of the active window
+    const window = (stats.activeEnd - stats.activeStart) / (stats.balls ?? 1);
+    for (let b = 1; b < (stats.balls ?? 1); b++) {
+      advanceSwing(p, window); assert.equal(p.sword.ball, b);
+      assert.deepEqual(swordHit(p, e, 1), { damage: stats.damage, crit: false }); assert.equal(swordHit(p, e, 1), false);
+    }
     advanceSwing(p, stats.duration); assert.equal(p.sword.active, false);
   }
 });

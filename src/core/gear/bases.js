@@ -1,18 +1,20 @@
 // Which base types drop, from what item level and how often. A base is an item in
 // core/items.js; `tags` decide which affixes may roll on it (core/gear/affixes.js): its kind
-// (sword, bow, crossbow, staff) and how it fights (melee or ranged).
+// (sword, flail, bow, crossbow, staff) and how it fights (melee or ranged).
 // To add a dropping weapon: define the item (with its model), then list it here.
 // The Old Sword is never dropped: it is what a run starts with.
-// Every kind has a light base from item level 1 and heavier ones further down; a kind's weights
-// add up to the same, so each kind is about as likely as the others once all of it drops.
+// Every kind but the flails has a light base from item level 1 and heavier ones further down;
+// the flails only from item level 7 (Renew's, the time boss, who always drops one: he is the
+// first to hand you one). A kind's weights add up to the same, so each kind is about as likely as
+// the others once all of it drops.
 // Rolls lean towards the kind the player fights with (`favor`, FAVOR times its weight): about
 // half of the weapons are of that kind, so whatever you use keeps finding upgrades while the
 // other kinds still turn up.
-import { ITEMS } from '../items.js';
+import { ITEMS, isMelee } from '../items.js';
 
 const base = (itemId, minLevel, weight = 1, extra = []) => {
   const kind = ITEMS[itemId].weapon.kind;
-  return { itemId, minLevel, weight, tags: [kind, kind === 'sword' ? 'melee' : 'ranged', ...extra] };
+  return { itemId, minLevel, weight, tags: [kind, isMelee(kind) ? 'melee' : 'ranged', ...extra] };
 };
 
 export const BASES = [
@@ -21,6 +23,11 @@ export const BASES = [
   base('weapon_sword_long', 2),
   base('weapon_sword_broad', 4),
   base('weapon_sword_greatsword', 6, 1, ['two-handed']),
+  base('weapon_flail_ball', 7),
+  base('weapon_flail_morningstar', 7),
+  base('weapon_flail_twin', 8),
+  base('weapon_flail_knight', 9),
+  base('weapon_flail_triple', 10),
   base('weapon_bow_short', 1),
   base('weapon_bow_hunting', 1),
   base('weapon_bow_recurve', 3),
@@ -43,13 +50,15 @@ export function baseTags(itemId) {
   if (BASE[itemId]) return BASE[itemId].tags;
   if (ITEMS[itemId]?.armor) return ['armor', ITEMS[itemId].armor.slot];
   const kind = ITEMS[itemId]?.weapon?.kind ?? 'sword';
-  return [kind, kind === 'sword' ? 'melee' : 'ranged'];
+  return [kind, isMelee(kind) ? 'melee' : 'ranged'];
 }
 
 export const FAVOR = 3;
-// favor: a kind (sword, bow, crossbow, staff) to lean towards, or null
-export function rollBase(rng, ilvl, favor = null) {
-  const open = BASES.filter(b => ilvl >= b.minLevel), weight = b => b.weight * (b.tags[0] === favor ? FAVOR : 1);
+// favor: a kind (sword, flail, bow, crossbow, staff) to lean towards, or null; kind: only that kind,
+// any of its bases however deep (a boss's own: Renew's flails, core/gear/drops.js)
+export function rollBase(rng, ilvl, favor = null, kind = null) {
+  const open = kind ? BASES.filter(b => b.tags[0] === kind) : BASES.filter(b => ilvl >= b.minLevel);
+  const weight = b => b.weight * (b.tags[0] === favor ? FAVOR : 1);
   let w = rng() * open.reduce((n, b) => n + weight(b), 0);
   for (const b of open) if ((w -= weight(b)) < 0) return b;
   return open.at(-1);

@@ -12,6 +12,7 @@ import { BONES, Q, packPose, wornOf } from '../net/protocol.js';
 import { lerpAngle } from '../net/sync.js';
 import { scene, camera } from './scene.js';
 import { character, mountWeapon, wornSkin } from './character.js';
+import { prepareHeld, updateHeld } from './held.js';
 import { setSkinMap, skinTexture } from './skin.js';
 import { rig, createFigure, takeOff, wearLike, wornKey, animateWorn } from './figure.js';
 import { trackLight, untrackLight } from './lightpool.js';
@@ -108,14 +109,15 @@ function setWeapon(fig, url) {
   const w = fig.weapon;
   if (w.want === url) return;
   w.want = url;
-  if (w.object) { w.object.removeFromParent(); w.object = null; w.url = null; }
+  if (w.object) { w.object.removeFromParent(); w.object = null; w.url = null; w.held = null; }
   if (!url) return;
   const f = fig;
   weaponModel(url).then(model => {
     if (figs.get(f.slot) !== f || w.want !== url || !model) return;
     model.removeFromParent();
-    mountWeapon(f.f.bones, model);
+    const item = mountWeapon(f.f.bones, model);
     w.object = model; w.url = url;
+    w.held = item?.userData.weapon === 'flail' ? prepareHeld(model, item) : null;   // (its balls swing: render/held.js)
   });
 }
 // what they wear (protocol.js wornOf: [{ id, slot, rarity, back }], one per slot)
@@ -126,7 +128,7 @@ function setWorn(fig, list) {
   if (wearLike(fig.f, { worn }, true)) fig.worn = key;   // else: again next time, once loaded
 }
 
-const qa = [], qb = [], _q = new THREE.Quaternion();
+const qa = [], qb = [], _q = new THREE.Quaternion(), IDLE = { sword: { active: false } };
 // show player `slot` between messages a and b (k of the way, src/net/sync.js Timeline.at), or
 // hide them (null)
 export function showPartner(slot, span, name) {
@@ -151,6 +153,12 @@ export function showPartner(slot, span, name) {
   });
   setWeapon(fig, typeof b.weapon === 'string' ? b.weapon : null);
   if (fig.weapon.object) fig.weapon.object.visible = b.armed !== false;
+  const now = performance.now() / 1000, dt = Math.min(0.1, now - (fig.at ?? now));
+  fig.at = now;
+  if (fig.weapon.held && fig.weapon.object.visible) {
+    fig.group.updateMatrixWorld(true);
+    updateHeld(fig.weapon.held, IDLE, null, dt);
+  }
   setWorn(fig, wornOf(b.worn));
   animateWorn(fig.f, performance.now() / 1000, slot);   // (rare armor shines)
   fig.group.visible = fig.tag.visible = true;

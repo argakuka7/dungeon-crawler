@@ -1,17 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mulberry32 } from '../src/core/util.js';
-import { ITEMS, OLD_SWORD, WEAPONS } from '../src/core/items.js';
+import { ITEMS, OLD_SWORD, WEAPONS, WEAPON_KINDS, isMelee } from '../src/core/items.js';
 import { RARITIES, RARITY, rarityOdds, rollRarity } from '../src/core/gear/rarities.js';
 import { AFFIXES, AFFIX, MAX_PREFIXES, MAX_SUFFIXES, MAX_TIER, affixTier, describeAffix } from '../src/core/gear/affixes.js';
-import { BASES, FAVOR } from '../src/core/gear/bases.js';
+import { BASES, BASE, FAVOR } from '../src/core/gear/bases.js';
 import { rollWeapon, fixedWeapon, GEN_VERSION } from '../src/core/gear/generate.js';
 import { weaponDrops, armorDrops, potionDrops, crystalDrops, enemyDrops, dropChance, potionChance, guardianDrops } from '../src/core/gear/drops.js';
 import { itemStats, displayName, baseLine, affixLines, affixEntries, weaponDps, ilvlDamage, ARC, CRIT_CHANCE, CRIT_DAMAGE } from '../src/core/gear/stats.js';
 import { createInventory, addInstance, takeItem, equipItem, equippedItem, hasRoom } from '../src/core/inventory.js';
 import { createPlayerStats } from '../src/core/progression.js';
 import { swordState, combatStats, startSwing, advanceSwing, swordHit } from '../src/core/combat.js';
-import { SPIDER, STUNDER, TRIANGLE, ENEMY_KINDS, makeEnemy } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, TRIANGLE, ENEMY_KINDS, RENEW, makeEnemy, guardianLevel } from '../src/core/enemies.js';
 
 const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
@@ -160,18 +160,55 @@ test('bows, crossbows and staffs: five bases each, ranged, weaker per second tha
   // melee-only affixes never roll on ranged bases and the other way round; Distance stretches range
   const R = mulberry32(21);
   for (let k = 0; k < 400; k++) {
-    const item = rollWeapon(R, 20, { rarity: 'omg' }), ranged = ITEMS[item.itemId].weapon.kind !== 'sword';
+    const item = rollWeapon(R, 20, { rarity: 'omg' }), ranged = !isMelee(ITEMS[item.itemId].weapon.kind);
     for (const a of item.gen.affixes) assert.ok(AFFIX[a.id].tags.includes(ranged ? 'ranged' : 'melee'), `${a.id} on ${item.itemId}`);
   }
-  // drops lean towards the kind you fight with: about half of them once every kind drops
+  // drops lean towards the kind you fight with: about two in five of them once every kind drops
   const share = (favor, n = 8000) => { const R2 = mulberry32(5); let k = 0;
     for (let i = 0; i < n; i++) if (ITEMS[rollWeapon(R2, 12, { favor }).itemId].weapon.kind === (favor ?? 'bow')) k++;
     return k / n; };
-  assert.ok(Math.abs(share(null) - 0.25) < 0.02 && Math.abs(share('bow') - FAVOR / (FAVOR + 3)) < 0.02, `${share(null)} ${share('bow')}`);
+  assert.ok(Math.abs(share(null) - 0.2) < 0.02 && Math.abs(share('bow') - FAVOR / (FAVOR + 4)) < 0.02, `${share(null)} ${share('bow')}`);
   assert.deepEqual(weaponDrops({ id: 'g', level: 9, guardian: true, guardianRole: 'side' }, 4, 'staff'),
     weaponDrops({ id: 'g', level: 9, guardian: true, guardianRole: 'side' }, 4, 'staff'), 'still seeded');
   assert.equal(itemStats(gen('weapon_bow_long', [{ id: 'distance', tier: 3, value: 25 }])).range, 10);
   assert.deepEqual(affixLines(gen('weapon_bow_long', [{ id: 'distance', tier: 3, value: 25 }])), ['+25% range']);
+});
+
+test('flails: five bases, melee, wide and shoving, their balls striking in turn; from Renew on', () => {
+  const gen = (itemId, ilvl = 1) => ({ itemId, count: 1, gen: { v: 1, rarity: 'vanilla', ilvl, affixes: [], name: 'x' } });
+  assert.deepEqual(WEAPON_KINDS, ['sword', 'flail', 'bow', 'crossbow', 'staff']);
+  const list = WEAPONS.filter(w => w.weapon.kind === 'flail'), swords = WEAPONS.filter(w => w.weapon.kind === 'sword');
+  assert.equal(list.length, 5);
+  assert.deepEqual(list.map(w => w.weapon.balls ?? 1), [1, 1, 2, 1, 3]);
+  const widest = Math.max(...swords.map(w => itemStats(gen(w.id)).arc)), dps = list.map(w => weaponDps(itemStats(gen(w.id))));
+  for (const w of list) {
+    const s = itemStats(gen(w.id));
+    assert.ok(isMelee(s.kind) && !s.ranged && s.arc > widest && s.knockback > 1, w.id);
+    assert.equal(s.balls, w.weapon.balls > 1 ? w.weapon.balls : undefined);
+    assert.equal(BASE[w.id].minLevel >= 7, true, 'none before Renew\'s depth');
+    assert.deepEqual(BASE[w.id].tags, ['flail', 'melee']);
+  }
+  assert.ok(Math.max(...dps) / Math.min(...dps) < 1.3, 'no flail outclasses the others');
+  // with more balls, each hits for less, but together for more
+  const twin = itemStats(gen('weapon_flail_twin')), star = itemStats(gen('weapon_flail_morningstar'));
+  assert.ok(twin.damage < star.damage && weaponDps(twin) > weaponDps(star));
+  // the melee affixes roll on them
+  const R = mulberry32(3);
+  for (let k = 0; k < 200; k++) {
+    const item = rollWeapon(R, 12, { rarity: 'omg', kind: 'flail' });
+    assert.equal(ITEMS[item.itemId].weapon.kind, 'flail');
+    for (const a of item.gen.affixes) assert.ok(AFFIX[a.id].tags.includes('melee'), a.id);
+  }
+  // Renew always drops one, whatever you fight with; the twin morning star among them too
+  const level = guardianLevel(5, 'descent'), seen = new Set();
+  for (let seed = 0; seed < 60; seed++) {
+    const [first] = weaponDrops({ id: 'renew', level, kind: RENEW, guardian: true, guardianRole: 'descent' }, seed, 'bow');
+    assert.equal(ITEMS[first.itemId].weapon.kind, 'flail', `seed ${seed}`);
+    seen.add(first.itemId);
+  }
+  assert.ok(seen.has('weapon_flail_twin') && seen.size >= 4, [...seen].join());
+  // and nobody else drops them up there
+  for (let k = 0; k < 400; k++) assert.notEqual(ITEMS[rollWeapon(R, 6).itemId].weapon.kind, 'flail');
 });
 
 test('drops: seeded per enemy and world, likelier from tougher kinds, guardians always drop', () => {

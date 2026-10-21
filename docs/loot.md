@@ -2,7 +2,7 @@
 
 Enemies drop coins, now and then a weapon, a piece of armor, a potion or a crystal; guardians
 always drop weapons, armor, potions and crystals; treasure chests at reward sites hold all of them.
-Weapons are generated: each one is an instance of a base weapon (a sword, bow, crossbow or staff)
+Weapons are generated: each one is an instance of a base weapon (a sword, flail, bow, crossbow or staff)
 with its own rarity, item level, affixes and name; armor the same way, with bases and affixes of
 its own ([armor.md](armor.md)). In town the Enchanter puts an enchantment on a weapon (for copper
 and crystals) and the Smith re-rolls affixes (for copper) and sells armor: see [Enchanting and
@@ -104,20 +104,22 @@ prints the odds per level and per guardian (and `n` sample weapons per rarity).
 **Bases** (`core/gear/bases.js`): five of each kind, a light one or two from item level 1 and
 heavier ones further down (swords: short and medium from 1, long 2, broad 4, greatsword 6;
 bows: short and hunting 1, recurve 3, longbow 5, war bow 7; crossbows: hand 1, light 2, heavy
-4, repeating 6, arbalest 8; staffs: gnarled 1, oak 2, ember 4, crystal 6, arcane 8). The Old
-Sword never drops. Their stats are in [progression.md](progression.md#weapons). A base's damage
+4, repeating 6, arbalest 8; staffs: gnarled 1, oak 2, ember 4, crystal 6, arcane 8). The flails
+only from item level 7, Renew's (ball and chain and morning star 7, twin morning star 8,
+knight's flail 9, triple flail 10): he always drops one first, any of the five
+(`ownWeapon`), so he is the first to hand you one. The Old Sword never drops. Their stats are in [progression.md](progression.md#weapons). A base's damage
 grows **5% per item level** (`ILVL_DAMAGE`), so a weapon from ten depths further down hits half
 again as hard as the same one from the top.
 
 **Smart loot**: every base weighs the same, except that bases of the kind the player has
-equipped when the loot rolls weigh `FAVOR` (3) times as much: once every kind drops, about half
-of the weapons are of your kind and the rest spread over the other three. So whatever you fight
+equipped when the loot rolls weigh `FAVOR` (3) times as much: once every kind drops, about three
+in seven of the weapons are of your kind and the rest spread over the other four. So whatever you fight
 with keeps finding upgrades and you still see the others. A sword player arrives at each depth
 with about 6% less damage per second than when swords were all there was
 (`node tools/balance.mjs`).
 
 **Affixes** (`core/gear/affixes.js`), each at most once per item, at most three prefixes and
-three suffixes. Swooshy and of Long Arms roll only on swords (`melee`), of Far Away only on bows,
+three suffixes. Swooshy and of Long Arms roll only on swords and flails (`melee`), of Far Away only on bows,
 crossbows and staffs (`ranged`), the rest on all. The item level picks the tier (1: 1–3, 2: 4–7, 3: 8–12, 4: 13–18, 5: 19+);
 Impossible and OMG reach one or two tiers above (up to 7). The item's tooltip shows each
 affix's stat line with its name beside it.
@@ -172,7 +174,7 @@ is the enemy's level.
 - Side guardians: one weapon, at least Decent (Unusual from level 10), luck 0.1; one potion; one
   crystal.
 - Descent guardians: two weapons, at least Decent (Unusual from level 5, Remarkable from 14),
-  luck 0.2; two potions; two crystals.
+  luck 0.2; two potions; two crystals. Renew's first weapon is always a flail (`ownWeapon`).
 - Crystals (ruby, emerald, sapphire, amethyst, diamond: `core/items.js CRYSTALS`) are each as
   likely, rolled on a stream of their own (`crystalDrops`), so weapon and potion drops are as
   they were. They stack to 99 and are taken like potions (walking over them, collecting).

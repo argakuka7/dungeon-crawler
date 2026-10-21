@@ -1,11 +1,12 @@
 // Renew's fight as rules (game/renew.js runs it, game/rewind.js rewinds our own hero and plays his
-// echoes and the ghosts of the fight; his profiles are core/enemies.js RENEW, RENEW_BROAD,
-// RENEW_STAFF and RENEW_BOW). docs/bosses.md tells the whole fight.
+// echoes and the ghosts of the fight; his profiles are core/enemies.js RENEW, RENEW_BOW,
+// RENEW_FLAIL and RENEW_TWIN). docs/bosses.md tells the whole fight.
 //
 // Renew is a hero like the player: the same figure, running, rolling out of the way and chaining
-// his blows as a player chains clicks, with a weapon in his hands: a sword (phase 1), a broadsword
-// (phase 2), a staff (phase 3) and a bow (phase 4). With the last two he keeps his distance,
-// running backwards and leaping back out of reach. Each phase is a whole health bar. Brought down
+// his blows as a player chains clicks, with a weapon in his hands: a sword (phase 1), a bow
+// (phase 2), a morning star (phase 3: a flail of one ball) and a twin morning star (phase 4: two
+// balls). With the bow he keeps his distance, running backwards and leaping back out of reach.
+// Each phase is a whole health bar. Brought down
 // to its end (the first three) he turns back time: everything that happened in the room since the
 // phase began runs backwards (him, his minions, the player, the shots in flight), every body warded
 // meanwhile, until the room is as it was then; and he goes on with his next weapon. But the player
@@ -15,18 +16,20 @@
 // adds an echo. In phases 2 and 3 he casts minions out of the sky onto the floor: spiders, then
 // Fire-faces. The light goes as the fight goes on: dusk, then night. At the end of the last bar
 // time runs back once more, but he does not come back: he rises into the sky as a ghost and is
-// gone, his loot falling out of the sky where he went; the echoes and the ghosts fight on a while
-// (harmless now) and fade.
+// gone, his loot falling out of the sky where he went (always a flail among it: core/gear/drops.js);
+// the echoes and the ghosts fight on a while (harmless now) and fade.
 //
 // The room's time is a clock (`clock` on him, s since the phase began) that runs forward while
 // they fight and back while he rewinds; tapes record what the room was at each moment, and a
 // rewind and an echo play a tape back at that clock.
 //
+import { ballAt } from './combat.js';
+
 // (his final rewind's end: how far he has risen, 0 .. 1, at time t of it)
 export const risenAt = t => { const u = Math.min(1, Math.max(0, t / RENEW_FIGHT.ascend.time)); return u * u * (3 - 2 * u); };
 
 export const RENEW_FIGHT = Object.freeze({
-  weapons: ['weapon_sword_medium', 'weapon_sword_broad', 'weapon_staff_crystal', 'weapon_bow_hunting'],   // in his hands, phase by phase
+  weapons: ['weapon_sword_medium', 'weapon_bow_hunting', 'weapon_flail_morningstar', 'weapon_flail_twin'],   // in his hands, phase by phase
   sample: 1 / 20,                // s between the frames of a tape
   windup: 1.4,                   // s he gathers time in his hands before it runs back (nothing hurts him)
   rewind: { speed: 10, min: 4, max: 8 },   // the rewind lasts the phase's length / speed, but min .. max s
@@ -35,10 +38,10 @@ export const RENEW_FIGHT = Object.freeze({
   summonCool: [0, 10, 13, 0],    // s from one cast of minions to the next
   firstSummon: 3,                // s into a phase before his first cast
   drop: { height: 6, gravity: 20 },   // cells over the floor his minions are cast from, how fast they fall (cells/s²)
-  combo: [3, 2, 1, 1],           // the most blows he chains in a row, phase by phase
+  combo: [3, 1, 2, 2],           // the most blows he chains in a row, phase by phase
   chain: 0.06,                   // s between chained blows
   dodge: { chance: 0.4, every: 2.2, near: 0.6 },   // a roll out of a player's swing: how likely, how often at most (s), how far past its reach (cells)
-  leap: { every: 2.4, near: 0.5 },   // with a ranged weapon (staff, bow): a leap back once the player is this far inside his keep[0], at most every s
+  leap: { every: 2.4, near: 0.5 },   // with the bow: a leap back once the player is this far inside his keep[0], at most every s
   echo: { power: 0.45, fade: 0.35 },   // an echo's blow (× his damage), s it takes to come and go
   ascend: { time: 3.2, height: 7 },   // beaten: he rises as a ghost into the sky over this long (s), this high (cells)
   outro: 3.5,                    // s the echoes and the ghosts fight on once he is gone, before they fade
@@ -114,14 +117,16 @@ export const rewoundAt = (length, u) => length * (1 - ease(Math.min(1, Math.max(
 // each where its blade went through: the first frame of a swing in its active window) and the
 // shots of their bow, crossbow or staff (`shots`, the frame each left). A player frame's swing
 // (`sw`, null between attacks): { n: its serial, t: how far into it, yaw, fired, ranged, range,
-// arc (rad, each way), a0, a1 (its active window), color (a spell's) }.
+// arc (rad, each way), a0, a1 (its active window), color (a spell's), balls (a flail's: each
+// strikes) }.
 export function echoEvents(tape) {
   const strikes = [], shots = [], struck = new Set(), shot = new Set();
   for (const f of tape.frames) {
     const s = f.sw;
     if (!s) continue;
-    if (!s.ranged && s.t >= s.a0 && s.t <= s.a1 + 0.1 && !struck.has(s.n)) {
-      struck.add(s.n);
+    const blow = `${s.n}:${ballAt({ balls: s.balls, activeStart: s.a0, activeEnd: s.a1 }, s.t)}`;
+    if (!s.ranged && s.t >= s.a0 && s.t <= s.a1 + 0.1 && !struck.has(blow)) {
+      struck.add(blow);
       strikes.push({ t: f.t, x: f.x, y: f.y, z: f.z, yaw: s.yaw, range: s.range, arc: s.arc });
     }
     if (s.ranged && s.fired && !shot.has(s.n)) {

@@ -79,14 +79,16 @@ CHEST_CLIPS = {
 #   bow:      in the left fist, limbs up and the belly forward with the arm held out
 #   crossbow: like a pistol, the stock along the forearm, its top over the knuckles
 #   staff:    straight through the fist, upright with the forearm held level
+#   flail:    its handle held like a sword's grip
 MOUNTS = {
     'sword': ('hand.R', (math.sin(math.pi / 6), 0, 0, math.cos(math.pi / 6))),
+    'flail': ('hand.R', (math.sin(math.pi / 6), 0, 0, math.cos(math.pi / 6))),
     'bow': ('hand.L', (-0.1934, 0.2476, 0.5894, 0.7443)),
     'crossbow': ('hand.R', (-0.3083, 0.3874, -0.3157, 0.8095)),
     'staff': ('hand.R', (-0.0989, -0.6061, -0.7408, 0.2723)),
 }
 # the player's attack clip for each kind (character.py)
-CLIPS = {'sword': 'Slash', 'bow': 'Shoot', 'crossbow': 'CrossbowShot', 'staff': 'Cast', 'throw': 'Throw'}
+CLIPS = {'sword': 'Slash', 'flail': 'Slash', 'bow': 'Shoot', 'crossbow': 'CrossbowShot', 'staff': 'Cast', 'throw': 'Throw'}
 
 # Things a character wears or carries (category 'wearable' / 'held'): name: (socket bone,
 # rotation (glTF x y z w) and offset (rig units) in the socket bone's head frame, the arm's
@@ -675,6 +677,121 @@ def staff(m, v=0):
         m.slot = 0
         m.tube([(-.02, .04, .91), (-.18, .025, .78), (-.20, .02, .63)], .012, LEATHER, n=5)
         gem(m, 3, (-.20, .02, .56), .22)
+
+
+# Flails (morning stars): the handle along +Z, the grip at the origin, an iron cap at its top
+# with an eye (the anchor) from which a chain runs to each ball. As modelled the chains curve
+# over to the side in the XZ plane (how it lies on the floor, how the bag shows it); in a hand
+# the game hangs and swings them itself (src/render/held.js): the first link is a part of its
+# own (`link`, straight up from the anchor, long along +Z) that the game copies along each
+# chain, the other links are `chain` (hidden in a hand), and each ball is a part (`ball`,
+# `ball2`, `ball3`) pivoting at the end of its chain.
+# (name, top of the handle, links in a chain, ball radius, balls, spikes (0 studs, 1 spikes,
+# 2 long ones), wood, grip wrap, ball metal, spike metal)
+FLAILS = [
+    ('ball', .30, 6, .13, 1, 0, WOOD, LEATHER, IRON, IRON),
+    ('morningstar', .34, 7, .13, 1, 1, BARK, LEATHER, IRON, STEEL),
+    ('twin', .34, 6, .11, 2, 1, '#4a3428', '#6b2f2a', IRON, STEEL),
+    ('knight', .40, 8, .12, 1, 2, '#5b4030', '#3f5a8c', '#7d8a94', GOLD),
+    ('triple', .36, 6, .09, 3, 1, '#3a2d26', LEATHER, IRON, STEEL),
+]
+LINK = (.02, .007, 1.6)   # a chain link's radius, wire and stretch along its length
+PITCH = .062              # from one link's middle to the next
+EYE = .035                # from the end of a chain to its ball
+# how far each chain bends over as modelled (rad from +Z), by the number of balls
+DRAPE = {1: [.95], 2: [.8, -.8], 3: [1, 0, -1]}
+
+
+def loop(m, center, axis, normal, radius, wire, color, stretch=1):
+    """A ring about center, its circle through axis (stretched along it) and normal to `normal`."""
+    start = len(m.vertices)
+    m.ring((0, 0, 0), radius, wire, color, n=8, section=3, ellipse=stretch)
+    y = Vector(axis).normalized()
+    z = Vector(normal)
+    z = z - y * z.dot(y)
+    z = z.normalized() if z.length > 1e-6 else y.orthogonal().normalized()
+    x = y.cross(z)
+    for i in range(start, len(m.vertices)):
+        v = Vector(m.vertices[i])
+        m.vertices[i] = tuple(Vector(center) + x * v.x + y * v.y + z * v.z)
+
+
+def chain_link(m, center, axis, k):
+    """Link k of a chain about `center`, long along axis; every other one turned a quarter."""
+    side = Vector((0, 1, 0)) if k % 2 == 0 else Vector(axis).cross(Vector((0, 1, 0)))
+    loop(m, center, axis, side, LINK[0], LINK[1], IRON, LINK[2])
+
+
+def flail_anchor(v):
+    return (0, 0, FLAILS[v][1] + .045)
+
+
+def flail_chain(v, i):
+    """Chain i of flail v as modelled: its links' middles with their directions, its end and the
+    direction there. A circular arc from the anchor, straight up at first."""
+    links, balls = FLAILS[v][2], FLAILS[v][4]
+    bend, length = DRAPE[balls][i], links * PITCH
+    ax, _, az = flail_anchor(v)
+
+    def at(s):
+        if abs(bend) < 1e-6:
+            return Vector((ax, 0, az + s)), Vector((0, 0, 1))
+        k = bend / length
+        return (Vector((ax + (1 - math.cos(k * s)) / k, 0, az + math.sin(k * s) / k)),
+                Vector((math.sin(k * s), 0, math.cos(k * s))))
+    end, d = at(length)
+    return [at((j + .5) * PITCH) for j in range(links)], end, d
+
+
+def spiked_ball(m, end, axis, radius, spikes, metal, spike):
+    """A ball hanging from `end` (the end of its chain) along axis, by its eye."""
+    axis = Vector(axis).normalized()
+    center = Vector(end) + axis * (EYE + radius)
+    m.slot = 1
+    m.lathe(center, [(-radius, 0), (-radius * .72, radius * .7), (0, radius), (radius * .72, radius * .7), (radius, 0)],
+            metal, n=8, jitter=0, axis=axis)
+    loop(m, Vector(end) + axis * EYE * .55, axis, Vector((0, 1, 0)), EYE * .4, .008, IRON)
+    # the spikes point to the corners of an icosahedron, but not where the eye is
+    t = (1 + 5 ** .5) / 2
+    corners = [Vector(p).normalized() for p in [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t),
+                                                (0, -1, -t), (0, 1, -t), (t, 0, -1), (t, 0, 1), (-t, 0, -1), (-t, 0, 1)]]
+    turn = Vector((0, 0, 1)).rotation_difference(axis)
+    long, wide = [(.12, .3), (.7, .28), (1.05, .25)][spikes]
+    for d in corners:
+        d = turn @ d
+        if d.dot(axis) < -.75:
+            continue
+        m.lathe(center + d * radius * .8, [(0, radius * wide), (radius * (long + .2), 0)], spike, n=4, jitter=0, axis=d)
+    m.slot = 0
+
+
+def flail(m, v=0):
+    _, top, links, radius, balls, spikes, wood, wrap, metal, spike = FLAILS[v]
+    gold = spike == GOLD
+    # the handle: a shaft with a pommel, the grip wrapped, an iron cap with its eye at the top
+    m.lathe((0, 0, 0), [(-.2, 0), (-.2, .03), (-.17, .04), (-.15, .036), (top - .04, .036), (top, .03), (top, 0)],
+            wood, n=8, jitter=0)
+    grip(m, .26, .042, wrap)
+    m.slot = 1
+    m.lathe((0, 0, -.2), [(-.025, 0), (-.02, .045), (.02, .048), (.03, .038)], GOLD if gold else metal, n=8, jitter=0)
+    m.lathe((0, 0, top - .06), [(0, .042), (.05, .045), (.065, .03), (.075, 0)], metal, n=8, jitter=0)
+    for z in ((.16, top - .1) if top > .32 else (.16,)):
+        m.lathe((0, 0, z), [(0, .041), (.022, .041)], GOLD if gold else IRON, n=8, jitter=0)
+    anchor = Vector(flail_anchor(v))
+    loop(m, anchor - Vector((0, 0, .008)), (0, 0, 1), (1, 0, 0), .017, .007, IRON)
+    m.slot = 0
+    if gold:   # the knight's: a tassel under the cap
+        m.tube([(.035, .02, top - .08), (.07, .04, top - .2), (.08, .05, top - .3)], [.014, .012, .005], wrap, n=4)
+    first, rest = Mesh(m.rng.randrange(1 << 30)), Mesh(m.rng.randrange(1 << 30))
+    first.slot = rest.slot = 1
+    m.parts += [('link', first, tuple(anchor + Vector((0, 0, PITCH * .5)))), ('chain', rest, tuple(anchor))]
+    for i in range(balls):
+        middles, end, d = flail_chain(v, i)
+        for k, (p, axis) in enumerate(middles):
+            chain_link(rest if i or k else first, p, axis, k)
+        ball = Mesh(m.rng.randrange(1 << 30))
+        spiked_ball(ball, end, d, radius, spikes, metal, spike)
+        m.parts.append(('ball' if i == 0 else f'ball{i + 1}', ball, tuple(end)))
 
 
 # Drinkable potions (src/core/items.js POTIONS): name: (bottle shape, liquid, glass tint, emblem
@@ -1701,6 +1818,7 @@ SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
     (f'weapon_bow_{b[0]}', bow, i, 'weapon', 'hand') for i, b in enumerate(BOWS)] + [
     (f'weapon_crossbow_{c[0]}', crossbow, i, 'weapon', 'hand') for i, c in enumerate(CROSSBOWS)] + [
     (f'weapon_staff_{s[0]}', staff, i, 'weapon', 'hand') for i, s in enumerate(STAFFS)] + [
+    (f'weapon_flail_{f[0]}', flail, i, 'weapon', 'hand') for i, f in enumerate(FLAILS)] + [
     ('weapon_arrow', arrow, 0, 'ammunition', 'nock'),
     ('weapon_bolt', bolt, 0, 'ammunition', 'nock'),
     *[(f'item_potion_{p}', potion, i, 'consumable', 'ground') for i, p in enumerate(POTIONS)],
@@ -1743,7 +1861,7 @@ def build(scene=None):
                 'units': 'character_rig' if attach != 'ground' else 'cells',
                 'game_scale': .55 if attach != 'ground' else 1.0, 'front': '+Z'}
         if category == 'weapon':
-            kind = {sword: 'sword', bow: 'bow', crossbow: 'crossbow', staff: 'staff'}[builder]
+            kind = {sword: 'sword', bow: 'bow', crossbow: 'crossbow', staff: 'staff', flail: 'flail'}[builder]
             socket, quat = MOUNTS[kind]
             info.update(weapon=kind, socket=socket, mount_quat_gltf=[round(c, 6) for c in quat],
                         grip_angle_blender=-math.pi / 6 if builder == sword else 0,
@@ -1760,6 +1878,16 @@ def build(scene=None):
                             parts='string,bolt')
             if builder == staff:
                 info.update(head_gltf=gltf(staff_head(v)))
+            if builder == flail:
+                # the chains' anchor, how long each is, how far apart its links are, where the first
+                # link's middle is; for each ball (flattened) the end of its chain (the ball's pivot)
+                # and from there to its middle, as modelled
+                links, radius, balls = FLAILS[v][2], FLAILS[v][3], FLAILS[v][4]
+                info.update(anchor_gltf=gltf(flail_anchor(v)), chain_length=round(links * PITCH, 4), link_pitch=PITCH,
+                            link_gltf=gltf(Vector(flail_anchor(v)) + Vector((0, 0, PITCH * .5))), balls=balls,
+                            ball_ends_gltf=[c for i in range(balls) for c in gltf(flail_chain(v, i)[1])],
+                            ball_offsets_gltf=[c for i in range(balls) for c in gltf(flail_chain(v, i)[2] * (EYE + radius))],
+                            parts=','.join(['link', 'chain'] + ['ball' if i == 0 else f'ball{i + 1}' for i in range(balls)]))
         if builder in (arrow, bolt):
             info.update(axis_gltf='+Y', axis_blender='+Z')
         if name in WEARS:
@@ -1793,7 +1921,7 @@ def build(scene=None):
 
 
 def validate(objects):
-    assert len(objects) == len(SPECS) == 71 + len(QUEST_PROPS) + len(armor.ARMOR)
+    assert len(objects) == len(SPECS) == 76 + len(QUEST_PROPS) + len(armor.ARMOR)
     assert {o.name for o in objects} == {s[0] for s in SPECS}
     report = []
     for obj in objects:
@@ -1857,7 +1985,7 @@ def setup_preview(scene, objects):
     # family, the worn things, the potions (health and the old ones, then the rest and the
     # flasks), then the rest.
     groups = [[o for o in objects if o.name.startswith(p + '_')]
-              for p in ('weapon_sword', 'weapon_bow', 'weapon_crossbow', 'weapon_staff')]
+              for p in ('weapon_sword', 'weapon_bow', 'weapon_crossbow', 'weapon_staff', 'weapon_flail')]
     groups.append([o for o in objects if o.name.startswith(('wear_', 'held_'))])
     groups += [[o for o in objects if o.name.startswith(f'armor_{s}_')] for s in ('head', 'body', 'shield', 'feet')]
     groups.append([o for o in objects if o.name.startswith(('item_potion_health', 'item_potion_mana', 'item_potion_stamina'))])

@@ -34,12 +34,12 @@ const { combatStats, swordState, favoredKind } = await import('../src/core/comba
 const { addInstance, equipItem, takeItem, equippedItem, wearItem, wornItem, bareSlots } = await import('../src/core/inventory.js');
 const { mulberry32, hash32 } = await import('../src/core/util.js');
 const { RESPAWN } = await import('../src/core/respawn.js');
-const { ITEMS } = await import('../src/core/items.js');
+const { ITEMS, isMelee } = await import('../src/core/items.js');
 const { trialTime } = await import('../src/core/trials.js');
 const { hordeKinds, hordeSize } = await import('../src/world/hordes.js');
 const { enchantCost, rerollCost } = await import('../src/core/crafting.js');
 
-const ranged = item => ITEMS[item.itemId]?.weapon?.kind !== 'sword';
+const ranged = item => !isMelee(ITEMS[item.itemId]?.weapon?.kind);
 const SEEDS = Number(process.argv[2] || 8), SHARE = Number(process.argv[3] || 0.6);
 
 const pick = (kinds, r) => {

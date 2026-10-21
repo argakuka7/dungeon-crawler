@@ -17,14 +17,15 @@ export const MAX_ILVL = 99;
 
 const level = ilvl => Math.max(1, Math.min(MAX_ILVL, Math.floor(ilvl) || 1));
 
-// opts: rarity (an id: forces it), itemId (forces the base), favor (a kind of weapon the base
-// leans towards: rollBase), and the rarity odds options (luck, floor, guardian: see rarityOdds)
+// opts: rarity (an id: forces it), itemId (forces the base), kind (only that kind of weapon, any
+// of its bases: rollBase), favor (a kind of weapon the base leans towards: rollBase), and the
+// rarity odds options (luck, floor, guardian: see rarityOdds)
 // learn: loot.html#generate-code (see learn/README.md)
 export function rollWeapon(rng, ilvl, opts = {}) {
   ilvl = level(ilvl);
   const rarity = opts.rarity ? RARITY[opts.rarity] : rollRarity(rng, ilvl, opts);
   if (!rarity) throw new TypeError(`Unknown rarity: ${opts.rarity}`);
-  const itemId = opts.itemId ?? rollBase(rng, ilvl, opts.favor).itemId, def = ITEMS[itemId];
+  const itemId = opts.itemId ?? rollBase(rng, ilvl, opts.favor, opts.kind).itemId, def = ITEMS[itemId];
   if (!def?.weapon) throw new TypeError(`Not a weapon: ${itemId}`);
   const affixes = rollAffixes(rng, rarity.affixes, ilvl, baseTags(itemId), rarity.tierBonus);
   return { itemId, count: 1, gen: { v: GEN_VERSION, rarity: rarity.id, ilvl, affixes, name: itemName(rarity.id, def.name, rng) } };

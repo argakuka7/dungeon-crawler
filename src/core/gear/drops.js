@@ -10,6 +10,8 @@
 //     potions
 //   a kind with its own `drops` ({ weapons: false, potion: chance, potions: [item ids] }: Gusto's
 //     Custo triangles) drops no weapons and one of `potions` at that chance
+//   a guardian with a kind of weapon of its own (`ownWeapon`: Renew's flails) always drops one of
+//     them: its first weapon is of that kind (any of its bases, however deep)
 // Guardians also roll with luck (rarer results) and are the only source of OMG items.
 // Crystals (for the Enchanter, core/gear/enchants.js) on a stream of their own: ordinary enemies
 // one 1.5% of the time (× the same √ of their XP), side guardians one, descent guardians two;
@@ -58,7 +60,8 @@ export function weaponDrops(enemy, seed = 0, favor = null) {
   if (enemy.kind?.drops?.weapons === false) return [];
   if (!enemy.guardian) return R() < dropChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? [rollWeapon(R, level, { favor })] : [];
   const g = guardianDrops(enemy.guardianRole ?? 'descent', level), out = [];
-  for (let i = 0; i < g.count; i++) out.push(rollWeapon(R, level, { ...g, favor }));
+  const own = enemy.kind?.ownWeapon;
+  for (let i = 0; i < g.count; i++) out.push(rollWeapon(R, level, { ...g, favor, ...(own && i === 0 && { kind: own }) }));
   return out;
 }
 // `n` crystals drawn with rng R, each kind as likely: [{ itemId, count }], one entry per kind

@@ -619,10 +619,12 @@ export const FOGGERY_BALL = {
 // it). game/renew.js runs his fight, core/renew.js holds its rules: four phases, each a whole
 // bar of health; at the end of the first three he rewinds time (game/rewind.js) and takes up the
 // next weapon. The blows' times are the player's weapons', a little slower, so they can be read.
-// Phase 1: a sword. Phase 2: a broadsword, slower, wider and harder; he casts spiders out of the
-// sky (`summon`, a cast). Phase 3: a staff: spells (`orb`s, a volley of three now and then), and
-// Fire-faces cast out of the sky. Phase 4: a bow, arrows from far off. With the ranged ones he
-// keeps his distance: running backwards, leaping back (`leap`).
+// Phase 1: a sword. Phase 2: a bow, arrows from far off (three at once now and then), keeping his
+// distance: running backwards, leaping back (`leap`); he casts spiders out of the sky (`summon`, a
+// cast). Phase 3: a morning star (a flail of one ball): slower, wider and harder blows, and
+// Fire-faces cast out of the sky. Phase 4: a twin morning star, each of its two balls striking in
+// turn (`twice`: the second's hit frame, game/enemyai.js). Beaten, he always drops a flail
+// (`ownWeapon`, core/gear/drops.js).
 const RENEW_SLASH = {
   name: 'slash', clip: 'slash', weight: 3, reach: 1, hitAt: 0.3, trackUntil: 0.24, attackTime: 0.72, hitReach: 1.1,
   arc: Math.cos(Math.PI * 0.42), power: 0.6, knock: 4, knockDown: false, hop: 3, reason: 'Slashed by Renew!',
@@ -637,32 +639,19 @@ const RENEW_ROLL = {
   name: 'roll', clip: 'roll', weight: 0, reach: 0, hitAt: 9, trackUntil: 0, attackTime: 0.95, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', dodge: { dist: 1.5, from: 0.04, to: 0.72 },
 };
-const RENEW_CLEAVE = {
-  ...RENEW_SLASH, reach: 1.05, hitAt: 0.42, trackUntil: 0.32, attackTime: 0.98, hitReach: 1.18, arc: Math.cos(Math.PI * 0.525),
-  power: 0.95, knock: 6, reason: 'Cleaved by Renew!',
-};
-const RENEW_BROAD_DASH = {
-  ...RENEW_CLEAVE, name: 'dash', weight: 2, reach: 2.8, minReach: 1.4, hitAt: 0.46, trackUntil: 0.36, attackTime: 1.05, power: 1.1,
-  knockDown: true, hop: 3.5, lunge: { from: 0.08, to: 0.4, max: 1.9, stop: 0.6 }, reason: 'Renew\'s broadsword knocked you down!',
-};
 const RENEW_SPIDERS = {
   name: 'summon', clip: 'cast', weight: 2, reach: 9, hitAt: 0.6, trackUntil: 0.45, attackTime: 1.15, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', cast: 'summon',
   summon: { kind: 'renspider', muzzle: [0, 1.55, 0.3] },
 };
 const RENEW_FACES = { ...RENEW_SPIDERS, summon: { ...RENEW_SPIDERS.summon, kind: 'renface' } };
-const RENEW_SPELL = {
-  name: 'spell', clip: 'cast', weight: 3, reach: 6.5, hitAt: 0.5, trackUntil: 0.42, attackTime: 0.95, hitReach: 0,
-  arc: 0.5, power: 0.6, knock: 3, knockDown: false, hop: 3, reason: 'Hit by Renew\'s spell!',
-  projectile: { kind: 'orb', speed: 7, radius: 0.17, range: 9, color: '#bdf3ff', muzzle: [-0.171, 1.14, 0.821] },
-};
 // (a leap back, away from the player, facing them: `back`, along the way the fight picks; up
 // `hop` cells over the floor at its height, render/renewview.js)
 const RENEW_LEAP = {
   name: 'leap', clip: 'leap', weight: 0, reach: 0, hitAt: 9, trackUntil: 0, attackTime: 0.75, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Renew', dodge: { dist: 2.6, from: 0.08, to: 0.62, back: true, hop: 0.9 },
 };
-// The bow (phase 4): arrows from afar (an `arrow`: the game's arrow model, render/projectiles.js),
+// The bow (phase 2): arrows from afar (an `arrow`: the game's arrow model, render/projectiles.js),
 // now and then three at once, fanned out. The draw is a player's bow's, a little slower.
 const RENEW_SHOT = {
   name: 'shoot', clip: 'shoot', weight: 3, reach: 8, hitAt: 0.62, trackUntil: 0.55, attackTime: 1, hitReach: 0,
@@ -671,11 +660,25 @@ const RENEW_SHOT = {
 };
 const RENEW_ARROWS = { ...RENEW_SHOT, name: 'arrows', weight: 2, hitAt: 0.75, trackUntil: 0.65, attackTime: 1.15, power: 0.55,
   projectile: { ...RENEW_SHOT.projectile, volley: 3, fan: 0.22 } };
-const RENEW_VOLLEY = { ...RENEW_SPELL, name: 'volley', weight: 2, hitAt: 0.62, trackUntil: 0.5, attackTime: 1.1, power: 0.45,
-  projectile: { ...RENEW_SPELL.projectile, volley: 3, fan: 0.28 } };
+// The morning star (phase 3): swung on the Slash clip like the sword, but slower to come round,
+// sweeping wider and further and shoving harder; its lunge knocks you down.
+const RENEW_SWING = {
+  ...RENEW_SLASH, reach: 1.2, hitAt: 0.5, trackUntil: 0.38, attackTime: 1.05, hitReach: 1.4, arc: Math.cos(Math.PI * 0.6),
+  power: 0.9, knock: 7, reason: 'Smashed by Renew\'s morning star!',
+};
+const RENEW_SWING_DASH = {
+  ...RENEW_SWING, name: 'dash', weight: 2, reach: 2.9, minReach: 1.5, hitAt: 0.54, trackUntil: 0.4, attackTime: 1.1, power: 1.05,
+  knockDown: true, hop: 3.5, lunge: { from: 0.08, to: 0.46, max: 2, stop: 0.7 }, reason: 'Renew\'s morning star knocked you down!',
+};
+// The twin morning star (phase 4): each ball strikes, the second `twice` s into the swing; the
+// first shoves less, so the second can still catch you.
+const RENEW_TWIN_SWING = { ...RENEW_SWING, hitAt: 0.46, twice: 0.6, attackTime: 1.1, power: 0.62, knock: 3.5,
+  reason: 'Battered by Renew\'s twin morning star!' };
+const RENEW_TWIN_DASH = { ...RENEW_SWING_DASH, hitAt: 0.5, twice: 0.64, attackTime: 1.15, power: 0.72, knock: 3.5, knockDown: false,
+  reason: 'Renew\'s twin morning star caught you!' };
 export const RENEW = {
   type: 'renew', species: 'renew', label: 'Renew', hp: 360, damage: 24, knock: 4,
-  xp: 650, coins: [180, 320],
+  xp: 650, coins: [180, 320], ownWeapon: 'flail',
   radius: 0.26, height: 1.1, bodyHeight: 1, mass: 2.2, figure: true, model: 'character', weapon: 'weapon_sword_medium',
   aggro: 7, giveUp: 14, chase: 2.5, wander: 0.6, homeSpeed: 1.4,
   ...RENEW_SLASH, cooldown: 0.9, ichor: ['#eef6ff', '#6a8ab8'], pitch: 1,
@@ -685,21 +688,21 @@ export const RENEW = {
   style: 'skirmish', circle: 1.7, strafe: true, guardian: true, guardianRole: 'descent', boss: 'renew',
   seedSalt: 0x7e3e3a, spacing: 6,
 };
-// ... with the broadsword (phase 2): slower, wider and harder blows; he casts spiders
-export const RENEW_BROAD = {
-  ...RENEW, type: 'renewbroad', weapon: 'weapon_sword_broad', ...RENEW_CLEAVE, cooldown: 1.1, chase: 2.3,
-  attacks: [RENEW_CLEAVE, RENEW_BROAD_DASH, RENEW_ROLL, RENEW_SPIDERS], phase: 2, circle: 1.9,
-};
-// ... with the staff (phase 3): spells from afar, and Fire-faces; too close, he runs backwards (at
-// his full speed, `backpedal`, game/enemyai.js) and leaps back out of reach (game/renew.js)
-export const RENEW_STAFF = {
-  ...RENEW, type: 'renewstaff', weapon: 'weapon_staff_crystal', ...RENEW_SPELL, cooldown: 1, chase: 2.4,
-  attacks: [RENEW_SPELL, RENEW_VOLLEY, RENEW_LEAP, RENEW_FACES], phase: 3, style: 'ranged', keep: [3, 5.5], backpedal: 1,
-};
-// ... and with a bow (phase 4): arrows from far off, keeping further away still
+// ... with a bow (phase 2): arrows from far off; too close, he runs backwards (at his full speed,
+// `backpedal`, game/enemyai.js) and leaps back out of reach (game/renew.js); he casts spiders
 export const RENEW_BOW = {
   ...RENEW, type: 'renewbow', weapon: 'weapon_bow_hunting', ...RENEW_SHOT, cooldown: 0.9, chase: 2.6,
-  attacks: [RENEW_SHOT, RENEW_ARROWS, RENEW_LEAP], phase: 4, style: 'ranged', keep: [4, 7], backpedal: 1,
+  attacks: [RENEW_SHOT, RENEW_ARROWS, RENEW_LEAP, RENEW_SPIDERS], phase: 2, style: 'ranged', keep: [4, 7], backpedal: 1,
+};
+// ... with a morning star (phase 3): slower, wider and harder blows; he casts Fire-faces
+export const RENEW_FLAIL = {
+  ...RENEW, type: 'renewflail', weapon: 'weapon_flail_morningstar', ...RENEW_SWING, cooldown: 1.1, chase: 2.4,
+  attacks: [RENEW_SWING, RENEW_SWING_DASH, RENEW_ROLL, RENEW_FACES], phase: 3, circle: 2,
+};
+// ... and with a twin morning star (phase 4): two blows in every swing
+export const RENEW_TWIN = {
+  ...RENEW, type: 'renewtwin', weapon: 'weapon_flail_twin', ...RENEW_TWIN_SWING, cooldown: 1, chase: 2.5,
+  attacks: [RENEW_TWIN_SWING, RENEW_TWIN_DASH, RENEW_ROLL], phase: 4, circle: 2,
 };
 export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP, FOGGERY, RENEW];
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
@@ -925,7 +928,7 @@ export const SQUARLO_GIANT = enemyKind(SQUARLO, {
 // a boss's profile for each of its stages (game/squarlo.js; a friend's game swaps it by the stage
 // the runner sends, net/foes.js)
 export const STAGE_PROFILES = { squarlo: [SQUARLO, SQUARLO_GIANT], foggery: [FOGGERY, FOGGERY_BALL, FOGGERY_BALL],
-  renew: [RENEW, RENEW_BROAD, RENEW_STAFF, RENEW_BOW] };
+  renew: [RENEW, RENEW_BOW, RENEW_FLAIL, RENEW_TWIN] };
 // One full attack and recovery, averaged over a species' attacks (s), and what it deals per
 // second at level 1 (a projectile's burn included): how dangerous it is to stand next to.
 export function attackCycle(profile) {

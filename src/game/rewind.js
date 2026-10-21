@@ -88,7 +88,7 @@ function tapeHero(clock, list) {
   record(tape, clock, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, grounded: p.grounded, pose: capturePose(),
     weapon: (readiedFlask(p) ?? equippedWeapon(p))?.model ?? null,
     sw: s.active && st ? { n: s.serial, t: s.t, yaw: s.yaw, fired: s.fired, ranged: !!st.ranged, kind: st.kind, range: st.range,
-      arc: st.arc, a0: st.activeStart, a1: st.activeEnd, color: st.color ?? null } : null,
+      arc: st.arc, a0: st.activeStart, a1: st.activeEnd, color: st.color ?? null, balls: st.balls ?? 1 } : null,
     pr: projectiles.map(pr => [pr, pr.x, pr.y, pr.z]), shots: shots.map(sh => [sh, sh.x, sh.y, sh.z]),
     bodies: list.filter(b => b.mode !== 'gone' && !b.ghost).map(bodyRow) });
 }

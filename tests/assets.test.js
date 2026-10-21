@@ -86,7 +86,7 @@ test('the bow, crossbow, staff and throw clips match the attack timing, shoot fr
   }
 });
 test('every weapon model says which socket it goes in, how it sits there and which clip it attacks with', () => {
-  const names = { sword: 'Slash', bow: 'Shoot', crossbow: 'CrossbowShot', staff: 'Cast' };
+  const names = { sword: 'Slash', flail: 'Slash', bow: 'Shoot', crossbow: 'CrossbowShot', staff: 'Cast' };
   for (const w of WEAPONS.filter(w => !w.model.endsWith('sword.glb'))) {
     const { json: j } = glb(w.model.replace(/^assets\//, '').replace(/\.glb$/, ''));
     const node = j.nodes.find(n => n.name === w.id), e = node.extras;
@@ -96,7 +96,12 @@ test('every weapon model says which socket it goes in, how it sits there and whi
     assert.ok(Math.abs(Math.hypot(...e.mount_quat_gltf) - 1) < 1e-3, w.id);
     // (compressing gives a root's own mesh an unnamed node of its own: not a part)
     const parts = (node.children ?? []).map(c => j.nodes[c].name).filter(Boolean).sort();
-    const want = { bow: ['string'], crossbow: ['bolt', 'string'] }[w.weapon.kind] ?? [];
+    const balls = Array.from({ length: w.weapon.balls ?? 1 }, (_, i) => i ? `ball${i + 1}` : 'ball');
+    const want = { bow: ['string'], crossbow: ['bolt', 'string'], flail: [...balls, 'chain', 'link'] }[w.weapon.kind] ?? [];
+    if (w.weapon.kind === 'flail') {   // where its chains hang from, how long, and where each ball is from its chain's end
+      assert.equal(e.anchor_gltf.length, 3); assert.ok(e.chain_length > 0.3 && e.link_pitch > 0, w.id);
+      assert.equal(e.balls, w.weapon.balls ?? 1); assert.equal(e.ball_offsets_gltf.length, 3 * e.balls, w.id);
+    }
     assert.deepEqual(parts, want.map(p => `${w.id}_${p}`), w.id);
   }
   for (const name of ['items/weapon_arrow', 'items/weapon_bolt']) assert.ok(glb(name).json.meshes.length, name);

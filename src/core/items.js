@@ -5,12 +5,14 @@
 // bag's pictures from it).
 const model = name => `assets/items/${name}.glb`;
 // Base weapon stats at item level 1 (core/gear/stats.js grows the damage with item level):
-//   kind: sword, bow, crossbow or staff (how it attacks: core/combat.js KINDS); damage per hit;
-//   interval: seconds from one attack to the next (the attack speed; every attack time scales
-//   with it, see core/combat.js); range: reach in cells (how far a shot flies for the ranged
-//   kinds); arc: × the basic swing arc (swords); pierce: how many enemies a bolt goes through
-//   before it stops; burst: the radius (cells) a spell bursts over where it hits, hurting
-//   everything else there for BURST_SHARE of its damage (core/shots.js); color: the spell's.
+//   kind: sword, flail, bow, crossbow or staff (how it attacks: core/combat.js KINDS); damage
+//   per hit; interval: seconds from one attack to the next (the attack speed; every attack time
+//   scales with it, see core/combat.js); range: reach in cells (how far a shot flies for the
+//   ranged kinds); arc: × the basic swing arc (swords, flails); pierce: how many enemies a bolt
+//   goes through before it stops; burst: the radius (cells) a spell bursts over where it hits,
+//   hurting everything else there for BURST_SHARE of its damage (core/shots.js); color: the
+//   spell's; balls: how many balls a flail has (each strikes, one after the other, in a swing:
+//   core/combat.js ballAt); knockback: × how hard its hits shove.
 // Swords: the light ones are quick and nimble, the heavy ones hit harder, wider and further but
 // plant you for longer; damage per second rises a little with weight, and the heavier bases only
 // drop deeper down (core/gear/bases.js). Shooting from afar is safer, so the ranged kinds deal
@@ -20,9 +22,17 @@ const weapon = (id, name, kind, damage, interval, range, more = {}) => ({
   id, name, category: 'weapon', stackLimit: 1,
   model: more.old ? 'assets/sword.glb' : model(id),
   weapon: { kind, damage, interval, range, arc: more.arc ?? 1, pierce: more.pierce ?? 0,
-    burst: more.burst ?? 0, ...(more.color && { color: more.color }) },
+    burst: more.burst ?? 0, ...(more.color && { color: more.color }), ...(more.balls && { balls: more.balls }),
+    ...(more.knockback && { knockback: more.knockback }) },
 });
 const sword = (id, name, damage, interval, range, arc = 1, old = false) => weapon(id, name, 'sword', damage, interval, range, { arc, old });
+// Flails (morning stars): a ball or more on a chain, swung like a sword but slower, sweeping
+// wider and shoving harder; with two or three balls each strikes in turn (for less each). Damage
+// per second a little over a sword's of the same depth, for planting you longer. Renew, the time
+// boss, fights with them and always drops one (core/gear/drops.js); they drop from deeper down
+// than he is (core/gear/bases.js), so he is the first to hand you one.
+const flail = (id, name, damage, interval, range, arc, balls = 1) =>
+  weapon(id, name, 'flail', damage, interval, range, { arc, balls, knockback: 1.5 });
 // learn: combat.html#chain (see learn/README.md)
 export const WEAPONS = [
   sword('weapon_sword_old', 'Old Sword', 30, .42, .85, 1, true),   //  71 damage per second
@@ -31,6 +41,11 @@ export const WEAPONS = [
   sword('weapon_sword_long', 'Long Sword', 39, .48, 1.05),          //  81, long reach
   sword('weapon_sword_broad', 'Broadsword', 46, .54, .88, 1.25),    //  85, a wide sweep
   sword('weapon_sword_greatsword', 'Greatsword', 60, .66, 1.15, 1.3), // 91, wide and long
+  flail('weapon_flail_ball', 'Ball and Chain', 46, .58, .95, 1.4),          //  79
+  flail('weapon_flail_morningstar', 'Morning Star', 53, .62, 1, 1.45),     //  85
+  flail('weapon_flail_twin', 'Twin Morning Star', 32, .68, 1, 1.5, 2),     //  94 (two balls), the widest
+  flail('weapon_flail_knight', 'Knight\'s Flail', 62, .7, 1.15, 1.35),     //  89, the longest chain
+  flail('weapon_flail_triple', 'Triple Flail', 24, .74, .95, 1.55, 3),     //  97 (three balls)
   weapon('weapon_bow_short', 'Short Bow', 'bow', 22, .44, 5),             // 50, the quickest
   weapon('weapon_bow_hunting', 'Hunting Bow', 'bow', 30, .56, 6),         // 54
   weapon('weapon_bow_recurve', 'Recurve Bow', 'bow', 35, .62, 6.5),       // 56
@@ -48,7 +63,9 @@ export const WEAPONS = [
   weapon('weapon_staff_arcane', 'Arcane Staff', 'staff', 58, .84, 6, { burst: 1, color: '#c48cff' }),       // 69
 ];
 // the kinds of weapon, in the order the UI lists them
-export const WEAPON_KINDS = ['sword', 'bow', 'crossbow', 'staff'];
+export const WEAPON_KINDS = ['sword', 'flail', 'bow', 'crossbow', 'staff'];
+// the kinds that strike what is in front of them (the others shoot)
+export const isMelee = kind => kind === 'sword' || kind === 'flail';
 // learn: code.html#lists (see learn/README.md)
 export const COINS = [
   { id: 'item_coin_gold', name: 'Gold', value: 1000, suffix: 'g' },

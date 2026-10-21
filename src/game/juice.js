@@ -66,10 +66,11 @@ export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   sfx(killed ? 'kill' : 'hit', { at: e, pitch: e.profile.pitch ?? 1.1 });
 }
 
-// an attack starts: a sword's whoosh, a bow's draw, a staff's wind-up (a crossbow is quiet until
-// it shoots)
+// an attack starts: a sword's whoosh, a flail's deeper one with its chain, a bow's draw, a staff's
+// wind-up (a crossbow is quiet until it shoots)
 export function swingFx(kind = 'sword') {
   if (kind === 'sword') sfx('swing', { at: player, pitch: 0.9 + 0.2 * Math.random() });
+  else if (kind === 'flail') sfx('flail', { at: player, pitch: 0.9 + 0.2 * Math.random() });
   else if (kind === 'bow') sfx('draw', { at: player, volume: 0.8 });
   else if (kind === 'staff') sfx('swing', { at: player, pitch: 0.6, volume: 0.5 });
 }

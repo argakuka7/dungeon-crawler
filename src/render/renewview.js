@@ -1,8 +1,9 @@
 // Renew (game/renew.js) has no model of his own: he is a figure like the villagers and the other
 // players (render/figure.js), the hero's own rig, played with the hero's own clips (Idle, Walk, Run,
 // Slash, Cast, Shoot, Roll, Jump for a leap back; JumpLandSit as he goes down), in a hood, his
-// weapon of the phase in his hand (the item's model, render/character.js mountWeapon; a staff's
-// stone glowing as he casts, a bow's string drawn as he shoots, render/held.js), tinted his own blue grey, with his bar, his title and a silhouette where
+// weapon of the phase in his hand (the item's model, render/character.js mountWeapon; a bow's
+// string drawn as he shoots, a morning star's balls swinging on their chains, render/held.js),
+// tinted his own blue grey, with his bar, his title and a silhouette where
 // terrain hides him, like any boss. The animation follows his state like any enemy's
 // (render/enemies.js hands him over here): the legs go round by the way he moves along his heading,
 // so while time runs back (his position from the tape, game/renew.js) he walks backwards; an
@@ -301,6 +302,7 @@ export function drawEchoes(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.group.position.x += off.x; v.group.position.y += off.y; v.group.position.z += off.z;
     v.group.visible = true;
     echoWeapon(v, span.k < 0.5 ? span.a.weapon : span.b.weapon);
+    if (v.weapon.held) { v.group.updateMatrixWorld(true); updateHeld(v.weapon.held, IDLE, null, dt); }
     for (const m of v.materials) m.opacity = 0.5 * alpha;
     v.light.intensity = 0.9 * alpha;
     v.flicker -= dt;
@@ -312,6 +314,7 @@ export function drawEchoes(list, dt, off = { x: 0, y: 0, z: 0 }) {
     }
   }
 }
+const IDLE = { sword: { active: false } };
 function makeEcho() {
   const f = createFigure(ECHO_TINT), materials = [];
   f.model.traverse(o => {
@@ -328,13 +331,13 @@ function makeEcho() {
   light.position.y = 0.8;
   trackLight(light, f.group);
   scene.add(f.group);
-  return { group: f.group, f, materials, light, weapon: { url: null, object: null, mats: [] }, flicker: 0 };
+  return { group: f.group, f, materials, light, weapon: { url: null, object: null, mats: [], held: null }, flicker: 0 };
 }
 function echoWeapon(v, url) {
   const w = v.weapon;
   if (w.url === url) return;
   w.url = url;
-  if (w.object) { v.materials = v.materials.filter(m => !w.mats.includes(m)); w.mats.forEach(m => m.dispose()); w.object.removeFromParent(); w.object = null; }
+  if (w.object) { v.materials = v.materials.filter(m => !w.mats.includes(m)); w.mats.forEach(m => m.dispose()); w.object.removeFromParent(); w.object = null; w.held = null; }
   if (!url) return;
   if (!echoWeapons.has(url)) echoWeapons.set(url, loadGLB(url).then(g => g.scene).catch(() => null));
   echoWeapons.get(url).then(model => {
@@ -342,8 +345,9 @@ function echoWeapon(v, url) {
     const copy = model.clone(true), mats = [];
     const own = m => { m = m.clone(); m.transparent = true; m.depthWrite = false; mats.push(m); return m; };
     copy.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material); });
-    mountWeapon(v.f.bones, copy);
+    const item = mountWeapon(v.f.bones, copy);
     w.object = copy; w.mats = mats; v.materials.push(...mats);
+    w.held = item?.userData.weapon === 'flail' ? prepareHeld(copy, item) : null;   // (a flail's balls swing: render/held.js)
   });
 }
 function dropEcho(echo) {

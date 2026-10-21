@@ -207,13 +207,15 @@ function swung(item) {
 }
 // whether it is an OMG item, all colours at once (style.css .rainbow)
 const rainbow = item => !!(item?.gen && rarityOf(item).glow?.rainbow);
-const KIND_NAMES = { sword: 'Sword', bow: 'Bow · shoots arrows', crossbow: 'Crossbow · shoots bolts', staff: 'Staff · casts spells' };
+const KIND_NAMES = { sword: 'Sword', flail: 'Flail · swings wide, shoves hard', bow: 'Bow · shoots arrows', crossbow: 'Crossbow · shoots bolts',
+  staff: 'Staff · casts spells' };
 function weaponText(item) {
   const s = swung(item), r = rarityOf(item);
   const lines = [`${r.name}${item.gen ? ` · item level ${item.gen.ilvl}` : ''}`, KIND_NAMES[s.kind],
     `Damage ${s.damage} · ${s.speed.toFixed(2)} attacks per second`, `Damage per second ${Math.round(weaponDps(s))}`,
     s.ranged ? `Range ${s.range.toFixed(1)} cells` : `Reach ${s.range.toFixed(2)} cells`,
     `Critical hits ${Math.round(s.crit * 100)}% for ×${s.critDamage.toFixed(2)}`];
+  if (s.balls > 1) lines.push(`${s.balls === 2 ? 'Two' : 'Three'} balls: each strikes, one after the other`);
   if (s.pierce) lines.push(`Bolts pierce ${s.pierce} enem${s.pierce === 1 ? 'y' : 'ies'}`);
   if (s.burst) lines.push(`Bursts for ${Math.round(BURST_SHARE * 100)}% damage within ${s.burst.toFixed(2)} cells`);
   return lines.join('\n');

@@ -7,8 +7,8 @@
 // (s until he may roll out of a swing again), minions }. A dev spawn (game/devspawn.js) gets one
 // too.
 //
-// On him: `stage` (1 a sword, 2 a broadsword, 3 a staff, 4 a bow: his profile, core/enemies.js
-// STAGE_PROFILES), `on` (the fight has started), `clock` (the room's time: s since the phase
+// On him: `stage` (1 a sword, 2 a bow, 3 a morning star, 4 a twin morning star: his profile,
+// core/enemies.js STAGE_PROFILES), `on` (the fight has started), `clock` (the room's time: s since the phase
 // began, running back while he rewinds), `rewinding`, `rising` (beaten, rising into the sky as a
 // ghost: { t, from, u }) and `ascended` (gone that way: no body is left) (all sent to friends with his row,
 // net/protocol.js). This game's own hero and echoes follow his clock (game/rewind.js), on every
@@ -122,7 +122,7 @@ function dodge(f) {
   Object.assign(e, { mode: 'attack', attack: i, t: 0, bit: false, leap: 0, yaw, speed: 0, path: null, shield: 0.6 });
   e.attacks++; f.rolled = 0; f.way = yaw;
 }
-// With a ranged weapon (the staff, the bow) he keeps away: the AI runs him backwards
+// With a ranged weapon (the bow) he keeps away: the AI runs him backwards
 // (`backpedal`, game/enemyai.js), and once the player is well inside the distance he keeps
 // (keep[0]) he leaps back out of reach, facing them, every `leap.every` s at most
 function keepAway(f) {
@@ -222,9 +222,9 @@ function endRewind(f) {
   e.barred = barred({ stage: e.stage });
   f.rewind = null; f.tape = newTape(); f.next = 0; f.cool = G.firstSummon; f.combo = 0; f.dodge = 1; f.leap = 1;
   engage(e);
-  setStatus([null, null, `${e.profile.label} takes up a broadsword. Your echo does again what you did!`,
-    `${e.profile.label} takes up a staff. Two of your echoes walk again!`,
-    `${e.profile.label} takes up a bow! Three of your echoes walk again!`][e.stage]);
+  setStatus([null, null, `${e.profile.label} takes up a bow. Your echo does again what you did!`,
+    `${e.profile.label} takes up a morning star. Two of your echoes walk again!`,
+    `${e.profile.label} takes up a morning star with two balls! Three of your echoes walk again!`][e.stage]);
   sfx('rewound', { at: e });
 }
 

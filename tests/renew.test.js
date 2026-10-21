@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { state } from './fixtures.js';
 import { World } from '../src/world/world.js';
 import { BOSSES, bossAt, BOSS_ARENAS } from '../src/core/bosses.js';
-import { RENEW, RENEW_BROAD, RENEW_STAFF, RENEW_BOW, REN_SPIDER, REN_FACE, SPIDER, FIREFACE, ENEMY_KINDS, STAGE_PROFILES, BOSS_PROFILES,
+import { RENEW, RENEW_BOW, RENEW_FLAIL, RENEW_TWIN, REN_SPIDER, REN_FACE, SPIDER, FIREFACE, ENEMY_KINDS, STAGE_PROFILES, BOSS_PROFILES,
   attacksInReach, guardianLevel, enemyProfile } from '../src/core/enemies.js';
 import { RENEW_FIGHT, PHASES, risenAt, bodyRow, bodiesAt, summonCount, barred, duskAt, newTape, record, spanAt, tapeLength, rewindTime, rewoundAt,
   echoEvents, inStrike, echoesIn } from '../src/core/renew.js';
@@ -58,12 +58,12 @@ test('his arena is the one his depth would have, with braziers lit round it; he 
   }
 });
 
-test('four phases, each with a weapon of the game in his hands: a sword, a broadsword, a staff, a bow', () => {
+test('four phases, each with a weapon of the game in his hands: a sword, a bow, a morning star, a twin morning star', () => {
   assert.equal(PHASES, 4);
-  assert.deepEqual(STAGE_PROFILES.renew, [RENEW, RENEW_BROAD, RENEW_STAFF, RENEW_BOW]);
+  assert.deepEqual(STAGE_PROFILES.renew, [RENEW, RENEW_BOW, RENEW_FLAIL, RENEW_TWIN]);
   assert.deepEqual(STAGE_PROFILES.renew.map(p => p.weapon), RENEW_FIGHT.weapons);
-  assert.deepEqual(RENEW_FIGHT.weapons.map(id => ITEMS[id].weapon.kind), ['sword', 'sword', 'staff', 'bow']);
-  assert.equal(ITEMS[RENEW_FIGHT.weapons[1]].name, 'Broadsword');
+  assert.deepEqual(RENEW_FIGHT.weapons.map(id => ITEMS[id].weapon.kind), ['sword', 'bow', 'flail', 'flail']);
+  assert.deepEqual(RENEW_FIGHT.weapons.slice(2).map(id => ITEMS[id].weapon.balls ?? 1), [1, 2], 'first one ball, then two');
   for (const p of STAGE_PROFILES.renew) {
     assert.ok(p.figure && p.model === 'character' && p.boss === 'renew' && p.guardian, p.type);
     assert.equal(p.hp, RENEW.hp, 'each phase is a whole bar of the same health');
@@ -75,32 +75,44 @@ test('four phases, each with a weapon of the game in his hands: a sword, a broad
   assert.ok(RENEW.chase > 2 && RENEW.chase < 2.8);
   const slash = RENEW.attacks[0];
   assert.ok(slash.hitAt > SWORD.activeStart && slash.hitAt < 2.5 * SWORD.activeStart);
-  assert.ok(RENEW_BROAD.attacks[0].arc < slash.arc && RENEW_BROAD.attacks[0].power > slash.power, 'the broadsword sweeps wider and harder');
-  // the sword: blows from close by (a lunge from further off); the staff: spells from afar
+  // the morning star: slower, wider, further and harder than the sword; its lunge knocks you down
+  const swing = RENEW_FLAIL.attacks[0];
+  assert.equal(swing.clip, 'slash');
+  assert.ok(swing.hitAt > slash.hitAt && swing.arc < slash.arc && swing.hitReach > slash.hitReach && swing.power > slash.power);
+  assert.ok(RENEW_FLAIL.attacks.find(a => a.name === 'dash').knockDown);
+  // the twin morning star strikes twice in a swing, each blow lighter, together harder
+  for (const a of RENEW_TWIN.attacks.filter(a => a.name === 'slash' || a.name === 'dash')) {
+    assert.ok(a.twice > a.hitAt && a.twice < a.attackTime, a.name);
+    assert.ok(a.power < swing.power && 2 * a.power > swing.power && !a.knockDown, a.name);
+  }
+  // the sword and the flails: blows from close by (a lunge from further off)
   const at = (p, d) => attacksInReach(p, d, 0).map(i => p.attacks[i].name);
   assert.deepEqual(at(RENEW, 0.8), ['slash']); assert.deepEqual(at(RENEW, 2), ['dash']);
-  assert.deepEqual(at(RENEW_STAFF, 4).filter(n => n !== 'summon').sort(), ['spell', 'volley']);
-  assert.equal(RENEW_STAFF.attacks.find(a => a.name === 'volley').projectile.volley, 3);
+  assert.deepEqual(at(RENEW_TWIN, 1), ['slash']); assert.deepEqual(at(RENEW_TWIN, 2.2), ['dash']);
   // strong as a descent boss over the three bars, though each is less
   const level = guardianLevel(5, 'descent'), bar = enemyProfile(RENEW, level).hp, tier = enemyProfile({ ...RENEW, hp: 1000 }, level).hp;
   assert.ok(bar < tier && PHASES * bar > tier && PHASES * bar < 3 * tier);
 });
 
-test('with the staff and the bow he keeps his distance: running backwards, leaping back', () => {
-  for (const p of [RENEW_STAFF, RENEW_BOW]) {
-    assert.equal(p.style, 'ranged'); assert.ok(p.backpedal >= 1 && p.keep[0] >= 3, p.type);
-    const leap = p.attacks.find(a => a.name === 'leap');
-    assert.ok(leap.dodge.back && leap.dodge.dist > 2 && leap.dodge.hop > 0.5 && leap.dodge.to < leap.attackTime);
-  }
-  assert.ok(RENEW_BOW.keep[0] > RENEW_STAFF.keep[0], 'further off still with the bow');
-  assert.ok(barred({ stage: 3 }).has('leap') && barred({ stage: 4 }).has('leap'), 'only ever as a dodge');
+test('with the bow he keeps his distance: running backwards, leaping back', () => {
+  const p = RENEW_BOW;
+  assert.equal(p.style, 'ranged'); assert.ok(p.backpedal >= 1 && p.keep[0] >= 3, p.type);
+  const leap = p.attacks.find(a => a.name === 'leap');
+  assert.ok(leap.dodge.back && leap.dodge.dist > 2 && leap.dodge.hop > 0.5 && leap.dodge.to < leap.attackTime);
+  assert.ok(barred({ stage: 2 }).has('leap'), 'only ever as a dodge');
+  for (const q of [RENEW, RENEW_FLAIL, RENEW_TWIN]) assert.notEqual(q.style, 'ranged', q.type);
   // the bow: arrows (the game's arrow), now and then three at once, a little slower to draw than a player's
   const at = (p, d) => attacksInReach(p, d, 0).map(i => p.attacks[i].name);
-  assert.deepEqual(at(RENEW_BOW, 6).sort(), ['arrows', 'shoot']);
+  assert.deepEqual(at(RENEW_BOW, 6).filter(n => n !== 'summon').sort(), ['arrows', 'shoot']);
   const shot = RENEW_BOW.attacks[0];
   assert.equal(shot.clip, 'shoot'); assert.equal(shot.projectile.kind, 'arrow');
   assert.ok(shot.hitAt > 0.36 && shot.projectile.speed < 16, 'slower than a player\'s bow, to be dodged');
   assert.equal(RENEW_BOW.attacks.find(a => a.name === 'arrows').projectile.volley, 3);
+});
+
+test('beaten, he always drops a flail', () => {
+  assert.equal(RENEW.ownWeapon, 'flail');
+  for (const p of STAGE_PROFILES.renew) assert.equal(p.ownWeapon, 'flail', p.type);
 });
 
 test('beaten, he rises away into the sky; the echoes fight on a while', () => {
@@ -111,15 +123,16 @@ test('beaten, he rises away into the sky; the echoes fight on a while', () => {
 
 test('his minions: spiders in phase 2, Fire-faces in phase 3, cast out of the sky', () => {
   assert.equal(RENEW.attacks.some(a => a.summon), false);
-  assert.equal(RENEW_BROAD.attacks.find(a => a.summon).summon.kind, 'renspider');
-  assert.equal(RENEW_STAFF.attacks.find(a => a.summon).summon.kind, 'renface');
+  assert.equal(RENEW_BOW.attacks.find(a => a.summon).summon.kind, 'renspider');
+  assert.equal(RENEW_FLAIL.attacks.find(a => a.summon).summon.kind, 'renface');
+  assert.equal(RENEW_TWIN.attacks.some(a => a.summon), false);
   for (const [k, base] of [[REN_SPIDER, SPIDER], [REN_FACE, FIREFACE]]) {
     assert.ok(k.minion && k.plain && k.species === base.species && k.label === base.label && k.hp < base.hp, k.type);
     assert.equal(ENEMY_KINDS[k.type], k);
   }
   assert.equal(summonCount(1, 0), 0);
   assert.equal(summonCount(2, 1), RENEW_FIGHT.minions[1] - 1);
-  assert.equal(summonCount(3, 9), 0); assert.equal(summonCount(4, 0), 0, 'no minions with the bow');
+  assert.equal(summonCount(3, 9), 0); assert.equal(summonCount(4, 0), 0, 'no minions with the twin morning star');
   assert.ok(barred({ stage: 1 }).has('roll') && barred({ stage: 2, summonDue: true }).has('roll'));
   assert.ok(barred({ stage: 2 }).has('summon') && !barred({ stage: 2, summonDue: true }).has('summon'));
   assert.ok(!barred({ stage: 2, summonDue: true }).has('slash'));
@@ -180,4 +193,8 @@ test('the echo strikes the blows and lets go the shots the hero did, where and w
   assert.ok(!inStrike(s, { x: s.x, y: 1, z: s.z - 0.7, r: CHAR_R }));
   assert.ok(!inStrike(s, { x: s.x, y: 1, z: s.z + 1.3, r: CHAR_R }));
   assert.ok(!inStrike(s, { x: s.x, y: 2.5, z: s.z + 0.5, r: CHAR_R }));
+  // a flail of two balls: each strikes, in its half of the active window
+  const twin = newTape(), flail = { ranged: false, kind: 'flail', range: 1, arc: 2, a0: 0.2, a1: 0.4, balls: 2 };
+  [0.1, 0.22, 0.26, 0.32, 0.38].forEach((t, i) => record(twin, i * 0.05, { x: 0, y: 1, z: 0, sw: { n: 1, t, yaw: 0, fired: false, ...flail } }));
+  assert.deepEqual(echoEvents(twin).strikes.map(x => Math.round(x.t * 100)), [5, 15]);
 });

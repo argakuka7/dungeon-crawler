@@ -1,7 +1,8 @@
 # Combat and enemies
 
-Four kinds of weapon: swords swing (most of this page), bows, crossbows and staffs shoot (see
-[Bows, crossbows and staffs](#bows-crossbows-and-staffs)). The controls are the same for all.
+Five kinds of weapon: swords swing (most of this page) and so do flails (see [Flails](#flails)),
+bows, crossbows and staffs shoot (see [Bows, crossbows and staffs](#bows-crossbows-and-staffs)).
+The controls are the same for all.
 
 - **Mouse (Diablo style):** click the floor to walk there (pathing over the floor
   graph, to the closest reachable floor if the spot cannot be reached), click an enemy
@@ -195,11 +196,12 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
   would have anyway (with braziers lit round it): no monster but a hero like you, the same figure,
   in a hood. He runs as fast as you, chains his blows, lunges, and rolls out of the way of your
   swings. Each of his four phases is a whole health bar, with a weapon in his hands: a sword, a
-  broadsword, a staff and a bow; with the last two he runs backwards and leaps back to keep his
-  distance. At the end of every bar he turns back time: everything in the room runs backwards to when the phase began, you too (nothing
+  bow (he runs backwards and leaps back to keep his distance), a morning star and a twin morning
+  star (two balls: every swing strikes twice). At the end of every bar he turns back time: everything in the room runs backwards to when the phase began, you too (nothing
   hurts anybody meanwhile), and then there are two of you: your echo does again what you did, and
   its blows hurt you, while ghosts of him and his minions fight it again as they fought you. After
-  the last one he does not come back: he rises into the sky as a ghost, and his loot falls out of it. In phases 2 and 3 he casts
+  the last one he does not come back: he rises into the sky as a ghost, and his loot falls out of it,
+  always a flail among it. In phases 2 and 3 he casts
   spiders, then Fire-faces, out of the sky, and the fight falls from dusk into night. See
   [bosses.md](bosses.md#renew).
 - Squirtle (`blender/squirtle.py`): a little blue water serpent with a beak that runs about under
@@ -277,6 +279,28 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
   Cooldowns vary by ±20% per blow. Throws are aimed ahead of a running player by half the way
   they would run before the throw arrives; changing direction dodges them.
 - Blows start within 0.75 height (a stair step or a ramp) and land within 0.85.
+
+## Flails
+
+Flails (`kind: 'flail'`, five bases; stats in [progression.md](progression.md#flails)) are swung
+like swords, with the same rules: the blade arc becomes the sweep of the ball, within its reach
+and the same height band, one hit per target and ball, the wind-up's step-in, Shift's
+auto-attack. Their timing (`FLAIL` in `core/combat.js`) comes round later than a sword's (the
+ball trails the hand) and sweeps longer; they play the Slash clip retimed to it. They sweep wider
+than any sword and shove harder (their base `knockback`). A flail of two or three balls shares its
+active window out between them (`ballAt`): each ball strikes once in its part of it (`sword.ball`;
+the hits so far are forgotten as the next ball comes round), for the damage it shows; a body
+the first ball shoved out of reach is missed by the next. Their whoosh is deeper, with the
+chain rattling (`flail`, `audio/sfx.js`).
+
+In the hand (`render/held.js swingFlail`) each ball hangs on its chain from the top of the
+handle and swings with whatever the hand does: a point that falls, keeps its speed and stays
+within its chain's length of the anchor (Verlet, in steps of 1/120 s), off the floor under the
+one holding it (dragged along it) and apart from its other balls; the ball turns to hang along
+its chain, the links are copies of the model's first one laid along it, sagging as it
+slackens. The model's own chains, lying as on the floor, are hidden (`blender/items.py` FLAILS:
+the anchor, the chain's length and each ball's pivot are in the item's extras). Renew's, the
+others' and the echoes' flails swing the same way.
 
 ## Bows, crossbows and staffs
 

@@ -1,4 +1,4 @@
-// Generated sound effects (Web Audio, no sample files): a sword whoosh, a bow's draw and twang,
+// Generated sound effects (Web Audio, no sample files): a sword whoosh, a flail's, a bow's draw and twang,
 // a crossbow's shot and reload, a spell's cast and burst, shots striking walls, hits, kills,
 // getting hurt, blocks, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, lightning and thunder, the player's body (jumps,
 // falls, knock-downs, fluid deaths), travel, items and the bag, and the enemies' voices
@@ -60,6 +60,17 @@ const SOUNDS = {
     f.frequency.exponentialRampToValueAtTime(2600 * p, t + 0.07);
     f.frequency.exponentialRampToValueAtTime(800 * p, t + 0.21);
     noise(t, 0.24, f);
+  },
+  flail(t, out, p) {   // a flail swung round: a deep, slow whoosh, its chain rattling
+    const f = filter('bandpass', 260 * p, 0.8, amp(t, 0.08, 1.4, 0.26, out));
+    f.frequency.setValueAtTime(260 * p, t);
+    f.frequency.exponentialRampToValueAtTime(1300 * p, t + 0.14);
+    f.frequency.exponentialRampToValueAtTime(420 * p, t + 0.34);
+    noise(t, 0.36, f);
+    for (let i = 0; i < 5; i++) {
+      const at = t + 0.02 + i * 0.045 + Math.random() * 0.02, hz = (2800 + Math.random() * 1600) * p;
+      tone('square', hz, hz * 0.9, at, 0.02, filter('highpass', 1800 * p, 1, amp(at, 0.001, 0.05, 0.03, out)));
+    }
   },
   draw(t, out, p) {    // a bow being drawn: a creak of wood and a string stretching
     tone('sawtooth', 110 * p, 150 * p, t, 0.22, filter('bandpass', 700 * p, 6, amp(t, 0.06, 0.12, 0.18, out)));

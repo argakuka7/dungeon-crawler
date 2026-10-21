@@ -21,7 +21,7 @@ click. It runs at 44.1 kHz whatever the speakers run at (the browser resamples),
 
 | Sound | Event |
 |---|---|
-| `swing`, `hit`, `kill`, `hurt`, `sizzle` | combat and burning (`game/juice.js`) |
+| `swing`, `flail`, `hit`, `kill`, `hurt`, `sizzle` | combat and burning (`game/juice.js`) |
 | `fireball`, `zap`, `frost`, `whump`, `shatter`, `icecrack` | projectiles (`game/juice.js`) |
 | `laser`, `zapburst`, `fizzle` | the Spicy's laser shining, bursting, put out (`game/juice.js`) |
 | `thunder`, `gust` | the Wolla's storm cloud flashing, its blow (`game/juice.js`) |
