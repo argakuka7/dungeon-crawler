@@ -76,7 +76,8 @@ export const weaponDps = s => s.damage * (1 + s.crit * (s.critDamage - 1)) / s.i
 // its affixes. null for what is not armor.
 //   slot; armor; block: percent chance (shields); moveSpeed: percent (boots); life: + maximum
 //   health; regen: percent faster healing; burnResist / poisonResist: percent less from burning /
-//   poison; steady: percent less shoved about
+//   poison; steady: percent less shoved about. A base's own `perks` (the hats: core/items.js
+//   WEARABLES) count like affixes.
 // Armor grows as fast as enemy damage (core/enemies.js GROWTH.damage), and the share of a blow it
 // takes off (armorReduction) is reckoned against the level of what struck it: a piece from as deep
 // as the enemy takes off as much at every depth, an older one less and less.
@@ -89,6 +90,7 @@ export function armorStats(item) {
   const a = ITEMS[item?.itemId]?.armor;
   if (!a) return null;
   const sum = { armor: 0, armorPct: 0, block: 0, moveSpeed: 0, life: 0, regen: 0, burnResist: 0, poisonResist: 0, steady: 0 };
+  for (const [k, v] of Object.entries(a.perks ?? {})) sum[k] += v;
   for (const x of item.gen?.affixes ?? []) {
     const { stat, op } = AFFIX[x.id];
     sum[op === 'pct' && stat === 'armor' ? 'armorPct' : stat] += x.value;

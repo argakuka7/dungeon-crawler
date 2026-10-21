@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { player, state } from './state.js';
 import { sfx } from '../audio/sfx.js';
-import { ITEMS, ARMOR_SLOTS } from '../core/items.js';
+import { ARMOR_SLOTS } from '../core/items.js';
 import { equippedWeapon } from '../core/combat.js';
 import { refreshMaxHp } from '../core/progression.js';
 import { wornTotals, armorReduction, BLOCK_TAKES } from '../core/gear/stats.js';
@@ -52,8 +52,7 @@ function dress(want) {
   let loading = false;
   for (const slot of ARMOR_SLOTS) {
     const w = character.worn[slot], x = want[slot];
-    // (headwear that is not armor, the dev tools' /wear, stays while no helm is worn)
-    if (!x) { if (w && ITEMS[w.id]?.armor) takeOff(character, slot); continue; }
+    if (!x) { if (w) takeOff(character, slot); continue; }
     if (same(w, x)) continue;
     if (thingLoaded(x.id)) wear(character, x.id, x);
     else { loading = true; loadThing(x.id).catch(e => console.error('armor failed to load', e)); }

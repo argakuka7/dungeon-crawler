@@ -100,7 +100,7 @@ Developer (`?dev=1`):
 | `/weapon <weapon> [rarity] [level] [drop]` | roll a weapon and equip it, or drop it at your feet (default unusual, item level 8) |
 | `/enchant <enchantment\|off>` | enchant the equipped weapon for free (Toasty, Icky, Nippy, Zappy, Shiny: `core/gear/enchants.js`), or take it off |
 | `/armor <armor> [rarity] [level] [drop]` | roll a piece of armor and put it on, or drop it at your feet (default unusual, item level 8; `docs/armor.md`) |
-| `/wear <thing\|off>` | headwear on or off (a helm worn goes over it) |
+| `/wear <thing\|off>` | a hat on (a Vanilla one into the bag: hats are head armor, `docs/armor.md`), or off what is on the head |
 | `/gold <amount>`, `/heal`, `/level <n>` | the hero |
 | `/music <mood\|auto>` | hold one mood of the music |
 | `/saves` | the saved heroes and worlds, and what is being saved now |

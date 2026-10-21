@@ -18,6 +18,24 @@ blocks one, and the affixes add health, healing, speed and resistances.
 | Shield | Wooden Buckler (1, 3, blocks 10%), Round Shield (2, 5, 13%), Kite Shield (4, 7, 16%), Heater Shield (6, 9, 19%), Tower Shield (8, 12, 22%) |
 | Feet | Sandals (1, 3, 3% faster), Leather Boots (1, 4), Hobnail Boots (3, 6), Iron Greaves (5, 9), Winged Boots (7, 8, 6% faster) |
 
+The hats the villagers and the people out in the world wear (`WEARABLES` in `core/items.js`, the
+models of `blender/items.py`) are head armor too, `HATS`: light, each with a little something of
+its own (`perks`, counted like affixes), half as likely as a helm each. They drop, the Smith sells
+them, and the hero wears them like any armor:
+
+| Hat | Item level, armor | Its own |
+|---|---|---|
+| Headscarf | 1, 2 | 10% faster healing |
+| Hood | 1, 3 | 10% less hurt by poison |
+| Straw hat | 1, 3 | 10% less hurt by fire (it keeps off the sun) |
+| Explorer's hat | 2, 4 | 2% faster on your feet |
+| Wizard hat | 3, 3 | 20% faster healing |
+| Miner's helmet | 3, 8 | (a hard hat) |
+| Welding mask | 4, 9 | 20% less hurt by fire |
+
+A drop picks the slot first (each as likely, the bare ones three times), then a base of it by
+weight.
+
 ## Stats
 
 `armorStats` (`core/gear/stats.js`), worked out when read like a weapon's:
@@ -112,6 +130,8 @@ The resistances add up to at most 75%. Names come from `core/gear/names.js` with
 - A shield is modelled on the outside of the left forearm, turned towards the front. Its extras
   say where it goes on the back (`back_bone`, `back_gltf`) and how it lies face up on the floor and
   in the pictures (`floor_gltf`, `render/itempictures.js layFlat`).
+- A hat sits on the head's socket like on a villager (`socket`, `mount_*` in its extras); its band,
+  hem or stars are its trim.
 - Rarity: the trim (the material `Items_Trim`) is dull and rusty on Crap and Shitty, plain on
   Vanilla and Unremarkable, in the rarity's colour from Decent up, glowing and pulsing from
   Remarkable up, and runs through the rainbow on OMG; gems glow in the rarity's colour from Decent
@@ -124,7 +144,8 @@ The resistances add up to at most 75%. Names come from `core/gear/names.js` with
 ## Dev tools
 
 With `?dev=1`: `/armor <armor> [rarity] [level] [drop]` rolls a piece and puts it on, or lays it
-at your feet (`/armor great omg 20`); `/give <armor>` puts on a Vanilla one.
+at your feet (`/armor great omg 20`); `/give <armor>` puts on a Vanilla one, and so does `/wear
+<hat>` (`/wear off` takes off what is on the head).
 
 ## Tests
 

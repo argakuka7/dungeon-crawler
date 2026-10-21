@@ -56,13 +56,17 @@ export function rollBase(rng, ilvl, favor = null) {
 }
 
 // Armor (core/items.js ARMORS): five of each slot, a light one or two from item level 1 and
-// heavier ones further down. Tags: 'armor' and the slot. Each slot weighs the same once all of it
-// drops; rolls lean towards the slots the player wears nothing in (`favor`: a list of slots,
-// FAVOR times their weight), so an empty slot soon gets something.
+// heavier ones further down, and the hats the villagers wear (core/items.js WEARABLES: light
+// head armor, half as likely as a helm each). Tags: 'armor' and the slot. A roll picks the slot
+// first, each as likely, then a base of it by weight; it leans towards the slots the player wears
+// nothing in (`favor`: a list of slots, FAVOR times as likely), so an empty slot soon gets something.
 const armorBase = (itemId, minLevel, weight = 1) => ({ itemId, minLevel, weight, tags: ['armor', ITEMS[itemId].armor.slot] });
 export const ARMOR_BASES = [
   armorBase('armor_head_cap', 1), armorBase('armor_head_skullcap', 2), armorBase('armor_head_nasal', 4),
   armorBase('armor_head_horned', 6), armorBase('armor_head_great', 8),
+  armorBase('wear_headscarf', 1, .5), armorBase('wear_hood', 1, .5), armorBase('wear_straw_hat', 1, .5),
+  armorBase('wear_explorer_hat', 2, .5), armorBase('wear_wizard_hat', 3, .5), armorBase('wear_miner_helmet', 3, .5),
+  armorBase('wear_welding_mask', 4, .5),
   armorBase('armor_body_padded', 1), armorBase('armor_body_leather', 2), armorBase('armor_body_chain', 4),
   armorBase('armor_body_scale', 6), armorBase('armor_body_plate', 8),
   armorBase('armor_shield_buckler', 1), armorBase('armor_shield_round', 2), armorBase('armor_shield_kite', 4),
@@ -72,10 +76,14 @@ export const ARMOR_BASES = [
 ];
 for (const b of ARMOR_BASES) BASE[b.itemId] = b;
 // favor: slots to lean towards (an array), or null; slot: only this slot
+const draw = (rng, list, weight) => {
+  let w = rng() * list.reduce((n, x) => n + weight(x), 0);
+  for (const x of list) if ((w -= weight(x)) < 0) return x;
+  return list.at(-1);
+};
 export function rollArmorBase(rng, ilvl, favor = null, slot = null) {
   const open = ARMOR_BASES.filter(b => ilvl >= b.minLevel && (!slot || b.tags[1] === slot));
-  const weight = b => b.weight * (favor?.includes(b.tags[1]) ? FAVOR : 1);
-  let w = rng() * open.reduce((n, b) => n + weight(b), 0);
-  for (const b of open) if ((w -= weight(b)) < 0) return b;
-  return open.at(-1);
+  const slots = [...new Set(open.map(b => b.tags[1]))];
+  const s = slot ?? draw(rng, slots, x => favor?.includes(x) ? FAVOR : 1);
+  return draw(rng, open.filter(b => b.tags[1] === s), b => b.weight);
 }

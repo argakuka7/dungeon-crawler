@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { assets } from './paths.js';
 import { readGlb, decoderReady } from '../tools/glb.mjs';
 import { mulberry32 } from '../src/core/util.js';
-import { ITEMS, ARMORS, ARMOR_SLOTS, isGear } from '../src/core/items.js';
+import { ITEMS, ARMORS, HATS, WEARABLES, ARMOR_SLOTS, isGear } from '../src/core/items.js';
 import { RARITY, RARITIES } from '../src/core/gear/rarities.js';
 import { AFFIX, AFFIXES } from '../src/core/gear/affixes.js';
 import { ARMOR_BASES, BASES, baseTags } from '../src/core/gear/bases.js';
@@ -25,26 +25,29 @@ import { SPIDER, STUNDER } from '../src/core/enemies.js';
 const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 const slotOf = item => ITEMS[item.itemId].armor.slot;
 
-test('five pieces of armor for every slot, a light one from item level 1, each with a model', () => {
+test('five pieces of armor for every slot (and the hats), a light one from item level 1, each with a model', () => {
   assert.deepEqual(ARMOR_SLOTS, ['head', 'body', 'shield', 'feet']);
   for (const slot of ARMOR_SLOTS) {
     const bases = ARMOR_BASES.filter(b => slotOf(b) === slot);
-    assert.equal(bases.length, 5, slot);
+    assert.equal(bases.length, slot === 'head' ? 5 + HATS.length : 5, slot);
     assert.ok(bases.some(b => b.minLevel === 1), `a ${slot} piece from item level 1`);
     assert.deepEqual(bases.map(b => b.tags), bases.map(() => ['armor', slot]));
   }
-  assert.equal(ARMORS.length, ARMOR_BASES.length);
-  for (const a of ARMORS) {
-    assert.equal(a.category, 'armor'); assert.equal(a.slot, a.armor.slot); assert.equal(a.stackLimit, 1);
+  // every hat the villagers wear is head armor too, and drops
+  assert.deepEqual(HATS.map(h => h.id), WEARABLES.filter(w => w.slot === 'head').map(w => w.id));
+  assert.equal(ARMORS.length + HATS.length, ARMOR_BASES.length);
+  for (const a of [...ARMORS, ...HATS]) {
+    assert.equal(a.category, HATS.includes(a) ? 'wearable' : 'armor'); assert.equal(a.slot, a.armor.slot); assert.equal(a.stackLimit, 1);
     assert.equal(a.model, `assets/items/${a.id}.glb`);
     assert.ok(a.armor.armor > 0 && a.description, a.id);
     assert.equal(a.armor.block > 0, a.slot === 'shield', `${a.id}: only shields block`);
     assert.ok(isGear(a.id) && !isGear('item_potion_health'));
     assert.deepEqual(baseTags(a.id), ['armor', a.slot]);
   }
-  // heavier pieces come deeper down and hold more
+  // heavier pieces come deeper down and hold more (the hats are light, each a little something of its own)
+  for (const h of HATS) assert.ok(h.armor.armor < ITEMS.armor_head_great.armor.armor && (Object.keys(h.armor.perks).length || h.armor.speed || h.armor.armor >= 8), h.id);
   for (const slot of ARMOR_SLOTS) {
-    const bases = ARMOR_BASES.filter(b => slotOf(b) === slot && ITEMS[b.itemId].armor.speed === 0);
+    const bases = ARMOR_BASES.filter(b => slotOf(b) === slot && ITEMS[b.itemId].armor.speed === 0 && !HATS.includes(ITEMS[b.itemId]));
     for (let i = 1; i < bases.length; i++) assert.ok(ITEMS[bases[i].itemId].armor.armor > ITEMS[bases[i - 1].itemId].armor.armor, bases[i].itemId);
   }
   // the weapons' bases are as they were
@@ -97,6 +100,10 @@ test('armor grows with item level and rarity; what it takes off a blow is bounde
   const shield = armorStats(rollArmor(mulberry32(1), 1, { rarity: 'vanilla', itemId: 'armor_shield_tower' }));
   assert.equal(shield.block, 22);
   assert.equal(armorStats(rollArmor(mulberry32(1), 1, { rarity: 'vanilla', itemId: 'armor_feet_winged' })).moveSpeed, 6);
+  // a hat's own perks count like affixes
+  const straw = armorStats(rollArmor(mulberry32(1), 1, { rarity: 'vanilla', itemId: 'wear_straw_hat' }));
+  assert.deepEqual([straw.slot, straw.armor, straw.burnResist], ['head', 3, 10]);
+  assert.equal(armorStats(rollArmor(mulberry32(1), 1, { rarity: 'vanilla', itemId: 'wear_explorer_hat' })).moveSpeed, 2);
   // the same piece from as deep as the enemy takes off as much at every depth
   for (const level of [1, 5, 10, 20]) {
     const a = at('vanilla', level).armor;
@@ -286,5 +293,12 @@ test('every piece of armor is in parts that name their bones; shields say where 
     }
     // the trim the game tints by rarity
     assert.ok(json.materials.some(m => m.name === 'Items_Trim'), `${a.id} has trim`);
+  }
+  // a hat sits on the head's socket (render/figure.js wear), with trim to show its rarity
+  for (const h of HATS) {
+    const json = readGlb(resolve(assets, `items/${h.id}.glb`)).json, root = json.nodes[json.scenes[0].nodes[0]];
+    assert.equal(root.extras.socket, 'head', h.id);
+    assert.ok(!json.nodes.some(n => n.extras?.bone), h.id);
+    assert.ok(json.materials.some(m => m.name === 'Items_Trim'), `${h.id} has trim`);
   }
 });

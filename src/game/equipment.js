@@ -9,8 +9,7 @@ import { rollWeapon, rollArmor } from '../core/gear/generate.js';
 import { displayName } from '../core/gear/stats.js';
 import { dropAtFeet } from './loot.js';
 import { equippedWeapon, canChangeWeapon, readiedFlask } from '../core/combat.js';
-import { prepareSword, equipSword, character } from '../render/character.js';
-import { loadThing, wear, takeOff } from '../render/figure.js';
+import { prepareSword, equipSword } from '../render/character.js';
 
 let request = 0;
 export const equipmentAllowed = () => !state.transitioning && !state.equipping && canChangeWeapon(player);
@@ -96,12 +95,11 @@ export function devDropArmor(itemId, rarity = 'unusual', ilvl = 8) {
   if (!state.dev || !ITEMS[itemId]?.armor) return null;
   return dropAtFeet(rollArmor(Math.random, ilvl, { itemId, rarity }));
 }
-// dev tools: put a worn thing on the player, or take it off again (null). Headwear only for
-// now: the player's hands carry the weapon and the animator has no carry poses for them yet.
-export async function devWear(itemId) {
-  if (!state.dev || !character.ready) return false;
-  if (itemId == null) { takeOff(character, 'head'); return true; }
-  if (ITEMS[itemId]?.slot !== 'head') { setStatus('Only headwear on the player for now'); return false; }
-  await loadThing(itemId);
-  return wear(character, itemId);
+// dev tools: put headwear on the player (a Vanilla one, into the bag: hats are head armor), or
+// take off what is on the head (null). Only headwear: the player's hands carry the weapon.
+export function devWear(itemId) {
+  if (!state.dev) return false;
+  if (itemId == null) { takeOffArmor('head'); return true; }
+  if (ITEMS[itemId]?.slot !== 'head') { setStatus('Only headwear on the player'); return false; }
+  return devWearArmor(itemId, 'vanilla', 1);
 }

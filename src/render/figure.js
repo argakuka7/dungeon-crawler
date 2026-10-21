@@ -127,20 +127,24 @@ export const thingLoaded = id => things.has(id);
 
 // Put item `id` on figure f (in its slot, replacing what was there). false: not loaded yet.
 // Each copy has its own materials (a cube's fade changes them, render/fade.js). opts (armor):
-// rarity (an id: how its trim shines), back (a shield slung on the back).
+// rarity (an id: how its trim shines), back (a shield slung on the back). Armor in parts goes on
+// its bones (wearArmor); a hat (head armor too) sits on its socket like any worn thing.
 export function wear(f, id, opts = {}) {
   const def = ITEMS[id], template = things.get(id);
   if (!def?.slot || !template) return false;
-  if (def.armor) return wearArmor(f, id, template, opts);
+  let parts = false;
+  template.traverse(o => { parts ||= !!o.userData.bone; });
+  if (def.armor && parts) return wearArmor(f, id, template, opts);
   takeOff(f, def.slot);
   const object = template.clone(true);
   let node = null;
   object.traverse(o => { if (!node && o.userData.socket) node = o; });
-  const d = node?.userData ?? {}, glowing = [];
+  const d = node?.userData ?? {}, glowing = [], materials = [];
   object.traverse(o => {
     if (!o.isMesh) return;
     o.material = [].concat(o.material).map(m => {
       m = m.clone();
+      materials.push(m);
       // the gem-like part (the glTF material Items_Facets) shines in the item's glow colour
       if (def.glow && /Facets/.test(m.name)) { m.emissive.set(def.glow); m.emissiveIntensity = .6; glowing.push(m); }
       return m;
@@ -153,8 +157,9 @@ export function wear(f, id, opts = {}) {
   f.bones[d.socket ?? 'hand.R'].add(object);
   object.position.fromArray(d.mount_offset_gltf ?? [0, 0, 0]);
   object.quaternion.fromArray(d.mount_quat_gltf ?? [0, 0, 0, 1]);
-  f.worn[def.slot] = { id, object, objects: [object], hold: d.hold ?? null, float: d.float ?? 0, glowing, shine: null,
-    at: object.position.clone(), mount: object.quaternion.clone() };
+  const rarity = def.armor ? opts.rarity ?? null : null;
+  f.worn[def.slot] = { id, object, objects: [object], hold: d.hold ?? null, float: d.float ?? 0, glowing, rarity,
+    shine: shine(materials.filter(m => !glowing.includes(m)), rarity), at: object.position.clone(), mount: object.quaternion.clone() };
   return true;
 }
 
@@ -213,10 +218,12 @@ const DULL = { crap: '#9a6a48', shitty: '#a8a294' };
 function shine(materials, rarityId) {
   const r = RARITY[rarityId], trims = materials.filter(m => /Trim/.test(m.name)), gems = materials.filter(m => /Facets/.test(m.name));
   if (!r) return null;
-  if (DULL[r.id]) for (const m of trims) m.color.set(DULL[r.id]);
+  // the trim in a colour of the rarity's own, not times its vertex colours (a hat's band is dark)
+  const plain = c => { for (const m of trims) { m.color.set(c); m.vertexColors = false; m.needsUpdate = true; } };
+  if (DULL[r.id]) plain(DULL[r.id]);
   if (!r.glow) return null;
   const color = new THREE.Color().setRGB(...r.rgb);   // (linear, like the loot's glow: render/loot.js)
-  for (const m of trims) m.color.copy(color).lerp(WHITE, 0.15);
+  plain(color.clone().lerp(WHITE, 0.15));
   const base = r.rank >= RARITY.remarkable.rank ? 0.2 + 0.15 * (r.rank - RARITY.remarkable.rank) : 0;
   const pulse = [];
   for (const m of [...trims, ...gems]) {

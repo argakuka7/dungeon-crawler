@@ -241,6 +241,8 @@ function compareText(item) {
 // the depth's level (the deepest anyone got to: what you meet), its block and speed. The affixes
 // come under it, like a weapon's.
 const pct = x => `${Math.round(x * 100)}%`;
+const PERKS = { regen: v => `${v}% faster healing`, burnResist: v => `${v}% less hurt by fire`, poisonResist: v => `${v}% less hurt by poison`,
+  life: v => `+${v} health`, steady: v => `${v}% less shoved about` };
 const against = () => Math.max(depthLevel(state.map?.depth ?? 0), depthLevel(state.run?.quests.deepest ?? 0));
 function armorText(item) {
   const s = armorStats(item), r = rarityOf(item), level = against();
@@ -248,6 +250,7 @@ function armorText(item) {
     `Armor ${s.armor} · takes ${pct(armorReduction(s.armor, level))} off blows (level ${level})`];
   if (s.block) lines.push(`Blocks ${s.block}% of blows${s.slot === 'shield' ? ' (not with a bow: it goes on your back)' : ''}`);
   if (s.moveSpeed && ITEMS[item.itemId].armor.speed) lines.push(`${ITEMS[item.itemId].armor.speed}% faster on your feet`);
+  for (const [k, v] of Object.entries(ITEMS[item.itemId].armor.perks ?? {})) lines.push(PERKS[k](v));   // (a hat's own)
   if (selected?.from === 'bag' && isWorn(player.inventory, item.instanceId)) lines.push('Worn');
   return lines.join('\n');
 }

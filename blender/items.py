@@ -970,6 +970,7 @@ def chest(m, v=0):
 # fist, which is the round end of an arm of radius figure.LIMB_R (.125).
 # ----------------------------------------------------------------------------
 HEAD_R = .26
+TRIM = armor.TRIM_SLOT   # the trim of headwear, which is head armor too (src/core/items.js)
 SCARF = '#8a3a6c'
 SCARF_DOTS = '#e3b64e'
 SCARF_DARK = '#6d2c55'
@@ -1069,8 +1070,10 @@ def headscarf(m, v=0):
     m.lathe((0, 0, r + .02), [(-.02, .025), (0, 0)], SCARF, n=8, jitter=0)   # the crown
     # the hem: a rolled edge all round
     hem = [on_sphere((0, 0, 0), r + .014, math.tau * i / n, edge(math.tau * i / n)) for i in range(n + 1)]
+    m.slot = TRIM   # (the trim: worn as armor, it takes the rarity's colour)
     for a, b in zip(hem, hem[1:]):
         m.tube([a, b], .018, SCARF_DARK, n=5)
+    m.slot = 0
     # the knot at the nape and its tails
     knot = on_sphere((0, 0, 0), r + .03, math.pi, math.radians(112))
     m.blob(knot, (.055, .045, .045), SCARF_DARK, n=6, jitter=.08)
@@ -1116,13 +1119,14 @@ def welding_mask(m, v=0):
     # the window: a raised frame and the dark green glass, in the upper half
     wz, ww, wh = .1, .3, .12
     y = plate_y(0, wz) - .024
+    m.slot = TRIM
     for (cx, cz, sx, sz) in [(0, wz + wh / 2 + .02, ww + .08, .04), (0, wz - wh / 2 - .02, ww + .08, .04),
                              (-ww / 2 - .02, wz, .04, wh), (ww / 2 + .02, wz, .04, wh)]:
         m.box((cx, y - .012 + .35 * cx * cx, cz), (sx, .03, sz), MASK_DARK)
     m.slot = 2
     m.box((0, y + .004, wz), (ww, .012, wh), LENS)
     m.box((-.08, y - .004, wz + .03), (.06, .004, .018), '#7fa595')   # a glint
-    m.slot = 1
+    m.slot = TRIM
     # hinge knobs on the sides, where the headband holds the mask
     for side in (-1, 1):
         m.lathe((side * (across(.02) + .01), back + .03, .02), [(0, .045), (.03, .045), (.045, .028)], IRON,
@@ -1149,9 +1153,8 @@ def wizard_hat(m, v=0):
             (0, .32, base + .74)]
     radii = [.25, .2, .145, .09, .045, .012]
     m.tube(path, radii, HAT, n=12)
-    m.slot = 1
+    m.slot = TRIM
     m.lathe((0, .01, base), [(0, .255), (.07, .235)], STAR, n=18, jitter=0)
-    m.slot = 0
     for (k, t, phi, size) in [(0, .55, -.3, .045), (1, .3, .9, .035), (1, .7, -1.1, .03), (2, .4, .2, .03),
                               (0, .3, 2.6, .04), (2, .1, -2.2, .03)]:
         a, b = Vector(path[k]), Vector(path[k + 1])
@@ -1159,6 +1162,7 @@ def wizard_hat(m, v=0):
         r = radii[k] + (radii[k + 1] - radii[k]) * t
         normal = Vector((math.sin(phi), -math.cos(phi), .25)).normalized()
         star(m, c + Vector((normal.x, normal.y, 0)).normalized() * (r - .004), normal, size, STAR)
+    m.slot = 0
 
 
 def towel(m, v=0):
@@ -1616,7 +1620,9 @@ def hood(m, v=0):
     sheet(m, grid, .03, lambda i, j: HOOD_DARK if j == rows - 1 else HOOD, closed=True)
     # the hem round the face, and the point falling back
     hem = [on_sphere((0, 0, 0), r + .02, math.tau * i / n, edge(math.tau * i / n)) for i in range(-4, 5)]
+    m.slot = TRIM
     m.tube(hem, .02, HOOD_DARK, n=5)
+    m.slot = 0
     top = on_sphere((0, 0, 0), r + .02, math.pi, math.radians(40))
     m.tube([top, top + Vector((0, .1, -.04)), top + Vector((0, .17, -.16))], [.07, .045, .015], HOOD, n=6)
 
@@ -1628,6 +1634,7 @@ def miner_helmet(m, v=0):
     m.lathe((0, 0, base), [(0, HEAD_R + .04), (.05, HEAD_R + .035), (.14, HEAD_R - .01), (.22, .16), (.28, .07), (.3, 0)],
             HELMET, n=16, jitter=0, colors=[HELMET, HELMET, HELMET_DARK, HELMET])
     m.lathe((0, 0, base - .015), [(0, HEAD_R + .09), (.025, HEAD_R + .085), (.035, HEAD_R + .03)], HELMET_DARK, n=16, jitter=0)
+    m.slot = TRIM
     m.tube([(0, -.22, base + .17), (0, -.12, base + .27), (0, 0, base + .31), (0, .12, base + .27), (0, .22, base + .17)],
            .024, HELMET_DARK, n=5)   # the ridge
     m.slot = 1
@@ -1653,7 +1660,9 @@ def explorer_hat(m, v=0):
         x, y, z = m.vertices[i]
         if x < -.25:
             m.vertices[i] = (x, y, z + (-.25 - x) * .7)
+    m.slot = TRIM
     m.lathe((0, 0, base + .01), [(0, .255), (.05, .245)], '#3d2d22', n=14, jitter=0)
+    m.slot = 0
     m.leaf(Vector((.2, .1, base + .04)), Vector((.3, .26, base + .2)), .035, '#c8553a')
 
 
@@ -1665,7 +1674,9 @@ def straw_hat(m, v=0):
     for rr in (.32, .41):   # the woven rings on the brim
         m.ring((0, 0, base + .025 - (rr - .3) * .1), rr, .007, STRAW_DARK, n=20, section=3)
     m.lathe((0, 0, base + .02), [(0, .26), (.1, .25), (.15, .2), (.17, .1), (.18, 0)], STRAW, n=14, jitter=.02)
+    m.slot = TRIM
     m.lathe((0, 0, base + .03), [(0, .265), (.035, .26)], '#7a4a2a', n=14, jitter=0)
+    m.slot = 0
 
 
 # (name, builder, variant, category, attachment)
