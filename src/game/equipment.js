@@ -1,10 +1,11 @@
 // Prepare the model first, then commit visual + inventory equipment together. The hand holds the
 // weapon, or a flask readied to throw (core/inventory.js readyItem; game/throws.js) instead.
+// Armor goes on and off at once (game/armor.js puts it on the hero).
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { ITEMS } from '../core/items.js';
-import { ownedItem, equipItem, addInstance, readyItem } from '../core/inventory.js';
-import { rollWeapon } from '../core/gear/generate.js';
+import { ownedItem, equipItem, addInstance, readyItem, wearItem, takeOffItem, wornItem } from '../core/inventory.js';
+import { rollWeapon, rollArmor } from '../core/gear/generate.js';
 import { displayName } from '../core/gear/stats.js';
 import { dropAtFeet } from './loot.js';
 import { equippedWeapon, canChangeWeapon, readiedFlask } from '../core/combat.js';
@@ -40,6 +41,22 @@ export async function equipOwnedWeapon(instanceId) {
     return false;
   } finally { if (token === request) state.equipping = false; }
 }
+// put on the piece of armor `instanceId` (instead of what was in its slot)
+export function wearArmor(instanceId) {
+  const slot = ownedItem(player.inventory, instanceId);
+  if (!wearItem(player.inventory, instanceId)) return false;
+  sfx('equip', { pitch: 0.8 }); sfx('clink', { pitch: 0.6, volume: 0.6 });
+  setStatus(`Wearing ${displayName(slot)}`);
+  return true;
+}
+// take off what is worn in `slot` (it stays in the bag)
+export function takeOffArmor(slot) {
+  const was = wornItem(player.inventory, slot);
+  if (!takeOffItem(player.inventory, slot)) return false;
+  sfx('toss', { volume: 0.5 });
+  setStatus(`Took off ${displayName(was)}`);
+  return true;
+}
 // Take flask `itemId` in hand to throw it (null: put it away, the weapon back in hand).
 export async function readyFlask(itemId) {
   const inventory = player.inventory, def = itemId && ITEMS[itemId];
@@ -67,6 +84,17 @@ export async function devSwapWeapon(itemId, rarity = 'vanilla', ilvl = 1) {
 export function devDropWeapon(itemId, rarity = 'unusual', ilvl = 8) {
   if (!state.dev || !ITEMS[itemId]?.weapon) return null;
   return dropAtFeet(devRoll(itemId, rarity, ilvl));
+}
+// dev tools: roll a piece of armor into the bag and put it on, or drop one at your feet
+export function devWearArmor(itemId, rarity = 'vanilla', ilvl = 1) {
+  if (!state.dev || !ITEMS[itemId]?.armor) return false;
+  const id = addInstance(player.inventory, rollArmor(Math.random, ilvl, { itemId, rarity }));
+  if (!id) { setStatus('Inventory is full'); return false; }
+  return wearArmor(id);
+}
+export function devDropArmor(itemId, rarity = 'unusual', ilvl = 8) {
+  if (!state.dev || !ITEMS[itemId]?.armor) return null;
+  return dropAtFeet(rollArmor(Math.random, ilvl, { itemId, rarity }));
 }
 // dev tools: put a worn thing on the player, or take it off again (null). Headwear only for
 // now: the player's hands carry the weapon and the animator has no carry poses for them yet.

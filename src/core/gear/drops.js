@@ -1,4 +1,4 @@
-// What a defeated enemy drops besides its coins: maybe a weapon, maybe a potion. Seeded by
+// What a defeated enemy drops besides its coins: maybe a weapon, armor, a potion. Seeded by
 // the world seed, the enemy's id and its life (`wave`, core/respawn.js), so the same enemy always
 // drops the same thing in one life (also when it comes back after a death, like its coins), and
 // something new when it comes back after a while. The item level is the enemy's level, so deeper
@@ -14,12 +14,15 @@
 // Crystals (for the Enchanter, core/gear/enchants.js) on a stream of their own: ordinary enemies
 // one 1.5% of the time (× the same √ of their XP), side guardians one, descent guardians two;
 // each of the five kinds as likely. Kinds with their own `drops` drop none.
+// Armor on a stream of its own too: ordinary enemies a piece ARMOR_CHANCE of the time (× the same √
+// of their XP), guardians one each, at least Decent like their weapons. It leans towards the
+// slots the player wears nothing in (`bare`, gear/bases.js rollArmorBase).
 // Which potion is drawn by the enemy's level (core/potions.js potionTable): mostly health
 // potions, the stronger ones and the rest deeper down.
 // favor: the kind of weapon the player fights with; drops lean towards it (gear/bases.js).
 import { mulberry32, hash32 } from '../util.js';
 import { RARITY } from './rarities.js';
-import { rollWeapon } from './generate.js';
+import { rollWeapon, rollArmor } from './generate.js';
 import { rollPotions } from '../potions.js';
 import { CRYSTALS } from '../items.js';
 
@@ -29,7 +32,8 @@ export const WEAPON_CHANCE = 0.05, POTION_CHANCE = 0.03;
 const worth = xp => Math.sqrt(Math.max(1, xp ?? 30) / 30);
 export const dropChance = xp => Math.min(0.15, WEAPON_CHANCE * worth(xp));
 export const potionChance = xp => Math.min(0.1, POTION_CHANCE * worth(xp));
-export const CRYSTAL_CHANCE = 0.015;
+export const CRYSTAL_CHANCE = 0.015, ARMOR_CHANCE = 0.04;
+export const armorChance = xp => Math.min(0.12, ARMOR_CHANCE * worth(xp));
 export const crystalChance = xp => Math.min(0.05, CRYSTAL_CHANCE * worth(xp));
 
 // learn: loot.html#drops (see learn/README.md)
@@ -78,5 +82,14 @@ export function potionDrops(enemy, seed = 0) {
     : R() < potionChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? 1 : 0;
   return rollPotions(R, level, n);
 }
+// a piece of armor, or none; bare: the slots the player wears nothing in (drops lean towards them)
+export function armorDrops(enemy, seed = 0, bare = null) {
+  const R = stream(enemy, seed, 0xa4302), level = Math.max(1, enemy.level || 1);
+  if (enemy.kind?.drops) return [];
+  if (!enemy.guardian) return R() < armorChance(enemy.kind?.dropXP ?? enemy.kind?.xp) * (enemy.kind?.dropScale ?? 1) ? [rollArmor(R, level, { favor: bare })] : [];
+  const g = guardianDrops(enemy.guardianRole ?? 'descent', level);
+  return [rollArmor(R, level, { floor: g.floor, luck: g.luck, guardian: true, favor: bare })];
+}
 // everything but the coins
-export const enemyDrops = (enemy, seed = 0, favor = null) => [...weaponDrops(enemy, seed, favor), ...potionDrops(enemy, seed), ...crystalDrops(enemy, seed)];
+export const enemyDrops = (enemy, seed = 0, favor = null, bare = null) => [...weaponDrops(enemy, seed, favor), ...armorDrops(enemy, seed, bare),
+  ...potionDrops(enemy, seed), ...crystalDrops(enemy, seed)];

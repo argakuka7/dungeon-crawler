@@ -18,8 +18,8 @@ any character can wear them; for now only the villagers do (and the player throu
 
 There is no enchanting tent yet; the enchanter keeps the herb stall (`town_merchant_b`). Three
 of them trade (`core/shops.js`): the alchemist sells potions ([potions.md](potions.md)), the
-enchanter enchants weapons for copper and crystals and the smith re-rolls their affixes for copper
-([loot.md](loot.md#enchanting-and-re-rolling)). All six give
+enchanter enchants weapons for copper and crystals and the smith re-rolls affixes for copper
+([loot.md](loot.md#enchanting-and-re-rolling)) and sells armor ([armor.md](armor.md)). All six give
 quests ([quests.md](quests.md)). Hovered, a villager has a gold label (a `!` in front: a quest for
 you, a `?`: one to hand in; then the label always shows); a click walks up to them, and so does
 the action key beside them, to talk (`game/inventory.js talkTo`): the panel opens on the Quests tab

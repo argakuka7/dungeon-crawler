@@ -69,3 +69,50 @@ export function enchantEntry(item) {
 }
 // damage per second, counting crits: what to compare weapons by
 export const weaponDps = s => s.damage * (1 + s.crit * (s.critDamage - 1)) / s.interval;
+
+// --- armor ---------------------------------------------------------------------------------------
+// A piece of armor's stats (core/items.js ARMORS), like a weapon's: its base armor grown by item
+// level (ARMOR_GROWTH a level) and scaled by rarity (the weapons' damage factor), then changed by
+// its affixes. null for what is not armor.
+//   slot; armor; block: percent chance (shields); moveSpeed: percent (boots); life: + maximum
+//   health; regen: percent faster healing; burnResist / poisonResist: percent less from burning /
+//   poison; steady: percent less shoved about
+// Armor grows as fast as enemy damage (core/enemies.js GROWTH.damage), and the share of a blow it
+// takes off (armorReduction) is reckoned against the level of what struck it: a piece from as deep
+// as the enemy takes off as much at every depth, an older one less and less.
+export const ARMOR_GROWTH = 0.1, ARMOR_K = 160, MAX_REDUCTION = 0.75;
+// a block takes BLOCK_TAKES of the blow, none of its shove or statuses; at most MAX_BLOCK percent
+export const BLOCK_TAKES = 0.2, MAX_BLOCK = 50;
+export const armorGrowth = level => 1 + ARMOR_GROWTH * (Math.max(1, level || 1) - 1);
+const ARMOR_STATS = ['armor', 'block', 'moveSpeed', 'life', 'regen', 'burnResist', 'poisonResist', 'steady'];
+export function armorStats(item) {
+  const a = ITEMS[item?.itemId]?.armor;
+  if (!a) return null;
+  const sum = { armor: 0, armorPct: 0, block: 0, moveSpeed: 0, life: 0, regen: 0, burnResist: 0, poisonResist: 0, steady: 0 };
+  for (const x of item.gen?.affixes ?? []) {
+    const { stat, op } = AFFIX[x.id];
+    sum[op === 'pct' && stat === 'armor' ? 'armorPct' : stat] += x.value;
+  }
+  return {
+    slot: a.slot,
+    armor: Math.max(1, Math.round((a.armor * armorGrowth(item.gen?.ilvl) * rarityOf(item).damage + sum.armor) * (1 + sum.armorPct / 100))),
+    block: a.block + sum.block, moveSpeed: a.speed + sum.moveSpeed,
+    life: sum.life, regen: sum.regen, burnResist: sum.burnResist, poisonResist: sum.poisonResist, steady: sum.steady,
+  };
+}
+// the share of a blow (0..MAX_REDUCTION) `armor` takes off one from an enemy of `level`
+export const armorReduction = (armor, level) => armor > 0 ? Math.min(MAX_REDUCTION, armor / (armor + ARMOR_K * armorGrowth(level))) : 0;
+// What everything worn adds up to (inv.worn: core/inventory.js). The shield's block only counts
+// while it is in hand (`shield`: false with a bow, it is on the back then). The resistances add
+// up to at most 75%.
+export function wornTotals(inv, { shield = true } = {}) {
+  const out = Object.fromEntries(ARMOR_STATS.map(k => [k, 0]));
+  for (const id of Object.values(inv?.worn ?? {})) {
+    const s = id && armorStats(inv.slots.find(x => x?.instanceId === id));
+    if (s) for (const k of ARMOR_STATS) out[k] += s[k];
+  }
+  if (!shield) out.block = 0;
+  out.block = Math.min(MAX_BLOCK, out.block);
+  for (const k of ['burnResist', 'poisonResist', 'steady']) out[k] = Math.min(75, out[k]);
+  return out;
+}

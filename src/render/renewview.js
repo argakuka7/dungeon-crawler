@@ -26,7 +26,7 @@ import { ITEMS } from '../core/items.js';
 import { attackOf, STAGE_PROFILES } from '../core/enemies.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { BONES, Q } from '../net/protocol.js';
-import { rig, rigReady, createFigure, loadThing, thingLoaded, wear, takeOff } from './figure.js';
+import { rig, rigReady, createFigure, loadThing, thingLoaded, wear, wearLike, takeOff } from './figure.js';
 import { character, mountWeapon } from './character.js';
 import { prepareHeld, updateHeld } from './held.js';
 import { trackLight, untrackLight } from './lightpool.js';
@@ -210,7 +210,7 @@ function animate(e, dt, off) {
     if (ghost) o.material.color.lerp(ECHO, 0.55);
     o.material.opacity = seen; o.material.depthWrite = !ghost;
   }
-  if (dead || ghost) for (const obj of [v.weapon.object, ...Object.values(v.f.worn).map(w => w.object)]) obj?.traverse(o => {
+  if (dead || ghost) for (const obj of [v.weapon.object, ...Object.values(v.f.worn).flatMap(w => w.objects)]) obj?.traverse(o => {
     if (o.isMesh) for (const m of [].concat(o.material)) { m.transparent = seen < 1; m.opacity = seen; m.depthWrite = !ghost; }
   });
   v.ghost.opacity = ghost ? 0 : GHOST_OPACITY * fade;
@@ -320,8 +320,10 @@ function makeEcho() {
     o.material.emissive?.set('#5f86b8');
     materials.push(o.material);
   });
-  for (const id of Object.values(character.worn ?? {}).map(w => w.id)) if (thingLoaded(id)) wear(f, id);
-  for (const w of Object.values(f.worn)) w.object.traverse(o => { if (o.isMesh) { o.material.transparent = true; o.material.depthWrite = false; materials.push(o.material); } });
+  wearLike(f, character);
+  for (const w of Object.values(f.worn)) for (const obj of w.objects) obj.traverse(o => {
+    if (o.isMesh) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; materials.push(m); }
+  });
   const light = new THREE.PointLight('#cfe6ff', 0.9, 2.6, 2);
   light.position.y = 0.8;
   trackLight(light, f.group);

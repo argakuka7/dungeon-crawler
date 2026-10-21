@@ -9,6 +9,7 @@ import { vaultLocked } from './trials.js';
 import { player, state, setStatus } from './state.js';
 import { chestLoot } from '../core/chests.js';
 import { favoredKind } from '../core/combat.js';
+import { bareSlots } from '../core/inventory.js';
 import { showChestOpen } from '../render/chests.js';
 import { spill } from './loot.js';
 import { sfx } from '../audio/sfx.js';
@@ -37,7 +38,7 @@ export function openChest(site) {
   state.run.chests.add(site.id);
   // the loot only comes out once the lid is all the way open
   const opening = showChestOpen(state.world, site.id);
-  const { copper, items } = chestLoot(site, state.map.depth, state.map.seed, favoredKind(player));
+  const { copper, items } = chestLoot(site, state.map.depth, state.map.seed, favoredKind(player), bareSlots(player.inventory));
   const a = site.anchor, front = site.approach ?? a;
   spill(`c:${site.id}`, front, copper, items, { kept: true }, { x: a.x, y: a.y + 0.6, z: a.z }, opening);
   sfx('chest', { at: a });

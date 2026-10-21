@@ -33,7 +33,7 @@ import { rollWeapon } from './gear/generate.js';
 import { RARITY } from './gear/rarities.js';
 import { validGen } from './loot.js';
 import { rollPotions } from './potions.js';
-import { ITEMS, QUEST_THINGS } from './items.js';
+import { ITEMS, QUEST_THINGS, isGear } from './items.js';
 import { CHESTS } from './chests.js';
 import { depthLevel, grown, GROWTH, ENEMY_KINDS } from './enemies.js';
 import { xpToNext } from './progression.js';
@@ -843,7 +843,7 @@ function checkItem(i) {
   if (!isObj(i) || !Object.hasOwn(ITEMS, i.itemId) || ITEMS[i.itemId].category === 'currency') return null;
   const count = Number.isInteger(i.count) && i.count > 0 && i.count <= ITEMS[i.itemId].stackLimit ? i.count : null;
   if (!count) return null;
-  if (i.gen !== undefined) return ITEMS[i.itemId].weapon && validGen(i.gen) ? { itemId: i.itemId, count: 1, gen: structuredClone(i.gen) } : null;
+  if (i.gen !== undefined) return isGear(i.itemId) && validGen(i.gen) ? { itemId: i.itemId, count: 1, gen: structuredClone(i.gen) } : null;
   return { itemId: i.itemId, count };
 }
 function checkStage(s) {

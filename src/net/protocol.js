@@ -28,7 +28,8 @@
 //   me      { ts, seed, cube, busy, pose, body, ground, swim, down, ko, hp, maxHp, level,
 //             weapon, armed, worn, skin }  to all, about 20 times a second: where I am and how I
 //                                      look (`ts`: the sender's clock, ms; skin: the id of the
-//                                      painted skin I wear, or null; body: [x, y, z, vx,
+//                                      painted skin I wear, or null; worn: what I wear,
+//                                      'id@rarity@back' each, wornOf; body: [x, y, z, vx,
 //                                      vz], what enemies go after; ko: lying downed, [helped up
 //                                      %, s left], game/downed.js). The host passes it on less
 //                                      often to players in another cube (FAR_EVERY).
@@ -86,8 +87,11 @@
 //   version { v }                      either way: the other side runs a different version
 //   bye     {}                         either way: leaving
 
+import { ITEMS } from '../core/items.js';
+import { RARITY } from '../core/gear/rarities.js';
+
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 12;
+export const PROTOCOL = 13;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others
@@ -202,6 +206,20 @@ const r3 = x => Math.round(x * 1000) / 1000;
 // learn: network.html#send-code (see learn/README.md)
 export function packPose(position, yaw, hips, quats) {
   return { p: position.map(r3), yaw: r3(yaw), hips: hips.map(r3), q: quats.map(x => Math.round(x * Q)) };
+}
+
+// what a `me` says the player wears (render/partner.js capturedLook): 'id@rarity@back' each, or
+// a bare id (as before armor) -> [{ id, rarity, back }], one per slot, only things we know
+export function wornOf(list) {
+  const out = [], slots = new Set();
+  for (const s of Array.isArray(list) ? list.slice(0, 8) : []) {
+    if (typeof s !== 'string') continue;
+    const [id, rarity, back] = s.split('@'), def = ITEMS[id];
+    if (!def?.slot || slots.has(def.slot)) continue;
+    slots.add(def.slot);
+    out.push({ id, rarity: Object.hasOwn(RARITY, rarity) ? rarity : null, back: back === '1' });
+  }
+  return out;
 }
 
 // a well-formed pose (it came over the network)

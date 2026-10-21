@@ -7,7 +7,11 @@ The treasure chest is the one animated asset: its lid is a child object on the
 hinge with the Open and Close actions (glTF clips).
 
 MCP: import items; items.main()
-CLI: Blender -b --python blender/items.py -- [output-directory]
+CLI: Blender -b --python blender/items.py -- [output-directory] [--only PREFIX]
+
+--only PREFIX exports and renders only the items whose names start with it (armor_: the armor of
+armor.py), and leaves the other GLBs and icons alone; the manifest and the overview are still
+written for everything.
 
 Default output: assets/items.glb + assets/items/ (glb, icons, manifest; the game draws
 items from their models, the icons are for the kids' guide, learn/),
@@ -25,6 +29,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import armor
 import props
 import town
 
@@ -195,8 +200,10 @@ def make_mesh(m, name):
     for mat in (surface('Items_Clay', .88, 0), surface('Items_Metal', .56, .2),
                 surface('Items_Facets', .38, .05)):
         mesh.materials.append(mat)
-    if GLOW_SLOT in slots:   # a quest thing's glowing parts (quest_prop), lit in the prop's colour
+    if GLOW_SLOT in slots or armor.TRIM_SLOT in slots:   # a quest thing's glowing parts (quest_prop), lit in the prop's colour
         mesh.materials.append(props.material(name + '_glow', glow=getattr(m, 'glow', None) or '#ffffff', strength=1.5))
+    if armor.TRIM_SLOT in slots:   # armor's trim (armor.py): the game tints it by rarity
+        mesh.materials.append(surface('Items_Trim', .42, .45))
     attr = mesh.color_attributes.new(name='Color', type='FLOAT_COLOR', domain='CORNER')
     mesh.color_attributes.active_color = attr
     for poly, color, slot in zip(mesh.polygons, colors, slots):
@@ -218,12 +225,14 @@ def finish(m, name, info, collection):
     obj['cube_crawler_item'] = True
     for key, value in info.items():
         obj[key] = value
-    for suffix, part, pivot in m.parts:
+    for suffix, part, pivot, *extras in m.parts:
         # vertices relative to the pivot, so the part rotates about it
         part.vertices = [(x - pivot[0], y - pivot[1], z - pivot[2]) for x, y, z in part.vertices]
         child = bpy.data.objects.new(f'{name}_{suffix}', make_mesh(part, f'{name}_{suffix}'))
         collection.objects.link(child)
         child['cube_crawler_part'] = True
+        for key, value in (extras[0] if extras else {}).items():   # (armor: the bone it follows)
+            child[key] = value
         child.parent = obj
         child.location = (pivot[0], pivot[1], pivot[2] + dz)
     return obj
@@ -1693,7 +1702,9 @@ SPECS = [(f'item_stick_{s}', stick, i, 'resource', 'ground')
     (f'quest_{q}', builder, 0, 'quest', 'ground') for q, builder in (
         ('locket', locket), ('toy_rabbit', toy_rabbit), ('letter', letter), ('parcel', parcel),
         ('map_scrap', map_scrap), ('ring', ring_item), ('compass', compass), ('journal', journal))] + [
-    (f'quest_{q[0]}', quest_prop, i, 'quest', 'ground') for i, q in enumerate(QUEST_PROPS)]
+    (f'quest_{q[0]}', quest_prop, i, 'quest', 'ground') for i, q in enumerate(QUEST_PROPS)] + [
+    (name, builder, 0, 'armor', 'body') for name, builder, _ in armor.ARMOR]
+ARMOR_EXTRAS = {name: extras for name, _, extras in armor.ARMOR}
 
 
 def build(scene=None):
@@ -1737,6 +1748,8 @@ def build(scene=None):
                 info['hold'] = hold
             if builder == crystal_ball:
                 info['float'] = BALL_FLOAT
+        if category == 'armor':   # in the character's space; a part on each bone it follows (armor.py)
+            info.update(ARMOR_EXTRAS[name], slot=name.split('_')[1], units='character_rig', game_scale=.55)
         if builder == potion:
             info['potion_type'] = POTIONS[v]
         if builder == flask:
@@ -1758,7 +1771,7 @@ def build(scene=None):
 
 
 def validate(objects):
-    assert len(objects) == len(SPECS) == 71 + len(QUEST_PROPS)
+    assert len(objects) == len(SPECS) == 71 + len(QUEST_PROPS) + len(armor.ARMOR)
     assert {o.name for o in objects} == {s[0] for s in SPECS}
     report = []
     for obj in objects:
@@ -1785,6 +1798,8 @@ def validate(objects):
             assert abs(lo[2]) < 1e-6, (obj.name, lo)
         elif obj['attach'] == 'hand':
             assert lo[2] < 0 < hi[2] or obj['category'] == 'held', obj.name
+        elif obj['attach'] == 'body':   # armor: every part says its bone
+            assert all(p.get('bone') for p in [obj] + list(obj.children)), obj.name
         obj['radius'] = round(max(math.hypot(v.x, v.y) for v in vertices), 4)
         report.append({'name': obj.name, 'triangles': triangles,
                        'size': [round(b - a, 4) for a, b in zip(lo, hi)],
@@ -1794,13 +1809,14 @@ def validate(objects):
     return report
 
 
-def export(objects, directory):
+def export(objects, directory, only=None):
     directory = Path(directory).resolve()
     (directory / 'items').mkdir(parents=True, exist_ok=True)
     report = validate(objects)
     props.export_gltf(objects, directory / 'items.glb', animations=True)
     for obj in objects:
-        props.export_gltf([obj], directory / 'items' / (obj.name + '.glb'), animations=True)
+        if not only or obj.name.startswith(only):
+            props.export_gltf([obj], directory / 'items' / (obj.name + '.glb'), animations=True)
     (directory / 'items' / 'manifest.json').write_text(json.dumps(
         {'up': 'Y', 'weapon_scale': .55, 'assets': report}, indent=2) + '\n')
     return report
@@ -1821,6 +1837,7 @@ def setup_preview(scene, objects):
     groups = [[o for o in objects if o.name.startswith(p + '_')]
               for p in ('weapon_sword', 'weapon_bow', 'weapon_crossbow', 'weapon_staff')]
     groups.append([o for o in objects if o.name.startswith(('wear_', 'held_'))])
+    groups += [[o for o in objects if o.name.startswith(f'armor_{s}_')] for s in ('head', 'body', 'shield', 'feet')]
     groups.append([o for o in objects if o.name.startswith(('item_potion_health', 'item_potion_mana', 'item_potion_stamina'))])
     groups.append([o for o in objects if o.name.startswith(('item_potion_', 'item_flask_')) and not any(o in g for g in groups)])
     rest = [o for o in objects if not any(o in g for g in groups) and not o.name.startswith('quest_')]
@@ -1833,7 +1850,7 @@ def setup_preview(scene, objects):
               'item_town_portal': 'TOWN PORTAL', 'item_room_portal': 'ROOM PORTAL'}
     for row, group in enumerate(groups):
         for i, obj in enumerate(group):
-            x, y = (i - (len(group) - 1) / 2) * 1.6 + (-9 if row < rows else 11.5), (4 - row % rows) * 3.1
+            x, y = (i - (len(group) - 1) / 2) * 1.6 + (-9 if row < rows else 11.5), ((rows - 1) / 2 - row % rows) * 2.9
             low = min(v.co.z for v in obj.data.vertices)
             obj.location = (x, y, .085 - low)
             platform = bpy.data.meshes.new('ItemPlinth')
@@ -1855,7 +1872,7 @@ def setup_preview(scene, objects):
     cam = link('ItemsCamera', bpy.data.cameras.new('ItemsCamera'))
     cam.location = (3, -12, 14)
     town.aim(cam, (0, 0, .35))
-    cam.data.type, cam.data.ortho_scale = 'ORTHO', 48
+    cam.data.type, cam.data.ortho_scale = 'ORTHO', 56
     scene.camera = cam
     for name, pos, power, size in [('ItemsKey', (-3, -5, 10), 1500, 7),
                                   ('ItemsFill', (7, -1, 8), 900, 6), ('ItemsRim', (0, 6, 9), 1100, 5)]:
@@ -1892,7 +1909,7 @@ OVERVIEW = (1600, 1000)
 ICON = 256
 
 
-def render_previews(scene, objects, preview, directory, overview=True, previews=None):
+def render_previews(scene, objects, preview, directory, overview=True, previews=None, only=None):
     """Overview into previews (default: directory); icons into directory/items."""
     directory = Path(directory)
     overview_path = Path(previews or directory) / 'items-preview.png'
@@ -1921,6 +1938,8 @@ def render_previews(scene, objects, preview, directory, overview=True, previews=
             obj.hide_render = True
         scene.render.resolution_x = scene.render.resolution_y = ICON
         for obj, item in zip(objects, report):
+            if only and not obj.name.startswith(only):
+                continue
             for other in objects:
                 for part in [other] + list(other.children):
                     part.hide_render = other != obj
@@ -1940,26 +1959,31 @@ def render_previews(scene, objects, preview, directory, overview=True, previews=
         scene.render.filepath = str(overview_path)
 
 
-def main(directory=None, render=True):
+def main(directory=None, render=True, only=None):
     directory, blends, previews = props.output_dirs(directory)
     scene = bpy.data.scenes.new('ItemsShowroom')
     if bpy.context.window:
         bpy.context.window.scene = scene
     objects = build(scene)
-    report = export(objects, directory)
+    report = export(objects, directory, only)
     preview = setup_preview(scene, objects)
     bpy.ops.object.select_all(action='DESELECT')
     objects[12].select_set(True)
     bpy.context.view_layer.objects.active = objects[12]
     bpy.ops.wm.save_as_mainfile(filepath=str(blends / 'items.blend'))
     if render:
-        render_previews(scene, objects, preview, directory, previews=previews)
+        render_previews(scene, objects, preview, directory, previews=previews, only=only)
     return report
 
 
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+    only = None
+    if '--only' in args:
+        i = args.index('--only')
+        only = args[i + 1]
+        del args[i:i + 2]
     if len(args) > 1:
-        raise SystemExit('Usage: Blender -b --python blender/items.py -- [output-directory]')
+        raise SystemExit('Usage: Blender -b --python blender/items.py -- [output-directory] [--only PREFIX]')
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    print(json.dumps(main(args[0] if args else None), indent=2))
+    print(json.dumps(main(args[0] if args else None, only=only), indent=2))

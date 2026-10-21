@@ -33,7 +33,7 @@
 // settle; vy: falling.
 import { player, state, setStatus } from './state.js';
 import { coinDrops, inCollectReach, inMagnetReach, inFloorReach, steppedOn, walkTakes } from '../core/loot.js';
-import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar, fits, equippedItem } from '../core/inventory.js';
+import { addItem, addInstance, takeItem, isBound, formatCoins, autoBar, fits, equippedItem, bareSlots } from '../core/inventory.js';
 import { ITEMS } from '../core/items.js';
 import { RARITY, rarityOf } from '../core/gear/rarities.js';
 import { enemyDrops } from '../core/gear/drops.js';
@@ -102,15 +102,15 @@ function place(list, item, id, source, at, from, extra = {}) {
   return p;
 }
 
-// what enemy e leaves behind: its coins and its seeded weapon, potion and crystal drops
-// (core/gear/drops.js), leaning towards our weapons (we killed it); a Shiny weapon in hand shakes
+// what enemy e leaves behind: its coins and its seeded weapon, armor, potion and crystal drops
+// (core/gear/drops.js), leaning towards our weapons and the armor we lack (we killed it); a Shiny weapon in hand shakes
 // more coins loose (core/gear/enchants.js)
 export function dropLoot(e, copper) {
   const source = dropSource(e);
   if (state.run.dropped.has(source)) return;
   const shiny = enchantOf(equippedItem(player.inventory));
   if (shiny?.id === 'shiny') copper = Math.round(copper * (1 + shiny.value / 100));
-  const items = enemyDrops(e, state.map?.seed ?? 0, favoredKind(player));
+  const items = enemyDrops(e, state.map?.seed ?? 0, favoredKind(player), bareSlots(player.inventory));
   // (nothing at all: a Custo triangle, mostly; from where it went, if not its body: Renew's, out of the sky)
   if (copper || items.length) spill(source, e, copper, items, {}, e.lootFrom ?? undefined);
 }

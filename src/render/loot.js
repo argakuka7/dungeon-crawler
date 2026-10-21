@@ -1,6 +1,6 @@
 // Pickups on the ground: they arc out of the body, and when collected they swoop into the
 // player and shrink away. Coins and stackables hover, spin and bob with a faint glow of their
-// own colour; weapons lie flat, and their rarity shows in what glows around them (RARITIES
+// own colour; weapons lie flat (armor stands, a shield lies face up), and their rarity shows in what glows around them (RARITIES
 // glow in core/gear/rarities.js): a ring on the floor, a soft pool of light, a beam, rising
 // sparks, a turning circle of runes and a real light, more of it the rarer the weapon.
 // The bottom four (Crap to Unremarkable) do not glow at all; OMG runs through the rainbow and
@@ -11,6 +11,7 @@
 // disposing a cube leaves them alone.
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
+import { layFlat } from './itempictures.js';
 import { ITEMS } from '../core/items.js';
 import { RARITIES, rarityOf } from '../core/gear/rarities.js';
 import { player } from '../game/state.js';
@@ -22,7 +23,7 @@ const protos = new Map();   // itemId -> prototype (null while loading)
 const loads = new Map();    // itemId -> Promise (resolves once loaded or failed)
 const views = new Map();                               // pickup id -> { o, model, fx, light }
 let viewsWorld = null;
-const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72;
+const HOVER = 0.08, TOSS_HEIGHT = 0.75, SCALE = 1.35, WEAPON_SCALE = 0.72, ARMOR_SCALE = 0.5;
 // how a quest's thing glows: like a rarity, in gold
 const QUEST_GLOW = { id: 'quest', rank: 6, rgb: [1, 0.78, 0.32], glow: { ring: 0.9, halo: 0.9, beam: 1.6, sparks: 3, runes: false, light: 1.2 } };
 const glowOf = p => p.questItem ? QUEST_GLOW : p.gen ? rarityOf(p) : null;
@@ -37,7 +38,7 @@ const sparkOf = (r, k) => r.glow?.rainbow ? rainbow(sparkColor, Math.random()) :
 function proto(itemId) {
   if (protos.has(itemId)) return protos.get(itemId);
   protos.set(itemId, null);
-  const def = ITEMS[itemId], weapon = !!def.weapon;
+  const def = ITEMS[itemId], weapon = !!def.weapon, gear = weapon || !!def.armor;
   loads.set(itemId, loadGLB(def.model).then(g => {
     const root = g.scene;
     root.traverse(o => {
@@ -48,17 +49,18 @@ function proto(itemId) {
       o.material = [].concat(o.material).map(m => {
         m = m.clone(); m.userData.keep = true;
         // (a quest thing's own glowing parts, '<name>_glow', keep their light)
-        if (m.emissive && !weapon && !m.name.endsWith('_glow')) { m.emissive.copy(m.color); m.emissiveIntensity = 0.2; }
+        if (m.emissive && !gear && !m.name.endsWith('_glow')) { m.emissive.copy(m.color); m.emissiveIntensity = 0.2; }
         return m;
       });
       if (o.material.length === 1) o.material = o.material[0];
     });
     if (def.category === 'currency') root.rotation.x = Math.PI / 2;   // coins stand on their rim
     if (weapon) root.rotation.x = -Math.PI / 2;   // the blade (+Y) flat along the floor, its face up
+    layFlat(root);   // a shield face up (blender/armor.py floor_gltf)
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root), centre = box.getCenter(new THREE.Vector3());
     root.position.sub(centre);
-    const wrap = new THREE.Group(), scale = weapon ? WEAPON_SCALE : SCALE;
+    const wrap = new THREE.Group(), scale = weapon ? WEAPON_SCALE : def.armor ? ARMOR_SCALE : SCALE;
     wrap.add(root); wrap.scale.setScalar(scale);
     wrap.userData.half = (box.max.y - box.min.y) / 2 * scale;
     wrap.userData.scale = scale;

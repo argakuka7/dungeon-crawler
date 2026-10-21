@@ -41,7 +41,9 @@ being helped up and getting back in. Up to four players, co-op.
   same for the same seed, whatever the order cubes are visited in (`world/wfc.js`), so no
   map goes over the wire. Only the host starts new worlds (with the dev tools, N); the guests follow.
 - Everyone sends `me` 20 times a second: cube, position, the character's 14 bone rotations
-  (`render/partner.js capturePose`), weapon model, worn things, skin id, health and level. The
+  (`render/partner.js capturePose`), weapon model, worn things (armor with its rarity, so it
+  shines the same, and whether the shield is on the back: `id@rarity@back`, `net/protocol.js
+  wornOf`; [armor.md](armor.md)), skin id, health and level. The
   others draw them as a figure in the player's colour, ~110 ms in the past, blending the two
   messages around that moment (`src/net/sync.js Timeline`). Animation, attacks, ragdolls and
   get-ups all come along with the bones; nothing is animated twice. The host passes `me` on

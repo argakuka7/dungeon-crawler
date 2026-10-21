@@ -38,9 +38,10 @@ export const BASES = [
   base('weapon_staff_arcane', 8),
 ];
 export const BASE = Object.fromEntries(BASES.map(b => [b.itemId, b]));
-// tags for any weapon, including those that never drop
+// tags for any weapon or armor, including those that never drop
 export function baseTags(itemId) {
   if (BASE[itemId]) return BASE[itemId].tags;
+  if (ITEMS[itemId]?.armor) return ['armor', ITEMS[itemId].armor.slot];
   const kind = ITEMS[itemId]?.weapon?.kind ?? 'sword';
   return [kind, kind === 'sword' ? 'melee' : 'ranged'];
 }
@@ -49,6 +50,31 @@ export const FAVOR = 3;
 // favor: a kind (sword, bow, crossbow, staff) to lean towards, or null
 export function rollBase(rng, ilvl, favor = null) {
   const open = BASES.filter(b => ilvl >= b.minLevel), weight = b => b.weight * (b.tags[0] === favor ? FAVOR : 1);
+  let w = rng() * open.reduce((n, b) => n + weight(b), 0);
+  for (const b of open) if ((w -= weight(b)) < 0) return b;
+  return open.at(-1);
+}
+
+// Armor (core/items.js ARMORS): five of each slot, a light one or two from item level 1 and
+// heavier ones further down. Tags: 'armor' and the slot. Each slot weighs the same once all of it
+// drops; rolls lean towards the slots the player wears nothing in (`favor`: a list of slots,
+// FAVOR times their weight), so an empty slot soon gets something.
+const armorBase = (itemId, minLevel, weight = 1) => ({ itemId, minLevel, weight, tags: ['armor', ITEMS[itemId].armor.slot] });
+export const ARMOR_BASES = [
+  armorBase('armor_head_cap', 1), armorBase('armor_head_skullcap', 2), armorBase('armor_head_nasal', 4),
+  armorBase('armor_head_horned', 6), armorBase('armor_head_great', 8),
+  armorBase('armor_body_padded', 1), armorBase('armor_body_leather', 2), armorBase('armor_body_chain', 4),
+  armorBase('armor_body_scale', 6), armorBase('armor_body_plate', 8),
+  armorBase('armor_shield_buckler', 1), armorBase('armor_shield_round', 2), armorBase('armor_shield_kite', 4),
+  armorBase('armor_shield_heater', 6), armorBase('armor_shield_tower', 8),
+  armorBase('armor_feet_sandals', 1), armorBase('armor_feet_boots', 1), armorBase('armor_feet_hobnail', 3),
+  armorBase('armor_feet_greaves', 5), armorBase('armor_feet_winged', 7),
+];
+for (const b of ARMOR_BASES) BASE[b.itemId] = b;
+// favor: slots to lean towards (an array), or null; slot: only this slot
+export function rollArmorBase(rng, ilvl, favor = null, slot = null) {
+  const open = ARMOR_BASES.filter(b => ilvl >= b.minLevel && (!slot || b.tags[1] === slot));
+  const weight = b => b.weight * (favor?.includes(b.tags[1]) ? FAVOR : 1);
   let w = rng() * open.reduce((n, b) => n + weight(b), 0);
   for (const b of open) if ((w -= weight(b)) < 0) return b;
   return open.at(-1);

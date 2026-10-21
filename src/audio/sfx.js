@@ -1,6 +1,6 @@
 // Generated sound effects (Web Audio, no sample files): a sword whoosh, a bow's draw and twang,
 // a crossbow's shot and reload, a spell's cast and burst, shots striking walls, hits, kills,
-// getting hurt, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, lightning and thunder, the player's body (jumps,
+// getting hurt, blocks, pickups, thrown fireballs / punches / ice balls and burning, lasers, storms, lightning and thunder, the player's body (jumps,
 // falls, knock-downs, fluid deaths), travel, items and the bag, and the enemies' voices
 // (voices.js). Footsteps are footsteps.js, the continuous sounds loops.js. The audio context
 // lives in context.js.
@@ -189,6 +189,12 @@ const SOUNDS = {
   },
   pickup(t, out, p) {
     tone('sine', 660 * p, 990 * p, t, 0.1, amp(t, 0.004, 0.3, 0.1, out));
+  },
+  block(t, out, p) {     // a blow caught on a shield: a metal clang (inharmonic partials ringing out) over a thud
+    for (const [hz, gain, dur] of [[520, 0.3, 0.35], [1310, 0.18, 0.28], [2270, 0.1, 0.2], [3480, 0.06, 0.12]])
+      tone('triangle', hz * p, hz * p * 0.985, t, dur, amp(t, 0.001, gain, dur, out));
+    tone('sine', 140 * p, 70 * p, t, 0.12, amp(t, 0.002, 0.6, 0.12, out));
+    noise(t, 0.05, filter('bandpass', 3200, 1.2, amp(t, 0.001, 0.4, 0.05, out)));
   },
   drop(t, out, p) {      // a good weapon landing: a soft clink and a shimmering rising chime
     tone('triangle', 1200 * p, 900 * p, t, 0.06, amp(t, 0.001, 0.25, 0.06, out));

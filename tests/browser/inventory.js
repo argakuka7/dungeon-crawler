@@ -10,7 +10,7 @@ import { clearInput, inputDir } from '../../src/game/input.js';
 import { equipOwnedWeapon, devSwapWeapon } from '../../src/game/equipment.js';
 import { runCommand } from '../../src/game/commands.js';
 import { WEAPONS, ITEMS } from '../../src/core/items.js';
-import { lootHere, updateLoot, requestCollect, dropLoot, dropFromBag, floorItems } from '../../src/game/loot.js';
+import { lootHere, updateLoot, requestCollect, dropLoot, dropFromBag, floorItems, takeNow } from '../../src/game/loot.js';
 import { updateLootLabels } from '../../src/game/lootlabels.js';
 import { lootView } from '../../src/render/loot.js';
 import { orderPickup, followOrder, order } from '../../src/game/orders.js';
@@ -152,10 +152,13 @@ export async function runWeaponLootChecks() {
     await paused(async () => {
       const hostile = await state.cubes.get('0,0,-2');
       enterCube(hostile, 2);
-      const weapons = () => lootHere().filter(p => p.gen);
+      const weapons = () => lootHere().filter(p => p.gen && ITEMS[p.itemId].weapon);   // (not the armor it drops too)
       dropLoot({ id: 'browser:guardian', level: 20, guardian: true, guardianRole: 'descent', x: player.x, y: player.y, z: player.z }, 0);
       steps(90, i => updateLoot(1 / 60, i / 60));
       check(weapons().length === 2 && weapons().every(p => p.toss === 1), 'A level-20 descent guardian drops two weapons');
+      const armor = lootHere().filter(p => ITEMS[p.itemId].armor);
+      check(armor.length === 1, 'and a piece of armor');
+      for (const p of armor) takeNow(p);   // (into the bag: the floor is the weapons' from here)
       check(weapons().every(p => ['remarkable', 'fabled', 'impossible', 'omg'].includes(p.gen.rarity)), 'Descent guardians drop Remarkable or better from level 20');
       const isPotion = id => ITEMS[id].category === 'potion', bagged = () => player.inventory.slots.reduce((n, s) => n + (s && isPotion(s.itemId) ? s.count : 0), 0);
       const potions = () => lootHere().filter(p => isPotion(p.itemId)).reduce((n, p) => n + p.count, 0);

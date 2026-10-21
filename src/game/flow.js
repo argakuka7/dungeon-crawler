@@ -31,7 +31,7 @@ import { lootMark, forgetLoot, takeLoot } from './loot.js';
 import { townPadIn } from '../core/townportal.js';
 import { shoreIssues } from '../render/shore.js';
 import { cancelCast } from './townportal.js';
-import { isInterior } from '../world/town.js';
+import { isInterior, isTown } from '../world/town.js';
 import { isTestRoom } from '../world/testrooms.js';
 import { online, relay } from '../net/online.js';
 import { log, logDeath, noteDepth } from './log.js';
@@ -39,6 +39,7 @@ import { questEvent, questMark, restoreQuests } from './quests.js';
 import { questWorld, noticeQuestGoals, forgetPicked } from './questworld.js';
 import { raidDied } from './defense.js';
 import { checkQuestLog } from '../core/quests.js';
+import { checkSmith } from '../core/save.js';
 import { depthOf } from '../themes/depth.js';
 import { enterTrial, restartTrial, refreshTrialView, sealedIn, warnTrials } from './trials.js';
 import { setFluidPalettes } from '../render/fluidpal.js';
@@ -243,6 +244,8 @@ export const portalSeen = (k, m) => Object.fromEntries(m.portals.map(p => [p.id,
 // learn: architecture.html#cube-journey (see learn/README.md)
 export function enterCube(c, from = null, back = null, at = null) {
   const k = c.key;
+  // back in town from out there: the Smith has forged new armor (core/shops.js smithStock)
+  if (c.map.town && state.cubeKey && !isTown(state.cubeKey) && !isInterior(state.cubeKey)) state.run.smith = { visit: state.run.smith.visit + 1, sold: [] };
   devShores(c.map);
   if (!back) discover(c);
   state.cubeKey = k; state.map = c.map; state.lookDepth = c.map.depth;
@@ -382,6 +385,7 @@ function restoreRun({ run, faces, visited, deepest = 0 }) {
   r.clock = run.clock; r.kills = unpackKills(run.kills);
   for (const [k, n] of run.trials || []) r.trials.set(k, n);
   r.townPortal = run.townPortal;
+  r.smith = checkSmith(run.smith);
   r.quests = checkQuestLog(run.quests);
   r.quests.deepest = Math.max(r.quests.deepest, deepest);
   takeLoot(run.loot);

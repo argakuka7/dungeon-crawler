@@ -11,7 +11,7 @@ import { chestLoot } from '../../src/core/chests.js';
 import { favoredKind } from '../../src/core/combat.js';
 import { HEALTH_POTION } from '../../src/core/items.js';
 import { tickEffects } from '../../src/core/potions.js';
-import { barEntry, copperTotal } from '../../src/core/inventory.js';
+import { barEntry, copperTotal, bareSlots } from '../../src/core/inventory.js';
 import { enterCube, spawnAt, hurt } from '../../src/game/flow.js';
 import { lootHere, updateLoot } from '../../src/game/loot.js';
 import { chatOpen, closeChat } from '../../src/game/console.js';
@@ -80,13 +80,13 @@ export const runActionKeyChecks = () => atRewardSite(async (c, entry, site, resu
   press('ControlRight');
   check(state.run.chests.has(site.id) && !chatOpen(), 'right Ctrl beside the chest opens it');
   for (let i = 0; i < 30; i++) tickChests(1 / 30);
-  for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
+  for (let i = 0; i < 150; i++) updateLoot(1 / 60, i / 60);
   const loose = () => lootHere().filter(p => !p.gen && !p.claim);
   if (loose().length) {
     check(pendingAction()?.kind === 'collect' && pendingAction().picture && pendingAction().count === loose().length,
       'with the chest open the use button collects, showing an item');
     press('KeyF');
-    for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
+    for (let i = 0; i < 150; i++) updateLoot(1 / 60, i / 60);
     check(!loose().length, 'F with the chest open collects what it spilled');
     results.push('F collects');
   } else results.push('(nothing spilled to collect)');
@@ -133,8 +133,8 @@ export const runChestChecks = () => atRewardSite(async (c, entry, site, results)
   check(hoveredChest() === null, 'an open chest is no longer hovered');
   results.push('hover / label / click opens / Open clip');
 
-  for (let i = 0; i < 90; i++) updateLoot(1 / 60, i / 60);
-  const want = chestLoot(site, state.map.depth, state.map.seed, favoredKind(player)), here = lootHere().filter(p => p.kept);
+  for (let i = 0; i < 150; i++) updateLoot(1 / 60, i / 60);
+  const want = chestLoot(site, state.map.depth, state.map.seed, favoredKind(player), bareSlots(player.inventory)), here = lootHere().filter(p => p.kept);
   const names = list => list.filter(i => i.gen).map(i => i.gen.name).sort().join();
   check(names(here) === names(want.items) && here.every(p => p.toss === 1), 'the chest spills its seeded weapons');
   check(copperTotal(player.inventory) === copper + want.copper, 'and coins (the magnet takes them in front of the chest)');

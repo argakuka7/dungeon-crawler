@@ -1,4 +1,4 @@
-import { ITEMS, COINS } from './items.js';
+import { ITEMS, COINS, ARMOR_SLOTS } from './items.js';
 
 // A slot holds { instanceId, itemId, count, gen? }. `gen` is a generated item's own data
 // (core/gear/): a slot with it is one unique item and never stacks.
@@ -7,6 +7,8 @@ import { ITEMS, COINS } from './items.js';
 // items (it clears when that item leaves the bag).
 // `equipped` is the weapon (an instance); `readied` a flask in hand instead of it, by item id
 // (any stack of it), until none is left or the weapon is taken again (game/equipment.js).
+// `worn` is the armor, one instance per slot (core/items.js ARMOR_SLOTS: head, body, shield,
+// feet; null: nothing there). Like the weapon, what is worn stays in the bag.
 
 export const BAG_SIZE = 24, BAR_SIZE = 6;
 export function whole(n) {
@@ -16,8 +18,9 @@ export function whole(n) {
 // learn: memory.html#bag-code (see learn/README.md)
 export function createInventory() {
   return { slots: Array(BAG_SIZE).fill(null), currency: COINS.map(c => ({ itemId: c.id, count: 0 })),
-    bar: Array(BAR_SIZE).fill(null), equipped: null, readied: null, nextInstance: 1, version: 0 };
+    bar: Array(BAR_SIZE).fill(null), equipped: null, readied: null, worn: emptyWorn(), nextInstance: 1, version: 0 };
 }
+export const emptyWorn = () => Object.fromEntries(ARMOR_SLOTS.map(s => [s, null]));
 export const copperTotal = inv => whole(inv.currency.reduce((n, s) => n + s.count * ITEMS[s.itemId].value, 0));
 // learn: code.html#math (see learn/README.md)
 export function coinCounts(copper) {
@@ -53,6 +56,29 @@ export function equipItem(inv, instanceId) {
   if (!slot || !ITEMS[slot.itemId]?.weapon) return false;
   if (inv.equipped !== instanceId || inv.readied) { inv.equipped = instanceId; inv.readied = null; inv.version++; }
   return true;
+}
+// Put on the piece of armor `instanceId` (in its slot, instead of what was there); false: not
+// armor in the bag
+export function wearItem(inv, instanceId) {
+  const slot = ownedItem(inv, instanceId), a = ITEMS[slot?.itemId]?.armor;
+  if (!a) return false;
+  inv.worn ??= emptyWorn();
+  if (inv.worn[a.slot] !== instanceId) { inv.worn[a.slot] = instanceId; inv.version++; }
+  return true;
+}
+// take off what is worn in `slot` (it stays in the bag)
+export function takeOffItem(inv, slot) {
+  if (!inv.worn?.[slot]) return false;
+  inv.worn[slot] = null; inv.version++;
+  return true;
+}
+// the armor slots with nothing worn in them (armor drops lean towards them: core/gear/drops.js)
+export const bareSlots = inv => ARMOR_SLOTS.filter(s => !inv.worn?.[s]);
+export const isWorn = (inv, instanceId) => !!instanceId && Object.values(inv.worn ?? {}).includes(instanceId);
+// the armor worn in `slot` (its bag slot), or null
+export const wornItem = (inv, slot) => ownedItem(inv, inv.worn?.[slot]);
+function forgetWorn(inv, instanceId) {
+  for (const k of Object.keys(inv.worn ?? {})) if (inv.worn[k] === instanceId) inv.worn[k] = null;
 }
 // how many of item `itemId` the bag holds, over all its stacks
 export const countOf = (inv, itemId) => inv.slots.reduce((n, s) => n + (s?.itemId === itemId ? s.count : 0), 0);
@@ -124,7 +150,7 @@ export function takeItem(inv, instanceId) {
   const { itemId, count, gen } = inv.slots[i];
   inv.slots[i] = null;
   if (inv.equipped === instanceId) inv.equipped = null;
-  forgetBar(inv, instanceId); forgetReadied(inv, itemId);
+  forgetBar(inv, instanceId); forgetReadied(inv, itemId); forgetWorn(inv, instanceId);
   inv.version++;
   return gen ? { itemId, count, gen } : { itemId, count };
 }
@@ -140,7 +166,7 @@ export function removeItem(inv, instanceId, count = 1) {
   if (!inv.slots[i].count) {
     inv.slots[i] = null;
     if (inv.equipped === instanceId) inv.equipped = null;
-    forgetBar(inv, instanceId); forgetReadied(inv, itemId);
+    forgetBar(inv, instanceId); forgetReadied(inv, itemId); forgetWorn(inv, instanceId);
   }
   inv.version++;
   return true;

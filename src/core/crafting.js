@@ -1,14 +1,14 @@
-// The Enchanter and the Smith in town work on the player's weapons (core/shops.js says who does
+// The Enchanter and the Smith in town work on the player's weapons (the Smith on armor too) (core/shops.js says who does
 // what; game/inventory.js is where you ask them). Pure.
 //   enchanting: puts an enchantment on a weapon (core/gear/enchants.js), replacing the one it had;
 //     costs copper and crystals of the enchantment's kind
-//   re-rolling: one affix of a weapon becomes a fresh one (core/gear/affixes.js rerollAffix);
-//     costs copper
+//   re-rolling: one affix of a weapon or a piece of armor becomes a fresh one (core/gear/affixes.js
+//     rerollAffix); costs copper
 // Prices grow with the weapon's item level (PRICE_GROWTH a level, on the price at level 1): about
 // as fast as what a depth pays grows (enemy coins, and more enemies deeper down; `node
 // tools/balance.mjs` prints both), so an enchantment costs about a quarter of what the depth of
 // its weapon brings in, and a re-roll a few percent. Better weapons cost more to re-roll.
-import { ITEMS } from './items.js';
+import { ITEMS, isGear } from './items.js';
 import { ownedItem, countOf, copperTotal, spendCopper, spendItem } from './inventory.js';
 import { ENCHANT } from './gear/enchants.js';
 import { rerollAffix } from './gear/affixes.js';
@@ -30,6 +30,7 @@ export function roundPrice(c) {
 }
 const level = item => Math.max(1, item?.gen?.ilvl ?? 1);
 const isWeapon = item => !!ITEMS[item?.itemId]?.weapon;
+const gear = item => isGear(item?.itemId);
 
 // what enchanting `item` with enchantment `id` costs: { copper, crystal, count }
 export function enchantCost(item, id) {
@@ -62,11 +63,11 @@ export function enchantWeapon(inv, instanceId, id) {
   inv.version++;
   return 'ok';
 }
-// can the Smith re-roll affix `index` of the weapon? 'ok', 'unknown' (no such weapon or affix),
-// 'poor'
+// can the Smith re-roll affix `index` of the weapon (or armor)? 'ok', 'unknown' (no such item or
+// affix), 'poor'
 export function canReroll(inv, instanceId, index) {
   const item = ownedItem(inv, instanceId), cost = rerollCost(item);
-  if (!isWeapon(item) || cost === null || !item.gen.affixes[index]) return 'unknown';
+  if (!gear(item) || cost === null || !item.gen.affixes[index]) return 'unknown';
   return copperTotal(inv) < cost ? 'poor' : 'ok';
 }
 // Re-roll it with rng (all or nothing): what canReroll says
@@ -111,5 +112,7 @@ export const ENCHANTED_SAYS = {
   zappy: "Done. It'll tingle a bit.",
   shiny: "Done. Ooh, shiny. Don't let the magpies see.",
 };
+// ... when you buy armor off him (core/shops.js smithStock)
+export const SOLD_SAYS = ['Wear it in good health.', 'Mind the edges.', "Fits like it was made for you. It wasn't.", 'Come back when it dents.'];
 export const REROLLED_SAYS = ['There, good as new. Better, maybe.', 'Clang. Done.', "Hammered out. Don't tell the Enchanter.",
   'Fresh off the anvil.'];

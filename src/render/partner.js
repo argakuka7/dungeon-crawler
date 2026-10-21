@@ -9,12 +9,12 @@ import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_H } from '../core/constants.js';
 import { ITEMS } from '../core/items.js';
-import { BONES, Q, packPose } from '../net/protocol.js';
+import { BONES, Q, packPose, wornOf } from '../net/protocol.js';
 import { lerpAngle } from '../net/sync.js';
 import { scene, camera } from './scene.js';
 import { character, mountWeapon, wornSkin } from './character.js';
 import { setSkinMap, skinTexture } from './skin.js';
-import { rig, createFigure, loadThing, thingLoaded, wear, takeOff } from './figure.js';
+import { rig, createFigure, takeOff, wearLike, wornKey, animateWorn } from './figure.js';
 import { trackLight, untrackLight } from './lightpool.js';
 import { makeBar, makeLevelLabel, makeNote } from './bars.js';
 import { playerColor } from '../net/online.js';
@@ -34,10 +34,11 @@ export function capturePose() {
   return packPose(g.position.toArray(), g.rotation.y, b.hips.position.toArray(), quats);
 }
 
-// what our character holds and wears, for the other side to show
+// what our character holds and wears, for the other side to show: worn things as
+// 'id@rarity@back' (armor: its rarity, a shield on the back: 1; protocol.js wornOf reads them)
 export function capturedLook() {
   return { armed: !!character.sword?.visible,
-    worn: Object.values(character.worn ?? {}).map(w => w.id), skin: wornSkin()?.id ?? null };
+    worn: Object.values(character.worn ?? {}).map(w => `${w.id}@${w.rarity ?? ''}@${w.back ? 1 : 0}`), skin: wornSkin()?.id ?? null };
 }
 
 // slot -> { f, group, ghost, light, tag, bars, hp, label, note, name, weapon: { url, object, want }, worn, clay }
@@ -118,17 +119,12 @@ function setWeapon(fig, url) {
     w.object = model; w.url = url;
   });
 }
-function setWorn(fig, ids) {
-  const key = ids.join(',');
+// what they wear (protocol.js wornOf: [{ id, rarity, back }], one per slot)
+function setWorn(fig, list) {
+  const worn = Object.fromEntries(list.map(w => [ITEMS[w.id].slot, w])), key = wornKey(worn);
   if (fig.worn === key) return;
-  for (const slot of Object.keys(fig.f.worn)) if (!ids.includes(fig.f.worn[slot].id)) takeOff(fig.f, slot);
-  let all = true;
-  for (const id of ids) {
-    if (!ITEMS[id]?.slot || fig.f.worn[ITEMS[id].slot]?.id === id) continue;
-    if (thingLoaded(id)) wear(fig.f, id);
-    else { all = false; loadThing(id).catch(e => console.error('partner outfit failed to load', e)); }
-  }
-  if (all) fig.worn = key;   // else: again next time, once loaded
+  for (const slot of Object.keys(fig.f.worn)) takeOff(fig.f, slot);
+  if (wearLike(fig.f, { worn }, true)) fig.worn = key;   // else: again next time, once loaded
 }
 
 const qa = [], qb = [], _q = new THREE.Quaternion();
@@ -156,7 +152,8 @@ export function showPartner(slot, span, name) {
   });
   setWeapon(fig, typeof b.weapon === 'string' ? b.weapon : null);
   if (fig.weapon.object) fig.weapon.object.visible = b.armed !== false;
-  setWorn(fig, Array.isArray(b.worn) ? b.worn.filter(id => typeof id === 'string') : []);
+  setWorn(fig, wornOf(b.worn));
+  animateWorn(fig.f, performance.now() / 1000, slot);   // (rare armor shines)
   fig.group.visible = fig.tag.visible = true;
   // the tag: over the head, facing the camera
   fig.tag.position.set(fig.group.position.x, fig.group.position.y + CHAR_H + 0.4, fig.group.position.z);

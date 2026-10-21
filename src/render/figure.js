@@ -10,10 +10,20 @@
 // (`mount_quat_gltf`, `mount_offset_gltf`, from the bone's root in rig units), which still clip
 // holds the arm that carries it (`hold`: the character's Hold<Name> clip) and whether it floats
 // over the hand (`float`, the crystal ball, which bobs and turns there).
+//
+// Armor (core/items.js ARMORS, blender/armor.py) is modelled where it sits on the character in its
+// rest pose, in parts: every node with a `bone` in its extras goes on that bone (a breastplate on
+// the spine, shoulder plates on the upper arms, a boot on each shin), placed by the bone's rest
+// frame (restInverse), so it follows the bone as the body moves. A shield says where it goes on
+// the back too (`back_bone`, `back_gltf`: a matrix, column-major, in the character's space),
+// for when a bow needs the hand (game/armor.js). Worn armor shows its rarity: the trim (the glTF
+// material Items_Trim) takes the rarity's colour from Decent up, glows from Remarkable up and runs
+// through the rainbow on OMG; Crap and Shitty trim is dull and rusty.
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_SCALE } from '../core/constants.js';
 import { ITEMS, outfitOf } from '../core/items.js';
+import { RARITY } from '../core/gear/rarities.js';
 import { cloneSkinned, cullBySphere, ownShadowDepth } from './skinned.js';
 
 const URL = 'assets/character.glb';
@@ -90,6 +100,20 @@ export function poseFigure(f) {
   for (const w of Object.values(f.worn)) if (w.hold) for (const [node, q] of rig.holds[w.hold] ?? []) f.nodes[node]?.quaternion.copy(q);
 }
 
+// the inverse of each bone's rest frame in the character's space (rig units, glTF Y up), by its
+// Blender name: what turns a part modelled in that space into the bone's own
+let rests = null;
+export function restInverse(name) {
+  if (!rests) {
+    rests = new Map();
+    const root = rig.source;
+    root.updateMatrixWorld(true);
+    const inv = root.matrixWorld.clone().invert();
+    root.traverse(o => { if (o.isBone) rests.set(o.userData.name || o.name, inv.clone().multiply(o.matrixWorld).invert()); });
+  }
+  return rests.get(name) ?? null;
+}
+
 // The worn and held things' models, loaded once (by item id); wear() needs them loaded.
 const things = new Map(), loading = new Map();
 export function loadThing(id) {
@@ -102,10 +126,12 @@ export function loadThing(id) {
 export const thingLoaded = id => things.has(id);
 
 // Put item `id` on figure f (in its slot, replacing what was there). false: not loaded yet.
-// Each copy has its own materials (a cube's fade changes them, render/fade.js).
-export function wear(f, id) {
+// Each copy has its own materials (a cube's fade changes them, render/fade.js). opts (armor):
+// rarity (an id: how its trim shines), back (a shield slung on the back).
+export function wear(f, id, opts = {}) {
   const def = ITEMS[id], template = things.get(id);
   if (!def?.slot || !template) return false;
+  if (def.armor) return wearArmor(f, id, template, opts);
   takeOff(f, def.slot);
   const object = template.clone(true);
   let node = null;
@@ -126,18 +152,94 @@ export function wear(f, id) {
   f.bones[d.socket ?? 'hand.R'].add(object);
   object.position.fromArray(d.mount_offset_gltf ?? [0, 0, 0]);
   object.quaternion.fromArray(d.mount_quat_gltf ?? [0, 0, 0, 1]);
-  f.worn[def.slot] = { id, object, hold: d.hold ?? null, float: d.float ?? 0, glowing,
+  f.worn[def.slot] = { id, object, objects: [object], hold: d.hold ?? null, float: d.float ?? 0, glowing, shine: null,
     at: object.position.clone(), mount: object.quaternion.clone() };
   return true;
 }
 
+// a part of an armor model: its own meshes, not the parts hanging off it
+function ownCopy(node) {
+  const copy = node.isMesh ? node.clone(false) : new THREE.Object3D();
+  copy.name = node.name;
+  for (const c of node.children) if (!c.userData.bone) copy.add(c.clone(true));
+  return copy;
+}
+const _m = new THREE.Matrix4();
+function wearArmor(f, id, template, { rarity = null, back = false } = {}) {
+  const def = ITEMS[id];
+  takeOff(f, def.slot);
+  template.updateMatrixWorld(true);
+  const inv = template.matrixWorld.clone().invert(), objects = [], materials = [];
+  template.traverse(node => {
+    const d = node.userData;
+    if (!d.bone) return;
+    const slung = back && d.back_bone && d.back_gltf, bone = f.bones[slung ? d.back_bone : d.bone], rest = restInverse(slung ? d.back_bone : d.bone);
+    if (!bone || !rest) return;
+    const object = ownCopy(node);
+    object.matrixAutoUpdate = false;
+    object.matrix.copy(rest);
+    if (slung) object.matrix.multiply(_m.fromArray(d.back_gltf));
+    object.matrix.multiply(_m.multiplyMatrices(inv, node.matrixWorld));
+    object.traverse(o => {
+      if (!o.isMesh) return;
+      o.material = [].concat(o.material).map(m => { m = m.clone(); materials.push(m); return m; });
+      if (o.material.length === 1) o.material = o.material[0];
+      o.castShadow = true;
+      o.userData.sharedGeo = true;   // the template owns the geometry
+    });
+    bone.add(object);
+    objects.push(object);
+  });
+  f.worn[def.slot] = { id, object: objects[0], objects, hold: null, float: 0, glowing: [], rarity, back: !!back,
+    shine: shine(materials, rarity) };
+  return true;
+}
+// How worn armor shows its rarity (RARITIES in core/gear/rarities.js): the trim's colour, and from
+// Remarkable up a glow that pulses (the gems glow from Decent up). -> { pulse: [materials],
+// base: their glow, rainbow } or null when nothing moves.
+const DULL = { crap: '#9a6a48', shitty: '#a8a294' };
+function shine(materials, rarityId) {
+  const r = RARITY[rarityId], trims = materials.filter(m => /Trim/.test(m.name)), gems = materials.filter(m => /Facets/.test(m.name));
+  if (!r) return null;
+  if (DULL[r.id]) for (const m of trims) m.color.set(DULL[r.id]);
+  if (!r.glow) return null;
+  const color = new THREE.Color().setRGB(...r.rgb);   // (linear, like the loot's glow: render/loot.js)
+  for (const m of trims) m.color.copy(color).lerp(WHITE, 0.15);
+  const base = r.rank >= RARITY.remarkable.rank ? 0.2 + 0.15 * (r.rank - RARITY.remarkable.rank) : 0;
+  const pulse = [];
+  for (const m of [...trims, ...gems]) {
+    if (!m.emissive) continue;
+    const gem = gems.includes(m);
+    if (!base && !gem) continue;
+    m.emissive.copy(color); m.emissiveIntensity = gem ? Math.max(0.35, base * 1.5) : base;
+    m.userData.glowBase = m.emissiveIntensity;
+    pulse.push(m);
+  }
+  return pulse.length || r.glow.rainbow ? { pulse, trims, rainbow: !!r.glow.rainbow, steady: !base } : null;
+}
+const WHITE = new THREE.Color(1, 1, 1);
+
 export function takeOff(f, slot) {
   const w = f.worn[slot];
   if (!w) return;
-  w.object.removeFromParent();
-  w.object.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => m.dispose()); });
+  for (const object of w.objects) {
+    object.removeFromParent();
+    object.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => m.dispose()); });
+  }
   delete f.worn[slot];
 }
+// what figure `from` wears, on figure f too (the Renew boss's echo of the player; the inventory's
+// hero); `load`: what is not loaded yet starts loading (and is missing until it is)
+export function wearLike(f, from, load = false) {
+  let all = true;
+  for (const w of Object.values(from.worn ?? {})) {
+    if (thingLoaded(w.id)) wear(f, w.id, w);
+    else { all = false; if (load) loadThing(w.id).catch(e => console.error('outfit failed to load', e)); }
+  }
+  return all;
+}
+// what a worn thing is, as a key: the same key, the same look
+export const wornKey = worn => Object.values(worn ?? {}).map(w => `${w.id}@${w.rarity ?? ''}@${w.back ? 1 : 0}`).sort().join(',');
 
 // wear all of `ids` (one per slot, core/items.js outfitOf)
 export function dress(f, ids) {
@@ -157,5 +259,14 @@ export function animateWorn(f, time, phase = 0) {
       w.object.quaternion.copy(w.mount).multiply(_spin.setFromAxisAngle(Y, t * .8));
     }
     for (const m of w.glowing) m.emissiveIntensity = .55 + .25 * Math.sin(t * 2.7);
+    const s = w.shine;
+    if (!s) continue;
+    if (s.rainbow) {
+      _c.setHSL(((t * 0.4) % 1 + 1) % 1, 1, 0.6);
+      for (const m of s.trims) m.color.copy(_c);
+      for (const m of s.pulse) m.emissive.copy(_c);
+    }
+    if (!s.steady) for (const m of s.pulse) m.emissiveIntensity = m.userData.glowBase * (0.75 + 0.25 * Math.sin(t * 3.1));
   }
 }
+const _c = new THREE.Color();

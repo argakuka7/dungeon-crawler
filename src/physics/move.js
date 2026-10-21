@@ -5,15 +5,20 @@ import { groundAt, ceilingAt, slopeAt } from './collide.js';
 import { canMove } from './canmove.js';
 import { chillFactor } from '../core/projectiles.js';
 import { effectMod } from '../core/potions.js';
+import { wornTotals } from '../core/gear/stats.js';
 import { pushStep, pushControl } from '../core/gusts.js';
+
+// how much faster the boots worn make you (not swimming)
+const feet = p => p.swimming ? 0 : wornTotals(p.inventory).moveSpeed / 100;
 
 // learn: physics.html#feel #walls (see learn/README.md)
 function horizontal(dt, dx, dz, run) {
   const p = player;
   // an ice ball's chill slows every way of moving (core/projectiles.js), a swiftness potion
-  // quickens it (core/potions.js), wading the more the deeper the water (physics/hazards.js)
+  // quickens it (core/potions.js), and so do light boots (core/gear/stats.js), wading the more the
+  // deeper the water (physics/hazards.js)
   const speed = (p.swimming ? (p.fluid === ACID ? 0.6 : SWIM_SPEED) : run ? RUN_SPEED : WALK_SPEED) * chillFactor(p.chilled)
-    * (1 + effectMod(p, 'moveSpeed')) * (1 - WADE_SLOW * Math.min(1, (p.wade || 0) / HEAD_Y));
+    * (1 + effectMod(p, 'moveSpeed') + feet(p)) * (1 - WADE_SLOW * Math.min(1, (p.wade || 0) / HEAD_Y));
   let tx = dx * speed, tz = dz * speed;
   if (p.grounded && !p.swimming && p.support) {
     const [gx, gz] = slopeAt(p.support, p.x, p.z), g = Math.hypot(gx, gz);
@@ -56,7 +61,7 @@ function jumping(dt, jump) {
   const boost = Math.sqrt(1 + effectMod(p, 'jump'));
   p.vy = p.swimming ? 4.8 : JUMP_V * boost;
   // jumping while moving is a leap: enough speed to clear a one-cell gap (more with a potion)
-  const s = Math.hypot(p.vx, p.vz), leap = LEAP * (1 + effectMod(p, 'moveSpeed'));
+  const s = Math.hypot(p.vx, p.vz), leap = LEAP * (1 + effectMod(p, 'moveSpeed') + feet(p));
   if (!p.swimming && s > 0.8 && s < leap) { p.vx *= leap / s; p.vz *= leap / s; }
   p.grounded = p.swimming = false;
   p.coyote = p.jumpBuf = 0;

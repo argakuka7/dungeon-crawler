@@ -47,6 +47,9 @@ Four kinds of weapon: swords swing (most of this page), bows, crossbows and staf
 - Hit feedback (`game/juice.js`): a short hit pause (critical hits only), a camera nudge, sparks and
   ichor, a knockback, a damage number and generated sounds (`audio/sfx.js`).
   Spider bites are a short flinch; a Stunder ram or a lethal bite knocks you over.
+- The armor you wear takes its share off every blow first, and a shield in hand now and then
+  blocks one: a clang, "Blocked!", a fifth of it and nothing else, no shove, no fire or poison
+  (`game/armor.js guardBlow`, [armor.md](armor.md)).
 - Knocked over, you ragdoll until the body settles, then get up from where it lies
   (`game/ragdoll.js`): face down or on the back picks `GetUpFront` / `GetUpBack`,
   turned to the body; the animator morphs the ragdoll pose into the clip's first frames.

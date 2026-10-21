@@ -7,8 +7,7 @@
 //                     [data-live-hero] the hero as it stands, with the weapon (or the flask) in
 //                     its hand and what it wears
 import * as THREE from 'three';
-import { ITEMS } from '../core/items.js';
-import { rig, createFigure, poseFigure, wear, takeOff, thingLoaded, loadThing, animateWorn } from './figure.js';
+import { rig, createFigure, poseFigure, takeOff, wearLike, wornKey, animateWorn } from './figure.js';
 import { character, mountWeapon } from './character.js';
 import { paint, load, modelUrl, paintItem, itemModel } from './itempictures.js';
 
@@ -57,17 +56,12 @@ function dressHero(itemId) {
       pose(h);
     });
   }
-  // what the character wears (only headwear for now, game/equipment.js devWear)
-  const ids = Object.values(character.worn ?? {}).map(w => w.id), key = ids.join(',');
+  // what the character wears (its armor, game/armor.js; headwear, game/equipment.js devWear)
+  const key = wornKey(character.worn);
   if (hero.worn !== key) {
-    for (const slot of Object.keys(hero.f.worn)) if (!ids.includes(hero.f.worn[slot].id)) takeOff(hero.f, slot);
-    let all = true;
-    for (const id of ids) {
-      if (hero.f.worn[ITEMS[id].slot]?.id === id) continue;
-      if (thingLoaded(id)) wear(hero.f, id);
-      else { all = false; loadThing(id).catch(e => console.error('outfit failed to load', e)); }
-    }
-    if (all) { hero.worn = key; pose(hero); }   // (else again once loaded)
+    for (const slot of Object.keys(hero.f.worn)) takeOff(hero.f, slot);
+    if (wearLike(hero.f, character, true)) hero.worn = key;   // (else again once loaded)
+    pose(hero);
   }
   return hero;
 }

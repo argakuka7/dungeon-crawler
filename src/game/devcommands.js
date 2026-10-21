@@ -5,7 +5,7 @@ import { addCommand, addType } from '../core/commands.js';
 import { ITEMS } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 import { addItem, equippedItem } from '../core/inventory.js';
-import { xpForLevel, levelFromXP, maxHealth } from '../core/progression.js';
+import { xpForLevel, levelFromXP, fullHealth } from '../core/progression.js';
 import { MAX_ILVL } from '../core/gear/generate.js';
 import { RARITY } from '../core/gear/rarities.js';
 import { ENCHANTS, ENCHANT, enchantOf, describeEnchant } from '../core/gear/enchants.js';
@@ -24,7 +24,7 @@ import { devQuest } from './quests.js';
 import { BRIDGE_STYLES, LADDER_STYLES } from '../themes/builds.js';
 import { ARENA_WEIGHTS } from '../world/arenas.js';
 import { BOSS_SHAPES } from '../cubegen/arenashapes.js';
-import { devSwapWeapon, devDropWeapon, devWear } from './equipment.js';
+import { devSwapWeapon, devDropWeapon, devWear, devWearArmor, devDropArmor } from './equipment.js';
 import { forceMood } from './music.js';
 import { nextCube, newWorld } from './flow.js';
 import { pickFloor, pointer } from './pointer.js';
@@ -186,10 +186,11 @@ dev({
 // --- things ----------------------------------------------------------------------------------
 
 dev({
-  name: 'give', help: 'put things in the bag (weapons: /weapon)', args: [{ name: 'item', type: 'item' }, { name: 'count', type: 'int', optional: true, min: 1, max: 9999 }],
+  name: 'give', help: 'put things in the bag (weapons: /weapon, armor: /armor)', args: [{ name: 'item', type: 'item' }, { name: 'count', type: 'int', optional: true, min: 1, max: 9999 }],
   async run({ item, count = 1 }) {
     const def = ITEMS[item];
     if (def.weapon) return await devSwapWeapon(item, 'vanilla', 1) ? `Equipped: ${def.name} (Vanilla)` : 'No room in the bag';
+    if (def.armor) return devWearArmor(item, 'vanilla', 1) ? `Wearing: ${def.name} (Vanilla)` : 'No room in the bag';
     return addItem(player.inventory, item, count) ? `+${count} ${def.name}` : 'No room in the bag';
   },
 });
@@ -201,6 +202,16 @@ dev({
     const name = `${ITEMS[weapon].name} (${RARITY[rarity].name}, item level ${level})`;
     if (drop) return devDropWeapon(weapon, rarity, level) ? `Dropped: ${name}` : 'Could not drop it here';
     return await devSwapWeapon(weapon, rarity, level) ? `Equipped: ${name}` : 'Could not equip it (bag full, or busy)';
+  },
+});
+dev({
+  name: 'armor', help: 'roll a piece of armor and put it on (or drop it at your feet)',
+  args: [{ name: 'armor', type: 'armor' }, { name: 'rarity', type: 'rarity', optional: true },
+    { name: 'level', type: 'int', optional: true, min: 1, max: MAX_ILVL }, { name: 'drop', type: 'drop', optional: true }],
+  run({ armor, rarity = 'unusual', level = 8, drop }) {
+    const name = `${ITEMS[armor].name} (${RARITY[rarity].name}, item level ${level})`;
+    if (drop) return devDropArmor(armor, rarity, level) ? `Dropped: ${name}` : 'Could not drop it here';
+    return devWearArmor(armor, rarity, level) ? `Wearing: ${name}` : 'Could not put it on (bag full)';
   },
 });
 addType(commands, { name: 'enchant', values: () => [...ENCHANTS.map(e => ({ value: e.id, label: e.name })), { value: 'off', label: 'off' }] });
@@ -251,7 +262,7 @@ dev({
   name: 'level', help: 'become this level (health full)', args: [{ name: 'level', type: 'int', min: 1, max: 99 }],
   run({ level }) {
     player.xp = xpForLevel(level); player.level = levelFromXP(player.xp);
-    player.maxHp = maxHealth(player.level);
+    player.maxHp = fullHealth(player.level, player.inventory);
     if (player.hp > 0) player.hp = player.maxHp;
     return `Level ${player.level}`;
   },

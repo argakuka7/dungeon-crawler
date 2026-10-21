@@ -8,6 +8,7 @@ import { groundAt } from './physics/collide.js';
 import { player, state, setStatus, worldPaused } from './game/state.js';
 import { loadCube } from './game/flow.js';
 import { updatePlayer } from './game/update.js';
+import { updateArmor } from './game/armor.js';
 import { updateMovers } from './game/movers.js';
 import { updateCamera, closeView } from './game/camera.js';
 import { updateCut } from './game/cut.js';
@@ -137,6 +138,7 @@ function frame(now = performance.now()) {
   player.visY += (player.y - player.visY) * Math.min(1, dt * 25);
   if (Math.abs(player.y - player.visY) > 1.5 || player.ragdoll) player.visY = player.y;
   animateCharacter(dt, state.time);
+  updateArmor(state.time);   // the hero wears what the bag says, the maximum health with it (game/armor.js)
   applyHeroPose();   // (while Renew's time runs back: the hero as the tape has them, game/rewind.js)
   updateFootsteps();   // on the cycle the animator just advanced
   updateSounds(dt); updateAmbience(dt);
@@ -212,7 +214,7 @@ function menuFrame(dt, start) {
   if (skinEditorOpen()) { requestAnimationFrame(frame); return; }
   state.time += dt;
   if (character.ready && !portraitShown()) character.group.visible = false;
-  if (portraitShown()) { player.yaw = Math.sin(state.time * SWAY_SPEED) * SWAY; animateCharacter(dt, state.time); }
+  if (portraitShown()) { player.yaw = Math.sin(state.time * SWAY_SPEED) * SWAY; animateCharacter(dt, state.time); updateArmor(state.time); }
   updatePlayerBar(); updatePortalBar(); updateCastBar();   // (they hide with no hero)
   updateOnline();
   updateMenu();

@@ -1,6 +1,6 @@
 // Loot on the ground: what a defeated enemy drops and what the player can pick up. Plain data,
 // no renderer (see game/loot.js and render/loot.js). Weapons are generated (core/gear/).
-import { COINS, ITEMS } from './items.js';
+import { COINS, ITEMS, isGear } from './items.js';
 import { coinCounts, whole } from './inventory.js';
 import { RARITY } from './gear/rarities.js';
 import { ENCHANT } from './gear/enchants.js';
@@ -25,8 +25,8 @@ export function coinDrops(copper) {
 export const stackable = itemId => ITEMS[itemId].stackLimit > 1;
 export const isCoin = itemId => ITEMS[itemId].category === 'currency';
 export const isWeapon = itemId => !!ITEMS[itemId].weapon;
-// walking over takes coins and stackables; weapons wait for a click or the inventory
-export const walkTakes = p => !isWeapon(p.itemId);
+// walking over takes coins and stackables; weapons and armor wait for a click or the inventory
+export const walkTakes = p => !isGear(p.itemId);
 // what gets a name label (X) and can be clicked to pick up: everything but coins
 export const labelled = p => !isCoin(p.itemId);
 
@@ -42,7 +42,7 @@ export const inFloorReach = (p, x, y, z) => labelled(p)
 // is the player at (x, y, z) standing on pickup p?
 export const steppedOn = (p, x, y, z) => Math.hypot(p.x - x, p.z - z) <= WALK_RADIUS && Math.abs(p.y - y) <= 0.8;
 
-// A generated weapon's own data, and a pickup as it is packed (game/loot.js packPickup), as they
+// A generated weapon's (or armor's) own data, and a pickup as it is packed (game/loot.js packPickup), as they
 // come over the wire (net/session.js) or out of a save (core/save.js)
 const finite = (...xs) => xs.every(Number.isFinite);
 export const validGen = g => !!g && typeof g === 'object' && Object.hasOwn(RARITY, g.rarity) && Number.isFinite(g.ilvl)

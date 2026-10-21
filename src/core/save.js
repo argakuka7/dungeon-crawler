@@ -10,7 +10,7 @@ import { checkSkin } from './skin.js';
 // the loot on the floor, the cubes discovered, and where each hero left it (spots). Its name
 // comes from the seed (core/names.js); the same seed saved again is the second copy, "... II".
 //   { v, id, seed, copy, name, created, updated, deepest,
-//     run: { defeated, gates, chests, dropped, loot, townPortal, quests, clock, kills }, faces, visited,
+//     run: { defeated, gates, chests, dropped, loot, townPortal, quests, clock, kills, trials, smith }, faces, visited,
 //     spots: { [heroId]: { cube, arrival: { x, y, z } } } }
 // The map itself is never saved: the same seed makes the same cubes (world/). The name is
 // written along (to read the file) but never read back.
@@ -20,9 +20,9 @@ import { checkSkin } from './skin.js';
 // the hero chosen in the menu. What is read is checked: a damaged or unknown entry is left out
 // (and left alone), an item the game no longer knows leaves the bag. `v` says which version
 // wrote it: migrate brings older ones up.
-import { ITEMS, COINS } from './items.js';
+import { ITEMS, COINS, ARMOR_SLOTS, isGear } from './items.js';
 import { BAG_SIZE, BAR_SIZE, createInventory, whole } from './inventory.js';
-import { createPlayerStats, carryTools, levelFromXP, maxHealth } from './progression.js';
+import { createPlayerStats, carryTools, levelFromXP, fullHealth } from './progression.js';
 import { validGen, validPickup } from './loot.js';
 import { worldName } from './names.js';
 import { createQuestLog, checkQuestLog } from './quests.js';
@@ -63,8 +63,8 @@ export const heroLevel = h => levelFromXP(h.xp);
 // What the hero is when it comes into a world: its level, its bag, full health, no potions at work
 // (the fields of core/progression.js createPlayerStats)
 export function heroStats(h) {
-  const level = levelFromXP(h.xp), maxHp = maxHealth(level);
-  return { ...createPlayerStats(), xp: h.xp, level, maxHp, hp: maxHp, inventory: carryTools(structuredClone(h.inventory)) };
+  const level = levelFromXP(h.xp), inventory = carryTools(structuredClone(h.inventory)), maxHp = fullHealth(level, inventory);
+  return { ...createPlayerStats(), xp: h.xp, level, maxHp, hp: maxHp, inventory };
 }
 
 // A bag as it was saved, checked: slots with items the game no longer knows (or that do not
@@ -78,7 +78,7 @@ export function checkInventory(saved) {
     if (!isObj(s) || typeof s.instanceId !== 'string' || seen.has(s.instanceId)) return;
     const def = ITEMS[s.itemId];
     if (!def || def.category === 'currency' || !Number.isInteger(s.count) || s.count < 1 || s.count > def.stackLimit) return;
-    if (s.gen !== undefined && (!def.weapon || !validGen(s.gen))) return;
+    if (s.gen !== undefined && (!isGear(def.id) || !validGen(s.gen))) return;
     seen.add(s.instanceId);
     top = Math.max(top, Number(/^item-(\d+)$/.exec(s.instanceId)?.[1] ?? 0));
     inv.slots[i] = { instanceId: s.instanceId, itemId: s.itemId, count: s.count, ...s.gen ? { gen: structuredClone(s.gen) } : {} };
@@ -93,6 +93,11 @@ export function checkInventory(saved) {
     return null;
   });
   inv.equipped = typeof saved.equipped === 'string' && ITEMS[own(saved.equipped)?.itemId]?.weapon ? saved.equipped : null;
+  // the armor worn: a piece of armor in the bag, in its own slot
+  for (const slot of ARMOR_SLOTS) {
+    const id = saved.worn?.[slot];
+    inv.worn[slot] = typeof id === 'string' && ITEMS[own(id)?.itemId]?.armor?.slot === slot ? id : null;
+  }
   inv.readied = typeof saved.readied === 'string' && ITEMS[saved.readied]?.use === 'throw' && inv.slots.some(s => s?.itemId === saved.readied) ? saved.readied : null;
   inv.nextInstance = Math.max(Number.isSafeInteger(saved.nextInstance) ? saved.nextInstance : 1, top + 1);
   inv.version = Number.isSafeInteger(saved.version) && saved.version >= 0 ? saved.version : 0;
@@ -115,7 +120,8 @@ export function checkHero(h) {
 export function createWorld(seed, { copy = 1, id = newId('w'), now = Date.now() } = {}) {
   seed >>>= 0;
   return { v: SAVE_VERSION, id, seed, copy, name: savedWorldName(seed, copy), created: now, updated: now, deepest: 0,
-    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog(), clock: 0, kills: [], trials: [] },
+    run: { defeated: [], gates: [], chests: [], dropped: [], loot: [], townPortal: null, quests: createQuestLog(), clock: 0, kills: [], trials: [],
+      smith: { visit: 0, sold: [] } },
     faces: [], visited: [], spots: {} };
 }
 
@@ -145,9 +151,12 @@ export function checkWorld(w) {
     created: time(w.created), updated: time(w.updated), deepest: Number.isInteger(w.deepest) && w.deepest > 0 ? w.deepest : 0,
     run: { defeated: strings(run.defeated), gates: strings(run.gates), chests: strings(run.chests), dropped: strings(run.dropped),
       loot: checkLoot(run.loot), townPortal: checkTownPortal(run.townPortal), quests: checkQuestLog(run.quests),
-      clock: time(run.clock), kills: packKills(unpackKills(run.kills)), trials: checkTrials(run.trials) },
+      clock: time(run.clock), kills: packKills(unpackKills(run.kills)), trials: checkTrials(run.trials), smith: checkSmith(run.smith) },
     faces: strings(w.faces), visited: strings(w.visited), spots };
 }
+// the Smith's stock (core/progression.js createRun smith): which visit, what of it was bought
+export const checkSmith = s => ({ visit: Number.isSafeInteger(s?.visit) && s.visit >= 0 ? s.visit : 0,
+  sold: Array.isArray(s?.sold) ? [...new Set(s.sold.filter(i => Number.isInteger(i) && i >= 0 && i < 32))] : [] });
 // a sunken room's stages drained (core/progression.js createRun trials): [[key, count], ...]
 export const checkTrials = t => Array.isArray(t) ? t.filter(e => Array.isArray(e) && typeof e[0] === 'string' && Number.isInteger(e[1]) && e[1] > 0 && e[1] < 10) : [];
 

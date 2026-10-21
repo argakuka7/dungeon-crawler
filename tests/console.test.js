@@ -29,7 +29,8 @@ test('a line splits into words, quoted ones with their spaces', () => {
 });
 
 test('typing finds items by name, by word starts, by id and by letters', () => {
-  assert.equal(best('gr he'), 'item_potion_health_greater');
+  assert.equal(best('gr hea'), 'item_potion_health_greater');
+  assert.equal(best('gr he'), 'armor_head_great');               // "Great Helm": as well a fit, and shorter
   assert.equal(best('health'), 'item_potion_health');           // the name starts with it: before "Minor health potion"
   assert.equal(best('Recurve'), 'weapon_bow_recurve');
   assert.equal(best('flask_f'), 'item_flask_fire');              // the id, without its item_ prefix
@@ -56,11 +57,11 @@ test('the word under the cursor completes: commands first, then their arguments'
   assert.deepEqual([c.from, c.to, c.arg], [1, 3, -1]);
   // without the dev tools, the developer commands are not there
   assert.deepEqual(complete(reg, '/', 1, {}).items.map(i => i.value), ['help']);
-  c = complete(reg, '/give gr he', 11, dev);
+  c = complete(reg, '/give gr hea', 12, dev);
   assert.equal(c.command.name, 'give');
   assert.equal(c.arg, 0);
   assert.equal(c.items[0].value, 'item_potion_health_greater');
-  assert.deepEqual([c.from, c.to], [6, 11]);
+  assert.deepEqual([c.from, c.to], [6, 12]);
   // after a space: the next argument, nothing typed yet (an int: nothing to offer)
   c = complete(reg, '/give ruby ', 11, dev);
   assert.equal(c.arg, 1);
@@ -80,7 +81,7 @@ test('the word under the cursor completes: commands first, then their arguments'
 
 test('taking a completion puts it in place of the word', () => {
   const reg = registry(), dev = { dev: true };
-  let line = '/give gr he', c = complete(reg, line, line.length, dev);
+  let line = '/give gr hea', c = complete(reg, line, line.length, dev);
   let r = accept(line, c, c.items[0].value);
   assert.equal(r.line, '/give item_potion_health_greater ');
   assert.equal(r.cursor, r.line.length);
@@ -93,7 +94,7 @@ test('taking a completion puts it in place of the word', () => {
 
 test('a command line reads into values, or says what is wrong', () => {
   const reg = registry(), dev = { dev: true };
-  let p = parse(reg, '/give gr he 3', dev);
+  let p = parse(reg, '/give gr hea 3', dev);
   assert.equal(p.command.name, 'give');
   assert.deepEqual(p.values, { item: 'item_potion_health_greater', count: 3 });
   assert.deepEqual(parse(reg, '/give "Greater health potion"', dev).values, { item: 'item_potion_health_greater' });

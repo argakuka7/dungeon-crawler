@@ -164,6 +164,44 @@ export const WEARABLES = [
   wearable('wear_explorer_hat', 'Explorer\'s hat', 'head', 'A felt hat with a wide brim and a red feather.'),
   wearable('wear_straw_hat', 'Straw hat', 'head', 'A wide straw hat to keep off the sun.'),
 ];
+// Armor: what the player wears in four slots (ARMOR_SLOTS; core/inventory.js `worn`). Like the
+// weapons these are base types; what drops, chests hold and the Smith sells is an instance with
+// its own rarity, item level, affixes and name (core/gear/generate.js rollArmor; its stats:
+// core/gear/stats.js armorStats). Base values at item level 1:
+//   armor: how much it takes off a blow (core/gear/stats.js armorReduction), grown by item level
+//     like weapon damage; block: a shield's chance to block a blow (most of it, all of its shove
+//     and what it would set on you: game/enemycombat.js), in percent; speed: percent faster on
+//     your feet (boots)
+// The heavier bases only drop deeper down (core/gear/bases.js ARMOR_BASES). Their models are in
+// the character's rest pose (blender/armor.py), in parts on the bones they follow (render/figure.js).
+export const ARMOR_SLOTS = ['head', 'body', 'shield', 'feet'];
+export const ARMOR_SLOT_NAMES = { head: 'Head', body: 'Body', shield: 'Shield', feet: 'Feet' };
+const armor = (id, name, slot, value, description, more = {}) => ({
+  id, name, category: 'armor', slot, stackLimit: 1, model: model(id), description,
+  armor: { slot, armor: value, block: more.block ?? 0, speed: more.speed ?? 0 },
+});
+export const ARMORS = [
+  armor('armor_head_cap', 'Leather Cap', 'head', 5, 'A round cap of boiled leather. Better than nothing.'),
+  armor('armor_head_skullcap', 'Iron Skullcap', 'head', 7, 'A plain iron bowl with a rim. It rings when hit.'),
+  armor('armor_head_nasal', 'Nasal Helm', 'head', 9, 'A pointed helm with a bar down over the nose.'),
+  armor('armor_head_horned', 'Horned Helm', 'head', 11, 'A heavy helm with two curved horns. Mind the doorways.'),
+  armor('armor_head_great', 'Great Helm', 'head', 14, 'A whole bucket of steel with slits to see through.'),
+  armor('armor_body_padded', 'Padded Vest', 'body', 12, 'Quilted cloth stuffed with wool. Warm, at least.'),
+  armor('armor_body_leather', 'Leather Jerkin', 'body', 15, 'Stiff leather with shoulder pads and a broad belt.'),
+  armor('armor_body_chain', 'Chainmail', 'body', 20, 'Thousands of little iron rings. It jingles.'),
+  armor('armor_body_scale', 'Scale Coat', 'body', 25, 'Overlapping metal scales, like a fish that went to war.'),
+  armor('armor_body_plate', 'Plate Armor', 'body', 30, 'A breastplate and big shoulder plates. Very shiny.'),
+  armor('armor_shield_buckler', 'Wooden Buckler', 'shield', 3, 'A small round shield of planks, held in the fist.', { block: 10 }),
+  armor('armor_shield_round', 'Round Shield', 'shield', 5, 'A painted round shield with an iron boss.', { block: 13 }),
+  armor('armor_shield_kite', 'Kite Shield', 'shield', 7, 'Long and pointed at the bottom, to cover the legs too.', { block: 16 }),
+  armor('armor_shield_heater', 'Heater Shield', 'shield', 9, 'A knight\'s shield with a crest on it.', { block: 19 }),
+  armor('armor_shield_tower', 'Tower Shield', 'shield', 12, 'A wall you carry around.', { block: 22 }),
+  armor('armor_feet_sandals', 'Sandals', 'feet', 3, 'Leather straps and a sole. Light on the feet.', { speed: 3 }),
+  armor('armor_feet_boots', 'Leather Boots', 'feet', 4, 'Good honest boots.'),
+  armor('armor_feet_hobnail', 'Hobnail Boots', 'feet', 6, 'Heavy boots with iron nails in the soles.'),
+  armor('armor_feet_greaves', 'Iron Greaves', 'feet', 9, 'Boots with iron plates up the shins.'),
+  armor('armor_feet_winged', 'Winged Boots', 'feet', 8, 'Light boots with little wings at the heels.', { speed: 6 }),
+];
 // Things the quests have you find, carry and bring back (core/quests.js). A quest carries them,
 // not a bag: they lie on the ground until somebody picks them up for the quest, and are never
 // dropped, sold or put on the quick bar.
@@ -241,5 +279,7 @@ export function outfitOf(ids) {
   }
   return out;
 }
-export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, ...TOOLS, ...WEARABLES, ...QUEST_ITEMS].map(i => [i.id, i]));
+export const ITEMS = Object.fromEntries([...WEAPONS, ...COINS, ...POTIONS, ...stackables, ...TOOLS, ...WEARABLES, ...ARMORS, ...QUEST_ITEMS].map(i => [i.id, i]));
+// items that are generated (core/gear/): a weapon or a piece of armor
+export const isGear = itemId => !!(ITEMS[itemId]?.weapon || ITEMS[itemId]?.armor);
 export const OLD_SWORD = WEAPONS[0];

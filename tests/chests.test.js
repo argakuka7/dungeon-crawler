@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHESTS, chestLoot } from '../src/core/chests.js';
+import { CHESTS, CHEST_ARMOR, chestLoot } from '../src/core/chests.js';
 import { PRESTIGE } from '../src/world/sites.js';
 import { makeLayouts } from '../src/world/layout.js';
 import { RARITY } from '../src/core/gear/rarities.js';
@@ -9,7 +9,8 @@ import { itemStats } from '../src/core/gear/stats.js';
 import { ITEMS } from '../src/core/items.js';
 
 const site = (prestige, i = 0) => ({ id: `7:0,-3,1:site:${i}`, prestige });
-const weapons = loot => loot.items.filter(i => i.gen);
+const weapons = loot => loot.items.filter(i => i.gen && ITEMS[i.itemId].weapon);
+const armor = loot => loot.items.filter(i => i.gen && ITEMS[i.itemId].armor);
 const potions = loot => loot.items.filter(i => ITEMS[i.itemId].category === 'potion').reduce((n, i) => n + i.count, 0);
 const crystals = loot => loot.items.filter(i => ITEMS[i.itemId].crystal).reduce((n, i) => n + i.count, 0);
 
@@ -59,6 +60,25 @@ test('exceptional chests promise the best the depth allows, without breaking sha
     assert.ok(shallow.every(w => w.gen.rarity === 'unusual'), 'no Remarkable below its item level: the floor comes down to Unusual');
     assert.ok(RARITY[deep[0].gen.rarity].rank >= RARITY.remarkable.rank);
   }
+});
+
+test('chests hold armor too, on a stream of its own, leaning towards the bare slots', () => {
+  for (const p of PRESTIGE) {
+    let n = 0;
+    for (let i = 0; i < 200; i++) {
+      const loot = chestLoot(site(p, i), 6, 9), a = armor(loot);
+      n += a.length;
+      assert.ok(a.length <= CHEST_ARMOR[p].length);
+      for (const [k, x] of a.entries()) assert.ok(RARITY[x.gen.rarity].rank >= Math.min(RARITY[CHEST_ARMOR[p][k].floor].rank, RARITY.unusual.rank), `${p}: ${x.gen.rarity}`);
+      // the armor's leaning changes nothing else: the weapons, potions and crystals stay
+      assert.deepEqual(loot.items.filter(x => !ITEMS[x.itemId].armor), chestLoot(site(p, i), 6, 9, null, ['head']).items.filter(x => !ITEMS[x.itemId].armor));
+    }
+    const want = CHEST_ARMOR[p].reduce((s, a) => s + a.chance, 0) * 200;
+    assert.ok(Math.abs(n - want) < 30, `${p}: ${n} pieces of armor in 200 chests, about ${want}`);
+  }
+  let feet = 0;
+  for (let i = 0; i < 200; i++) feet += armor(chestLoot(site('rare', i), 6, 9, null, ['feet'])).filter(x => ITEMS[x.itemId].armor.slot === 'feet').length;
+  assert.ok(feet > 200 * 0.4, `${feet} boots in 200 rare chests for a player without any`);
 });
 
 test('the planned reward sites of real layouts all roll a chest', () => {

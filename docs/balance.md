@@ -28,7 +28,9 @@ chests, combat stats) and prints where the player stands on arrival at every dep
 
   Enemy health grows with the player's damage, and enemy damage with the player's health, so
   these hold from depth 1 to 20. What gets harder going down is the roster: stronger kinds,
-  more of them, and the heavy and ranged species.
+  more of them, and the heavy and ranged species. The blows are counted without armor; the armor
+  found on the way ([armor.md](armor.md)) takes off about a tenth of each at first and a third deep
+  down, so with it they take that much longer (`node tools/balance.mjs` counts it).
 - **Guardians are set pieces.** At full damage per second a side guardian takes about 6 s and
   a descent guardian about 12 s at every depth (the first ones on the road a bit less, the last
   ones a bit more as top-tier gear comes in). Trading blows without dodging costs about half
@@ -131,6 +133,10 @@ Change a number, then run `node tools/balance.mjs` and `npm test`. Useful checks
   (item level, level bonus, rarity). If deep enemies melt, raise `GROWTH.hp` or lower
   `ILVL_DAMAGE`.
 - *Guardian seconds and brawl*: tune `GUARDIAN_TIERS`.
+- *armor%*: what the armor the simulated player found (it wears the piece with the most armor in
+  each slot) takes off a blow from an enemy of the depth's level: about 10% at depth 1, rising to
+  about a third deep down ([armor.md](armor.md)). The blows to kill the player and the brawls
+  count it. One knob moves it all: `ARMOR_K` in `core/gear/stats.js` (more: armor counts less).
 - The rarity odds per item level: `node tools/loot-table.mjs`.
 - *What a depth pays*: the simulation also prints the copper (kills and chests) and crystals
   found at each depth, beside what the Enchanter and the Smith ask for weapons of its item level

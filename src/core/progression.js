@@ -1,6 +1,7 @@
 import { createInventory, addInstance, addItem, equipItem, assignBar, whole } from './inventory.js';
 import { OLD_SWORD, TOWN_PORTAL, ROOM_PORTAL, TOOLS, HEALTH_POTION } from './items.js';
 import { fixedWeapon } from './gear/generate.js';
+import { wornTotals } from './gear/stats.js';
 import { createPotionState } from './potions.js';
 import { createQuestLog } from './quests.js';
 import { noteKill } from './respawn.js';
@@ -22,6 +23,17 @@ export const xpForLevel = level => {
 };
 // learn: code.html#functions, stronger.html#levels (see learn/README.md)
 export const maxHealth = level => PLAYER.HP + PLAYER.HP_PER_LEVEL * (level - 1);
+// ... and with what the armor worn adds (core/gear/stats.js wornTotals)
+export const fullHealth = (level, inventory) => maxHealth(level) + wornTotals(inventory).life;
+// the maximum health after the armor worn changed: health gained comes with it (like a level),
+// health lost takes off only what is now over the maximum
+export function refreshMaxHp(p) {
+  const max = fullHealth(p.level, p.inventory), was = p.maxHp;
+  if (max === was) return false;
+  p.maxHp = max;
+  if (p.hp > 0) p.hp = Math.min(max, p.hp + Math.max(0, max - was));
+  return true;
+}
 // what the player's level multiplies weapon damage by
 // learn: code.html#functions, combat.html#damage, stronger.html#levels (see learn/README.md)
 export const levelDamage = level => 1 + PLAYER.DAMAGE_PER_LEVEL * (level - 1);
@@ -73,14 +85,16 @@ export function createPlayerStats(dev = false) {
 // (s, main.js); kills: the ordinary kills, for them to come back (core/respawn.js)
 // loot: the pickups on the floor per cube (game/loot.js); dropped: the drops (their sources) that came
 // trials: what a trial room keeps that its gate cannot (a sunken room's stages drained: key -> count)
+// smith: the Smith's armor for sale (core/shops.js smithStock): how often we came back to town
+// (visit) and what of this visit's we bought (sold: indices)
 // learn: memory.html#notes (see learn/README.md)
 export const createRun = () => ({ defeated: new Set(), unlockedGates: new Set(), loot: new Map(), dropped: new Set(), chests: new Set(), townPortal: null, trials: new Map(),
-  quests: createQuestLog(), clock: 0, kills: new Map() });
+  quests: createQuestLog(), clock: 0, kills: new Map(), smith: { visit: 0, sold: [] } });
 // learn: stronger.html#xp-code (see learn/README.md)
 export function awardXP(p, amount) {
   whole(amount);
   const xp = whole(p.xp + amount), oldLevel = p.level, oldMax = p.maxHp;
-  p.xp = xp; p.level = levelFromXP(xp); p.maxHp = maxHealth(p.level);
+  p.xp = xp; p.level = levelFromXP(xp); p.maxHp = fullHealth(p.level, p.inventory);
   if (p.hp > 0) p.hp = Math.min(p.maxHp, p.hp + p.maxHp - oldMax);
   return p.level - oldLevel;
 }
@@ -102,7 +116,8 @@ export function takeDamage(p, amount, time) {
   if (!Number.isFinite(amount) || amount < 0) throw new RangeError('Invalid damage');
   if (amount > 0 && !p.god) { p.hp = Math.max(0, p.hp - amount); p.lastDamageAt = time; }
 }
-// no regeneration while poisoned (core/status.js)
+// no regeneration while poisoned (core/status.js); armor of Licking Wounds heals faster
 export function regenerate(p, dt, time) {
-  if (p.hp > 0 && !p.toxic && time - p.lastDamageAt >= PLAYER.REGEN_DELAY) p.hp = Math.min(p.maxHp, p.hp + PLAYER.REGEN * p.maxHp * dt);
+  if (p.hp > 0 && !p.toxic && time - p.lastDamageAt >= PLAYER.REGEN_DELAY)
+    p.hp = Math.min(p.maxHp, p.hp + PLAYER.REGEN * (1 + wornTotals(p.inventory).regen / 100) * p.maxHp * dt);
 }

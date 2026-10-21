@@ -26,7 +26,7 @@ export const KINDS = {
   level: { group: 'events' },    // { level }
   guardian: { group: 'events' }, // { label, level, depth, boss }: a guardian (boss: a real boss) defeated, its gate open
   depth: { group: 'events' },    // { depth, place }: the first time down there in this world
-  loot: { group: 'events' },     // { name, rarity }: a rare (or better) weapon picked up
+  loot: { group: 'events' },     // { name, rarity }: a rare (or better) weapon or piece of armor picked up
   kill: { group: 'events' },     // { count, xp }: enemies defeated (merged, MERGE_TIME)
   horde: { group: 'events' },    // {}: a horde woke up
   trial: { group: 'events' },    // { name, depth, what: 'resolved' | 'failed' }: a trial room (core/trials.js) met or failed

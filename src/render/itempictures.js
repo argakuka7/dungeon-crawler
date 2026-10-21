@@ -50,6 +50,15 @@ const OTHERS = { treasure_chest: 'assets/items/treasure_chest.glb' };
 const root = path => path && new URL('../../' + path, import.meta.url).href;
 export const modelUrl = id => root(ITEMS[id] ? ITEMS[id].model ?? ITEMS[id].picture : OTHERS[id]);
 
+// A shield is modelled where it sits on the arm; its model says how it lies face up instead
+// (blender/armor.py `floor_gltf`): for the floor (render/loot.js) and the pictures.
+export function layFlat(model) {
+  let floor = null;
+  model.traverse(o => { floor ??= o.userData.floor_gltf ?? null; });
+  if (Array.isArray(floor) && floor.length === 16) model.applyMatrix4(new THREE.Matrix4().fromArray(floor));
+  return model;
+}
+
 // itemId -> { group (centred on its box), half (half the height of a square view that fits it,
 // turning too) }; null while loading, false when it cannot be shown
 const protos = new Map(), pictures = new Map(), listeners = [];
@@ -62,6 +71,7 @@ function proto(itemId) {
   if (url) load(url).then(root => {
     if (!root) { protos.set(itemId, false); return; }
     const model = root.clone(true);
+    layFlat(model);
     model.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
     model.position.sub(box.getCenter(new THREE.Vector3()));

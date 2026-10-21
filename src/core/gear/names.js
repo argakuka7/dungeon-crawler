@@ -35,25 +35,36 @@ const OLD = ['Ur-', 'Elder ', 'First ', 'Primal ', 'Mega-'];
 const OMG = ['Bane of Kings', 'Who Was Before', 'the World-Root', 'Eye of the Abyss', 'Last of the First Forge',
   'the Sleeping Star', 'Mother of All Pointy Things', 'Ender of Arguments', 'the Absolute Unit'];
 
+// armor has words of its own where the weapons' would not fit ("Grim Shell", "Duskward",
+// "Ur-Stoneguard, Mother of All Lids")
+const ARMOR_NOUN = ['Shell', 'Hug', 'Bucket', 'Blanket', 'Wall', 'Promise', 'Lid', 'Huddle', 'Cuddle', 'Hide', 'Shelter',
+  'Elbow'];
+const ARMOR_TAIL = ['guard', 'ward', 'shell', 'hide', 'mantle', 'wall', 'keep', 'shroud', 'bulwark', 'cover', 'hugger',
+  'huddle', 'bucket', 'blanket'];
+const ARMOR_OMG = ['Mother of All Lids', 'the Unbudging', 'Wall of the World', 'Who Was Never Dented', 'Last of the First Forge',
+  'the Sleeping Mountain', 'Ender of Arguments', 'the Absolute Unit'];
+
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
-function compound(rng) {   // never "Thornthorn" or "Boneedge"
+function compound(rng, tails = TAIL) {   // never "Thornthorn" or "Boneedge"
   const root = pick(ROOT, rng), end = root.at(-1).toLowerCase();
-  return root + pick(TAIL.filter(t => t !== root.toLowerCase() && t[0] !== end), rng);
+  return root + pick(tails.filter(t => t !== root.toLowerCase() && t[0] !== end), rng);
 }
 
+// armor: a piece of armor's words (the weapons' otherwise)
 // learn: loot.html#affixes (see learn/README.md)
-export function itemName(rarity, baseName, rng) {
+export function itemName(rarity, baseName, rng, armor = false) {
+  const tails = armor ? ARMOR_TAIL : TAIL;
   switch (rarity) {
     case 'crap': return `${pick(CRAP, rng)} ${baseName}`;
     case 'shitty': return `${pick(SHITTY, rng)} ${baseName}`;
     case 'vanilla': return `${pick(VANILLA, rng)} ${baseName}`;
     case 'unremarkable': return `${pick(MEH, rng)} ${baseName}`;
-    case 'decent': return `${pick(ADJ, rng)} ${pick(NOUN, rng)}`;
-    case 'unusual': return compound(rng);
-    case 'remarkable': return `${compound(rng)} ${pick(TITLE, rng)}`;
-    case 'fabled': return `${compound(rng)}, ${pick(EPITHET, rng)}`;
-    case 'impossible': return `${compound(rng)}, ${pick(IMPOSSIBLE, rng)}`;
-    default: return `${pick(OLD, rng)}${compound(rng)}, ${pick(OMG, rng)}`;
+    case 'decent': return `${pick(ADJ, rng)} ${pick(armor ? ARMOR_NOUN : NOUN, rng)}`;
+    case 'unusual': return compound(rng, tails);
+    case 'remarkable': return `${compound(rng, tails)} ${pick(TITLE, rng)}`;
+    case 'fabled': return `${compound(rng, tails)}, ${pick(EPITHET, rng)}`;
+    case 'impossible': return `${compound(rng, tails)}, ${pick(IMPOSSIBLE, rng)}`;
+    default: return `${pick(OLD, rng)}${compound(rng, tails)}, ${pick(armor ? ARMOR_OMG : OMG, rng)}`;
   }
 }
 // whether the name already says what the item is (no base line needed under it)

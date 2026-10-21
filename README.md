@@ -19,7 +19,9 @@ docs that explain how the game works, from the big ideas down to the real code:
 - `index.html`, `style.css`, `src/`: the game.
   - `src/core/`: pure rules and data (constants, combat, items, inventory, ...);
     `src/core/gear/` is the weapon generator (rarities, affixes, names, drops, enchantments;
-    `docs/loot.md`); `src/core/crafting.js` is the town's Enchanter and Smith working on weapons.
+    `docs/loot.md`) and armor (`docs/armor.md`, its models `blender/armor.py`); `src/core/crafting.js`
+    is the town's Enchanter and Smith working on weapons and armor (the Smith sells armor too,
+    `src/core/shops.js`).
   - `src/world/`: the world graph and everything shared between cubes (layout, WFC, faces,
     falls across faces, sites, town plan, the trial rooms' plan), plus the worker that owns it.
     Trial rooms (`docs/trials.md`): planned in `src/world/trials.js`, built in `src/cubegen/trials/`,
@@ -47,7 +49,8 @@ docs that explain how the game works, from the big ideas down to the real code:
     pen, color picker, closed-outline fill, eraser, rotation and zoom. Paint is a 2048² UV
     texture, not vertex colors; GPU projection carries strokes across UV seams without painting
     through the body. Fill refuses outlines with gaps. Save Skin needs a name and puts the skin
-    on the hero; Cancel leaves it unchanged. Not sent to other players online. See `docs/skins.md`.
+    on the hero; Cancel leaves it unchanged. Playing together the others see it (sent once, in
+    pieces). See `docs/skins.md`.
   - Settings (`src/game/settings.js`, the menu in `src/game/settingsmenu.js`, from the Esc menu
     and the main menu): the frame rate cap (30, 60 or unlimited, `src/main.js`), the anti-aliasing (MSAA off to
     8x, `src/render/msaa.js`), the camera (the overview or the close view behind the hero; Tab or C

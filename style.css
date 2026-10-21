@@ -208,6 +208,10 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #inventory-hero-col[hidden], #inventory-floor-col[hidden], #inventory-shop-col[hidden] { display: none; }
 #inventory-hero { flex: 1 1 0; min-height: 120px; width: 100%; height: 0; border-radius: 4px;
   background: radial-gradient(ellipse at 50% 70%, #2f3a4a, #181e28 72%); }
+/* the armor worn, a slot each (game/inventory.js) */
+#inventory-worn { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+#inventory-panel .worn-slot { aspect-ratio: 1; }
+.worn-slot .slot-name { position: absolute; inset: 0; display: grid; place-items: center; color: #5d6878; font: 11px var(--font-display); }
 #inventory-equipped { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; margin-top: 8px; font-size: 15px; align-items: baseline; }
 #inventory-equipped small { color: #8f9aaa; font-size: 14px; }
 #inventory-equipped b { font-weight: normal; color: #ffcf7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

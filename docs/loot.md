@@ -1,10 +1,11 @@
 # Loot
 
-Enemies drop coins, now and then a weapon, a potion or a crystal; guardians always drop weapons,
-potions and crystals; treasure chests at reward sites hold all four. Weapons are generated: each
-one is an instance of a base weapon (a sword, bow, crossbow or staff) with its own rarity, item
-level, affixes and name. In town the Enchanter puts an enchantment on a weapon (for copper and
-crystals) and the Smith re-rolls its affixes (for copper): see [Enchanting and
+Enemies drop coins, now and then a weapon, a piece of armor, a potion or a crystal; guardians
+always drop weapons, armor, potions and crystals; treasure chests at reward sites hold all of them.
+Weapons are generated: each one is an instance of a base weapon (a sword, bow, crossbow or staff)
+with its own rarity, item level, affixes and name; armor the same way, with bases and affixes of
+its own ([armor.md](armor.md)). In town the Enchanter puts an enchantment on a weapon (for copper
+and crystals) and the Smith re-rolls affixes (for copper) and sells armor: see [Enchanting and
 re-rolling](#enchanting-and-re-rolling). The generator lives
 in `src/core/gear/` and is pure and seeded; the floor, pickup and inventory code in
 `src/game/loot.js`, `src/game/lootlabels.js`, `src/game/inventory.js` and `src/render/loot.js`;
@@ -18,8 +19,8 @@ chests in `src/core/chests.js` and `src/game/chests.js`. How much of it there is
   collecting every coin and stackable item within four cells (only when there is one; else it
   does nothing). On touch screens the use button above the action button does the same.
   Enter is the chat.
-- Weapons are **not** taken by walking over them, by the coin magnet or by collecting (the action key).
-- **Click** a weapon (or its label) to walk there and pick it up. The enemy under the cursor
+- Weapons and armor are **not** taken by walking over them, by the coin magnet or by collecting (the action key).
+- **Click** a weapon or a piece of armor (or its label) to walk there and pick it up. The enemy under the cursor
   still wins over an item; an item wins over a chest, a chest over the floor. A full bag says so
   and leaves it.
 - **Click** a closed treasure chest (or its label, "Treasure chest", coloured by how grand the
@@ -165,6 +166,9 @@ is the enemy's level.
 - Ordinary enemies: a weapon 5%, a potion 3% and a crystal 1.5% of the time, all × √(the
   kind's level-1 XP / 30): a spider 4% / 2.5% / 1.2%, a Stunder 8% / 5% / 2.4%, a Triangle 10% /
   6% / 3%. Kinds with drops of their own (a boss's minions) drop no crystals.
+- Armor ([armor.md](armor.md)): ordinary enemies a piece 4% of the time (× the same √),
+  guardians one (at least Decent), on a stream of its own, leaning towards the slots you wear
+  nothing in. Kinds with drops of their own drop none.
 - Side guardians: one weapon, at least Decent (Unusual from level 10), luck 0.1; one potion; one
   crystal.
 - Descent guardians: two weapons, at least Decent (Unusual from level 5, Remarkable from 14),
@@ -189,6 +193,10 @@ kind like drops do); `CHESTS` is the table:
 | Exceptional | depth + 2 | 180–280 | 2 | 2–3 | at least Remarkable and at least Unusual |
 
 (The site prestiges, basic to exceptional, are not rarities: they rank reward sites, `world/sites.js`.)
+
+Armor comes on a stream of its own (`CHEST_ARMOR`): a basic chest a piece half the time (at least
+Vanilla), an uncommon or rare one a Decent one, an exceptional one an Unusual one and half the time
+a second (Decent); see [armor.md](armor.md).
 
 Copper grows like enemy coins. Weapons roll with luck (0.1 to 0.45 by prestige). Opening a chest
 (`game/chests.js`) adds its site to `run.chests`, opens the model and, once the lid's `Open` clip has
@@ -237,8 +245,9 @@ three from 16; copper `300 × (1 + 0.75 × (item level − 1))`, rounded to two 
 item level 1, 2300 at 10, 4400 at 19). That is about a quarter of what the depth of the weapon
 pays (`node tools/balance.mjs` prints both).
 
-**The Smith** (at the anvil in town) re-rolls one affix: with a weapon selected, every affix
-line has a **Re-roll** button. The line becomes a fresh affix that may roll on the weapon and is
+**The Smith** (at the anvil in town) re-rolls one affix: with a weapon or a piece of armor
+selected, every affix line has a **Re-roll** button. His column holds the armor he sells
+([armor.md](armor.md#drops-and-the-smith)). The line becomes a fresh affix that may roll on the weapon and is
 not on it already (the same one again too, with a new value), keeping the prefix and suffix
 limits and the old line's tier (`core/gear/affixes.js rerollAffix`). Weapons without affixes
 (Crap to Unremarkable) have nothing to re-roll. It costs copper only:
@@ -270,7 +279,7 @@ for free.
 
 With `?dev=1` the console (`` ` ``, `docs/console.md`) rolls a weapon of any base, rarity and item
 level: `/weapon <weapon> [rarity] [level] [drop]` puts it in the bag and equips it, or with `drop`
-lays it on the floor (`/weapon grsw omg 20 drop`). `__game.devDropWeapon(itemId, rarity, ilvl)`
+lays it on the floor (`/weapon grsw omg 20 drop`); `/armor` does the same for armor. `__game.devDropWeapon(itemId, rarity, ilvl)`
 does the same from the browser's devtools.
 
 ## Tests
