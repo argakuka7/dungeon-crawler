@@ -143,24 +143,27 @@ export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];
 // one thing per slot (OUTFIT_SLOTS): on the head, or in the right or the left hand. Their models
 // say which bone they sit on, how, and how the arm holds them (blender/items.py WEARS).
 // `glow`: the colour the gem-like part shines in. The villagers wear them (world/town.js
-// VILLAGERS), the people out in the world too (core/npcs.js). The headwear is head armor as well
-// (`armor`, like ARMORS below: light, with a little something of its own, `perks`, core/gear/stats.js
-// armorStats): it drops, the Smith sells it, the hero wears it (core/gear/bases.js ARMOR_BASES).
+// VILLAGERS), the people out in the world too (core/npcs.js). They are armor as well (`armor`,
+// like ARMORS below: light, with a little something of its own, `perks`, core/gear/stats.js
+// armorStats): the headwear on the head, the things carried in the off hand, the shield's slot
+// (the hero's other hand holds the weapon: render/figure.js puts a right-hand thing in the left).
+// They drop, the Smith sells them, the hero wears them (core/gear/bases.js ARMOR_BASES).
 const wearable = (id, name, slot, description, more = {}) => ({
   id, name, category: slot === 'head' ? 'wearable' : 'held', slot, stackLimit: 1, model: model(id),
   description, ...more });
 const hat = (value, { moveSpeed = 0, ...perks } = {}) => ({ armor: { slot: 'head', armor: value, block: 0, speed: moveSpeed, perks } });
+const carried = (value, block, perks = {}) => ({ armor: { slot: 'shield', armor: value, block, speed: 0, perks } });
 export const OUTFIT_SLOTS = ['head', 'right', 'left'];
 export const WEARABLES = [
   wearable('wear_headscarf', 'Headscarf', 'head', 'A plum kerchief with golden dots, knotted at the nape.', hat(2, { regen: 10 })),
   wearable('wear_welding_mask', 'Welding mask', 'head', 'A smith\'s mask with a dark glass window.', hat(9, { burnResist: 20 })),
   wearable('wear_wizard_hat', 'Wizard hat', 'head', 'Tall, pointed and covered in stars.', hat(3, { regen: 20 })),
-  wearable('held_towel', 'Towel', 'left', 'A striped towel, carried over the forearm.'),
-  wearable('held_crystal_ball', 'Crystal ball', 'right', 'It floats over the palm and glows softly.', { glow: '#7fb4ff' }),
-  wearable('held_rope', 'Rope', 'right', 'A coil of hemp rope.'),
-  wearable('held_hammer', 'Hammer', 'right', 'A smith\'s hammer.'),
-  wearable('held_pliers', 'Pliers', 'left', 'A smith\'s pliers, holding a glowing billet.', { glow: '#ff7a2a' }),
-  wearable('held_feed_bag', 'Feed bag', 'left', 'Grain for the animals, and a carrot.'),
+  wearable('held_towel', 'Towel', 'left', 'A striped towel, carried over the forearm. Always know where your towel is.', carried(1, 5, { regen: 15 })),
+  wearable('held_crystal_ball', 'Crystal ball', 'right', 'It floats over the palm and glows softly.', { glow: '#7fb4ff', ...carried(2, 6, { regen: 20, poisonResist: 10 }) }),
+  wearable('held_rope', 'Rope', 'right', 'A coil of hemp rope.', carried(1, 4, { steady: 20 })),
+  wearable('held_hammer', 'Hammer', 'right', 'A smith\'s hammer.', carried(3, 8, { steady: 10 })),
+  wearable('held_pliers', 'Pliers', 'left', 'A smith\'s pliers, holding a glowing billet.', { glow: '#ff7a2a', ...carried(2, 6, { burnResist: 15 }) }),
+  wearable('held_feed_bag', 'Feed bag', 'left', 'Grain for the animals, and a carrot. Snacks!', carried(1, 4, { life: 10 })),
   // the people out in the world wear these (core/npcs.js)
   wearable('wear_hood', 'Hood', 'head', 'A pilgrim\'s hood of rough brown cloth.', hat(3, { poisonResist: 10 })),
   wearable('wear_miner_helmet', 'Miner\'s helmet', 'head', 'A hard yellow helmet with a lamp on the front.', { glow: '#ffe9a0', ...hat(8) }),
@@ -178,13 +181,14 @@ export const WEARABLES = [
 // The heavier bases only drop deeper down (core/gear/bases.js ARMOR_BASES). Their models are in
 // the character's rest pose (blender/armor.py), in parts on the bones they follow (render/figure.js).
 export const ARMOR_SLOTS = ['head', 'body', 'shield', 'feet'];
-export const ARMOR_SLOT_NAMES = { head: 'Head', body: 'Body', shield: 'Shield', feet: 'Feet' };
+export const ARMOR_SLOT_NAMES = { head: 'Head', body: 'Body', shield: 'Off hand', feet: 'Feet' };
 const armor = (id, name, slot, value, description, more = {}) => ({
   id, name, category: 'armor', slot, stackLimit: 1, model: model(id), description,
   armor: { slot, armor: value, block: more.block ?? 0, speed: more.speed ?? 0 },
 });
-// the headwear among WEARABLES above, head armor too
-export const HATS = WEARABLES.filter(w => w.armor);
+// the headwear among WEARABLES above, head armor too, and the things carried, off-hand armor
+export const HATS = WEARABLES.filter(w => w.armor?.slot === 'head');
+export const CARRIED = WEARABLES.filter(w => w.armor?.slot === 'shield');
 export const ARMORS = [
   armor('armor_head_cap', 'Leather Cap', 'head', 5, 'A round cap of boiled leather. Better than nothing.'),
   armor('armor_head_skullcap', 'Iron Skullcap', 'head', 7, 'A plain iron bowl with a rim. It rings when hit.'),

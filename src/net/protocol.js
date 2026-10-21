@@ -209,15 +209,16 @@ export function packPose(position, yaw, hips, quats) {
 }
 
 // what a `me` says the player wears (render/partner.js capturedLook): 'id@rarity@back' each, or
-// a bare id (as before armor) -> [{ id, rarity, back }], one per slot, only things we know
+// a bare id (as before armor) -> [{ id, slot, rarity, back }], one per slot (an armor slot for what
+// is armor), only things we know
 export function wornOf(list) {
   const out = [], slots = new Set();
   for (const s of Array.isArray(list) ? list.slice(0, 8) : []) {
     if (typeof s !== 'string') continue;
-    const [id, rarity, back] = s.split('@'), def = ITEMS[id];
-    if (!def?.slot || slots.has(def.slot)) continue;
-    slots.add(def.slot);
-    out.push({ id, rarity: Object.hasOwn(RARITY, rarity) ? rarity : null, back: back === '1' });
+    const [id, rarity, back] = s.split('@'), def = ITEMS[id], slot = def?.armor?.slot ?? def?.slot;
+    if (!slot || slots.has(slot)) continue;
+    slots.add(slot);
+    out.push({ id, slot, rarity: Object.hasOwn(RARITY, rarity) ? rarity : null, back: back === '1' });
   }
   return out;
 }

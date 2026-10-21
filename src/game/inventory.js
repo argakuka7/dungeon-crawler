@@ -246,9 +246,10 @@ const PERKS = { regen: v => `${v}% faster healing`, burnResist: v => `${v}% less
 const against = () => Math.max(depthLevel(state.map?.depth ?? 0), depthLevel(state.run?.quests.deepest ?? 0));
 function armorText(item) {
   const s = armorStats(item), r = rarityOf(item), level = against();
-  const lines = [`${r.name}${item.gen ? ` · item level ${item.gen.ilvl}` : ''}`, `${ARMOR_SLOT_NAMES[s.slot]} armor`,
+  const def = ITEMS[item.itemId], what = s.slot !== 'shield' ? `${ARMOR_SLOT_NAMES[s.slot]} armor` : def.category === 'armor' ? 'Shield' : 'Carried in the off hand';
+  const lines = [`${r.name}${item.gen ? ` · item level ${item.gen.ilvl}` : ''}`, what,
     `Armor ${s.armor} · takes ${pct(armorReduction(s.armor, level))} off blows (level ${level})`];
-  if (s.block) lines.push(`Blocks ${s.block}% of blows${s.slot === 'shield' ? ' (not with a bow: it goes on your back)' : ''}`);
+  if (s.block) lines.push(`Blocks ${s.block}% of blows (not with a bow in hand${def.category === 'armor' ? ': it goes on your back' : ''})`);
   if (s.moveSpeed && ITEMS[item.itemId].armor.speed) lines.push(`${ITEMS[item.itemId].armor.speed}% faster on your feet`);
   for (const [k, v] of Object.entries(ITEMS[item.itemId].armor.perks ?? {})) lines.push(PERKS[k](v));   // (a hat's own)
   if (selected?.from === 'bag' && isWorn(player.inventory, item.instanceId)) lines.push('Worn');
@@ -257,7 +258,7 @@ function armorText(item) {
 // against what is worn in its slot, stat by stat
 function compareArmorText(item) {
   const s = armorStats(item), worn = wornItem(player.inventory, s.slot);
-  if (!worn) return `<p>Nothing worn on your ${ARMOR_SLOT_NAMES[s.slot].toLowerCase()} yet.</p>`;
+  if (!worn) return `<p>Nothing ${s.slot === 'shield' ? 'in your off hand' : `worn on your ${ARMOR_SLOT_NAMES[s.slot].toLowerCase()}`} yet.</p>`;
   if (selected?.from === 'bag' && selected.id === worn.instanceId) return '';
   const now = armorStats(worn);
   const row = (label, k) => {
@@ -349,7 +350,7 @@ function draw(next, inv, equipped, allowed, floor, item) {
     + `<small>In hand</small><b>${esc(inv.readied ? ITEMS[inv.readied].name : equipped ? itemName(equipped) : 'Nothing')}</b>`
     + `<small>Level bonus</small><b>+${Math.round((levelDamage(player.level || 1) - 1) * 100)}% damage</b>`
     + `<small>Armor</small><b title="Against level ${level} enemies">${d.armor} · ${pct(armorReduction(d.armor, level))} off blows</b>`
-    + (wornItem(inv, 'shield') ? `<small>Block</small><b>${shieldInHand() ? `${d.block}% of blows${d.block >= MAX_BLOCK ? ' (most)' : ''}` : 'Shield on your back'}</b>` : '');
+    + (wornItem(inv, 'shield') ? `<small>Block</small><b>${shieldInHand() ? `${d.block}% of blows${d.block >= MAX_BLOCK ? ' (most)' : ''}` : 'None with a bow in hand'}</b>` : '');
   // what is worn, a slot each: a click selects it in the bag
   $('inventory-worn').innerHTML = ARMOR_SLOTS.map(slot => {
     const s = wornItem(inv, slot), on = !!s && selected?.from === 'bag' && selected.id === s.instanceId;

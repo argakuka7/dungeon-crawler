@@ -56,8 +56,8 @@ export function rollBase(rng, ilvl, favor = null) {
 }
 
 // Armor (core/items.js ARMORS): five of each slot, a light one or two from item level 1 and
-// heavier ones further down, and the hats the villagers wear (core/items.js WEARABLES: light
-// head armor, half as likely as a helm each). Tags: 'armor' and the slot. A roll picks the slot
+// heavier ones further down, and what the villagers wear and carry (core/items.js WEARABLES: light
+// head armor, half as likely as a helm each; off-hand things, a little less likely than a shield). Tags: 'armor' and the slot. A roll picks the slot
 // first, each as likely, then a base of it by weight; it leans towards the slots the player wears
 // nothing in (`favor`: a list of slots, FAVOR times as likely), so an empty slot soon gets something.
 const armorBase = (itemId, minLevel, weight = 1) => ({ itemId, minLevel, weight, tags: ['armor', ITEMS[itemId].armor.slot] });
@@ -67,6 +67,8 @@ export const ARMOR_BASES = [
   armorBase('wear_headscarf', 1, .5), armorBase('wear_hood', 1, .5), armorBase('wear_straw_hat', 1, .5),
   armorBase('wear_explorer_hat', 2, .5), armorBase('wear_wizard_hat', 3, .5), armorBase('wear_miner_helmet', 3, .5),
   armorBase('wear_welding_mask', 4, .5),
+  armorBase('held_towel', 1, .4), armorBase('held_feed_bag', 1, .4), armorBase('held_rope', 1, .4),
+  armorBase('held_pliers', 2, .4), armorBase('held_hammer', 3, .4), armorBase('held_crystal_ball', 4, .4),
   armorBase('armor_body_padded', 1), armorBase('armor_body_leather', 2), armorBase('armor_body_chain', 4),
   armorBase('armor_body_scale', 6), armorBase('armor_body_plate', 8),
   armorBase('armor_shield_buckler', 1), armorBase('armor_shield_round', 2), armorBase('armor_shield_kite', 4),

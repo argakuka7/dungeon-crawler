@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { assets } from './paths.js';
 import { readGlb, decoderReady } from '../tools/glb.mjs';
 import { mulberry32 } from '../src/core/util.js';
-import { ITEMS, ARMORS, HATS, WEARABLES, ARMOR_SLOTS, isGear } from '../src/core/items.js';
+import { ITEMS, ARMORS, HATS, CARRIED, WEARABLES, ARMOR_SLOTS, isGear } from '../src/core/items.js';
 import { RARITY, RARITIES } from '../src/core/gear/rarities.js';
 import { AFFIX, AFFIXES } from '../src/core/gear/affixes.js';
 import { ARMOR_BASES, BASES, baseTags } from '../src/core/gear/bases.js';
@@ -29,13 +29,18 @@ test('five pieces of armor for every slot (and the hats), a light one from item 
   assert.deepEqual(ARMOR_SLOTS, ['head', 'body', 'shield', 'feet']);
   for (const slot of ARMOR_SLOTS) {
     const bases = ARMOR_BASES.filter(b => slotOf(b) === slot);
-    assert.equal(bases.length, slot === 'head' ? 5 + HATS.length : 5, slot);
+    assert.equal(bases.length, 5 + (slot === 'head' ? HATS.length : slot === 'shield' ? CARRIED.length : 0), slot);
     assert.ok(bases.some(b => b.minLevel === 1), `a ${slot} piece from item level 1`);
     assert.deepEqual(bases.map(b => b.tags), bases.map(() => ['armor', slot]));
   }
-  // every hat the villagers wear is head armor too, and drops
+  // every hat the villagers wear is head armor too, everything they carry off-hand armor, and drops
   assert.deepEqual(HATS.map(h => h.id), WEARABLES.filter(w => w.slot === 'head').map(w => w.id));
-  assert.equal(ARMORS.length + HATS.length, ARMOR_BASES.length);
+  assert.deepEqual(CARRIED.map(h => h.id), WEARABLES.filter(w => w.slot !== 'head').map(w => w.id));
+  assert.equal(ARMORS.length + HATS.length + CARRIED.length, ARMOR_BASES.length);
+  for (const c of CARRIED) {
+    assert.equal(c.category, 'held'); assert.ok(['left', 'right'].includes(c.slot));
+    assert.ok(c.armor.block > 0 && c.armor.block < ITEMS.armor_shield_buckler.armor.block && Object.keys(c.armor.perks).length, c.id);
+  }
   for (const a of [...ARMORS, ...HATS]) {
     assert.equal(a.category, HATS.includes(a) ? 'wearable' : 'armor'); assert.equal(a.slot, a.armor.slot); assert.equal(a.stackLimit, 1);
     assert.equal(a.model, `assets/items/${a.id}.glb`);
@@ -47,7 +52,7 @@ test('five pieces of armor for every slot (and the hats), a light one from item 
   // heavier pieces come deeper down and hold more (the hats are light, each a little something of its own)
   for (const h of HATS) assert.ok(h.armor.armor < ITEMS.armor_head_great.armor.armor && (Object.keys(h.armor.perks).length || h.armor.speed || h.armor.armor >= 8), h.id);
   for (const slot of ARMOR_SLOTS) {
-    const bases = ARMOR_BASES.filter(b => slotOf(b) === slot && ITEMS[b.itemId].armor.speed === 0 && !HATS.includes(ITEMS[b.itemId]));
+    const bases = ARMOR_BASES.filter(b => slotOf(b) === slot && ITEMS[b.itemId].armor.speed === 0 && ARMORS.includes(ITEMS[b.itemId]));
     for (let i = 1; i < bases.length; i++) assert.ok(ITEMS[bases[i].itemId].armor.armor > ITEMS[bases[i - 1].itemId].armor.armor, bases[i].itemId);
   }
   // the weapons' bases are as they were
@@ -269,9 +274,10 @@ test('the Smith re-rolls armor like weapons', () => {
 test('a friend sees what we wear: id, rarity and whether the shield is on the back', () => {
   assert.ok(PROTOCOL >= 13);
   assert.deepEqual(wornOf(['armor_head_cap@fabled@0', 'armor_shield_kite@decent@1', 'wear_wizard_hat']), [
-    { id: 'armor_head_cap', rarity: 'fabled', back: false }, { id: 'armor_shield_kite', rarity: 'decent', back: true }]);
-  assert.deepEqual(wornOf(['wear_wizard_hat']), [{ id: 'wear_wizard_hat', rarity: null, back: false }]);
-  assert.deepEqual(wornOf(['nope@omg@1', 3, null, 'armor_head_cap@bogus@x']), [{ id: 'armor_head_cap', rarity: null, back: false }]);
+    { id: 'armor_head_cap', slot: 'head', rarity: 'fabled', back: false }, { id: 'armor_shield_kite', slot: 'shield', rarity: 'decent', back: true }]);
+  assert.deepEqual(wornOf(['wear_wizard_hat']), [{ id: 'wear_wizard_hat', slot: 'head', rarity: null, back: false }]);
+  assert.deepEqual(wornOf(['held_hammer@unusual@0']), [{ id: 'held_hammer', slot: 'shield', rarity: 'unusual', back: false }], 'carried: in the off hand');
+  assert.deepEqual(wornOf(['nope@omg@1', 3, null, 'armor_head_cap@bogus@x']), [{ id: 'armor_head_cap', slot: 'head', rarity: null, back: false }]);
   assert.deepEqual(wornOf('armor_head_cap'), []);
   assert.equal(wornOf(Array(20).fill('armor_feet_boots@vanilla@0')).length, 1, 'one per slot');
 });
@@ -294,10 +300,11 @@ test('every piece of armor is in parts that name their bones; shields say where 
     // the trim the game tints by rarity
     assert.ok(json.materials.some(m => m.name === 'Items_Trim'), `${a.id} has trim`);
   }
-  // a hat sits on the head's socket (render/figure.js wear), with trim to show its rarity
-  for (const h of HATS) {
+  // a hat sits on the head's socket, a thing carried on its hand's (render/figure.js wear), with
+  // trim to show its rarity
+  for (const h of [...HATS, ...CARRIED]) {
     const json = readGlb(resolve(assets, `items/${h.id}.glb`)).json, root = json.nodes[json.scenes[0].nodes[0]];
-    assert.equal(root.extras.socket, 'head', h.id);
+    assert.equal(root.extras.socket, { head: 'head', left: 'hand.L', right: 'hand.R' }[h.slot], h.id);
     assert.ok(!json.nodes.some(n => n.extras?.bone), h.id);
     assert.ok(json.materials.some(m => m.name === 'Items_Trim'), `${h.id} has trim`);
   }

@@ -1185,9 +1185,11 @@ def towel(m, v=0):
     stripes = {1, len(profile) - 3}
     sheet(m, grid, .022, lambda i, j: TOWEL_STRIPE if j in stripes else TOWEL)
     # a little fringe on the long end
+    m.slot = TRIM
     for i in range(5):
         y = -width / 2 + .025 + i * (width - .05) / 4
         m.box((-r - .03, y, -.35), (.014, .016, .04), TOWEL)
+    m.slot = 0
 
 
 def crystal_ball(m, v=0):
@@ -1198,6 +1200,7 @@ def crystal_ball(m, v=0):
     m.slot = 2
     profile = [(-r, 0)] + [(-r * math.cos(a), r * math.sin(a)) for a in [math.pi * i / 7 for i in range(1, 7)]] + [(r, 0)]
     m.lathe((0, 0, 0), profile, light, n=12, jitter=0, colors=[deep, light, pale, light, deep, light])
+    m.slot = TRIM
     for i in range(3):
         a = math.tau * i / 3 + .4
         c = Vector((math.cos(a) * .25, math.sin(a) * .25, .04 * (i - 1)))
@@ -1233,8 +1236,10 @@ def rope(m, v=0):
     m.lathe(tail[-1], [(0, .03), (.035, .036), (.05, .014)], '#e2cc9a', n=6, jitter=.1,
             axis=tail[-1] - tail[-2])   # frayed end
     # the binding round the bundle, either side of the fist
+    m.slot = TRIM
     for x in (-.13, .13):
         m.lathe((x - .03, 0, 0), [(0, .06), (.06, .06)], ROPE_DARK, n=7, jitter=0, axis=(1, 0, 0))
+    m.slot = 0
 
 
 def hammer(m, v=0):
@@ -1242,11 +1247,13 @@ def hammer(m, v=0):
     face at +X, a cross peen at -X)."""
     top = .5
     m.tube([(0, 0, -.17), (0, 0, .15), (0, 0, top)], [.04, .038, .034], WOOD, n=7)
+    m.slot = TRIM
     m.lathe((0, 0, -.19), [(0, .045), (.035, .045), (.05, .036)], '#5d4128', n=7, jitter=0)
     m.slot = 1
     m.box((0, 0, top), (.22, .12, .12), IRON)
     m.lathe((.11, 0, top), [(0, .074), (.05, .074), (.065, .062)], STEEL, n=8, jitter=0, axis=(1, 0, 0))
     m.lathe((-.11, 0, top), [(0, .064), (.12, .016)], STEEL, n=4, jitter=0, axis=(-1, 0, 0), phase=math.pi / 4)
+    m.slot = TRIM
     m.box((0, 0, top + .065), (.04, .07, .025), IRON)   # the wedge
     m.slot = 0
 
@@ -1260,7 +1267,7 @@ def pliers(m, v=0):
                 (-side * .018, y, .48)], [.022, .025, .028, .022, .017], IRON, n=5)
         m.box((-side * .024, y, .48), (.036, .03, .07), IRON)
     m.lathe((0, -.045, .25), [(0, .04), (.09, .04)], STEEL, n=7, jitter=0, axis=(0, 1, 0))
-    m.slot = 0
+    m.slot = TRIM
     for side in (-1, 1):
         m.tube([(side * .062, 0, -.24), (side * .05, 0, -.07)], .036, '#7b3a2b', n=6)
     m.slot = 2
@@ -1275,7 +1282,9 @@ def feed_bag(m, v=0):
     lip = -.13
     m.lathe((0, 0, lip - .27), [(0, .07), (.04, .13), (.14, .155), (.23, .135), (.27, .115)], BURLAP, n=9,
             jitter=.05, colors=[BURLAP, BURLAP, BURLAP_DARK, BURLAP])
+    m.slot = TRIM
     m.ring((0, 0, lip), .118, .022, BURLAP_DARK, n=9, section=4)
+    m.slot = 0
     m.blob((0, 0, lip + .005), (.1, .1, .045), '#d9b85c', n=7, jitter=.15)
     for i in range(7):
         a = math.tau * i / 7
@@ -1286,8 +1295,10 @@ def feed_bag(m, v=0):
             axis=Vector((-.04, -.02, -1)).normalized())
     for d in ((-.05, .02, .1), (.03, -.04, .11), (-.01, .05, .09)):
         m.leaf(top, top + Vector(d), .018, '#5e9c4a')
+    m.slot = TRIM
     m.tube([(-.118, 0, lip), (-.08, 0, lip + .07), (0, 0, .02), (.08, 0, lip + .07), (.118, 0, lip)],
            .013, '#7d5e3c', n=5)
+    m.slot = 0
     m.vertices[start:] = [(x * size, y * size, z * size) for x, y, z in m.vertices[start:]]
 
 

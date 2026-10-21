@@ -126,16 +126,20 @@ export function loadThing(id) {
 export const thingLoaded = id => things.has(id);
 
 // Put item `id` on figure f (in its slot, replacing what was there). false: not loaded yet.
-// Each copy has its own materials (a cube's fade changes them, render/fade.js). opts (armor):
-// rarity (an id: how its trim shines), back (a shield slung on the back). Armor in parts goes on
-// its bones (wearArmor); a hat (head armor too) sits on its socket like any worn thing.
+// Each copy has its own materials (a cube's fade changes them, render/fade.js). opts (worn as
+// armor: game/armor.js): slot (the armor slot it goes in, not its own), rarity (an id: how its
+// trim shines), back (a shield slung on the back; a thing carried in the off hand put away). Armor
+// in parts goes on its bones (wearArmor); a hat or a thing carried (armor too) sits on its socket
+// like on a villager, without the villager's hold pose; a right-hand thing carried in the off hand
+// goes into the left hand, mirrored (the hero's right one holds the weapon).
 export function wear(f, id, opts = {}) {
   const def = ITEMS[id], template = things.get(id);
   if (!def?.slot || !template) return false;
   let parts = false;
   template.traverse(o => { parts ||= !!o.userData.bone; });
   if (def.armor && parts) return wearArmor(f, id, template, opts);
-  takeOff(f, def.slot);
+  const key = opts.slot ?? def.slot, worn = !!opts.slot;
+  takeOff(f, key);
   const object = template.clone(true);
   let node = null;
   object.traverse(o => { if (!node && o.userData.socket) node = o; });
@@ -154,12 +158,20 @@ export function wear(f, id, opts = {}) {
     overGhost(o);
     o.userData.sharedGeo = true;   // the template owns the geometry
   });
-  f.bones[d.socket ?? 'hand.R'].add(object);
+  const socket = d.socket ?? 'hand.R', mirror = worn && key === 'shield' && socket === 'hand.R';
+  f.bones[mirror ? 'hand.L' : socket].add(object);
   object.position.fromArray(d.mount_offset_gltf ?? [0, 0, 0]);
   object.quaternion.fromArray(d.mount_quat_gltf ?? [0, 0, 0, 1]);
+  if (mirror) {   // the hands' frames mirror each other across their x: so does the mount
+    object.position.x *= -1;
+    object.quaternion.set(object.quaternion.x, -object.quaternion.y, -object.quaternion.z, object.quaternion.w);
+    object.scale.x = -1;
+  }
+  object.visible = !(worn && opts.back);   // (the bow needs the hand)
   const rarity = def.armor ? opts.rarity ?? null : null;
-  f.worn[def.slot] = { id, object, objects: [object], hold: d.hold ?? null, float: d.float ?? 0, glowing, rarity,
-    shine: shine(materials.filter(m => !glowing.includes(m)), rarity), at: object.position.clone(), mount: object.quaternion.clone() };
+  f.worn[key] = { id, slot: key, object, objects: [object], hold: worn ? null : d.hold ?? null, float: d.float ?? 0, glowing, rarity,
+    back: worn && !!opts.back, shine: shine(materials.filter(m => !glowing.includes(m)), rarity),
+    at: object.position.clone(), mount: object.quaternion.clone() };
   return true;
 }
 
@@ -207,7 +219,7 @@ function wearArmor(f, id, template, { rarity = null, back = false } = {}) {
     bone.add(object);
     objects.push(object);
   });
-  f.worn[def.slot] = { id, object: objects[0], objects, hold: null, float: 0, glowing: [], rarity, back: !!back,
+  f.worn[def.slot] = { id, slot: def.slot, object: objects[0], objects, hold: null, float: 0, glowing: [], rarity, back: !!back,
     shine: shine(materials, rarity) };
   return true;
 }

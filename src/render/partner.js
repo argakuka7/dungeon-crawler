@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_H } from '../core/constants.js';
-import { ITEMS } from '../core/items.js';
 import { BONES, Q, packPose, wornOf } from '../net/protocol.js';
 import { lerpAngle } from '../net/sync.js';
 import { scene, camera } from './scene.js';
@@ -119,9 +118,9 @@ function setWeapon(fig, url) {
     w.object = model; w.url = url;
   });
 }
-// what they wear (protocol.js wornOf: [{ id, rarity, back }], one per slot)
+// what they wear (protocol.js wornOf: [{ id, slot, rarity, back }], one per slot)
 function setWorn(fig, list) {
-  const worn = Object.fromEntries(list.map(w => [ITEMS[w.id].slot, w])), key = wornKey(worn);
+  const worn = Object.fromEntries(list.map(w => [w.slot, w])), key = wornKey(worn);
   if (fig.worn === key) return;
   for (const slot of Object.keys(fig.f.worn)) takeOff(fig.f, slot);
   if (wearLike(fig.f, { worn }, true)) fig.worn = key;   // else: again next time, once loaded

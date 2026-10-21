@@ -1,7 +1,7 @@
 // The armor the player wears (core/inventory.js `worn`; core/gear/stats.js armorStats): on the
 // hero, in what a blow takes, and in the maximum health.
 //   updateArmor     every frame: the hero wears what the bag says (render/figure.js wear), the
-//                   shield on the back while a bow needs the hand; the maximum health follows
+//                   shield on the back (a thing carried put away) while a bow needs the hand; the maximum health follows
 //                   the armor's health (core/progression.js refreshMaxHp); rare armor shines
 //   guardBlow       a blow on the player (game/enemycombat.js hitPlayer), through the shield and
 //                   the armor: a block (the shield's chance, only in hand) takes most of the blow
@@ -26,12 +26,12 @@ import { emit, glow, rand } from '../render/particles.js';
 export const shieldInHand = (p = player) => equippedWeapon(p)?.weapon?.kind !== 'bow';
 export const wornDefense = (p = player) => wornTotals(p.inventory, { shield: shieldInHand(p) });
 
-// what the hero should wear, by slot: { id, rarity, back }
+// what the hero should wear, by slot: { id, slot, rarity, back }
 function wanted(inv) {
   const out = {};
   for (const slot of ARMOR_SLOTS) {
     const s = inv.slots.find(x => x?.instanceId === inv.worn?.[slot]);
-    if (s) out[slot] = { id: s.itemId, rarity: s.gen?.rarity ?? null, back: slot === 'shield' && !shieldInHand() };
+    if (s) out[slot] = { id: s.itemId, slot, rarity: s.gen?.rarity ?? null, back: slot === 'shield' && !shieldInHand() };
   }
   return out;
 }

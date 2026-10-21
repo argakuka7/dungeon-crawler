@@ -1,6 +1,6 @@
 # Armor
 
-The hero wears armor in four slots: **head**, **body**, **shield** and **feet**. Armor is loot
+The hero wears armor in four slots: **head**, **body**, **shield** (the off hand) and **feet**. Armor is loot
 like the weapons: every piece is an instance of a base with its own rarity, item level, affixes
 and name (`core/gear/`, [loot.md](loot.md)); it drops from enemies, guardians and chests, and the
 Smith in town sells it. It takes a share off the blows that land on you, a shield now and then
@@ -33,8 +33,23 @@ them, and the hero wears them like any armor:
 | Miner's helmet | 3, 8 | (a hard hat) |
 | Welding mask | 4, 9 | 20% less hurt by fire |
 
+What they carry in their hands (`CARRIED`) goes in the off hand, the shield's slot: a little armor,
+a small chance to block and something of its own, each a little less likely than a shield. The
+hero's right hand holds the weapon, so a right-hand thing (the crystal ball, the rope, the hammer)
+goes into the left hand, mirrored (`render/figure.js wear`); with a bow it is put away (not shown,
+no block), like a shield goes on the back.
+
+| Carried | Item level, armor, block | Its own |
+|---|---|---|
+| Towel | 1, 1, 5% | 15% faster healing |
+| Feed bag | 1, 1, 4% | +10 health (snacks) |
+| Rope | 1, 1, 4% | 20% less shoved about |
+| Pliers | 2, 2, 6% | 15% less hurt by fire |
+| Hammer | 3, 3, 8% | 10% less shoved about |
+| Crystal ball | 4, 2, 6% | 20% faster healing, 10% less hurt by poison |
+
 A drop picks the slot first (each as likely, the bare ones three times), then a base of it by
-weight.
+weight. The shield's slot is called the off hand in the inventory.
 
 ## Stats
 
@@ -130,8 +145,9 @@ The resistances add up to at most 75%. Names come from `core/gear/names.js` with
 - A shield is modelled on the outside of the left forearm, turned towards the front. Its extras
   say where it goes on the back (`back_bone`, `back_gltf`) and how it lies face up on the floor and
   in the pictures (`floor_gltf`, `render/itempictures.js layFlat`).
-- A hat sits on the head's socket like on a villager (`socket`, `mount_*` in its extras); its band,
-  hem or stars are its trim.
+- A hat sits on the head's socket like on a villager (`socket`, `mount_*` in its extras), a thing
+  carried on its hand's (without the villager's hold pose); a hat's band, hem or stars, a carried
+  thing's binding, handles or fringe are its trim.
 - Rarity: the trim (the material `Items_Trim`) is dull and rusty on Crap and Shitty, plain on
   Vanilla and Unremarkable, in the rarity's colour from Decent up, glowing and pulsing from
   Remarkable up, and runs through the rainbow on OMG; gems glow in the rarity's colour from Decent
