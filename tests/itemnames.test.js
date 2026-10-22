@@ -7,7 +7,8 @@ import { itemName, defName, defDescription } from '../src/game/itemnames.js';
 test('playing together the room portal scroll goes by the teleport scroll, the same item', () => {
   const scroll = { itemId: ROOM_PORTAL.id, instanceId: 'a', count: 1 };
   assert.equal(itemName(scroll), 'Room Portal Scroll');
-  assert.equal(defDescription(ROOM_PORTAL), ROOM_PORTAL.description);
+  assert.match(defDescription(ROOM_PORTAL), /after 3 seconds of holding still/);
+  assert.doesNotMatch(defDescription(ROOM_PORTAL), /to a friend/);
   online.peers.set(1, { name: 'Anna' });
   try {
     assert.equal(itemName(scroll), 'Teleport Scroll');

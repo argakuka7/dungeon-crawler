@@ -9,7 +9,9 @@
 // The game fills it (game/commands.js, game/devcommands.js). Here: splitting a line into words
 // (words), finding the best matches for what was typed (match, pick), completing the word
 // under the cursor (complete) and reading a line as a command with its values (parse).
-// Commands marked dev only exist with the dev tools on (ctx.dev).
+// Commands marked dev only exist with the dev tools on (ctx.dev); their words stay English, the
+// others' are translated (src/i18n/).
+import { tr } from '../i18n/i18n.js';
 
 export function createRegistry() { return { commands: new Map(), types: new Map() }; }
 export function addType(reg, type) { reg.types.set(type.name, type); return type; }
@@ -18,6 +20,8 @@ export function addCommand(reg, cmd) { reg.commands.set(cmd.name, { args: [], de
 export const commandsFor = (reg, ctx = {}) => [...reg.commands.values()].filter(c => !c.dev || ctx.dev).sort((a, b) => a.name.localeCompare(b.name));
 
 // how a command is used: '/give <item> [count]'
+// a command's help in the language of the moment (a developer command's stays English)
+export const helpOf = cmd => cmd.dev ? cmd.help : tr(cmd.help);
 export const usage = cmd => ['/' + cmd.name, ...cmd.args.map(a => a.optional ? `[${a.name}]` : `<${a.name}>`)].join(' ');
 
 // The words of a line, where each starts and ends (to: one past its end). A word in quotes may
@@ -175,12 +179,12 @@ export function accept(line, c, value) {
 // learn: code.html#talking (see learn/README.md)
 export function parse(reg, line, ctx = {}) {
   const list = words(line.replace(/^\//, ''));
-  if (!list.length) return { error: 'Type a command after the /. /help lists them' };
+  if (!list.length) return { error: tr('Type a command after the /. /help lists them') };
   const command = commandOf(reg, list[0].text, ctx);
-  if (!command) return { error: `There is no command /${list[0].text}. /help lists them` };
+  if (!command) return { error: tr('There is no command /{name}. /help lists them', { name: list[0].text }) };
   const given = list.slice(1), { spans: found, left } = spans(reg, command, given, ctx), values = {};
-  if (left) return { error: `Too many words. Usage: ${usage(command)}` };
-  if (command.args.some((a, i) => !a.optional && i >= found.length)) return { error: `Usage: ${usage(command)}` };
+  if (left) return { error: tr('Too many words. Usage: {usage}', { usage: usage(command) }) };
+  if (command.args.some((a, i) => !a.optional && i >= found.length)) return { error: tr('Usage: {usage}', { usage: usage(command) }) };
   for (const { arg, from, to } of found) {
     const v = read(reg, command.args[arg], joined(given, from, to), ctx);
     if (v.error) return v;
@@ -193,13 +197,13 @@ export function parse(reg, line, ctx = {}) {
 function read(reg, arg, text, ctx) {
   if (arg.type === 'text') return { value: text };
   if (arg.type === 'int') {
-    if (!/^-?\d+$/.test(text)) return { error: `${arg.name} is a whole number, not "${text}"` };
+    if (!/^-?\d+$/.test(text)) return { error: tr('{name} is a whole number, not "{text}"', { name: arg.name, text }) };
     const n = Number(text);
-    if (n < (arg.min ?? -Infinity) || n > (arg.max ?? Infinity)) return { error: `${arg.name} goes from ${arg.min} to ${arg.max}` };
+    if (n < (arg.min ?? -Infinity) || n > (arg.max ?? Infinity)) return { error: tr('{name} goes from {min} to {max}', { name: arg.name, min: arg.min, max: arg.max }) };
     return { value: n };
   }
   const p = pick(text, valuesOf(reg, arg, ctx));
   if (p.item) return { value: p.item.value };
-  if (p.none) return { error: `No ${arg.name} fits "${text}"` };
-  return { error: `"${text}" could be ${p.some.map(c => c.label ?? c.value).join(', ')}` };
+  if (p.none) return { error: tr('No {name} fits "{text}"', { name: arg.name, text }) };
+  return { error: tr('"{text}" could be {list}', { text, list: p.some.map(c => c.label ?? c.value).join(', ') }) };
 }

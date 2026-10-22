@@ -11,6 +11,13 @@
 //   omg:           an old root, compound and epithet      "Ur-Stormreaver, Mother of All Pointy Things"
 // The base type is always shown with it (in the UI), except where it is part of the name.
 // Mostly earnest words, with a few sillier ones mixed in.
+// The name is kept in English (gen.name: saves, the network); another language says it with its
+// own words (src/i18n/<code>/names.js, a list for each of these, in the same order): the words
+// are found again in the English name (wordsOf). Change a word here together with its
+// translations (tools/i18n.mjs checks the lists line up); a name whose words are gone shows in
+// English.
+import { language, localeNames, nounOf, noun, tr } from '../../i18n/i18n.js';
+import { ITEMS } from '../items.js';
 const CRAP = ['Soggy', 'Wobbly', 'Chewed', 'Lopsided', 'Mouldy', 'Squeaky', 'Rusty', 'Bent', 'Sad', 'Damp'];
 const SHITTY = ['Dented', 'Chipped', 'Dull', 'Wonky', 'Borrowed', 'Discount', 'Secondhand', 'Creaky', 'Scuffed',
   'Questionable'];
@@ -44,6 +51,9 @@ const ARMOR_TAIL = ['guard', 'ward', 'shell', 'hide', 'mantle', 'wall', 'keep', 
 const ARMOR_OMG = ['Mother of All Lids', 'the Unbudging', 'Wall of the World', 'Who Was Never Dented', 'Last of the First Forge',
   'the Sleeping Mountain', 'Ender of Arguments', 'the Absolute Unit'];
 
+// every list, by the name the translations use
+export const WORDS = { CRAP, SHITTY, VANILLA, MEH, ADJ, NOUN, ROOT, TAIL, TITLE, EPITHET, IMPOSSIBLE, OLD, OMG, ARMOR_NOUN, ARMOR_TAIL, ARMOR_OMG };
+
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
 function compound(rng, tails = TAIL) {   // never "Thornthorn" or "Boneedge"
   const root = pick(ROOT, rng), end = root.at(-1).toLowerCase();
@@ -70,3 +80,65 @@ export function itemName(rarity, baseName, rng, armor = false) {
 // whether the name already says what the item is (no base line needed under it)
 const NAMES_BASE = new Set(['crap', 'shitty', 'vanilla', 'unremarkable']);
 export const namesBase = rarity => NAMES_BASE.has(rarity);
+
+// --- the name in other languages ---------------------------------------------------------------
+
+const ONE_WORD = { crap: 'CRAP', shitty: 'SHITTY', vanilla: 'VANILLA', unremarkable: 'MEH' };
+const AFTER = { remarkable: [' ', 'TITLE'], fabled: [', ', 'EPITHET'], impossible: [', ', 'IMPOSSIBLE'] };
+const at = (list, word) => { const i = WORDS[list].indexOf(word); return i < 0 ? null : [list, i]; };
+// 'Goblinbotherer' -> [['ROOT', i], ['TAIL', j]]
+function compoundOf(s, armor) {
+  const tails = armor ? 'ARMOR_TAIL' : 'TAIL';
+  for (const [i, root] of ROOT.entries()) {
+    if (!s.startsWith(root)) continue;
+    const tail = at(tails, s.slice(root.length));
+    if (tail) return [['ROOT', i], tail];
+  }
+  return null;
+}
+// The words a generated name is made of, found again in it: { rarity, armor, parts: [[list,
+// index] ...] } (parts: [] for a base's own name, the Old Sword's), or null where they are not
+// (a name from an older list, a developer's).
+export function wordsOf(item) {
+  const gen = item?.gen, def = ITEMS[item?.itemId];
+  if (!gen || typeof gen.name !== 'string' || !def) return null;
+  const { rarity } = gen, name = gen.name, armor = !!def.armor;
+  if (name === def.name) return { rarity, armor, parts: [] };
+  if (ONE_WORD[rarity]) {
+    if (!name.endsWith(` ${def.name}`)) return null;
+    const w = at(ONE_WORD[rarity], name.slice(0, -def.name.length - 1));
+    return w && { rarity, armor, parts: [w] };
+  }
+  if (rarity === 'decent') {
+    for (const [i, adj] of ADJ.entries()) {
+      if (!name.startsWith(`${adj} `)) continue;
+      const n = at(armor ? 'ARMOR_NOUN' : 'NOUN', name.slice(adj.length + 1));
+      if (n) return { rarity, armor, parts: [['ADJ', i], n] };
+    }
+    return null;
+  }
+  if (rarity === 'unusual') { const c = compoundOf(name, armor); return c && { rarity, armor, parts: c }; }
+  let rest = name, old = null;
+  if (rarity === 'omg') {
+    const i = OLD.findIndex(o => name.startsWith(o));
+    if (i < 0) return null;
+    old = ['OLD', i]; rest = name.slice(OLD[i].length);
+  }
+  const [sep, list] = AFTER[rarity] ?? [', ', armor ? 'ARMOR_OMG' : 'OMG'];
+  for (let k = rest.indexOf(sep); k >= 0; k = rest.indexOf(sep, k + 1)) {
+    const c = compoundOf(rest.slice(0, k), armor), end = at(list, rest.slice(k + sep.length));
+    if (c && end) return { rarity, armor, parts: [...(old ? [old] : []), ...c, end] };
+  }
+  return null;
+}
+// The item's name in the language of the moment; enchant: its enchantment's name (English, an
+// adjective: 'Toasty'), said in front of it. English: as it was rolled.
+export function sayName(item, enchant = null) {
+  const def = ITEMS[item?.itemId], name = item?.gen?.name ?? def?.name ?? '';
+  const names = localeNames();
+  if (language() === 'en' || !names || !def) return enchant && name ? `${enchant} ${name}` : name;
+  const words = item?.gen ? wordsOf(item) : { rarity: null, armor: !!def.armor, parts: [] };
+  const base = nounOf(noun(def.name)), adjective = enchant && tr(enchant);
+  if (!words) return adjective && name ? `${names.adjective(adjective, 'm')} ${name}` : name;
+  return names.say(words, base, adjective);
+}

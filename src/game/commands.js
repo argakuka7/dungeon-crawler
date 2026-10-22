@@ -3,7 +3,7 @@
 // enemies, rarities and the like, read from the game's own tables so new ones show up by
 // themselves. core/commands.js reads and completes the lines; game/devcommands.js adds the
 // developer commands (?dev=1).
-import { createRegistry, addCommand, addType, commandsFor, usage, parse } from '../core/commands.js';
+import { createRegistry, addCommand, addType, commandsFor, usage, parse, helpOf } from '../core/commands.js';
 import { ITEMS, WEARABLES } from '../core/items.js';
 import { ENEMY_KINDS } from '../core/enemies.js';
 import { RARITIES } from '../core/gear/rarities.js';
@@ -12,6 +12,7 @@ import { MAX_DEPTH, themeAt, themesAt } from '../themes/depth.js';
 import { online } from '../net/online.js';
 import { state } from './state.js';
 import { note, clearChronicle } from './log.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 export const commands = createRegistry();
 
@@ -42,28 +43,28 @@ choice('drop', [['drop', 'at your feet instead of in hand']]);
 // --- the commands everyone has ------------------------------------------------------------------
 
 addCommand(commands, {
-  name: 'help', help: 'what the commands are (or how one works)', args: [{ name: 'command', type: 'command', optional: true }],
+  name: 'help', help: msg('what the commands are (or how one works)'), args: [{ name: 'command', type: 'command', optional: true }],
   run({ command }, ctx) {
     const one = command && commands.commands.get(command);
-    if (one) return `${usage(one)}: ${one.help}`;
-    const list = commandsFor(commands, ctx).map(c => `${usage(c)}: ${c.help}`);
-    return ['Type to chat. A line that starts with / is a command (Tab completes it):', ...list].join('\n');
+    if (one) return `${usage(one)}: ${helpOf(one)}`;
+    const list = commandsFor(commands, ctx).map(c => `${usage(c)}: ${helpOf(c)}`);
+    return [tr('Type to chat. A line that starts with / is a command (Tab completes it):'), ...list].join('\n');
   },
 });
-addType(commands, { name: 'command', values: ctx => commandsFor(commands, ctx).map(c => ({ value: c.name, label: c.name, hint: c.help })) });
+addType(commands, { name: 'command', values: ctx => commandsFor(commands, ctx).map(c => ({ value: c.name, label: c.name, hint: helpOf(c) })) });
 addCommand(commands, {
-  name: 'seed', help: "this world's seed (?seed= in the address plays it again)",
-  run: () => state.cubes ? `Seed ${state.cubes.seed}` : 'No world yet',
+  name: 'seed', help: msg("this world's seed (?seed= in the address plays it again)"),
+  run: () => state.cubes ? tr('Seed {seed}', { seed: String(state.cubes.seed) }) : tr('No world yet'),
 });
-addCommand(commands, { name: 'clear', help: 'empty the chat box', run() { clearChronicle(); } });
+addCommand(commands, { name: 'clear', help: msg('empty the chat box'), run() { clearChronicle(); } });
 addCommand(commands, {
-  name: 'who', help: 'who is playing',
+  name: 'who', help: msg('who is playing'),
   run() {
-    if (!online.peers.size) return 'Only you. O plays together';
+    if (!online.peers.size) return tr('Only you. O plays together');
     const at = slot => online.buddies.find(b => b.slot === slot);
     return [...online.peers].sort(([a], [b]) => a - b).map(([slot, p]) => {
       const b = at(slot);
-      return `${p.name}${b ? b.here ? ' (here)' : ` (cube ${b.cube})` : ''}`;
+      return b ? b.here ? tr('{name} (here)', { name: p.name }) : tr('{name} (cube {cube})', { name: p.name, cube: b.cube }) : p.name;
     }).join(', ');
   },
 });

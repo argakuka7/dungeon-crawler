@@ -7,6 +7,7 @@
 import { player, state, setStatus } from './state.js';
 import { sfx } from '../audio/sfx.js';
 import { keyLabel, onSettingsChange } from './settings.js';
+import { tr } from '../i18n/i18n.js';
 
 const el = document.getElementById('teleport-menu');
 const MOVED = 0.3;   // cells walked off where it opened: closed
@@ -48,7 +49,7 @@ export function updateTeleportMenu() {
   const next = JSON.stringify(list);
   if (next === menu.shown) return;
   menu.shown = next;
-  el.innerHTML = '<h2>Teleport to</h2>' + list.map((e, i) => {
+  el.innerHTML = `<h2>${esc(tr('Teleport to'))}</h2>` + list.map((e, i) => {
     const key = keyLabel(`bar${i + 1}`, { both: false });
     return `<button data-pick="${i}"${e.why ? ' class="off" aria-disabled="true"' : ''} tabindex="-1">`
       + `${key ? `<kbd>${esc(key)}</kbd>` : ''}<b${e.color ? ` style="color:${e.color}"` : ''}>${esc(e.label)}</b>`

@@ -23,6 +23,7 @@ import { cancelSword } from './sword.js';
 import { clearMouseInput } from './orders.js';
 import { openTeleportMenu, closeTeleportMenu, teleportMenuOpen } from './teleportmenu.js';
 import { together, travel, playerColor } from '../net/online.js';
+import { tr } from '../i18n/i18n.js';
 
 const FADE_MS = 380;
 
@@ -34,24 +35,24 @@ function say(message) {
 // why the scroll cannot be read right now (null: it can)
 function castBlocked() {
   const p = player;
-  if (!state.map || state.transitioning || !state.arrival) return 'Not now';
-  if (state.fallFrom) return 'Not while falling';
+  if (!state.map || state.transitioning || !state.arrival) return tr('Not now');
+  if (state.fallFrom) return tr('Not while falling');
   if (sealedIn()) return SEALED_MESSAGE;   // a trial room while its event runs (game/trials.js)
-  if (p.hp <= 0 || p.ragdoll || p.getUp || p.down) return 'Get up first';
-  if (p.stun > 0 || p.sword.active) return 'Finish your current action first';
+  if (p.hp <= 0 || p.ragdoll || p.getUp || p.down) return tr('Get up first');
+  if (p.stun > 0 || p.sword.active) return tr('Finish your current action first');
   return null;
 }
 // ... and why it cannot take you back to where you came in
 function entryBlocked() {
   const p = player, a = state.arrival;
-  return a && Math.hypot(p.x - a.x, p.z - a.z) < 1 && Math.abs(p.y - a.y) < 0.6 ? 'You are where you came in already' : null;
+  return a && Math.hypot(p.x - a.x, p.z - a.z) < 1 && Math.abs(p.y - a.y) < 0.6 ? tr('You are where you came in already') : null;
 }
 
 // use the scroll: start reading it (playing together: ask where to first), or stop a cast in
 // progress (or the asking)
 export function useRoomPortal() {
   if (teleportMenuOpen()) { closeTeleportMenu(); return false; }
-  if (state.cast) { cancelCast('Portal cancelled'); return false; }
+  if (state.cast) { cancelCast(tr('Portal cancelled')); return false; }
   const why = castBlocked();
   if (why) { say(why); return false; }
   if (together()) { openTeleportMenu(destinations, castTo); return true; }
@@ -63,7 +64,7 @@ export function useRoomPortal() {
 // where the teleport scroll can take you: where you came in, then the others (null: alone again)
 function destinations() {
   if (!together()) return null;
-  return [{ to: 'entry', label: 'Where you came in', why: entryBlocked() },
+  return [{ to: 'entry', label: tr('Where you came in'), why: entryBlocked() },
     ...travel.targets().map(t => ({ to: t.slot, label: t.name, color: playerColor(t.slot), why: t.why }))];
 }
 
@@ -73,8 +74,8 @@ function castTo({ to, label }) {
   if (why) { say(why); return false; }
   const friend = to !== 'entry';
   startCast({ kind: 'roomPortal', duration: ROOM_PORTAL_CAST, firm: false, done: friend ? () => takeToFriend(to) : takeRoomPortal });
-  setStatus(friend ? `Reading the teleport scroll to ${label}... hold still`
-    : together() ? 'Reading the teleport scroll... hold still' : 'Reading the room portal scroll... hold still');
+  setStatus(friend ? tr('Reading the teleport scroll to {name}... hold still', { name: label })
+    : together() ? tr('Reading the teleport scroll... hold still') : tr('Reading the room portal scroll... hold still'));
   return true;
 }
 
@@ -102,6 +103,6 @@ function takeRoomPortal() {
     state.transitioning = false;
     fadeIn();
     sfx('portal', { at: a });
-    say('Back where you came in');
+    say(tr('Back where you came in'));
   }, FADE_MS);
 }

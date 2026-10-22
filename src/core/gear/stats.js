@@ -12,7 +12,8 @@ import { ITEMS, isMelee } from '../items.js';
 import { AFFIX, describeAffix } from './affixes.js';
 import { rarityOf } from './rarities.js';
 import { ENCHANT, enchantOf, describeEnchant } from './enchants.js';
-import { namesBase } from './names.js';
+import { namesBase, sayName } from './names.js';
+import { tr, sayAs } from '../../i18n/i18n.js';
 
 export const ARC = Math.PI * 0.42;   // the basic swing arc (core/combat.js SWORD.arc)
 // learn: combat.html#damage (see learn/README.md)
@@ -55,18 +56,21 @@ export function itemStats(item) {
 // what to call it, and the base type to show under the name (null when the name says it). An
 // enchanted weapon wears its enchantment in front of its name ("Toasty Duskfang"); the name it was
 // found with stays in `gen.name`, so a new enchantment renames it and an old save shows it too.
-export function displayName(item) {
-  const name = item?.gen?.name ?? ITEMS[item?.itemId]?.name ?? '', e = ENCHANT[item?.gen?.enchant];
-  return e && name ? `${e.name} ${name}` : name;
-}
-export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? ITEMS[item.itemId].name : null;
+// In the language of the moment (core/gear/names.js sayName).
+export const displayName = item => sayName(item, ENCHANT[item?.gen?.enchant]?.name ?? null);
+// What to keep of an item to say its name later (the chronicle, a friend's news): { item: {
+// itemId, gen: { name, rarity, enchant } } }, which say() (src/i18n/i18n.js) turns into its name.
+export const itemWords = item => ({ item: { itemId: item.itemId, ...(item.gen && { gen: { name: item.gen.name, rarity: item.gen.rarity,
+  ...(item.gen.enchant && { enchant: item.gen.enchant }) } }) } });
+sayAs('item', it => ITEMS[it?.itemId] ? (it.gen ? displayName(it) : tr(ITEMS[it.itemId].name)) : '');
+export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? tr(ITEMS[item.itemId].name) : null;
 export const affixLines = item => (item?.gen?.affixes ?? []).map(describeAffix);
 // ... with each affix's name: [{ name: 'Pointy', text: '+5 damage' }]
-export const affixEntries = item => (item?.gen?.affixes ?? []).map(a => ({ name: AFFIX[a.id].name, text: describeAffix(a) }));
+export const affixEntries = item => (item?.gen?.affixes ?? []).map(a => ({ name: tr(AFFIX[a.id].name), text: describeAffix(a) }));
 // ... and its enchantment: { name: 'Toasty', text: 'Sets things burning ...' } or null
 export function enchantEntry(item) {
   const e = enchantOf(item);
-  return e && { id: e.id, name: ENCHANT[e.id].name, text: describeEnchant(e.id, e.value) };
+  return e && { id: e.id, name: tr(ENCHANT[e.id].name), text: describeEnchant(e.id, e.value) };
 }
 // damage per second, counting crits (and every ball of a flail striking): what to compare weapons by
 export const weaponDps = s => s.damage * (s.balls ?? 1) * (1 + s.crit * (s.critDamage - 1)) / s.interval;

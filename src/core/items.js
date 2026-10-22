@@ -3,6 +3,11 @@
 // own rolled rarity, affixes and name in `gen` (core/gear/). Its stats: core/gear/stats.js.
 // `model`: how it looks, on the floor, in a hand and in the bag (render/itemviews.js draws the
 // bag's pictures from it).
+// Names and descriptions are English, translated where they are shown (game/itemnames.js; the
+// texts are messages, src/i18n/sources.js lists them): a description may have parameters, its
+// `params` ({ heal: 40 } for 'Restores {heal}% ...').
+import { msg, phrase } from '../i18n/i18n.js';
+
 const model = name => `assets/items/${name}.glb`;
 // Base weapon stats at item level 1 (core/gear/stats.js grows the damage with item level):
 //   kind: sword, flail, bow, crossbow or staff (how it attacks: core/combat.js KINDS); damage
@@ -87,16 +92,18 @@ export const COINS = [
 // likely they drop against the others (core/gear/drops.js, core/chests.js). `family`: which
 // quick bar slot they share by themselves (core/inventory.js autoBar). A new run starts with a
 // few health potions on the quick bar.
-const potionDef = (id, name, use, spec, description) => ({ id, name, category: 'potion', stackLimit: 99,
-  model: model(id), use, cooldown: 1, level: 1, weight: 1, ...spec, description });
-const pct = v => `${Math.round(v * 100)}%`;
-const BUFF_TEXT = { moveSpeed: v => `You move ${pct(v)} faster`, attackSpeed: v => `You attack ${pct(v)} faster`,
-  damage: v => `Your attacks deal ${pct(v)} more damage`, jump: v => `You jump ${pct(v)} higher` };
+const potionDef = (id, name, use, spec, description, params) => ({ id, name, category: 'potion', stackLimit: 99,
+  model: model(id), use, cooldown: 1, level: 1, weight: 1, ...spec, description, params });
+const pct = v => Math.round(v * 100);
+const BUFF_TEXT = { moveSpeed: msg('You move {v}% faster for {time} seconds.'), attackSpeed: msg('You attack {v}% faster for {time} seconds.'),
+  damage: msg('Your attacks deal {v}% more damage for {time} seconds.'), jump: msg('You jump {v}% higher for {time} seconds.') };
 const drink = (id, name, effect, spec) => potionDef(id, name, 'drink', { family: effect.buff ? 'buff' : effect.heal ? 'heal' : 'cure', ...spec,
-  effect }, effect.heal ? `Restores ${pct(effect.heal)} of your health in an instant.`
-  : effect.cure ? `Cures poison and keeps it off you for ${effect.time} seconds.` : `${BUFF_TEXT[effect.buff](effect.value)} for ${effect.time} seconds.`);
+  effect }, effect.heal ? msg('Restores {v}% of your health in an instant.')
+  : effect.cure ? msg('Cures poison and keeps it off you for {time} seconds.') : BUFF_TEXT[effect.buff],
+  { v: pct(effect.heal ?? effect.value ?? 0), time: effect.time });
 const flask = (id, name, spec, text) => potionDef(id, name, 'throw', { family: 'flask', ...spec, flask: spec.flask },
-  `Click its quick bar slot to take it in hand, then click where to throw it (up to ${spec.flask.range} cells away). ${text} It never hurts you.`);
+  msg('Click its quick bar slot to take it in hand, then click where to throw it (up to {range} cells away). {text} It never hurts you.'),
+  { range: spec.flask.range, text: phrase(text) });
 export const POTIONS = [
   drink('item_potion_health_minor', 'Minor health potion', { heal: 0.25, time: 0.5 }, { price: 15, weight: 5 }),
   drink('item_potion_health', 'Health potion', { heal: 0.4, time: 0.6 }, { price: 40, weight: 6 }),
@@ -108,13 +115,13 @@ export const POTIONS = [
   drink('item_potion_might', 'Potion of might', { buff: 'damage', value: 0.3, time: 30 }, { price: 90, level: 3 }),
   drink('item_potion_leaping', 'Leaping potion', { buff: 'jump', value: 0.5, time: 30 }, { price: 60, level: 2 }),
   flask('item_flask_blast', 'Blast flask', { price: 60, level: 2, weight: 1.5,
-    flask: { range: 6, radius: 1.6, blast: 55, color: '#ffb347' } }, 'It explodes where it lands, hurting and throwing back everything around.'),
+    flask: { range: 6, radius: 1.6, blast: 55, color: '#ffb347' } }, msg('It explodes where it lands, hurting and throwing back everything around.')),
   flask('item_flask_fire', 'Fire flask', { price: 70, level: 3,
     flask: { range: 6, radius: 1.4, blast: 12, burn: { damage: 45, time: 4, ticks: 8 }, patch: 4, color: '#ff7a2a' } },
-    'It bursts into flames: everything around catches fire, and the ground burns on for a while.'),
+    msg('It bursts into flames: everything around catches fire, and the ground burns on for a while.')),
   flask('item_flask_toxic', 'Toxic flask', { price: 70, level: 4,
     flask: { range: 6, radius: 1.8, toxin: { damage: 60, time: 6, ticks: 6 }, cloud: 6, color: '#8fdc3c' } },
-    'It bursts into a poison cloud that lingers; everything in it is poisoned.'),
+    msg('It bursts into a poison cloud that lingers; everything in it is poisoned.')),
 ];
 export const HEALTH_POTION = POTIONS.find(p => p.id === 'item_potion_health');
 // Mana and stamina potions and the sticks have inventory definitions only (no mana or
@@ -149,10 +156,12 @@ export const TOWN_PORTAL = {
 export const ROOM_PORTAL_CAST = 3;   // s holding still to read it
 export const ROOM_PORTAL = {
   id: 'item_room_portal', name: 'Room Portal Scroll', category: 'tool', stackLimit: 1, bound: true, use: 'roomPortal',
-  description: `Takes you back to where you came into this room after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere: the way out when you are stuck. One way. Never used up.`,
+  description: 'Takes you back to where you came into this room after {time} seconds of holding still, even on a ladder or wedged in somewhere: the way out when you are stuck. One way. Never used up.',
+  params: { time: ROOM_PORTAL_CAST },
   picture: model('item_room_portal'),
   together: { name: 'Teleport Scroll',
-    description: `Takes you back to where you came into this room, or to a friend, after ${ROOM_PORTAL_CAST} seconds of holding still, even on a ladder or wedged in somewhere. Never used up.` },
+    description: 'Takes you back to where you came into this room, or to a friend, after {time} seconds of holding still, even on a ladder or wedged in somewhere. Never used up.',
+    params: { time: ROOM_PORTAL_CAST } },
 };
 // every hero carries these (core/progression.js carryTools)
 export const TOOLS = [TOWN_PORTAL, ROOM_PORTAL];
@@ -198,7 +207,7 @@ export const WEARABLES = [
 // The heavier bases only drop deeper down (core/gear/bases.js ARMOR_BASES). Their models are in
 // the character's rest pose (blender/armor.py), in parts on the bones they follow (render/figure.js).
 export const ARMOR_SLOTS = ['head', 'body', 'shield', 'feet'];
-export const ARMOR_SLOT_NAMES = { head: 'Head', body: 'Body', shield: 'Off hand', feet: 'Feet' };
+export const ARMOR_SLOT_NAMES = { head: msg('Head'), body: msg('Body'), shield: msg('Off hand'), feet: msg('Feet') };
 const armor = (id, name, slot, value, description, more = {}) => ({
   id, name, category: 'armor', slot, stackLimit: 1, model: model(id), description,
   armor: { slot, armor: value, block: more.block ?? 0, speed: more.speed ?? 0 },

@@ -41,6 +41,8 @@ let current = SOURCE, locale = null;
 const listeners = new Set();
 
 export const language = () => current;
+// the current language's way of saying generated item names (core/gear/names.js sayName)
+export const localeNames = () => locale?.names ?? null;
 export const isLanguage = code => CODES.includes(code);
 
 // the first of the reader's languages (navigator.languages) the game speaks, else English
@@ -123,12 +125,17 @@ export const msg = source => source;
 export const phrase = (source, params) => (params ? { t: source, p: params } : { t: source });
 export const noun = (source, flags) => ({ noun: source, ...flags });
 export const person = (name, g) => ({ name, ...(g && { g }) });
+// Other kinds of words say themselves: sayAs('item', fn) for { item: ... } (core/gear/stats.js:
+// an item's name, generated or not).
+const sayers = new Map();
+export function sayAs(key, fn) { sayers.set(key, fn); }
 export function say(x) {
   if (x == null) return '';
   if (typeof x === 'number') return num(x);
   if (typeof x === 'string') return x;
   if (Array.isArray(x)) return x.map(say).join('');
   if (typeof x.t === 'string') return tr(x.t, x.p);
+  for (const [key, fn] of sayers) if (x[key] !== undefined) return fn(x[key]);
   if (typeof x.noun === 'string' || typeof x.name === 'string') return form(x, null);
   return String(x);
 }
@@ -143,6 +150,7 @@ export function nounOf(x) {
   if (typeof x === 'string') return { word: x, g: 'n', proper: true };
   if (typeof x.name === 'string') return { word: x.name, g: x.g ?? 'n', proper: true };
   if (typeof x.t === 'string') return { word: say(x), g: x.g ?? 'n', proper: true };
+  if (typeof x.noun !== 'string') return { word: say(x), g: 'n', proper: true };
   const source = x.noun, flags = { proper: !!x.proper, caps: !!x.caps };
   if (!locale) { const en = EN_NOUNS[source]; return { word: source, g: 'n', ...en, ...flags }; }
   const e = entryOf(source);

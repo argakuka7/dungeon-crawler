@@ -43,6 +43,7 @@ import { playSong } from '../audio/music.js';
 import { readCode } from '../net/protocol.js';
 import { online } from '../net/online.js';
 import { joinGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
+import { tr, onLanguageChange } from '../i18n/i18n.js';
 
 const FADE_MS = 380, CONFIRM_MS = 4000, COPIED_MS = 1500;
 const $ = id => document.getElementById(id);
@@ -64,18 +65,18 @@ let skins = null, skinPictures = new Map(), skinLoad = 0, wearing = false;
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 function ago(t) {
   const s = (Date.now() - t) / 1000;
-  if (s < 90) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400 * 1.5) return `${Math.round(s / 3600)} h ago`;
-  return `${Math.round(s / 86400)} days ago`;
+  if (s < 90) return tr('just now');
+  if (s < 3600) return tr('{n} min ago', { n: Math.round(s / 60) });
+  if (s < 86400 * 1.5) return tr('{n} h ago', { n: Math.round(s / 3600) });
+  return tr('{n} days ago', { n: Math.round(s / 86400) });
 }
 function playTime(s) {
   const m = Math.round(s / 60);
-  return m < 60 ? `${m} min played` : `${Math.floor(m / 60)} h ${m % 60} min played`;
+  return m < 60 ? tr('{m} min played', { m }) : tr('{h} h {m} min played', { h: Math.floor(m / 60), m: m % 60 });
 }
 // the item a hero holds (its weapon), shown as its picture
 const heroWeapon = h => { const s = h.inventory.slots.find(x => x?.instanceId === h.inventory.equipped); return ITEMS[s?.itemId] ? s.itemId : null; };
-const depthText = w => w.deepest ? `depth ${w.deepest}` : 'town';
+const depthText = w => w.deepest ? tr('depth {depth}', { depth: w.deepest }) : tr('town');
 const chosen = () => { const id = store.selected(); return id ? store.hero(id) : null; };
 
 // --- showing ------------------------------------------------------------------------------------
@@ -106,7 +107,7 @@ function closeMainMenu() {
 
 function deleteButton(id) {
   const sure = asked.id === id && performance.now() < asked.until;
-  return `<button data-act="delete" data-id="${esc(id)}" class="${sure ? 'confirm' : ''}">${sure ? 'Sure? Click again' : 'Delete'}</button>`;
+  return `<button data-act="delete" data-id="${esc(id)}" class="${sure ? 'confirm' : ''}">${sure ? tr('Sure? Click again') : tr('Delete')}</button>`;
 }
 // a thing to pick: `picture` (HTML, null: none), its name and what is known about it under it;
 // `tag`: said after the name; `chosen`: the one picked now
@@ -122,69 +123,69 @@ const card = (body, actions = '', kind = '') =>
 function listScreen({ title, about = '', cards, empty = '', below = '' }) {
   return `<h2>${title}${about ? ` <small>${about}</small>` : ''}</h2>`
     + (cards.length ? `<ul class="title-cards">${cards.join('')}</ul>` : `<p>${empty}</p>`)
-    + `${below}<button data-act="back" class="title-back">Back</button>`;
+    + `${below}<button data-act="back" class="title-back">${tr('Back')}</button>`;
 }
 // the most there can be: why there is no "new" button
-const tooMany = (max, what) => `<p>${max} ${what} is the most: delete one to make a new one.</p>`;
+const tooMany = text => `<p>${text}</p>`;
 
-const noHero = `<p class="title-none">You don't have a character yet.</p><button class="menu-big" data-act="first-hero">OK</button>`;
+const noHero = () => `<p class="title-none">${tr("You don't have a character yet.")}</p><button class="menu-big" data-act="first-hero">${tr('OK')}</button>`;
 // a hero to pick (with its weapon's picture); `chosen`: the one picked now
 function heroPick(h, chosen = false) {
   const weapon = heroWeapon(h);
   return pick({ act: 'hero', id: h.id, chosen, picture: weapon ? pictureImg(weapon) : '<i></i>', name: h.name,
-    info: `Level ${heroLevel(h)} · ${playTime(h.playTime)} · ${ago(h.updated)}` });
+    info: `${tr('Level {level}', { level: heroLevel(h) })} · ${playTime(h.playTime)} · ${ago(h.updated)}` });
 }
 // a skin to pick (its thumbnail: the hero wearing it)
 function skinPick(s, chosen) {
   const url = skinPictures.get(s.key);
-  return pick({ act: 'skin', id: s.key, chosen, name: s.name, tag: chosen ? 'wears it now' : '',
-    picture: url ? `<img src="${url}" alt="">` : '<i></i>', info: s.savedAt ? `saved ${ago(s.savedAt)}` : 'saved skin' });
+  return pick({ act: 'skin', id: s.key, chosen, name: s.name, tag: chosen ? tr('wears it now') : '',
+    picture: url ? `<img src="${url}" alt="">` : '<i></i>', info: s.savedAt ? tr('saved {when}', { when: ago(s.savedAt) }) : tr('saved skin') });
 }
 
 const screens = {
   title() {
     const hero = chosen();
-    const more = '<button class="title-item" data-act="settings">Settings</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">The guide</a>';
-    if (!hero) return `<div class="title-list">${noHero}${more}</div>`;
-    const world = store.heroWorld(hero.id);
-    const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : 'not been there yet'}`;
+    const more = `<button class="title-item" data-act="settings">${tr('Settings')}</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">${tr('The guide')}</a>`;
+    if (!hero) return `<div class="title-list">${noHero()}${more}</div>`;
+    const world = store.heroWorld(hero.id), name = esc(hero.name);
+    const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : tr('not been there yet')}`;
     return `<div class="title-list">
-      ${world ? `<button class="menu-big" data-act="continue">Continue<small>${esc(hero.name)} · level ${heroLevel(hero)}</small><small>${where}</small></button>` : ''}
-      <button class="${world ? 'title-item' : 'menu-big'}" data-act="choose-world">Choose World${world ? '' : `<small>${esc(hero.name)} has no world yet</small>`}</button>
-      <button class="title-item" data-act="join-game">Join Game</button>
-      <button class="title-item" data-act="characters">Choose Character</button>
-      <button class="title-item" data-act="skins">Choose Skin</button>
+      ${world ? `<button class="menu-big" data-act="continue">${tr('Continue')}<small>${name} · ${tr('level {level}', { level: heroLevel(hero) })}</small><small>${where}</small></button>` : ''}
+      <button class="${world ? 'title-item' : 'menu-big'}" data-act="choose-world">${tr('Choose World')}${world ? '' : `<small>${tr('{name} has no world yet', { name })}</small>`}</button>
+      <button class="title-item" data-act="join-game">${tr('Join Game')}</button>
+      <button class="title-item" data-act="characters">${tr('Choose Character')}</button>
+      <button class="title-item" data-act="skins">${tr('Choose Skin')}</button>
       ${more}
     </div>`;
   },
   worlds() {
     const hero = chosen(), worlds = store.worlds(), names = new Map(store.heroes().map(h => [h.id, h.name]));
     const cards = worlds.map(w => card(pick({ act: 'world', id: w.id, chosen: w.id === hero.world, name: w.name,
-      tag: w.id === hero.world ? 'its world now' : '',
+      tag: w.id === hero.world ? tr('its world now') : '',
       info: `${depthText(w)} · ${ago(w.updated)}${w.heroes.length ? ' · ' + w.heroes.map(id => esc(names.get(id) ?? '?')).join(', ') : ''}` }),
-      `<button data-act="copy-name" data-id="${w.id}" title="To share it: a friend makes it with New Known World">${copied === w.id ? 'Copied!' : 'Copy name'}</button>${deleteButton(w.id)}`,
+      `<button data-act="copy-name" data-id="${w.id}" title="${esc(tr('To share it: a friend makes it with New Known World'))}">${copied === w.id ? tr('Copied!') : tr('Copy name')}</button>${deleteButton(w.id)}`,
       'title-world'));
-    const make = worlds.length >= MAX_WORLDS ? tooMany(MAX_WORLDS, 'worlds')
+    const make = worlds.length >= MAX_WORLDS ? tooMany(tr('{max} worlds is the most: delete one to make a new one.', { max: MAX_WORLDS }))
       : form === 'known' ? `<div class="title-form title-new-world">
-          <input id="title-seed" maxlength="60" placeholder="A world name or a number" data-enter="create-world" aria-label="World name or number" autocomplete="off" spellcheck="false">
-          <p id="title-preview" class="title-preview">A friend's world: type its name.</p>
-          <div class="menu-row"><button class="menu-big" data-act="create-world">Make it</button><button data-act="cancel">Cancel</button></div></div>`
-      : `<div class="menu-row title-new"><button data-act="random-world">New Random World</button><button data-act="known-world">New Known World</button></div>`;
-    return listScreen({ title: 'Choose World', about: `for ${esc(hero.name)} · ${worlds.length} of ${MAX_WORLDS}`,
-      cards, empty: 'No worlds yet.', below: make });
+          <input id="title-seed" maxlength="60" placeholder="${esc(tr('A world name or a number'))}" data-enter="create-world" aria-label="${esc(tr('World name or number'))}" autocomplete="off" spellcheck="false">
+          <p id="title-preview" class="title-preview">${tr("A friend's world: type its name.")}</p>
+          <div class="menu-row"><button class="menu-big" data-act="create-world">${tr('Make it')}</button><button data-act="cancel">${tr('Cancel')}</button></div></div>`
+      : `<div class="menu-row title-new"><button data-act="random-world">${tr('New Random World')}</button><button data-act="known-world">${tr('New Known World')}</button></div>`;
+    return listScreen({ title: tr('Choose World'), about: tr('for {name} · {n} of {max}', { name: esc(hero.name), n: worlds.length, max: MAX_WORLDS }),
+      cards, empty: tr('No worlds yet.'), below: make });
   },
   join() {
     const heroes = store.heroes(), hero = chosen();
-    const body = !heroes.length ? noHero : `<h3>Who goes</h3><ul class="title-cards">${heroes.map(h => card(heroPick(h, h.id === hero?.id))).join('')}</ul>
-      <h3>Your friend's code</h3>
-      <div class="menu-row"><input id="title-code" maxlength="40" placeholder="CODE" data-enter="join" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}"><button class="menu-big" data-act="join">Join</button></div>
-      <p>Your hero goes into your friend's world and takes home what it finds there.</p>`;
-    return `<h2>Join Game</h2>${body}<button data-act="back" class="title-back">Back</button>`;
+    const body = !heroes.length ? noHero() : `<h3>${tr('Who goes')}</h3><ul class="title-cards">${heroes.map(h => card(heroPick(h, h.id === hero?.id))).join('')}</ul>
+      <h3>${tr("Your friend's code")}</h3>
+      <div class="menu-row"><input id="title-code" maxlength="40" placeholder="${esc(tr('CODE'))}" data-enter="join" aria-label="${esc(tr('Room code'))}" autocomplete="off" autocapitalize="characters" spellcheck="false" value="${esc(code)}"><button class="menu-big" data-act="join">${tr('Join')}</button></div>
+      <p>${tr("Your hero goes into your friend's world and takes home what it finds there.")}</p>`;
+    return `<h2>${tr('Join Game')}</h2>${body}<button data-act="back" class="title-back">${tr('Back')}</button>`;
   },
   joining() {
     const hero = chosen();
-    return `<h2>Joining ${esc(joining)}</h2><p>${esc(hero?.name ?? 'Your hero')} goes into your friend's world.</p>
-      <p class="title-status">${esc(sessionStatus().text)}</p><button data-act="cancel-join" class="title-back">Cancel</button>`;
+    return `<h2>${tr('Joining {code}', { code: esc(joining) })}</h2><p>${hero ? tr("{name} goes into your friend's world.", { name: esc(hero.name) }) : tr("Your hero goes into your friend's world.")}</p>
+      <p class="title-status">${esc(sessionStatus().text)}</p><button data-act="cancel-join" class="title-back">${tr('Cancel')}</button>`;
   },
   characters() {
     const heroes = store.heroes(), hero = chosen();
@@ -192,29 +193,29 @@ const screens = {
     const cards = Array.from({ length: MAX_HEROES }, (_, i) => {
       const h = heroes[i];
       if (h) return card(form?.rename === h.id
-        ? `<span class="title-rename"><input id="title-rename" maxlength="16" value="${esc(h.name)}" data-enter="save-name" aria-label="New name"><button data-act="save-name" data-id="${h.id}">Save</button></span>`
+        ? `<span class="title-rename"><input id="title-rename" maxlength="16" value="${esc(h.name)}" data-enter="save-name" aria-label="${esc(tr('New name'))}"><button data-act="save-name" data-id="${h.id}">${tr('Save')}</button></span>`
         : heroPick(h, h.id === hero?.id),
-        `<button data-act="rename" data-id="${h.id}">Rename</button>${deleteButton(h.id)}`);
+        `<button data-act="rename" data-id="${h.id}">${tr('Rename')}</button>${deleteButton(h.id)}`);
       if (form === 'hero' && !formShown) {
         formShown = true;
-        return card(`<input id="title-name" maxlength="16" placeholder="Name your hero" data-enter="create-hero" aria-label="Hero name">
-          <button data-act="create-hero">Create</button>${heroes.length ? '<button data-act="cancel">Cancel</button>' : ''}`, '', 'title-form');
+        return card(`<input id="title-name" maxlength="16" placeholder="${esc(tr('Name your hero'))}" data-enter="create-hero" aria-label="${esc(tr('Hero name'))}">
+          <button data-act="create-hero">${tr('Create')}</button>${heroes.length ? `<button data-act="cancel">${tr('Cancel')}</button>` : ''}`, '', 'title-form');
       }
-      return card('<button data-act="new-hero">+ New hero</button>', '', 'title-empty');
+      return card(`<button data-act="new-hero">${tr('+ New hero')}</button>`, '', 'title-empty');
     });
-    return listScreen({ title: 'Choose Character', cards });
+    return listScreen({ title: tr('Choose Character'), cards });
   },
   skins() {
     const hero = chosen(), worn = skinNameKey(hero.skin?.name ?? '');
     const cards = !skins ? [] : [
-      card(pick({ act: 'skin', chosen: !hero.skin, name: 'No skin', tag: hero.skin ? '' : 'wears it now', picture: '<i></i>', info: 'plain clay' }), '', 'title-skin'),
+      card(pick({ act: 'skin', chosen: !hero.skin, name: tr('No skin'), tag: hero.skin ? '' : tr('wears it now'), picture: '<i></i>', info: tr('plain clay') }), '', 'title-skin'),
       ...skins.map(s => card(skinPick(s, !!hero.skin && s.key === worn),
-        `<button data-act="paint-skin" data-id="${esc(s.key)}">Paint</button>${deleteButton(`skin:${s.key}`)}`, 'title-skin')),
+        `<button data-act="paint-skin" data-id="${esc(s.key)}">${tr('Paint')}</button>${deleteButton(`skin:${s.key}`)}`, 'title-skin')),
     ];
-    const make = !skins ? '' : skins.length >= MAX_SKINS ? tooMany(MAX_SKINS, 'skins')
-      : '<div class="menu-row title-new"><button data-act="new-skin">Paint New Skin</button></div>';
-    return listScreen({ title: 'Choose Skin', about: `for ${esc(hero.name)}${skins ? ` · ${skins.length} of ${MAX_SKINS}` : ''}`,
-      cards, empty: 'Loading the skins …', below: make });
+    const make = !skins ? '' : skins.length >= MAX_SKINS ? tooMany(tr('{max} skins is the most: delete one to make a new one.', { max: MAX_SKINS }))
+      : `<div class="menu-row title-new"><button data-act="new-skin">${tr('Paint New Skin')}</button></div>`;
+    return listScreen({ title: tr('Choose Skin'), about: skins ? tr('for {name} · {n} of {max}', { name: esc(hero.name), n: skins.length, max: MAX_SKINS }) : tr('for {name}', { name: esc(hero.name) }),
+      cards, empty: tr('Loading the skins …'), below: make });
   },
 };
 
@@ -236,7 +237,7 @@ function updateScene() {
   showPortrait(!!hero);
   if (hero) {
     $('title-hero-name').textContent = hero.name;
-    $('title-hero-level').textContent = `Level ${heroLevel(hero)}`;
+    $('title-hero-level').textContent = tr('Level {level}', { level: heroLevel(hero) });
     const k = `${hero.id} ${hero.updated}`;
     if (k !== shownHero) {
       shownHero = k;
@@ -276,11 +277,11 @@ $('title-hero').addEventListener('click', () => { if (state.mode === 'menu' && !
 function updatePreview() {
   const t = $('title-seed').value.trim(), seed = t ? readSeed(t) : null;
   const p = $('title-preview');
-  if (!t) { p.textContent = "A friend's world: type its name."; p.classList.remove('bad'); return; }
+  if (!t) { p.textContent = tr("A friend's world: type its name."); p.classList.remove('bad'); return; }
   p.classList.toggle('bad', seed === null);
-  if (seed === null) { p.textContent = 'Not a world name or a number (yet)'; return; }
+  if (seed === null) { p.textContent = tr('Not a world name or a number (yet)'); return; }
   const copy = store.nextCopy(seed);
-  p.textContent = `${savedWorldName(seed, copy)}${copy > 1 ? ' (you have this world already: a fresh copy)' : ''}`;
+  p.textContent = copy > 1 ? tr('{name} (you have this world already: a fresh copy)', { name: savedWorldName(seed, copy) }) : savedWorldName(seed, copy);
 }
 
 // --- doing --------------------------------------------------------------------------------------
@@ -290,13 +291,13 @@ function start(heroId, worldId) {
   play(heroId, worldId).catch(e => {   // (the game files did not come: the server or the connection)
     console.error('could not start', e);
     stopSaving(); endWorld(); openMainMenu();   // (another showcase)
-    note = 'That world would not start. Try again?'; render();
+    note = tr('That world would not start. Try again?'); render();
   });
 }
 
 function joinWith(room) {
   const id = store.selected();
-  if (!id || !playAsGuest(id)) { note = 'Choose a character first'; render(); return; }
+  if (!id || !playAsGuest(id)) { note = tr('Choose a character first'); render(); return; }
   invite = null;
   joining = room; screen = 'joining'; note = '';
   render();
@@ -310,7 +311,7 @@ function stopJoining(text = '') {
 }
 // the chosen hero's world from now on (back to the title: Continue plays it)
 function chooseWorld(id) {
-  if (!store.setHeroWorld(store.selected(), id)) { note = 'Could not save that (is the storage full?)'; return; }
+  if (!store.setHeroWorld(store.selected(), id)) { note = tr('Could not save that (is the storage full?)'); return; }
   form = null; screen = 'title';
 }
 
@@ -323,7 +324,7 @@ async function loadSkins() {
   let list;
   try { list = await listNamedSkins(); } catch (e) {
     console.error(e);
-    if (load === skinLoad) { note = 'Could not load the skins'; skins = []; render(); }
+    if (load === skinLoad) { note = tr('Could not load the skins'); skins = []; render(); }
     return;
   }
   if (load !== skinLoad) return;
@@ -371,7 +372,7 @@ function wear(skin) {
 async function chooseSkin(key) {
   if (wearing) return;
   if (!key) {
-    if (!wear(null)) { note = 'Could not save that (is the storage full?)'; return; }
+    if (!wear(null)) { note = tr('Could not save that (is the storage full?)'); return; }
     dropSkins(); screen = 'title'; return;
   }
   const s = skins?.find(e => e.key === key);
@@ -380,13 +381,13 @@ async function chooseSkin(key) {
   let file = null;
   try {
     file = await copyNamedSkin(s.name);
-    if (!file) { note = 'That skin is gone'; loadSkins(); return; }
+    if (!file) { note = tr('That skin is gone'); loadSkins(); return; }
     if (!wear(file)) throw new Error('Hero storage refused');
     if (screen === 'skins') { dropSkins(); screen = 'title'; }
   } catch (e) {
     console.error(e);
     if (file) deleteSkinFile(file).catch(console.warn);
-    note = 'Could not save that (is the storage full?)';
+    note = tr('Could not save that (is the storage full?)');
   } finally {
     wearing = false;
     render();
@@ -403,7 +404,7 @@ function paintSkin(name) {
 async function deleteSkin(key) {
   const s = skins?.find(e => e.key === key);
   if (!s) return;
-  try { await deleteNamedSkin(s.name); } catch (e) { console.error(e); note = 'Could not delete that skin'; }
+  try { await deleteNamedSkin(s.name); } catch (e) { console.error(e); note = tr('Could not delete that skin'); }
   loadSkins();
 }
 
@@ -428,9 +429,9 @@ const actions = {
   'new-hero'() { form = 'hero'; },
   'create-hero'() {
     const name = cleanName($('title-name').value);
-    if (!name) { note = 'Your hero needs a name'; return; }
+    if (!name) { note = tr('Your hero needs a name'); return; }
     const h = newHero(name);
-    if (!h) { note = 'Could not make the hero (is the storage full?)'; return; }
+    if (!h) { note = tr('Could not make the hero (is the storage full?)'); return; }
     store.select(h.id);
     form = null; screen = from;
   },
@@ -441,21 +442,21 @@ const actions = {
   world(id) { chooseWorld(id); },
   'random-world'() {
     const w = newSavedWorld();
-    if (!w) { note = 'Could not make the world (is the storage full?)'; return; }
+    if (!w) { note = tr('Could not make the world (is the storage full?)'); return; }
     chooseWorld(w.id);
   },
   'known-world'() { form = 'known'; },
   'create-world'() {
     const seed = readSeed($('title-seed').value);
-    if (seed === null) { note = $('title-seed').value.trim() ? 'That is not a world name or a number' : "Type the world's name"; return; }
+    if (seed === null) { note = $('title-seed').value.trim() ? tr('That is not a world name or a number') : tr("Type the world's name"); return; }
     const w = newSavedWorld(seed);
-    if (!w) { note = 'Could not make the world (is the storage full?)'; return; }
+    if (!w) { note = tr('Could not make the world (is the storage full?)'); return; }
     chooseWorld(w.id);
   },
   rename(id) { form = { rename: id }; },
   'save-name'(id) {
     const name = cleanName($('title-rename').value), h = store.hero(id);
-    if (!name) { note = 'A name, please'; return; }
+    if (!name) { note = tr('A name, please'); return; }
     if (h) store.putHero({ ...h, name });
     form = null;
   },
@@ -484,7 +485,7 @@ const actions = {
   },
   join() {
     const room = readCode($('title-code').value);
-    if (!room) { note = 'A code has four letters'; return; }
+    if (!room) { note = tr('A code has four letters'); return; }
     joinWith(room);
   },
   'cancel-join'() { leaveGame(); stopJoining(); },
@@ -521,9 +522,12 @@ addEventListener('keydown', e => {
 // joining: the friend's game says how it goes; a failure brings us back to Join Game
 onSessionChange(s => {
   if (state.mode !== 'menu' || screen !== 'joining') return;
-  if (s.phase === 'idle') stopJoining(s.text || 'Could not join');
+  if (s.phase === 'idle') stopJoining(s.text || tr('Could not join'));
   else render();
 });
+
+// the settings switched the language (from the menu's Settings): the menu in the new one
+onLanguageChange(() => render());
 
 // main.js, every frame in the menu: the friend's world started (net/session.js): off we go
 export function updateMenu() {

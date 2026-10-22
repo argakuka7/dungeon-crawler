@@ -11,7 +11,7 @@
 //
 // Closed, new lines show for a while and fade; open, the whole chronicle scrolls, filtered by
 // All / Chat / Events. A death's line opens to its record.
-import { complete, accept, usage } from '../core/commands.js';
+import { complete, accept, usage, helpOf } from '../core/commands.js';
 import { describe, details, KINDS, cleanText } from '../core/chronicle.js';
 import { RARITY } from '../core/gear/rarities.js';
 import { CHAR_H } from '../core/constants.js';
@@ -27,6 +27,7 @@ import { isModifier } from '../core/keybinds.js';
 import { chronicle, log, note } from './log.js';
 import { commands, runCommand } from './commands.js';
 import './devcommands.js';
+import { tr, phrase, onLanguageChange } from '../i18n/i18n.js';
 
 const $ = id => document.getElementById(id);
 const box = $('chat'), list = $('chat-log'), input = $('chat-input'), popup = $('chat-popup'), hint = $('chat-usage'),
@@ -128,7 +129,7 @@ export function say(text) {
   log('chat', { text });
   speech(text);
   if (relay.chat) relay.chat(text);
-  else if (!hinted) { hinted = true; note('Nobody else hears you here: O plays together with friends'); }
+  else if (!hinted) { hinted = true; note(phrase('Nobody else hears you here: O plays together with friends')); }
 }
 
 // What someone said, over their head for a while: ours (slot null) or a friend's who is here
@@ -173,7 +174,7 @@ function showPopup() {
   // how the command goes, the argument being typed in bold
   const c = comp?.command;
   hint.hidden = !c;
-  if (c) hint.innerHTML = usage(c).split(' ').map((w, i) => i - 1 === comp.arg ? `<b>${esc(w)}</b>` : esc(w)).join(' ') + ` <span>${esc(c.help)}</span>`;
+  if (c) hint.innerHTML = usage(c).split(' ').map((w, i) => i - 1 === comp.arg ? `<b>${esc(w)}</b>` : esc(w)).join(' ') + ` <span>${esc(helpOf(c))}</span>`;
   // greyed out after what was typed: the rest of the highlighted value, or what it is
   const it = items[sel], end = input.value.length;
   const after = it && comp.to === end && input.selectionStart === end && comp.query && input.scrollLeft === 0;
@@ -214,7 +215,7 @@ function row(e) {
   li.dataset.time = e.time;
   if (e.kind === 'chat') {
     const name = document.createElement('b');
-    name.textContent = e.who ? e.who.name : 'You';
+    name.textContent = e.who ? e.who.name : tr('You');
     name.style.color = colorOf(e.who);
     li.append(name, ': ' + e.data.text);
     return li;
@@ -253,6 +254,8 @@ for (const b of $('chat-tabs').querySelectorAll('button')) b.addEventListener('c
   list.scrollTop = list.scrollHeight;
 });
 
+// the chronicle says its lines anew in another language
+onLanguageChange(() => { shown = -1; });
 function render() {
   if (shown === chronicle.version) return;
   shown = chronicle.version;

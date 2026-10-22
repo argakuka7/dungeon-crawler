@@ -19,6 +19,7 @@ import { quitToMenu } from './menu.js';
 import { openSettings, closeSettings } from './settingsmenu.js';
 import { online, together, playerColor } from '../net/online.js';
 import { hostGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
+import { tr, onLanguageChange } from '../i18n/i18n.js';
 
 const $ = id => document.getElementById(id);
 const overlay = $('menu-overlay'), params = new URLSearchParams(location.search);
@@ -63,7 +64,7 @@ function players() {
 function render() {
   if (!state.menuOpen) return;
   const { phase, text } = sessionStatus(), idle = phase === 'idle', host = online.role === 'host';
-  $('menu-paused').textContent = together() ? 'The game goes on' : 'Paused';
+  $('menu-paused').textContent = together() ? tr('The game goes on') : tr('Paused');
   // play together: Host this world, or (hosting) Stop hosting with the join code and its link
   const room = host && online.code && (phase === 'waiting' || phase === 'connected');
   $('menu-host').hidden = !idle;
@@ -75,20 +76,21 @@ function render() {
   for (const p of list) {
     const li = document.createElement('li'), dot = document.createElement('i');
     dot.style.background = playerColor(p.slot);
-    li.append(dot, `${p.name}${p.you ? ' (you)' : ''}${p.slot === 0 ? ' · host' : ''}`);
+    li.append(dot, `${p.you ? tr('{name} (you)', { name: p.name }) : p.name}${p.slot === 0 ? ` · ${tr('host')}` : ''}`);
     $('menu-players').append(li);
   }
   $('menu-status').textContent = room ? '' : text;   // (hosting, the code and the players say it)
   const leave = $('menu-leave'), asking = performance.now() < confirmUntil;
   leave.hidden = idle;
   leave.classList.toggle('confirm', asking);
-  leave.textContent = phase === 'opening' || phase === 'joining' ? 'Cancel'
-    : host ? asking ? 'Stop hosting? Your friends drop out' : 'Stop hosting'
-    : 'Leave the game';
+  leave.textContent = phase === 'opening' || phase === 'joining' ? tr('Cancel')
+    : host ? asking ? tr('Stop hosting? Your friends drop out') : tr('Stop hosting')
+    : tr('Leave the game');
   const quit = $('menu-quit'), sure = performance.now() < quitUntil;
   quit.classList.toggle('confirm', sure);
-  quit.textContent = sure ? 'Quit? Your friends drop out' : savedHero() ? 'Save and quit to the menu' : 'Quit to the menu';
+  quit.textContent = sure ? tr('Quit? Your friends drop out') : savedHero() ? tr('Save and quit to the menu') : tr('Quit to the menu');
 }
+onLanguageChange(render);
 
 onSessionChange(s => {
   if (s.phase === 'idle') confirmUntil = 0;
@@ -130,9 +132,9 @@ $('menu-quit').onclick = () => {
   quitToMenu();
 };
 $('menu-copy').onclick = async () => {
-  try { await navigator.clipboard.writeText(link(online.code)); $('menu-copy').textContent = 'Copied!'; }
+  try { await navigator.clipboard.writeText(link(online.code)); $('menu-copy').textContent = tr('Copied!'); }
   catch { $('menu-copy').textContent = link(online.code); }
-  setTimeout(() => { $('menu-copy').textContent = 'Copy join link'; }, 1600);
+  setTimeout(() => { $('menu-copy').textContent = tr('Copy join link'); }, 1600);
 };
 $('menu-settings').onclick = () => openSettings();
 // a clicked button lets go of the focus: Space and Enter belong to the game again

@@ -1,4 +1,5 @@
 import { ITEMS, COINS, ARMOR_SLOTS } from './items.js';
+import { tc } from '../i18n/i18n.js';
 
 // A slot holds { instanceId, itemId, count, gen? }. `gen` is a generated item's own data
 // (core/gear/): a slot with it is one unique item and never stacks.
@@ -29,7 +30,7 @@ export function coinCounts(copper) {
 }
 // learn: code.html#functions (see learn/README.md)
 export function formatCoins(copper) {
-  return coinCounts(copper).map((n, i) => n ? `${n}${COINS[i].suffix}` : '').filter(Boolean).join(' ') || '0c';
+  return coinCounts(copper).map((n, i) => n ? `${n}${tc('coin', COINS[i].suffix)}` : '').filter(Boolean).join(' ') || `0${tc('coin', 'c')}`;
 }
 function setCopper(inv, total) {
   coinCounts(total).forEach((count, i) => { inv.currency[i].count = count; });

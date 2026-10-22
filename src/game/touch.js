@@ -23,6 +23,8 @@ import { requestCollect } from './loot.js';
 import { throwTarget } from './throws.js';
 import { queueAttack } from './sword.js';
 import { pendingAction, useAction } from './action.js';
+import { tr } from '../i18n/i18n.js';
+import { defName } from './itemnames.js';
 
 const STICK_R = 56, AIM_R = 72;   // px the thumb goes out to for a full push
 const TAP_TIME = 300;             // ms: a touch let go sooner (without moving) is a tap
@@ -257,7 +259,7 @@ export function updateTouch() {
   if (def) showPicture(icon, def.id);
   action.classList.toggle('flask', !!flask);
   action.classList.toggle('empty', !def);
-  action.setAttribute('aria-label', flask ? `Aim and throw ${flask.name}` : 'Attack');
+  action.setAttribute('aria-label', flask ? tr('Aim and throw {item}', { item: defName(flask) }) : tr('Attack'));
 }
 
 function updateUse() {

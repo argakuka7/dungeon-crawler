@@ -2,12 +2,15 @@
 // only (tools/i18n.mjs checks it). Terms the game and the kids' guide share are in
 // src/i18n/glossary.js: use its words.
 import { grammar } from './grammar.js';
+import { names } from './names.js';
 import ui from './ui.js';
+import items from './items.js';
 
-export const parts = { ui };
+export const parts = { ui, items };
 
 export default {
   code: 'de',
   grammar,
+  names,
   messages: Object.assign({}, ...Object.values(parts)),
 };

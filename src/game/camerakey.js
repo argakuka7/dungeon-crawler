@@ -9,6 +9,7 @@ import { keyPress, keyMove, keyRelease, snapYaw, clampPitch, YAW_PER_PX, PITCH_P
 import { view, state, setStatus } from './state.js';
 import { cameraMode, setCameraMode } from './settings.js';
 import { looking } from './mouselook.js';
+import { tr } from '../i18n/i18n.js';
 
 let key = null;   // the press going on: { code, t0, moved, orbiting }
 
@@ -18,7 +19,7 @@ export function toggleCamera() {
   if (state.mode !== 'play') return;
   const close = cameraMode() !== 'close';
   setCameraMode(close ? 'close' : 'overview');   // (going back, the overview settles on a side: game/camera.js)
-  setStatus(close ? 'Close view' : 'Overview');
+  setStatus(close ? tr('Close view') : tr('Overview'));
 }
 
 export function cameraKeyDown(code) {

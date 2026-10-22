@@ -9,33 +9,36 @@
 // The hits themselves: game/enchants.js; the statuses: core/status.js, game/statuses.js.
 import { affixTier, MAX_TIER } from './affixes.js';
 import { rarityOf } from './rarities.js';
+import { tr, msg } from '../../i18n/i18n.js';
 
 export const TOASTY_TIME = 3, ICKY_TIME = 4, NIPPY_TIME = 2, ZAPPY_TIME = 0.6;
 // guardians and bosses take half of a slow and of a stun (bosses are not stunned at all)
 export const BIG_SHARE = 0.5;
 export const MAX_SLOW = 50;   // %
 
-const enchant = (id, name, crystal, tiers, text, quip) => ({ id, name, crystal, tiers, text, quip });
+// text: a message, with the value as {v} and its time as {time}; name, text and quip are English,
+// translated where they are shown
+const enchant = (id, name, crystal, tiers, text, quip, time = null) => ({ id, name, crystal, tiers, text, quip, time });
 
 // tiers: the value at tiers 1-7, before the rarity's factor
 export const ENCHANTS = [
   // sets what it hits burning for a share of the hit over 3 s, unless it burns already (fire
   // does not hurt the fiery kinds): best on slow, heavy blows
   enchant('toasty', 'Toasty', 'item_crystal_ruby', [60, 70, 80, 90, 100, 110, 120],
-    v => `Sets things burning for ${v}% of the hit over ${TOASTY_TIME} s`, 'Mind your eyebrows.'),
+    msg('Sets things burning for {v}% of the hit over {time} s'), 'Mind your eyebrows.', TOASTY_TIME),
   // every hit adds a share of its damage to the poison, spread over the next 4 s: it piles up,
   // best on quick weapons
   enchant('icky', 'Icky', 'item_crystal_emerald', [8, 10, 12, 14, 16, 18, 20],
-    v => `Poisons for ${v}% of every hit; it piles up`, 'Leaves something unpleasant behind.'),
+    msg('Poisons for {v}% of every hit; it piles up'), 'Leaves something unpleasant behind.'),
   // slows what it hits (all it does, its blows too) for 2 s
   enchant('nippy', 'Nippy', 'item_crystal_sapphire', [15, 18, 21, 24, 27, 30, 33],
-    v => `Slows what it hits by ${v}% for ${NIPPY_TIME} s`, 'Brr.'),
+    msg('Slows what it hits by {v}% for {time} s'), 'Brr.', NIPPY_TIME),
   // now and then the hit stuns: the enemy holds still for a moment
   enchant('zappy', 'Zappy', 'item_crystal_amethyst', [6, 7, 8, 9, 10, 11, 12],
-    v => `${v}% chance to stun for ${ZAPPY_TIME} s`, 'They hold still and think about it.'),
+    msg('{v}% chance to stun for {time} s'), 'They hold still and think about it.', ZAPPY_TIME),
   // more coins from what it defeats
   enchant('shiny', 'Shiny', 'item_crystal_diamond', [15, 20, 25, 30, 35, 40, 50],
-    v => `+${v}% coins from what it defeats`, 'Pays for itself. Eventually.'),
+    msg('+{v}% coins from what it defeats'), 'Pays for itself. Eventually.'),
 ];
 export const ENCHANT = Object.fromEntries(ENCHANTS.map(e => [e.id, e]));
 
@@ -53,4 +56,4 @@ export function enchantOf(item) {
   const id = item?.gen?.enchant;
   return ENCHANT[id] ? { id, value: enchantValue(item, id) } : null;
 }
-export const describeEnchant = (id, value) => ENCHANT[id]?.text(value) ?? '';
+export const describeEnchant = (id, value) => ENCHANT[id] ? tr(ENCHANT[id].text, { v: value, time: ENCHANT[id].time }) : '';
