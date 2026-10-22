@@ -27,10 +27,10 @@ export default function mount(el) {
       g.fillStyle = '#8a96a8'; g.textAlign = 'center';
       if (i % 2 || i === pick) g.fillText(i, x + bw / 2, H - B + 13);
     }
-    g.textAlign = 'center'; g.fillText(tr('your level', 'deine Stufe'), (W + L) / 2, H - 4);
+    g.textAlign = 'center'; g.fillText(tr('your level', 'dein Level'), (W + L) / 2, H - 4);
     const need = xpToNext(pick), sp = xpOf(SPIDER, pick), st = xpOf(STUNDER, pick), l = Math.max(1, pick - 2);
     out.innerHTML = tr(`From level <b>${pick}</b> to ${pick + 1}: <b>${fmt(need)}</b> XP.\nA level-${l} spider gives you ${sp} XP, a level-${l} Stunder ${st}. So that's about <b>${Math.ceil(need / sp)} spiders</b>, or <b>${Math.ceil(need / st)} Stunders</b>.`,
-      `Von Stufe <b>${pick}</b> auf ${pick + 1}: <b>${fmt(need)}</b> XP.\nEine Spinne auf Stufe ${l} gibt dir ${sp} XP, ein Stunder auf Stufe ${l} ${st}. Das sind also etwa <b>${Math.ceil(need / sp)} Spinnen</b> oder <b>${Math.ceil(need / st)} Stunder</b>.`);
+      `Von Level <b>${pick}</b> auf ${pick + 1}: <b>${fmt(need)}</b> XP.\nEine Spinne auf Level ${l} gibt dir ${sp} XP, ein Stunder auf Level ${l} ${st}. Das sind also etwa <b>${Math.ceil(need / sp)} Spinnen</b> oder <b>${Math.ceil(need / st)} Stunder</b>.`);
   }
   const move = e => { const [x] = at(e); pick = Math.max(1, Math.min(MAX, Math.floor((x - L) / bw) + 1)); draw(); };
   c.addEventListener('pointermove', move);

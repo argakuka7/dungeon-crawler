@@ -17,7 +17,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 function weaponCard(item) {
   const r = RARITY[item.gen.rarity], s = itemStats(item);
   return `<div class="weapon" style="--rarity:${r.css}">${pictureImg(item.itemId)}
-      <div><h4>${esc(displayName(item))}</h4><div class="base">${gameName(r.name)} \u00B7 ${tr('item level', 'Stufe')} ${item.gen.ilvl}${baseLine(item) ? ' \u00B7 ' + baseLine(item) : ''}</div>
+      <div><h4>${esc(displayName(item))}</h4><div class="base">${gameName(r.name)} \u00B7 ${tr('item level', 'Gegenstandslevel')} ${item.gen.ilvl}${baseLine(item) ? ' \u00B7 ' + baseLine(item) : ''}</div>
       <div class="stats">${tr(`${s.damage} damage \u00B7 ${(1 / s.interval).toFixed(2)} attacks per second \u00B7 ${Math.round(weaponDps(s))} damage per second
 ${s.ranged ? 'range' : 'reach'} ${s.range.toFixed(2)} cells \u00B7 ${Math.round(s.crit * 100)}% critical hits`, `${s.damage} Schaden \u00B7 ${(1 / s.interval).toFixed(2)} Angriffe pro Sekunde \u00B7 ${Math.round(weaponDps(s))} Schaden pro Sekunde
 ${s.ranged ? 'Schussweite' : 'Reichweite'} ${s.range.toFixed(2)} Felder \u00B7 ${Math.round(s.crit * 100)}% kritische Treffer`)}</div>
@@ -45,7 +45,7 @@ const tip = {
 
 export default function mount(el) {
   if (el.dataset.mode === 'odds') return odds(el);
-  const row = html(el, `<div><div class="row"><label>${tr('item level', 'Gegenstandsstufe')} <input type="range" class="lv" min="1" max="25" value="5"> <b class="lvv">5</b></label>
+  const row = html(el, `<div><div class="row"><label>${tr('item level', 'Gegenstandslevel')} <input type="range" class="lv" min="1" max="25" value="5"> <b class="lvv">5</b></label>
     <label><input type="checkbox" class="guard"> ${tr('guardian luck', 'Wächter-Glück')}</label>
     <button class="roll">${tr('Roll a weapon!', 'Waffe würfeln!')}</button><button class="many">${tr('Open 100 chests', '100 Truhen öffnen')}</button></div></div>`);
   const card = html(el, '<div style="margin-top:10px"></div>');
@@ -62,7 +62,7 @@ export default function mount(el) {
       + `2. base: <b>${gameName(base.name)}</b> (${base.weapon.damage} damage at level 1, +5% per item level)\n`
       + `3. affixes: ${list}\n4. name: <b>${displayName(item)}</b>`,
       `Die Würfel haben Schritt für Schritt entschieden:\n1. Seltenheit: <b style="color:${r.css}">${gameName(r.name)}</b> \u2192 ${r.affixes} Affix${r.affixes === 1 ? '' : 'e'}, Schaden \u00D7${r.damage}\n`
-      + `2. Grundtyp: <b>${gameName(base.name)}</b> (${base.weapon.damage} Schaden auf Stufe 1, +5% pro Gegenstandsstufe)\n`
+      + `2. Grundtyp: <b>${gameName(base.name)}</b> (${base.weapon.damage} Schaden auf Level 1, +5% pro Gegenstandslevel)\n`
       + `3. Affixe: ${list}\n4. Name: <b>${displayName(item)}</b>`);
   }
   $('.lv').oninput = () => { $('.lvv').textContent = $('.lv').value; };
@@ -88,14 +88,14 @@ export default function mount(el) {
       b.onclick = () => { tiles.forEach(t => t.classList.toggle('on', t === b)); pinned.innerHTML = weaponCard(it); };
     });
     out.innerHTML = tr('100 chests opened, the best weapons first. Point at a weapon to see its card, click it to keep the card open. Try a higher item level, or guardian luck.',
-      '100 Truhen geöffnet, die besten Waffen zuerst. Zeig auf eine Waffe, um ihre Karte zu sehen, klick sie an, damit die Karte offen bleibt. Probier eine höhere Gegenstandsstufe oder Wächter-Glück.');
+      '100 Truhen geöffnet, die besten Waffen zuerst. Zeig auf eine Waffe, um ihre Karte zu sehen, klick sie an, damit die Karte offen bleibt. Probier eine höhere Gegenstandslevel oder Wächter-Glück.');
   };
   $('.roll').click();
 }
 
 function odds(el) {
   const W = 640, H = 270, { g } = canvas(el, W, H);
-  const row = html(el, `<div class="row"><label>${tr('item level', 'Gegenstandsstufe')} <input type="range" class="lv" min="1" max="25" value="1"> <b class="lvv">1</b></label>
+  const row = html(el, `<div class="row"><label>${tr('item level', 'Gegenstandslevel')} <input type="range" class="lv" min="1" max="25" value="1"> <b class="lvv">1</b></label>
     <label>${tr('luck', 'Glück')} <input type="range" class="luck" min="0" max="0.45" step="0.05" value="0"> <b class="lk">0</b></label></div>`);
   const out = html(el, '<div class="out"></div>');
   const $ = s => row.querySelector(s);
@@ -116,7 +116,7 @@ function odds(el) {
     g.textAlign = 'left';
     const best = RARITIES.filter((r, i) => p[i] > 0).at(-1);
     out.innerHTML = tr(`At item level <b>${lv}</b>, the best possible is <b style="color:${best.css}">${gameName(best.name)}</b>. Bars are drawn by the square root, so tiny chances stay visible.`,
-      `Auf Gegenstandsstufe <b>${lv}</b> ist das Beste, was geht: <b style="color:${best.css}">${gameName(best.name)}</b>. Die Balken sind mit der Wurzel gezeichnet, damit winzige Chancen sichtbar bleiben.`);
+      `Auf Gegenstandslevel <b>${lv}</b> ist das Beste, was geht: <b style="color:${best.css}">${gameName(best.name)}</b>. Die Balken sind mit der Wurzel gezeichnet, damit winzige Chancen sichtbar bleiben.`);
   }
   row.querySelectorAll('input').forEach(i => i.oninput = draw);
   draw();

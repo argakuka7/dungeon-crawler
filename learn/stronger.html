@@ -14,13 +14,13 @@
 
 <section class="slide" id="levels" data-lv="1" data-src="src/core/progression.js#PLAYER,maxHealth,levelDamage">
   <h2 lang="en">Experience and levels</h2>
-  <h2 lang="de">Erfahrung und Stufen</h2>
+  <h2 lang="de">Erfahrung und Level</h2>
   <div class="cols">
     <div>
       <p class="lead" lang="en">Every monster you beat gives you <b>experience</b> (XP). Collect enough, and you go up a <b>level</b>.</p>
-      <p class="lead" lang="de">Jedes Monster, das du besiegst, gibt dir <b>Erfahrung</b> (XP). Sammelst du genug, steigst du eine <b>Stufe</b> auf.</p>
+      <p class="lead" lang="de">Jedes Monster, das du besiegst, gibt dir <b>Erfahrung</b> (XP). Sammelst du genug, steigst du ein <b>Level</b> auf.</p>
       <p lang="en">Every level makes you a bit stronger:</p>
-      <p lang="de">Jede Stufe macht dich ein bisschen stärker:</p>
+      <p lang="de">Jedes Level macht dich ein bisschen stärker:</p>
       <ul>
         <li lang="en"><b>+<span data-val="src/core/progression.js#PLAYER.HP_PER_LEVEL">10</span></b> maximum health (you start with <span data-val="src/core/progression.js#PLAYER.HP">100</span>),</li>
         <li lang="de"><b>+<span data-val="src/core/progression.js#PLAYER.HP_PER_LEVEL">10</span></b> maximale Gesundheit (am Anfang hast du <span data-val="src/core/progression.js#PLAYER.HP">100</span>),</li>
@@ -28,12 +28,12 @@
         <li lang="de"><b>+<span data-val="src/core/progression.js#PLAYER.DAMAGE_PER_LEVEL" data-fmt="pct">2%</span></b> Schaden mit jedem Schwert.</li>
       </ul>
       <p lang="en">That doesn't sound like much. But it adds up: at level 21 you have three times the health you started with.</p>
-      <p lang="de">Das klingt nicht nach viel. Aber es läppert sich: Auf Stufe 21 hast du dreimal so viel Gesundheit wie am Anfang.</p>
+      <p lang="de">Das klingt nicht nach viel. Aber es läppert sich: Auf Level 21 hast du dreimal so viel Gesundheit wie am Anfang.</p>
     </div>
     <div>
       <pre class="wrap" data-code="src/core/progression.js#maxHealth,levelDamage"></pre>
       <p class="small muted" lang="en">Two machines. Level 1 gives exactly the starting numbers: <code>(level - 1)</code> is 0. Every level after that adds a little.</p>
-      <p class="small muted" lang="de">Zwei Maschinen. Stufe 1 gibt genau die Anfangszahlen: <code>(level - 1)</code> ist 0. Jede Stufe danach legt ein bisschen drauf.</p>
+      <p class="small muted" lang="de">Zwei Maschinen. Level 1 gibt genau die Anfangszahlen: <code>(level - 1)</code> ist 0. Jedes Level danach legt ein bisschen drauf.</p>
       <p lang="en">The bigger step comes from your swords. A sword found deeper down hits harder than the same sword found near the top.</p>
       <p lang="de">Den größeren Schritt machen deine Schwerter. Ein Schwert, das du weiter unten findest, trifft härter als dasselbe Schwert von weiter oben.</p>
       <a class="portal" href="loot.html#stats-code" lang="en">How strong is a sword?</a>
@@ -44,13 +44,13 @@
 
 <section class="slide" id="curve" data-lv="1" data-src="src/core/progression.js#xpToNext,xpScale src/core/enemies.js#GROWTH">
   <h2 lang="en">Try it: every level costs more</h2>
-  <h2 lang="de">Probier es: Jede Stufe kostet mehr</h2>
+  <h2 lang="de">Probier es: Jedes Level kostet mehr</h2>
   <p lang="en">The first level comes after a handful of monsters. Later levels take much longer. Point at the bars:</p>
-  <p lang="de">Die erste Stufe kommt nach einer Handvoll Monster. Spätere Stufen dauern viel länger. Zeig auf die Balken:</p>
+  <p lang="de">Das erste Level kommt nach einer Handvoll Monster. Spätere Level dauern viel länger. Zeig auf die Balken:</p>
   <div class="cols wide-right">
     <div>
       <p lang="en">Why make it harder? Because the monsters deeper down give more XP too. If every level cost the same, you'd shoot up very fast deep down, and the game would be too easy.</p>
-      <p lang="de">Warum wird es schwerer? Weil die Monster weiter unten auch mehr XP geben. Wenn jede Stufe gleich viel kosten würde, würdest du weiter unten sehr schnell aufsteigen, und das Spiel wäre zu leicht.</p>
+      <p lang="de">Warum wird es schwerer? Weil die Monster weiter unten auch mehr XP geben. Wenn jedes Level gleich viel kosten würde, würdest du weiter unten sehr schnell aufsteigen, und das Spiel wäre zu leicht.</p>
       <p lang="en">Game makers call this a <b>curve</b>: a line that bends upwards. Choosing the right curve is one of the trickiest parts of making a game feel fair.</p>
       <p lang="de">Spielemacher nennen das eine <b>Kurve</b>: eine Linie, die sich nach oben biegt. Die richtige Kurve zu finden ist einer der kniffligsten Teile daran, ein Spiel fair wirken zu lassen.</p>
     </div>
@@ -60,19 +60,19 @@
 
 <section class="slide" id="formula" data-lv="2" data-src="src/core/progression.js#PLAYER,xpToNext">
   <h2 lang="en">The level formula</h2>
-  <h2 lang="de">Die Stufenformel</h2>
+  <h2 lang="de">Die Level-Formel</h2>
   <div class="cols">
     <div>
       <pre class="wrap" data-code="src/core/progression.js#xpToNext"></pre>
       <p lang="en">The cost of the next level has three parts:</p>
-      <p lang="de">Die Kosten der nächsten Stufe haben drei Teile:</p>
+      <p lang="de">Die Kosten des nächsten Levels haben drei Teile:</p>
       <ol class="steps">
         <li lang="en"><code>XP_BASE</code> (<span data-val="src/core/progression.js#PLAYER.XP_BASE">500</span>): what every level costs, even the first.</li>
-        <li lang="de"><code>XP_BASE</code> (<span data-val="src/core/progression.js#PLAYER.XP_BASE">500</span>): was jede Stufe kostet, auch die erste.</li>
+        <li lang="de"><code>XP_BASE</code> (<span data-val="src/core/progression.js#PLAYER.XP_BASE">500</span>): was jedes Level kostet, auch das erste.</li>
         <li lang="en"><code>XP_STEP × (level − 1)</code>: <span data-val="src/core/progression.js#PLAYER.XP_STEP">1000</span> more for every level you already have. That's a straight line.</li>
-        <li lang="de"><code>XP_STEP × (level − 1)</code>: <span data-val="src/core/progression.js#PLAYER.XP_STEP">1000</span> mehr für jede Stufe, die du schon hast. Das ist eine gerade Linie.</li>
+        <li lang="de"><code>XP_STEP × (level − 1)</code>: <span data-val="src/core/progression.js#PLAYER.XP_STEP">1000</span> mehr für jedes Level, das du schon hast. Das ist eine gerade Linie.</li>
         <li lang="en"><code>XP_CURVE × (level − 1) ** 2</code>: a small number times the level <b>squared</b>. Small at first, big later. This bends the line upwards.</li>
-        <li lang="de"><code>XP_CURVE × (level − 1) ** 2</code>: eine kleine Zahl mal die Stufe <b>hoch zwei</b>. Erst klein, später groß. Das biegt die Linie nach oben.</li>
+        <li lang="de"><code>XP_CURVE × (level − 1) ** 2</code>: eine kleine Zahl mal das Level <b>hoch zwei</b>. Erst klein, später groß. Das biegt die Linie nach oben.</li>
       </ol>
     </div>
     <div>
@@ -91,10 +91,10 @@
   <div class="cols">
     <div>
       <p lang="en">A monster's level is the depth it lives at: level 1 near the top, level 20 at the core. Every level adds a share of its level-1 numbers:</p>
-      <p lang="de">Die Stufe eines Monsters ist die Tiefe, in der es lebt: Stufe 1 oben, Stufe 20 am Kern. Jede Stufe gibt einen Anteil seiner Zahlen auf Stufe 1 dazu:</p>
+      <p lang="de">Das Level eines Monsters ist die Tiefe, in der es lebt: Level 1 oben, Level 20 am Kern. Jedes Level gibt einen Anteil seiner Zahlen auf Level 1 dazu:</p>
       <pre class="wrap" data-code="src/core/enemies.js#GROWTH,grown"></pre>
       <p lang="en">So a spider with <b data-val="src/core/enemies.js#SPIDER.hp">32</b> health at level 1 has 32 × (1 + 0.17 × 10) = <b>86</b> at level 11.</p>
-      <p lang="de">Eine Spinne mit <b data-val="src/core/enemies.js#SPIDER.hp">32</b> Gesundheit auf Stufe 1 hat also auf Stufe 11 32 × (1 + 0,17 × 10) = <b>86</b>.</p>
+      <p lang="de">Eine Spinne mit <b data-val="src/core/enemies.js#SPIDER.hp">32</b> Gesundheit auf Level 1 hat also auf Level 11 32 × (1 + 0,17 × 10) = <b>86</b>.</p>
     </div>
     <div class="card">
       <h3 lang="en">A race</h3>
@@ -111,7 +111,7 @@
   <h2 lang="en">Try it: the race</h2>
   <h2 lang="de">Probier es: das Wettrennen</h2>
   <p lang="en">The game is made for a player about <b>two levels above the depth</b>, with a sword found along the way. Then a fight feels the same at depth 1 and at depth 20. What if you never pick up a new sword? Or never level up?</p>
-  <p lang="de">Das Spiel ist für einen Spieler gemacht, der ungefähr <b>zwei Stufen über der Tiefe</b> ist, mit einem Schwert, das er unterwegs gefunden hat. Dann fühlt sich ein Kampf in Tiefe 1 genauso an wie in Tiefe 20. Was, wenn du nie ein neues Schwert aufhebst? Oder nie aufsteigst?</p>
+  <p lang="de">Das Spiel ist für einen Spieler gemacht, der ungefähr <b>zwei Level über der Tiefe</b> ist, mit einem Schwert, das er unterwegs gefunden hat. Dann fühlt sich ein Kampf in Tiefe 1 genauso an wie in Tiefe 20. Was, wenn du nie ein neues Schwert aufhebst? Oder nie aufsteigst?</p>
   <div class="demo real" data-demo="race"></div>
   <p class="small muted" lang="en">The blue bars should stay flat. If they climb, every fight takes longer and longer, while the red ones (how long you survive) don't grow.</p>
   <p class="small muted" lang="de">Die blauen Balken sollen flach bleiben. Wenn sie steigen, dauert jeder Kampf länger und länger, während die roten (wie lange du überlebst) nicht wachsen.</p>
@@ -126,9 +126,9 @@
       <p lang="de">Was, wenn du zurück in die leichten Tiefen gehst und den ganzen Tag schwache Spinnen besiegst? Das nennt man <b>Farmen</b>, und das Spiel sorgt dafür, dass es sich nicht lohnt:</p>
       <ul>
         <li lang="en">A monster more than two levels below you gives less and less XP, down to a tenth.</li>
-        <li lang="de">Ein Monster mehr als zwei Stufen unter dir gibt immer weniger XP, bis zu einem Zehntel.</li>
+        <li lang="de">Ein Monster mehr als zwei Level unter dir gibt immer weniger XP, bis zu einem Zehntel.</li>
         <li lang="en">A monster above your level gives a tenth more for every level, up to half again.</li>
-        <li lang="de">Ein Monster über deiner Stufe gibt pro Stufe ein Zehntel mehr, bis zur Hälfte mehr.</li>
+        <li lang="de">Ein Monster über deinem Level gibt pro Level ein Zehntel mehr, bis zur Hälfte mehr.</li>
       </ul>
       <p lang="en">So the fastest way to get stronger is the fun way: go deeper.</p>
       <p lang="de">Der schnellste Weg, stärker zu werden, ist also der lustige: tiefer gehen.</p>
@@ -136,7 +136,7 @@
     <div>
       <pre class="wrap" data-code="src/core/progression.js#xpScale"></pre>
       <p class="small" lang="en"><code>d</code> is how many levels you are above the monster. <code>cond ? a : b</code> is a short <code>if</code>. The game counts in tenths (10 means "all of it") so the numbers stay whole and exact.</p>
-      <p class="small" lang="de"><code>d</code> ist, wie viele Stufen du über dem Monster bist. <code>bedingung ? a : b</code> ist ein kurzes <code>if</code>. Das Spiel rechnet in Zehnteln (10 heißt "alles"), damit die Zahlen ganz und genau bleiben.</p>
+      <p class="small" lang="de"><code>d</code> ist, wie viele Level du über dem Monster bist. <code>bedingung ? a : b</code> ist ein kurzes <code>if</code>. Das Spiel rechnet in Zehnteln (10 heißt "alles"), damit die Zahlen ganz und genau bleiben.</p>
     </div>
   </div>
 </section>
@@ -163,7 +163,7 @@
    15   15 17.0   260  166  ...  epic greatsword i16
    20   20 22.0   310  195  ...  legendary greatsword i20</code></pre>
       <p class="small" lang="en"><code>elvl</code>: the monsters' level. <code>plvl</code>: the player's. Two levels above, all the way down: just as planned. <code>hit</code>: how hard the best sword hits.</p>
-      <p class="small" lang="de"><code>elvl</code>: die Stufe der Monster. <code>plvl</code>: die des Spielers. Zwei Stufen darüber, den ganzen Weg nach unten: genau wie geplant. <code>hit</code>: wie hart das beste Schwert trifft.</p>
+      <p class="small" lang="de"><code>elvl</code>: das Level der Monster. <code>plvl</code>: das des Spielers. Zwei Level darüber, den ganzen Weg nach unten: genau wie geplant. <code>hit</code>: wie hart das beste Schwert trifft.</p>
     </div>
   </div>
 </section>
@@ -182,7 +182,7 @@
         <li lang="en">The XP: the monster's XP times the farming rule, rounded.</li>
         <li lang="de">Die XP: die XP des Monsters mal die Farm-Regel, gerundet.</li>
         <li lang="en"><code>awardXP</code> adds it, works out your new level, and grows your maximum health. You also get the health the new level added.</li>
-        <li lang="de"><code>awardXP</code> zählt sie dazu, rechnet deine neue Stufe aus und vergrößert deine maximale Gesundheit. Die Gesundheit, die die neue Stufe dazugibt, bekommst du auch.</li>
+        <li lang="de"><code>awardXP</code> zählt sie dazu, rechnet dein neues Level aus und vergrößert deine maximale Gesundheit. Die Gesundheit, die das neue Level dazugibt, bekommst du auch.</li>
         <li lang="en">The monster's name goes into <code>defeated</code>, so it is never paid twice. <code>noteKill</code> also writes down when it died: an ordinary monster comes back after a while, and then it pays again. A monster a boss called in (<code>summoned</code>) only gets marked <code>awarded</code>: it never comes back anyway.</li>
         <li lang="de">Der Name des Monsters kommt in <code>defeated</code>, damit es nie zweimal bezahlt wird. <code>noteKill</code> schreibt außerdem auf, wann es gestorben ist: Ein gewöhnliches Monster kommt nach einer Weile wieder, und dann bringt es wieder etwas. Ein Monster, das ein Boss gerufen hat (<code>summoned</code>), bekommt nur ein <code>awarded</code>: Es kommt sowieso nie wieder.</li>
         <li lang="en">A guardian? Its gate opens for good.</li>
@@ -199,9 +199,9 @@
   <h2 lang="de">Fair und lustig</h2>
   <ol class="steps">
     <li lang="en"><b>Small steps that add up</b>: every level, every sword makes you a little stronger.</li>
-    <li lang="de"><b>Kleine Schritte, die sich summieren</b>: Jede Stufe, jedes Schwert macht dich ein bisschen stärker.</li>
+    <li lang="de"><b>Kleine Schritte, die sich summieren</b>: Jedes Level, jedes Schwert macht dich ein bisschen stärker.</li>
     <li lang="en"><b>A curve</b>: each level costs more, because each monster gives more.</li>
-    <li lang="de"><b>Eine Kurve</b>: Jede Stufe kostet mehr, weil jedes Monster mehr gibt.</li>
+    <li lang="de"><b>Eine Kurve</b>: Jedes Level kostet mehr, weil jedes Monster mehr gibt.</li>
     <li lang="en"><b>A race that stays close</b>: monsters grow as fast as you, so fights keep their shape.</li>
     <li lang="de"><b>Ein Wettrennen, das knapp bleibt</b>: Monster wachsen so schnell wie du, darum behalten Kämpfe ihre Form.</li>
     <li lang="en"><b>Reward the fun way</b>: going deeper beats farming.</li>

@@ -76,7 +76,7 @@
       <h3 lang="en">And you</h3>
       <h3 lang="de">Und du</h3>
       <p lang="en">The hero's own numbers live in the notebook too: your level, your experience, your health and your bag.</p>
-      <p lang="de">Die eigenen Zahlen des Helden stehen auch im Notizbuch: deine Stufe, deine Erfahrung, deine Gesundheit und deine Tasche.</p>
+      <p lang="de">Die eigenen Zahlen des Helden stehen auch im Notizbuch: dein Level, deine Erfahrung, deine Gesundheit und deine Tasche.</p>
       <p lang="en"><code>new Set()</code> is a special list: each thing can be in it only once, and asking "is this in it?" is very fast. Perfect for "have I beaten this monster already?".</p>
       <p lang="de"><code>new Set()</code> ist eine besondere Liste: Jedes Ding kann nur einmal darin sein, und die Frage "Ist das drin?" geht sehr schnell. Perfekt für "Habe ich dieses Monster schon besiegt?".</p>
       <p lang="en"><code>new Map()</code> is a list of pairs: a name and what belongs to it, like a cube's address and the loot lying there.</p>
@@ -103,7 +103,7 @@
     <div>
       <pre data-code="src/core/enemies.js#enemyRoll"></pre>
       <p class="small" lang="en">Its own dice, from the world's seed and the floor: the monster's level (±1 around the depth) and its coins. And the name, on the last line, made with a <b>template</b>: text in backticks <code>`...`</code>, with values put in at each <code>${...}</code>.</p>
-      <p class="small" lang="de">Eigene Würfel, aus dem Seed der Welt und dem Boden: die Stufe des Monsters (±1 um die Tiefe) und seine Münzen. Und der Name, in der letzten Zeile, gemacht mit einer <b>Schablone</b>: Text in Backticks <code>`...`</code>, in den bei jedem <code>${...}</code> Werte eingesetzt werden.</p>
+      <p class="small" lang="de">Eigene Würfel, aus dem Seed der Welt und dem Boden: das Level des Monsters (±1 um die Tiefe) und seine Münzen. Und der Name, in der letzten Zeile, gemacht mit einer <b>Schablone</b>: Text in Backticks <code>`...`</code>, in den bei jedem <code>${...}</code> Werte eingesetzt werden.</p>
     </div>
   </div>
 </section>
@@ -142,7 +142,7 @@
   <div class="cols">
     <div>
       <p lang="en">Bottom left in the game is the <b>chat box</b>. It remembers what happened while you played: you died, you reached level 5, you found a Remarkable bow, a horde woke up. Press <kbd>Enter</kbd> and it opens, so you can scroll back.</p>
-      <p lang="de">Unten links im Spiel ist die <b>Chat-Box</b>. Sie merkt sich, was beim Spielen passiert ist: Du bist gestorben, du hast Stufe 5 erreicht, du hast einen bemerkenswerten Bogen gefunden, eine Horde ist aufgewacht. Drück <kbd>Enter</kbd>, dann öffnet sie sich und du kannst zurückblättern.</p>
+      <p lang="de">Unten links im Spiel ist die <b>Chat-Box</b>. Sie merkt sich, was beim Spielen passiert ist: Du bist gestorben, du hast Level 5 erreicht, du hast einen bemerkenswerten Bogen gefunden, eine Horde ist aufgewacht. Drück <kbd>Enter</kbd>, dann öffnet sie sich und du kannst zurückblättern.</p>
       <p lang="en">The game calls it the <b>chronicle</b>. Each line is a small <a class="w" href="words.html#object">object</a>, an <i>entry</i>: what kind of thing happened, and its details. A death, for example:</p>
       <p lang="de">Das Spiel nennt es die <b>Chronik</b>. Jede Zeile ist ein kleines <a class="w" href="words.html#object">Objekt</a>, ein <i>Eintrag</i>: welche Art Sache passiert ist, und die Einzelheiten. Ein Tod zum Beispiel:</p>
       <pre class="wrap" data-label="an entry (shortened)">{ kind: 'death', who: null,
@@ -164,7 +164,7 @@
       <p lang="en">The same trick works for languages. Your friend may play in German while you play in English, so the entry doesn't keep "Redback" as a word to show: it keeps <code>{ noun: 'Redback' }</code>, "the thing called Redback". Your game says "a Redback", a German one "einem Rotrücken".</p>
       <p lang="de">Derselbe Trick klappt auch für Sprachen. Dein Freund spielt vielleicht auf Deutsch, während du auf Englisch spielst. Darum hebt der Eintrag "Rotrücken" nicht als fertiges Wort auf, sondern <code>{ noun: 'Redback' }</code>: "das Ding, das auf Englisch <code>Redback</code> heißt". Ein deutsches Spiel sagt dann "einem Rotrücken", ein englisches den englischen Namen.</p>
       <p class="small muted" lang="en">Some kinds stay with you (your kills, what you bought). Others go to your friends as a <code>news</code> letter: deaths, level ups, guardians, new depths.</p>
-      <p class="small muted" lang="de">Manche Arten bleiben bei dir (deine Siege, was du gekauft hast). Andere gehen als <code>news</code>-Brief an deine Freunde: Tode, Stufenaufstiege, Wächter, neue Tiefen.</p>
+      <p class="small muted" lang="de">Manche Arten bleiben bei dir (deine Siege, was du gekauft hast). Andere gehen als <code>news</code>-Brief an deine Freunde: Tode, Level-Aufstiege, Wächter, neue Tiefen.</p>
       <a class="portal" href="network.html#messages" lang="en">Letters between the games</a>
       <a class="portal" href="network.html#messages" lang="de">Briefe zwischen den Spielen</a>
     </div>

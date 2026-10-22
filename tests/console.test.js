@@ -157,7 +157,7 @@ test('a death record says what did it, where, and reads for us and for a friend'
   // the same entry, read in German
   useLanguage('de', de);
   try {
-    assert.equal(describe({ kind: 'death', data: rec, who: { slot: 1, name: 'Anna' } }), 'Anna ist gestorben: Von einem Feuershraps gezwickt (Stufe 7) · Tiefe 4, Volcanic');
+    assert.equal(describe({ kind: 'death', data: rec, who: { slot: 1, name: 'Anna' } }), 'Anna ist gestorben: Von einem Feuershraps gezwickt (Lv 7) · Tiefe 4, Volcanic');
     assert.equal(describe({ kind: 'kill', data: { count: 2, xp: 4 } }), '2 Monster besiegt · +4 XP');
   } finally { useLanguage('en'); }
 });

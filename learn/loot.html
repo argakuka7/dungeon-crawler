@@ -36,7 +36,7 @@
   <p lang="en">This runs the game's real weapon machine. Each roll goes through four steps: rarity, then the kind of weapon, then its magic powers (<a class="w" href="words.html#affix">affixes</a>), then a name.
     Move the item level up: weapons from deeper down are stronger and rarer.</p>
   <p lang="de">Hier läuft die echte Waffenmaschine des Spiels. Jeder Wurf geht durch vier Schritte: Seltenheit, dann die Art der Waffe, dann seine magischen Kräfte (<a class="w" href="words.html#affix">Affixe</a>), dann ein Name.
-    Schieb die Gegenstandsstufe hoch: Waffen aus tieferen Tiefen sind stärker und seltener.</p>
+    Schieb das Gegenstandslevel hoch: Waffen aus tieferen Tiefen sind stärker und seltener.</p>
   <div class="demo real" data-demo="loot"></div>
 </section>
 
@@ -63,9 +63,9 @@
       <p lang="en">It's the <a class="portal" href="random.html#weighted">bag of marbles</a> again! 28 cream marbles for Vanilla, but less than half a marble for Fabled.</p>
       <p lang="de">Das ist wieder der <a class="portal" href="random.html#weighted">Murmelbeutel</a>! 28 cremefarbene Murmeln für Gewöhnlich, aber nicht mal eine halbe Murmel für Sagenhaft.</p>
       <p lang="en"><b>Item level</b> is the level of the monster that dropped it (about its depth). Better rarities only appear from a certain level: no Remarkable before level 4.</p>
-      <p lang="de">Die <b>Gegenstandsstufe</b> ist die Stufe des Monsters, das es fallen ließ (ungefähr seine Tiefe). Bessere Seltenheiten gibt es erst ab einer bestimmten Stufe: nichts Bemerkenswertes vor Stufe 4.</p>
+      <p lang="de">Die <b>Gegenstandslevel</b> ist das Level des Monsters, das es fallen ließ (ungefähr seine Tiefe). Bessere Seltenheiten gibt es erst ab einem bestimmten Level: nichts Bemerkenswertes vor Level 4.</p>
       <p lang="en">And the deeper you go, the more the bag tips towards the rare end, slowly. At item level 20, about 8% of swords are Remarkable and 3% Fabled.</p>
-      <p lang="de">Und je tiefer du gehst, desto mehr kippt der Beutel zum seltenen Ende, langsam. Auf Gegenstandsstufe 20 sind etwa 8% der Schwerter bemerkenswert und 3% sagenhaft.</p>
+      <p lang="de">Und je tiefer du gehst, desto mehr kippt der Beutel zum seltenen Ende, langsam. Auf Gegenstandslevel 20 sind etwa 8% der Schwerter bemerkenswert und 3% sagenhaft.</p>
       <p lang="en"><b>Luck</b> tips it further: guardians and chests roll with luck. OMG swords only come from guardians.</p>
       <p lang="de"><b>Glück</b> kippt ihn noch mehr: Wächter und Truhen würfeln mit Glück. OMG-Schwerter kommen nur von Wächtern.</p>
     </div>
@@ -76,10 +76,10 @@
   <h2 lang="en">Try it: how the odds change</h2>
   <h2 lang="de">Probier es: Wie sich die Chancen ändern</h2>
   <p lang="en">These are the exact chances the game uses. Slide the item level up from 1 to 25, then add luck.</p>
-  <p lang="de">Das sind genau die Chancen, die das Spiel benutzt. Schieb die Gegenstandsstufe von 1 bis 25 hoch und gib dann Glück dazu.</p>
+  <p lang="de">Das sind genau die Chancen, die das Spiel benutzt. Schieb das Gegenstandslevel von 1 bis 25 hoch und gib dann Glück dazu.</p>
   <div class="demo real" data-demo="loot" data-mode="odds"></div>
   <p class="small muted" lang="en">The formula: each rarity's weight is multiplied by <code>exp((0.025 × (level − 1) + luck) × rank)</code>. "Rank" is 0 for Crap up to 9 for OMG, so the rarest ones grow fastest.</p>
-  <p class="small muted" lang="de">Die Formel: Das Gewicht jeder Seltenheit wird mit <code>exp((0.025 × (Stufe − 1) + Glück) × Rang)</code> malgenommen. "Rang" ist 0 für Schrott bis 9 für OMG, darum wachsen die seltensten am schnellsten.</p>
+  <p class="small muted" lang="de">Die Formel: Das Gewicht jeder Seltenheit wird mit <code>exp((0.025 × (Level − 1) + Glück) × Rang)</code> malgenommen. "Rang" ist 0 für Schrott bis 9 für OMG, darum wachsen die seltensten am schnellsten.</p>
 </section>
 
 <section class="slide" id="affixes" data-lv="2" data-src="src/core/gear/affixes.js#AFFIXES,TIER_LEVELS src/core/gear/names.js#itemName">
@@ -111,7 +111,7 @@
       <h3 lang="en">Tiers</h3>
       <h3 lang="de">Stufen</h3>
       <p lang="en">Each affix has 7 <b>tiers</b>, like sizes. The item level picks the tier: level 1 to 3 is tier 1, level 19 and up is tier 5. Impossible and OMG weapons reach even higher, up to tier 7.</p>
-      <p lang="de">Jedes Affix hat 7 <b>Stufen</b>, wie Größen. Die Gegenstandsstufe wählt die Stufe: Stufe 1 bis 3 ist Stufe 1, ab 19 Stufe 5. Unmögliche und OMG-Waffen kommen noch höher, bis Stufe 7.</p>
+      <p lang="de">Jedes Affix hat 7 <b>Stufen</b>, wie Größen. Das Gegenstandslevel wählt die Stufe: Stufe 1 bis 3 ist Stufe 1, ab 19 Stufe 5. Unmögliche und OMG-Waffen kommen noch höher, bis Stufe 7.</p>
       <p lang="en">Pointy at tier 1 adds 2 to 4 damage. At tier 7, 29 to 38.</p>
       <p lang="de">Spitz auf Stufe 1 gibt 2 bis 4 Schaden dazu. Auf Stufe 7 sind es 29 bis 38.</p>
       <h3 lang="en">Names</h3>
@@ -129,7 +129,7 @@
     <div class="card"><h3 lang="en">Monsters</h3> <h3 lang="de">Monster</h3><p lang="en">Every monster drops coins. Sometimes a sword (5%), a piece of armor (4%), a health potion (3%) or a crystal for the Enchanter (1.5%). Tougher monsters drop more often: a Stunder a sword 8% of the time.</p> <p lang="de">Jedes Monster lässt Münzen fallen. Manchmal ein Schwert (5%), ein Rüstungsteil (4%), einen Heiltrank (3%) oder einen Kristall für die Verzauberin (1,5%). Stärkere Monster lassen öfter etwas fallen: ein Stunder ein Schwert in 8% der Fälle.</p>
       <p class="small" lang="en">And remember: the same monster always drops the same thing, even if it comes back after you die. <a href="random.html#why">Why?</a></p>
       <p class="small" lang="de">Und denk dran: Dasselbe Monster lässt immer dasselbe fallen, auch wenn es nach deinem Tod wiederkommt. <a href="random.html#why">Warum?</a></p></div>
-    <div class="card"><h3 lang="en">Guardians</h3> <h3 lang="de">Wächter</h3><p lang="en">A Guardian always drops a sword (at least Decent), a piece of armor, a potion and a crystal. A Temp Boss (or a real boss) drops two swords, potions and crystals, at least Unusual from level 5. Only they can drop OMG things.</p> <p lang="de">Ein Wächter lässt immer ein Schwert (mindestens ordentlich), ein Rüstungsteil, einen Trank und einen Kristall fallen. Ein Temp-Boss (oder ein echter Boss) lässt zwei Schwerter, Tränke und Kristalle fallen, ab Stufe 5 mindestens ungewöhnlich. Nur sie können OMG-Sachen fallen lassen.</p></div>
+    <div class="card"><h3 lang="en">Guardians</h3> <h3 lang="de">Wächter</h3><p lang="en">A Guardian always drops a sword (at least Decent), a piece of armor, a potion and a crystal. A Temp Boss (or a real boss) drops two swords, potions and crystals, at least Unusual from level 5. Only they can drop OMG things.</p> <p lang="de">Ein Wächter lässt immer ein Schwert (mindestens ordentlich), ein Rüstungsteil, einen Trank und einen Kristall fallen. Ein Temp-Boss (oder ein echter Boss) lässt zwei Schwerter, Tränke und Kristalle fallen, ab Level 5 mindestens ungewöhnlich. Nur sie können OMG-Sachen fallen lassen.</p></div>
     <div class="card"><h3 lang="en">Treasure chests</h3> <h3 lang="de">Schatztruhen</h3><p lang="en">Every depth has four treasure sites: two basic, one uncommon, one rare. Their chests hold coins, potions, crystals, a sword or two and often armor; the grander the site, the better. Click one to open it!</p> <p lang="de">Jede Tiefe hat vier Schatzplätze: zwei einfache, einen ungewöhnlichen, einen seltenen. Ihre Truhen enthalten Münzen, Tränke, Kristalle, ein oder zwei Schwerter und oft Rüstung; je prächtiger der Platz, desto besser. Klick eine an, um sie zu öffnen!</p></div>
   </div>
   <p lang="en">Coins: 10 copper make 1 silver, 100 silver make 1 gold. <img class="icon s" src="../assets/items/item_coin_copper.png" alt="copper"> <img class="icon s" src="../assets/items/item_coin_silver.png" alt="silver"> <img class="icon s" src="../assets/items/item_coin_gold.png" alt="gold"></p>
@@ -161,12 +161,12 @@
     <pre data-code="src/core/gear/stats.js#ILVL_DAMAGE,ilvlDamage,itemStats"></pre>
     <div>
       <p lang="en">The damage, step by step, for an Unusual Long Sword, item level 11, with "Pointy +5":</p>
-      <p lang="de">Der Schaden Schritt für Schritt, für ein ungewöhnliches Langschwert, Gegenstandsstufe 11, mit "Spitz +5":</p>
+      <p lang="de">Der Schaden Schritt für Schritt, für ein ungewöhnliches Langschwert, Gegenstandslevel 11, mit "Spitz +5":</p>
       <ol class="steps">
         <li lang="en">base: <b>39</b></li>
         <li lang="de">Grundwert: <b>39</b></li>
         <li lang="en">item level: × (1 + 0.05 × 10) = × 1.5 → 58.5</li>
-        <li lang="de">Gegenstandsstufe: × (1 + 0,05 × 10) = × 1,5 → 58,5</li>
+        <li lang="de">Gegenstandslevel: × (1 + 0,05 × 10) = × 1,5 → 58,5</li>
         <li lang="en">rarity Unusual: × 1.11 → 64.935</li>
         <li lang="de">Seltenheit Ungewöhnlich: × 1,11 → 64,935</li>
         <li lang="en">Pointy: + 5 → 69.935</li>
@@ -175,7 +175,7 @@
         <li lang="de">kein Grob: × 1 → gerundet: <b>70</b></li>
       </ol>
       <p lang="en">Then in a fight, your own level adds 2% per level.</p>
-      <p lang="de">Im Kampf gibt dann noch deine eigene Stufe 2% pro Stufe dazu.</p>
+      <p lang="de">Im Kampf gibt dann noch dein eigenes Level 2% pro Level dazu.</p>
     </div>
   </div>
 </section>

@@ -81,7 +81,7 @@ shared element. Everything else (slides, demos, code, images) exists once. Attri
 
 The game speaks German too (src/i18n/, docs/i18n.md), and the guide calls things what the game
 calls them: the German text says "Blutviper", "Ungewöhnlich", "Wächter-Spinne", "Aufträge", with the
-words of the glossary (`src/i18n/glossary.js`: Würfel, Tiefe, Stufe, Monster, Wächter ...). Where
+words of the glossary (`src/i18n/glossary.js`: Würfel, Tiefe, Level, Monster, Wächter ...). Where
 the guide only names a thing, let the game say it: `<span data-name="Blood viper">Blood viper</span>`
 shows the game's name in the page's language (the written one is the fallback). `npm run i18n`
 (and `npm test`) fails on an English name of the game's things in the German text. Names that are

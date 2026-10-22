@@ -45,7 +45,7 @@ export const DECKS = [
     de: { title: 'Schätze & Waffen', teaser: 'Seltenheiten, Affixe und lustige Namen: eine Maschine, die Waffen baut.' } },
   { file: 'stronger.html', theme: 'nests', depth: 14, icon: '../assets/items/weapon_sword_greatsword.png',
     title: 'Growing Stronger', teaser: 'Experience, levels and curves: how the game keeps getting harder, and you keep up.',
-    de: { title: 'Stärker werden', teaser: 'Erfahrung, Stufen und Kurven: wie das Spiel immer schwerer wird und du mithältst.' } },
+    de: { title: 'Stärker werden', teaser: 'Erfahrung, Level und Kurven: wie das Spiel immer schwerer wird und du mithältst.' } },
   { file: 'drawing.html', theme: 'nests', depth: 15, icon: '../assets/items/item_crystal_sapphire.png',
     title: 'Drawing the World', teaser: 'Triangles, cameras, lights, and cutting holes in roofs so you can see.',
     de: { title: 'Die Welt malen', teaser: 'Dreiecke, Kameras, Licht und Löcher in Dächern, damit du etwas siehst.' } },

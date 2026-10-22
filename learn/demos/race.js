@@ -48,7 +48,7 @@ export default function mount(el) {
     g.textAlign = 'center'; g.fillText(tr('depth', 'Tiefe'), (W + L) / 2, H - 2);
     const r = rows[pick - 1];
     out.innerHTML = tr(`Depth ${pick}: a level-${r.mlv} ${gameName(r.kind.label)} has <b>${r.m.hp}</b> health and hits for <b>${r.m.damage}</b>.\nYou, level ${r.plv}: your sword hits for <b>${r.hit}</b>, you have <b>${r.hp}</b> health.\nYou need <b>${r.slashes}</b> slash${r.slashes === 1 ? '' : 'es'}, it needs <b>${r.blows}</b> blow${r.blows === 1 ? '' : 's'}.`,
-      `Tiefe ${pick}: ${gameName(r.kind.label)} auf Stufe ${r.mlv} hat <b>${r.m.hp}</b> Gesundheit und trifft mit <b>${r.m.damage}</b>.\nDu, Stufe ${r.plv}: Dein Schwert trifft mit <b>${r.hit}</b>, du hast <b>${r.hp}</b> Gesundheit.\nDu brauchst <b>${r.slashes}</b> ${r.slashes === 1 ? 'Hieb' : 'Hiebe'}, es braucht <b>${r.blows}</b> ${r.blows === 1 ? 'Schlag' : 'Schläge'}.`);
+      `Tiefe ${pick}: ${gameName(r.kind.label)} auf Level ${r.mlv} hat <b>${r.m.hp}</b> Gesundheit und trifft mit <b>${r.m.damage}</b>.\nDu, Level ${r.plv}: Dein Schwert trifft mit <b>${r.hit}</b>, du hast <b>${r.hp}</b> Gesundheit.\nDu brauchst <b>${r.slashes}</b> ${r.slashes === 1 ? 'Hieb' : 'Hiebe'}, es braucht <b>${r.blows}</b> ${r.blows === 1 ? 'Schlag' : 'Schläge'}.`);
   }
   const move = e => { const [x] = at(e); pick = Math.max(1, Math.min(MAX_DEPTH, Math.floor((x - L) / bw) + 1)); draw(); };
   c.addEventListener('pointermove', move);

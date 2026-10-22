@@ -117,7 +117,7 @@ export default function mount(el) {
     camera.position.set(0, h * 0.6, h * 2.1 + 0.9); camera.lookAt(0, h * 0.46, 0);
     const lv = guardianLevel(depthOf(boss), 'descent'), p = enemyProfile(kind, lv);
     out.innerHTML = tr(`<b>${kind.label}</b>, the boss of depth ${depthOf(boss)} · level ${lv} · health <b>${p.hp}</b> · <b>${fmt(h)}</b> cells tall`,
-      `<b>${kind.label}</b>, der Boss von Tiefe ${depthOf(boss)} · Stufe ${lv} · Gesundheit <b>${p.hp}</b> · <b>${fmt(h)}</b> Felder hoch`)
+      `<b>${kind.label}</b>, der Boss von Tiefe ${depthOf(boss)} · Level ${lv} · Gesundheit <b>${p.hp}</b> · <b>${fmt(h)}</b> Felder hoch`)
       + `<br><span class="say"></span>`;
     play(giant ? 'stride' : 'walk');
   }

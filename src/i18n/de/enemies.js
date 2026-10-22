@@ -185,12 +185,12 @@ export default {
   '{name} the {kind:lower}': '{name} {kind:der}',
 
   // fighting (game/sword.js, game/shots.js, game/enemies.js, the bosses)
-  'Slashed Lv {level} {name} ({hp}/{max})': 'Getroffen: {name} Stufe {level} ({hp}/{max})',
-  'Hit Lv {level} {name} ({hp}/{max})': 'Getroffen: {name} Stufe {level} ({hp}/{max})',
+  'Slashed Lv {level} {name} ({hp}/{max})': 'Getroffen: {name} Lv {level} ({hp}/{max})',
+  'Hit Lv {level} {name} ({hp}/{max})': 'Getroffen: {name} Lv {level} ({hp}/{max})',
   '{name} defeated · Gate unlocked!': '{name} besiegt · Tor offen!',
   '{n, plural, one {Defeated # enemy} other {Defeated # enemies}}': '{n, plural, one {# Monster besiegt} other {# Monster besiegt}}',
   '+{xp} XP': '+{xp} XP',
-  'Level {level}!': 'Stufe {level}!',
+  'Level {level}!': 'Level {level}!',
   '{name} grows into a giant!': '{name} wächst zu einem Riesen!',
   "{name}'s shield is down! Hit him now!": '{name}s Schild ist weg! Schlag jetzt zu!',
   '{name} croaks: the lava is rising! Up the tower!': '{name} quakt: Die Lava steigt! Rauf auf den Turm!',
