@@ -329,7 +329,54 @@ export const MECKED = {
   style: 'brute', charge: 1.4,
   seedSalt: 0x3ec4ed1, spacing: 4,
 };
-export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK, SQUIRTLE, MECKED];
+// A little wind spirit in a skirt (blender/tornado.py, after the kids' sketch): a floating face
+// with angry brows over a thin body, its arms raised either side of it like a U, a round overskirt
+// over a long skirt (the game turns them, `waves`, so their swirls keep running round) and four
+// stubby feet. It fights with twisters (core/twisters.js, game/twisters.js), from afar:
+// A `twister` attack spins one up over each of its hands (`hands`: where, model space as for a
+// muzzle) from `form` s on and lets them go at the hit frame: they drop to the floor and run out at
+// `speed` cells/s, curving in from either side (`bend`) to cross where its target stood as it let
+// go, and on, `range` cells in all. One that touches a player (within `radius` of its middle, up to
+// `height` above the floor) catches them: lifted `lift` cells and spun round for `spin` s, then
+// flung down (the blow, knocking them down).
+// A `ride` lifts it onto a twister of its own between ride.from and the hit frame, up to
+// ride.height over the way (game/enemyai.js): `back` cells away from the player (the hop, when the
+// player comes too close: a twister stays behind where it took off for `leave.stay` s and catches
+// whoever comes in), or onto its target (`onto`, the slam: a stomp beam's shadow shows where it
+// comes down; it crashes down there onto whoever is under it). Up in the air (core/enemies.js
+// airborne) nothing bumps into it and no blade reaches it, and the ride is `steady`.
+const TWISTER = { speed: 2.6, range: 6.5, radius: 0.3, height: 1.1, bend: 0.5, lift: 1.3, spin: 1.1 };
+const TORNADO_TWIN = {
+  name: 'twin', clip: 'cast', weight: 4, reach: 4.6, minReach: 1.6, hitAt: 27 / 30, trackUntil: 0.7, attackTime: 48 / 30, hitReach: 0,
+  arc: 0.5, power: 1, knock: 3.5, knockDown: true, hop: 3, reason: 'Caught in a Tornado\'s twister!',
+  twister: { ...TWISTER, form: 6 / 30, hands: [[0.367, 1.158, 0.343], [-0.367, 1.158, 0.343]], muzzle: [0, 1.158, 0.343] },
+};
+const TORNADO_HOP = {
+  name: 'hop', clip: 'hop', weight: 1, reach: 1.6, hitAt: 33 / 30, trackUntil: 0.25, attackTime: 42 / 30, hitReach: 0,
+  arc: -1, power: 0.8, knock: 3, knockDown: true, hop: 3, reason: 'Caught in a Tornado\'s twister!', recover: 0.6,
+  ride: { from: 9 / 30, height: 1.1, back: 2.6, leave: { ...TWISTER, stay: 1.4 } }, steady: { from: 9 / 30, to: 33 / 30 },
+};
+const TORNADO_SLAM = {
+  name: 'slam', clip: 'slam', weight: 1, reach: 4.4, minReach: 2.2, hitAt: 45 / 30, trackUntil: 0.3, attackTime: 60 / 30, hitReach: 0,
+  arc: -1, power: 1.2, knock: 5, knockDown: true, hop: 3.5, reason: 'Slammed by a Tornado!',
+  ride: { from: 9 / 30, height: 1.5, onto: true }, steady: { from: 9 / 30, to: 45 / 30 },
+  beam: { kind: 'stomp', aim: 'feet', time: 39 / 30, track: 1.8, lock: 0.3, radius: 0.85, range: 14, sky: 5, clear: false,
+    muzzle: [0, 0, 0] },
+};
+export const TORNADO = {
+  type: 'tornado', species: 'tornado', label: 'Tornado', hp: 95, damage: 22, knock: 3,
+  xp: 66, coins: [14, 26],
+  radius: 0.36, height: 1.4, bodyHeight: 1.15, mass: 1.3, waves: 2.4,
+  aggro: 5.5, giveUp: 9, chase: 1.5, wander: 0.6, homeSpeed: 0.9,
+  ...TORNADO_TWIN, reach: TORNADO_TWIN.reach, cooldown: 1.7, ichor: ['#e2d0ff', '#7a5ab8'], pitch: 1.1,
+  attacks: [TORNADO_TWIN, TORNADO_HOP, TORNADO_SLAM],
+  poise: 0.5, hitStun: 0.2, deathTime: 2, corpseTime: 4,
+  parts: { body: ['TornadoBody', 'TornadoSkirt', 'TornadoSwirl'], wind: ['TornadoWind', 'TornadoWindDeep'], eyes: ['TornadoEyes_glow'] },
+  colors: paints({ body: 'violet.light', wind: 'violet.pale', eyes: 'eyes.sun' }),
+  style: 'ranged', keep: [2.2, 4.2],
+  seedSalt: 0x70a4d0, spacing: 4,
+};
+export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK, SQUIRTLE, MECKED, TORNADO];
 
 // Gusto, the first real boss (blender/gusto.py), in place of the first descent guardian
 // (core/bosses.js). A round white-grey head with red eyes and jagged teeth, two long arms with
@@ -756,7 +803,7 @@ export const enemyName = k => say(enemyWords(k));
 // the plural ('Spiders'), for a kind of the roster
 export const enemiesName = k => form(enemyWords(k), 'pl');
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
-export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
+export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? a.twister ?? null;
 
 // Enemy kinds: a species' base profile with its own name, colours and strength, drawn with
 // the species' model.
@@ -776,11 +823,11 @@ const times = (v, k) => Math.round(v * k);
 export function enemyKind(base, { mods = {}, attacks = base.attacks, ...spec }) {
   const { hp = 1, damage = 1, speed = 1, size = 1 } = mods, xp = mods.xp ?? Math.sqrt(hp * damage);
   const reach = a => a.hitReach * size;
-  const thrown = p => ({ ...p, muzzle: p.muzzle.map(v => v * size) });
+  const thrown = p => ({ ...p, muzzle: p.muzzle.map(v => v * size), ...(p.hands && { hands: p.hands.map(h => h.map(v => v * size)) }) });
   // a melee attack's own reach grows with the body; a throw's (or a beam's) stays
   const sized = a => ({ ...a, hitReach: reach(a), ...(a.reach !== undefined && !shotOf(a) && { reach: a.reach * size }),
     ...(a.projectile && { projectile: thrown(a.projectile) }), ...(a.beam && { beam: thrown(a.beam) }),
-    ...(a.gust && { gust: thrown(a.gust) }) });
+    ...(a.gust && { gust: thrown(a.gust) }), ...(a.twister && { twister: thrown(a.twister) }) });
   const list = attacks && attacks.map(sized);
   const own = list?.some(a => a.reach !== undefined);
   return {
@@ -794,6 +841,7 @@ export function enemyKind(base, { mods = {}, attacks = base.attacks, ...spec }) 
     ...(base.projectile && { projectile: thrown(base.projectile) }),
     ...(base.beam && { beam: thrown(base.beam) }),
     ...(base.gust && { gust: thrown(base.gust) }),
+    ...(base.twister && { twister: thrown(base.twister) }),
     ...(base.wheel && { wheel: base.wheel * size }),
     ...spec,
   };
@@ -987,6 +1035,28 @@ export const BONE_MECKED = enemyKind(MECKED, {
   colors: paints({ skin: 'stone.pale', belly: 'stone.light', eyes: 'eyes.ember' }), ichor: ['#efe6cf', '#8a8070'],
   mods: { hp: 1.5, damage: 1.45, speed: 1.15, size: 1.1 },
 });
+// The Tornados: an ochre one over the badlands and the canyon, a pale blue one in the snow and the
+// frozen caves, and a burning one in the volcanic depths, whose twisters set you on fire.
+const tornadoAttacks = (caught, slammed, more = {}) => [{ ...TORNADO_TWIN, reason: caught, ...more }, { ...TORNADO_HOP, reason: caught, ...more },
+  { ...TORNADO_SLAM, reason: slammed, ...more }];
+export const DUST_TORNADO = enemyKind(TORNADO, {
+  type: 'dusttornado', label: 'Dust tornado', reason: 'Caught in a Dust tornado\'s twister!',
+  attacks: tornadoAttacks('Caught in a Dust tornado\'s twister!', 'Slammed by a Dust tornado!'),
+  colors: paints({ body: 'ochre.light', wind: 'ochre.pale@+4', eyes: 'eyes.ember' }), ichor: ['#efe0b8', '#8a7040'],
+  mods: { hp: 1.2, damage: 1.15 },
+});
+export const FROST_TORNADO = enemyKind(TORNADO, {
+  type: 'frosttornado', label: 'Frost tornado', reason: 'Caught in a Frost tornado\'s twister!',
+  attacks: tornadoAttacks('Caught in a Frost tornado\'s twister!', 'Slammed by a Frost tornado!'),
+  colors: paints({ body: 'frost.pale@-4', wind: 'frost.pale@+8', eyes: 'eyes.ember' }), ichor: ['#e0f4ff', '#5a8fbf'],
+  mods: { hp: 1.3, damage: 1.1, speed: 0.9 },
+});
+export const FIRE_TORNADO = enemyKind(TORNADO, {
+  type: 'firetornado', label: 'Fire tornado', reason: 'Caught in a Fire tornado\'s twister!', fireproof: true, fx: 'firetornado',
+  attacks: tornadoAttacks('Caught in a Fire tornado\'s twister!', 'Slammed by a Fire tornado!', { burn: { time: 1, damage: 6, ticks: 2 } }),
+  colors: paints({ body: 'ember.mid', wind: 'ember.glow', eyes: 'eyes.sun' }), light: '#ff7a2a', sparks: ['#ffd25a', '#ff8a2a', '#ff4a17'],
+  ichor: ['#ffc07a', '#a0480f'], pitch: 1, mods: { hp: 1.5, damage: 1.45, speed: 1.1, size: 1.08 },
+});
 // from half his health on: a giant, six cells tall (the model at `size`), who stomps, jumps, kicks
 // and blasts; he walks over the hills on the floors like any enemy, but keeps clear of the bank
 // (game/squarlo.js); nothing staggers him and blows hurt him less, unless he is exposed
@@ -1141,7 +1211,7 @@ export const TOT_STUNDER = enemyKind(STUNDER, {
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
   BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
-  NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, FROST_MECKED, BOG_MECKED, BONE_MECKED, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
+  NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, FROST_MECKED, BOG_MECKED, BONE_MECKED, DUST_TORNADO, FROST_TORNADO, FIRE_TORNADO, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
   TIDE_SQUIRTLE, SKY_WOLLA, FOG_FACE, FOG_CAT, REN_SPIDER, REN_FACE].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,
@@ -1162,10 +1232,10 @@ export function hurtBy(e) {
   return x > 1 ? x : e.profile.armour ?? 1;
 }
 // is e up in the air now (Squarlo a giant, jumping: between the jump's take-off and the landing,
-// game/squarlo.js lifts him): nothing touches him
+// game/squarlo.js lifts him; a Tornado riding a twister, game/enemyai.js): nothing touches him
 export function airborne(e) {
-  const j = e.mode === 'attack' ? attackOf(e).jump : null;
-  return !!j && e.t >= j.from && e.t < attackOf(e).hitAt;
+  const a = e.mode === 'attack' ? attackOf(e) : null, j = a?.jump ?? a?.ride;
+  return !!j && e.t >= j.from && e.t < a.hitAt;
 }
 // is e warded now (Squarlo casting the tide: an attack's `ward`): nothing hurts it
 export const wardedNow = e => e.mode === 'attack' && !!attackOf(e).ward;

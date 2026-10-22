@@ -209,6 +209,21 @@ export function voices({ amp, noise, filter, tone, sweep }) {
       windup: (t, out, p) => { noise(t, 0.16, filter('bandpass', 900 * p, 1.2, amp(t, 0.01, 0.4, 0.15, out))); clicks(t + 0.12, 3, 0.05, 2200 * p, 0.35, out); },
       death: (t, out, p) => { bend(t, 1.0, 300 * p, 220 * p, 70 * p, 700 * p, 0.5, out); gloops(t + 0.5, 4, 120 * p, 240 * p, 0.09, 0.2, out, false); },
     },
+    tornado: {  // a cross little wind spirit: a whistling huff, a sharp intake of breath, a sigh that blows itself out
+      alert: (t, out, p) => {
+        bend(t, 0.3, 520 * p, 760 * p, 600 * p, 1400 * p, 0.3, out);
+        noise(t, 0.35, filter('bandpass', 1800 * p, 3, amp(t, 0.05, 0.3, 0.3, out)));
+      },
+      windup: (t, out, p) => {   // (the twisters' whirl is their own sound, game/juice.js)
+        const f = filter('bandpass', 900 * p, 2, amp(t, 0.12, 0.3, 0.2, out));
+        f.frequency.setValueAtTime(900 * p, t); f.frequency.exponentialRampToValueAtTime(2600 * p, t + 0.3);
+        noise(t, 0.32, f);
+      },
+      death: (t, out, p) => {
+        bend(t, 0.8, 600 * p, 420 * p, 160 * p, 1200 * p, 0.35, out);
+        sweep(t + 0.1, 1.2, 1600 * p, 700 * p, 150 * p, 2.5, 0.35, out, 0.05);
+      },
+    },
     snapskull: {   // a skull come to life: chattering teeth, a hollow clack, a crack
       alert: (t, out, p) => clicks(t, 7, 0.04, 2600 * p, 0.45, out),
       windup: (t, out, p) => { clicks(t, 3, 0.05, 2000 * p, 0.35, out); tone('sine', 520 * p, 300 * p, t, 0.08, amp(t, 0.002, 0.2, 0.08, out)); },

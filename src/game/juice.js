@@ -357,6 +357,47 @@ export function stormFx(e, g, what, arg = 0) {
   }
 }
 
+// A Tornado's twister (game/twisters.js): spinning up (over a hand, or under the Tornado as it
+// takes off: a whirl of wind and dust there), let go (dropping onto the floor in a burst of dust),
+// catching a player (a roaring spin) and blowing away (a last puff). Its colour is its kind's.
+const DUST = ['#c9c0ae', '#e2dccf', '#a89f8c'];
+export function twisterFx(w, what) {
+  const near = Math.hypot(w.x - player.x, w.z - player.z) < 16, c = w.profile?.sparks ?? DUST;
+  if (!near) return;
+  if (what === 'spin') { sfx('whirl', { at: w, pitch: w.kind === 'hand' ? 1.25 : 0.9, volume: w.kind === 'hand' ? 0.6 : 0.9 }); return; }
+  if (what === 'loose') {
+    sfx('gust', { at: w, pitch: 1.5, volume: 0.5 });
+    for (let i = 0; i < 18; i++) {
+      const a = rand(0, Math.PI * 2), s = rand(1, 2.4);
+      emit(soft, w.x, w.y + 0.08, w.z, { v: [Math.cos(a) * s, rand(0.2, 1), Math.sin(a) * s], life: rand(0.4, 0.7),
+        size: rand(0.12, 0.25), grow: 1.4, color: i % 3 ? DUST[i % 3] : c[0], alpha: 0.5, drag: 2.5 });
+    }
+    return;
+  }
+  if (what === 'catch') {
+    sfx('twirl', { at: w });
+    if (Math.hypot(w.x - player.x, w.z - player.z) < 4) cameraKick(0, 0, 0, 0.06);
+    return;
+  }
+  for (let i = 0; i < 12; i++) {   // gone: blown apart
+    const a = rand(0, Math.PI * 2), s = rand(0.6, 1.6);
+    emit(soft, w.x + Math.cos(a) * 0.2, w.y + rand(0.1, 0.9), w.z + Math.sin(a) * 0.2, { v: [Math.cos(a) * s, rand(0.3, 1.2), Math.sin(a) * s],
+      life: rand(0.35, 0.6), size: rand(0.14, 0.26), grow: 1.5, color: DUST[i % 3], alpha: 0.4, drag: 2 });
+  }
+}
+// The player caught in a twister (game/twirl.js): dust and wind whirling round them while they
+// spin, and a whump as they are flung
+export function twirlFx(p, what, dt = 0) {
+  if (what === 'caught') { cameraKick(0, 0, 0, 0.08); return; }
+  if (what === 'fling') { sfx('whump', { at: p, pitch: 0.8 }); cameraKick(0, 0, 0, 0.1); return; }
+  const spin = performance.now() / 1000 * 9;
+  for (let n = Math.floor(70 * dt + Math.random()); n > 0; n--) {
+    const k = Math.random(), a = spin + k * 7 + n * 2.1, r = 0.25 + 0.3 * k;
+    emit(soft, p.x + Math.cos(a) * r, p.y - 0.6 + k * 2, p.z + Math.sin(a) * r, { v: [-Math.sin(a) * 3, 0.8, Math.cos(a) * 3],
+      life: rand(0.2, 0.35), size: rand(0.06, 0.12), color: DUST[n % 3], alpha: 0.6, drag: 1 });
+  }
+}
+
 // A giant's stomp or his landing (a beam of kind 'stomp', game/beams.js; its shadow:
 // render/beams.js): when it comes down ('burst'), a boom, the ground shaking, a ring of dust and
 // spray bursting out from under the foot (the shockwave running on: game/quakes.js, waveFx).

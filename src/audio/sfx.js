@@ -355,6 +355,19 @@ const SOUNDS = {
     sweep(t + 0.05, 0.55, 1400 * p, 2600 * p, 900 * p, 6, 0.12, out, 0.08);   // the howl
     noise(t, 0.6, filter('lowpass', 180 * p, 1, amp(t, 0.04, 0.5, 0.55, out)));
   },
+  whirl(t, out, p) {     // a Tornado's twister spinning up: a whooshing wind whose band swings up and down ever faster
+    const f = filter('bandpass', 500 * p, 2.2, amp(t, 0.12, 0.7, 0.75, out));
+    let at = t;
+    for (let i = 0; i < 9; i++) { f.frequency.setValueAtTime((i % 2 ? 1500 : 650) * p * (1 + i * 0.06), at); at += 0.13 - i * 0.008; }
+    noise(t, 0.9, f);
+    noise(t, 0.85, filter('lowpass', 220 * p, 1, amp(t, 0.15, 0.35, 0.7, out)));
+  },
+  twirl(t, out, p) {     // caught in a twister: a roaring spin, the wind howling round and round
+    const f = filter('bandpass', 700 * p, 3, amp(t, 0.05, 0.9, 1.0, out));
+    for (let i = 0; i < 12; i++) f.frequency.setValueAtTime((i % 2 ? 1900 : 600) * p, t + i * 0.085);
+    noise(t, 1.1, f);
+    sweep(t, 1.0, 250 * p, 700 * p, 300 * p, 1.2, 0.5, out, 0.06);
+  },
   vortex(t, out, p) {    // Gusto's vortex: a deep roar that whirls (the band swinging up and down) and howls away
     const f = filter('bandpass', 400 * p, 1.4, amp(t, 0.05, 1.1, 0.75, out));
     for (let i = 0; i < 6; i++) f.frequency.setValueAtTime((i % 2 ? 380 : 900) * p, t + i * 0.12);

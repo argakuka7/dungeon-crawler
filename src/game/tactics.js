@@ -19,7 +19,7 @@ export function strikesFrom(profile, s) {
     return list.some(a => {
       const shot = shotOf(a), reach = a.reach ?? profile.reach;
       if (d < (a.minReach ?? 0)) return false;
-      if (!shot) return dy < 0.75 && d < reach + edge;
+      if (!shot) return !a.ride && dy < 0.75 && d < reach + edge;   // (a hop away is no place to strike from)
       return dy < 1.5 && d < reach - 0.3 && clearLine(x, y + shot.muzzle[1], z, s.x, s.y + CHEST, s.z);
     });
   };

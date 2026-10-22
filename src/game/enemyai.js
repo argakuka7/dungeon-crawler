@@ -5,6 +5,8 @@
 // keeps closing in while its throw recovers. A pouncing one is carried forward through its leap,
 // one that retreats (the Spicy) rolls back before it fires its beam (game/beams.js; the Wolk's
 // lightning is a beam too), and the Wolla's storm blows from its hit frame on (game/gusts.js).
+// One that rides (the Tornado) is carried through the air on a twister of its own (game/twisters.js
+// spins them up, and the ones it throws).
 //
 // Whom it goes after: the player, or when playing together the nearer of the two players
 // (game/party.js chooseTarget, its `target`); "the player" below is that one.
@@ -29,7 +31,7 @@
 import { player, state } from './state.js';
 import { party, chooseTarget, alive as canHurt } from './party.js';
 import { playerFloor, strikePlayer, hitBody, attacker } from './enemycombat.js';
-import { stepEnemy, findPath, pathToward, around, clearLine } from '../physics/enemynav.js';
+import { stepEnemy, findPath, pathToward, around, clearLine, walkable } from '../physics/enemynav.js';
 import { postPath, coverPath, covered } from './tactics.js';
 import { combatStats } from '../core/combat.js';
 import { attackOf, pickAttack, attacksInReach, lungeDistance, lungeAt, retreatAt, fireAt, shotOf, blowOf } from '../core/enemies.js';
@@ -325,6 +327,43 @@ function rollOn(e, a, t0, dt) {
     hitBody(b, { ...blowOf(e.profile, a), by: attacker(e) }, e.x, e.z, d ? dx / d : fx, d ? dz / d : fz);
   }
 }
+// A ride (the Tornado's, core/enemies.js TORNADO): from ride.from to the hit frame a twister carries
+// it through the air, up to ride.height over the way: `back` cells straight back from its heading
+// (away from the player it faces), or `onto` the aim of its beam (where its shadow lies, following
+// its target). It comes down at the hit frame on the floor it fits on that its way reaches (it is
+// not carried off a ledge or through a wall: the way runs over the floor, as far as that goes).
+// Up there it turns towards where it comes down. A ride cut short (its death) comes down where it is.
+const RIDE_STEP = 0.2;
+function landingOf(e, from, x, z) {
+  const s = { x: from.x, y: from.y, z: from.z, f: from.f, profile: e.profile }, dx = x - s.x, dz = z - s.z, d = Math.hypot(dx, dz);
+  for (let k = Math.ceil(d / RIDE_STEP), i = 0; i < k; i++) stepEnemy(s, dx / k, dz / k);
+  return s;
+}
+const rideLift = (r, u) => r.height * 4 * u * (1 - u);
+function ride(e, a, t0, dt) {
+  const r = a.ride;
+  if (e.t < r.from) return;
+  if (t0 < r.from || !e.riding || e.riding.attacks !== e.attacks) {
+    const back = r.back ? { x: e.x - Math.sin(e.yaw) * r.back, z: e.z - Math.cos(e.yaw) * r.back } : null;
+    e.riding = { attacks: e.attacks, x: e.x, y: e.y, z: e.z, f: e.f, to: back };
+  }
+  const R = e.riding;
+  if (r.onto && e.beam) R.to = { x: e.beam.ax, z: e.beam.az };   // (its shadow's last spot, once it has burst)
+  const aim = R.to ?? { x: R.x, z: R.z };
+  const end = landingOf(e, R, aim.x, aim.z), u = Math.min(1, (e.t - r.from) / (a.hitAt - r.from)), k = u * u * (3 - 2 * u);
+  if (u >= 1) { Object.assign(e, { x: end.x, y: end.y, z: end.z, f: end.f }); e.riding = null; return; }
+  e.x = R.x + (end.x - R.x) * k; e.z = R.z + (end.z - R.z) * k;
+  e.y = R.y + (end.y - R.y) * k + rideLift(r, u);
+  if (r.onto && Math.hypot(end.x - e.x, end.z - e.z) > 0.2) turn(e, Math.atan2(end.x - e.x, end.z - e.z), dt, 6);
+}
+// down from a ride cut short: onto the floor under it, if it fits there, else where it took off
+function touchDown(e) {
+  const R = e.riding;
+  e.riding = null;
+  const g = walkable(R.f, e.profile.height) && landingOf(e, R, e.x, e.z);
+  if (g && Math.hypot(g.x - e.x, g.z - e.z) < 0.3) Object.assign(e, { x: g.x, y: g.y, z: g.z, f: g.f });
+  else Object.assign(e, { x: R.x, y: R.y, z: R.z, f: R.f });
+}
 // Between blows, by style. Returns false where it should simply close in.
 //   skirmish: backs off after a blow, circles at `circle` cells (sidestepping if it `strafe`s,
 //     else walking round), then darts in when it can strike again
@@ -371,8 +410,8 @@ function fight(e, dt) {
   const p = foe(e), cfg = e.profile, dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz);
   if (!e.path && !e.anchored) { e.speed = 0; turn(e, toPlayer(e), dt, 3); return; }
   const facing = Math.cos(Math.atan2(dx, dz) - e.yaw) > 0.7, can = ready(e, d), list = cfg.attacks ?? [cfg];
-  // only throws in reach while they recover: one that also bites keeps coming
-  const closing = e.cool > 0 && can.every(i => shotOf(list[i])) && list.some(a => !shotOf(a));
+  // only throws in reach while they recover: one that also bites keeps coming (a hop away is no bite)
+  const closing = e.cool > 0 && can.every(i => shotOf(list[i])) && list.some(a => !shotOf(a) && !a.ride);
   const strike = can.length > 0 && !closing;
   e.held = false;
   if (strike && e.cool <= 0 && state.enemyGrace <= 0) {
@@ -405,6 +444,7 @@ function act(e, dt) {
     if (a.lunge) leap(e, a.lunge, t0, dx, dz);
     if (a.retreat) backOff(e, a.retreat, t0);
     if (a.roll) rollOn(e, a, t0, dt);
+    if (a.ride) ride(e, a, t0, dt);
     if (!e.bit && e.t >= fireAt(a)) {
       e.bit = true;
       // (a gust blows and a breath pulls on from here by themselves: game/gusts.js; a roll runs
@@ -412,7 +452,7 @@ function act(e, dt) {
       // game/totnar.js)
       if (a.beam) fireBeam(e, a); else if (a.projectile) launchProjectile(e, a);
       else if (a.summon) e.summon?.(a); else if (a.cast) e.cast?.(a);
-      else if (!a.gust && !a.pull && !a.roll && !strikePlayer(e) && a.miss) whiff(e, a);
+      else if (!a.gust && !a.pull && !a.roll && !a.twister && !a.ride && !strikePlayer(e) && a.miss) whiff(e, a);
     }
     // a blow that strikes twice (Renew's twin morning star): again at its `twice`
     if (a.twice && e.bit && e.again !== e.attacks && e.t >= a.twice) { e.again = e.attacks; strikePlayer(e); }
@@ -488,6 +528,7 @@ function burrow(e, dt) {
 // a blow's push, sliding along the floor graph and dying away quickly
 function knockback(e, dt) {
   if (!e.kbx && !e.kbz) return;
+  if (e.riding) { e.kbx = e.kbz = 0; return; }   // (up on its twister: blows do not shove it)
   stepEnemy(e, e.kbx * dt, e.kbz * dt);
   const k = Math.exp(-dt * 10);
   e.kbx *= k; e.kbz *= k;
@@ -498,6 +539,7 @@ function knockback(e, dt) {
 // learn: enemies.html#decide-code #fair (see learn/README.md)
 export function stepEnemies(list, realDt) {
   for (const e of list) {
+    if (e.riding && (e.mode !== 'attack' || e.attacks !== e.riding.attacks)) touchDown(e);
     knockback(e, realDt);
     if (e.mode === 'dead') { e.deadT += realDt; continue; }
     const slow = enemySlow(e), dt = realDt * slow;

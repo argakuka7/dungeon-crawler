@@ -9,6 +9,7 @@ import { canMoveCancel, cancelSwing, LUNGE_REACH } from '../core/combat.js';
 import { checkPortals } from './portals.js';
 import { knockDown, stepRagdoll, tickGetUp } from './ragdoll.js';
 import { tickHeld } from './grab.js';
+import { tickTwirl } from './twirl.js';
 import { movePlayer, updateLayer, landingSpeed } from '../physics/move.js';
 import { applyHazards } from '../physics/hazards.js';
 import { climb } from '../physics/climb.js';
@@ -39,8 +40,8 @@ export function updatePlayer(dt) {
   const charge = state.portalCharge;
   state.portalCharge = null;
   if (player.ragdoll) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); stepRagdoll(dt); return; }
-  // in a boss's hands (game/grab.js): carried, then thrown
-  if (player.held) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); tickHeld(dt); return; }
+  // in a boss's hands (game/grab.js): carried, then thrown; or spun round in a twister (game/twirl.js)
+  if (player.held) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); if (player.held.twirl) tickTwirl(dt); else tickHeld(dt); return; }
   // carried round as Flip turns the world, in his tractor beam or inside a black hole (game/flipworld.js moves us)
   if (player.flipping) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); return; }
   if (player.getUp) tickGetUp(dt);

@@ -175,6 +175,10 @@ again. The lineup is planned with the room (`cubegen/testrooms.js` `lineUp`), so
 | Frost mecked | Mecked | `frost.light` | ×1.3 | ×1.1 | ×0.9 | 1 | ×1.2 | 9–10 |
 | Bog mecked | Mecked | `moss.deep` | ×1.25 | ×1.25 | ×1.05 | 1 | ×1.25 | 11–13 |
 | Bone mecked | Mecked | `stone.pale` | ×1.5 | ×1.45 | ×1.15 | ×1.1 | ×1.47 | 14–15 |
+| Tornado | (base) | `violet.light` | | | | | | 2–5 |
+| Dust tornado | Tornado | `ochre.light` | ×1.2 | ×1.15 | 1 | 1 | ×1.17 | 4–6 |
+| Frost tornado | Tornado | `frost.pale@-4` | ×1.3 | ×1.1 | ×0.9 | 1 | ×1.2 | 3, 9–10 |
+| Fire tornado | Tornado | `ember.mid` | ×1.5 | ×1.45 | ×1.1 | ×1.08 | ×1.47 | 18–19 |
 
 The base kinds are painted from the palette too (their `colors`); the other columns are theirs.
 Depths are those whose rosters draw the kind (`src/core/spawns.js`, [depths.md](depths.md)).
@@ -216,6 +220,13 @@ caves (and now and then in the deep canyon), the pale blue Frost mecked in the f
 dark green Bog mecked in the swamp and the cenote, whose bites poison (also those while it holds
 you), and the bone-white Bone mecked, the biggest and strongest, in the nests and the ossuary.
 Their inner ears go with their bellies (`belly` role).
+
+The Tornados blow where the wind is: the light purple Tornado over the meadows, the snowy peaks
+and the badlands, the ochre Dust tornado over the badlands and the canyon, the pale blue Frost
+tornado over the snowy peaks and through the frozen caves, and the Fire tornado in the volcanic
+depths and the abyss, whose twisters and slam set you on fire (`burn` on its attacks) and which
+glows and sheds embers (`fx`). Their twisters (the `wind` role, materials of the `TornadoTwister`
+prop) take each kind's colours, a paler shade of its body; a fiery kind's (`sparks`) shed embers.
 
 The Wollas are strength tiers too: blue, then green in the swamp, purple in the cenote, the nests,
 the mines and the ruins, orange in the volcanic depths and the abyss. Their eyes take a contrasting

@@ -10,9 +10,10 @@
 // hover tint and gloom write the parts' colours, the glow pulse and the death fade the material.
 // Wheels (bones named wheel.*, a species with a `wheel` radius) spin by the distance the body
 // rolls along its heading, whatever clip plays, and spin down once it is dead.
-// Waves (bones named wave0, wave1, ..., a species with `waves`: the Wolla's rings) turn about
-// their own axes, every other one the other way, so the crests run round the body; they whirl
-// faster while it gathers its storm and blows, and still once it is dead. Its storm cloud's
+// Waves (bones named wave0, wave1, ..., a species with `waves`: the Wolla's rings, the Tornado's
+// skirts) turn about their own axes, every other one the other way, so the crests run round the
+// body; they whirl faster while it gathers its storm and blows (while it spins up its twisters and
+// rides one), and still once it is dead. Its storm cloud's
 // lightning (the attack's `thunder` times) flashes a light, and it leaves a wet trail
 // (trails.js).
 // A kind's `finish` ({ parts, roughness, metalness, sheen, glints }: the Wolk's silver descent
@@ -53,6 +54,7 @@ import { snapSkullModel } from './snapskullmodel.js';
 import { squarloModel } from './squarlomodel.js';
 import { squirtleModel } from './squirtlemodel.js';
 import { meckedModel } from './meckedmodel.js';
+import { tornadoModel } from './tornadomodel.js';
 import { flipModel } from './flipmodel.js';
 import { foggeryModel } from './foggerymodel.js';
 import { makeFoggeryLook, foggeryLook, disposeFoggeryLook } from './foggeryview.js';
@@ -79,7 +81,7 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
-  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, mecked: meckedModel, flip: flipModel, foggery: foggeryModel };
+  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, mecked: meckedModel, tornado: tornadoModel, flip: flipModel, foggery: foggeryModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the
@@ -96,6 +98,7 @@ const GLOW = {
   squarlo: { light: [0x7fe8ff, 1.2, 2.6, 0.5], flare: 0.8 },
   flip: { light: [0x8fdcff, 2.2, 4.5, 1.2], flare: 0.9 },
   foggery: { light: [0xff7a2a, 2.4, 3.8, 1.4], flare: 0.8, flicker: 1, embers: { rate: 8, from: 1.45, spread: 0.35 } },
+  firetornado: { light: [0xff7a2a, 1.6, 3, 0.7], embers: { rate: 7, from: 0.45, spread: 0.3 } },
 };
 const EMBERS = ['#ffd25a', '#ff8a2a', '#ff5a14'];
 const GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
@@ -137,6 +140,7 @@ function findWaves(model) {
 // how much faster the waves run: gathering the storm, then blowing it, then calming down
 function whirl(e) {
   const a = e.mode === 'attack' ? attackOf(e) : null;
+  if (a?.twister || a?.ride) return e.t < a.hitAt ? 1 + 3 * Math.min(1, e.t / a.hitAt) : 1 + 3 * Math.exp(-(e.t - a.hitAt) * 3);
   if (!a?.gust) return e.mode === 'dead' ? 0 : 1;
   const blow = a.hitAt, end = blow + a.gust.time;
   if (e.t < blow) return 1 + 2 * Math.min(1, e.t / blow);
@@ -179,7 +183,12 @@ function turnWaves(v, e, dt) {
   v.whirl += (whirl(e) - v.whirl) * Math.min(1, dt * (e.mode === 'dead' ? 1.5 : 6));
   for (const w of v.waves) {
     w.angle = (w.angle + w.dir * w.rate * speed * v.whirl * dt) % (2 * Math.PI);
-    w.bone.quaternion.multiply(spin.setFromAxisAngle(w.axis, w.angle));
+    // (the mixer only writes a bone whose pose changed, not one standing still: the turn goes on
+    // the clip's pose, not on last frame's turned one; as for the rings)
+    const q = w.bone.quaternion;
+    if (w.written && q.equals(w.written)) q.copy(w.clip); else (w.clip ??= new THREE.Quaternion()).copy(q);
+    q.multiply(spin.setFromAxisAngle(w.axis, w.angle));
+    (w.written ??= new THREE.Quaternion()).copy(q);
   }
 }
 // The storm cloud's lightning: a light that flares at each of the attack's thunder times and

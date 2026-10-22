@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, MECKED, ENEMY_KINDS, GUSTO, makeEnemy, attackOf, pickAttack,
-  attacksInReach, isRanged, attackDamage, blowOf, lungeDistance, lungeAt, retreatAt, fireAt, shotOf } from '../src/core/enemies.js';
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, MECKED, TORNADO, ENEMY_KINDS, GUSTO, makeEnemy, attackOf, pickAttack,
+  attacksInReach, isRanged, attackDamage, blowOf, lungeDistance, lungeAt, retreatAt, fireAt, shotOf, airborne } from '../src/core/enemies.js';
+import { launchTwister, stayTwister, stepTwister, twisterAt, catches, twirlAt } from '../src/core/twisters.js';
 import { startBeam, aimBeam, castBeam, beamHits, beamDistance, muzzleAt, aiming, aimPoint } from '../src/core/beams.js';
 import { launch, touches, stepProjectile, ignite, burnStep, burntOut, chillFrom, chillStep, chillFactor, THAW } from '../src/core/projectiles.js';
 import { SWORD, HEAVY_HIT, swordState, startSwing, advanceSwing, cancelSwing, inSwordArc, swordHit, softTarget, damageEnemy } from '../src/core/combat.js';
@@ -321,6 +322,69 @@ test('the Mecked mostly grabs, now and then bites: two bites while it holds you,
   assert.ok(blowOf(bog, bog.attacks[1]).toxin && blowOf(bog, bog.attacks[0]).toxin && !blowOf(MECKED, grab).toxin);
   // Gusto's grab still throws you down
   assert.ok(GUSTO.attacks.find(a => a.grab).knockDown);
+});
+test('the Tornado mostly sends two twisters, hops away from a player up close and now and then slams down onto one', () => {
+  const [twin, hop, slam] = TORNADO.attacks;
+  assert.deepEqual([twin.name, hop.name, slam.name], ['twin', 'hop', 'slam']);
+  assert.ok(isRanged(TORNADO) && TORNADO.style === 'ranged');
+  assert.ok(twin.weight > slam.weight, 'usually two twisters');
+  // up close it only hops away; further off it sends twisters, and from further still it may slam
+  assert.deepEqual(attacksInReach(TORNADO, 1.2, 0), [1]);
+  assert.deepEqual(attacksInReach(TORNADO, 2, 0), [0]);
+  assert.deepEqual(attacksInReach(TORNADO, 3, 0), [0, 2]);
+  assert.deepEqual(attacksInReach(TORNADO, 4.8, 0), []);
+  // twisters are let go at the hit frame, the hop and the slam land at theirs, up in the air in between
+  for (const a of [hop, slam]) {
+    assert.ok(a.ride.from < a.hitAt && a.steady.from === a.ride.from && a.steady.to === a.hitAt);
+    const e = makeEnemy({ x: 0, y: 0, z: 0, yaw: 0 }, TORNADO);
+    Object.assign(e, { mode: 'attack', attack: TORNADO.attacks.indexOf(a), t: a.ride.from - 0.01 });
+    assert.ok(!airborne(e)); e.t = a.ride.from + 0.01; assert.ok(airborne(e)); e.t = a.hitAt; assert.ok(!airborne(e));
+  }
+  // the slam's shadow shows from before it takes off until it comes down
+  assert.ok(fireAt(slam) < slam.ride.from && slam.beam.kind === 'stomp' && slam.beam.sky);
+  // caught or slammed, you go down; the hop leaves a twister behind
+  for (const a of TORNADO.attacks) assert.ok(blowOf(TORNADO, a).knockDown, a.name);
+  assert.ok(hop.ride.back > 2 && hop.ride.leave.stay > 1);
+  // the kinds: each says its own name; the Fire tornado's twisters burn
+  for (const k of Object.values(ENEMY_KINDS).filter(k => k.species === 'tornado' && !k.guardian))
+    for (const a of k.attacks) assert.ok(a.reason.includes(k.label), `${k.type} ${a.name}: ${a.reason}`);
+  assert.ok(blowOf(ENEMY_KINDS.firetornado, ENEMY_KINDS.firetornado.attacks[0]).burn && !blowOf(TORNADO, twin).burn);
+  // a bigger kind's hands are further out
+  const fire = ENEMY_KINDS.firetornado.attacks[0].twister;
+  assert.ok(fire.hands[0][0] > twin.twister.hands[0][0] && shotOf(ENEMY_KINDS.firetornado.attacks[0]) === fire);
+});
+test('a pair of twisters drops below the hands, crosses where the target stood and runs on', () => {
+  const spec = TORNADO.attacks[0].twister, e = { x: 0, y: 0, z: 0, yaw: 0 }, at = 3;
+  const [l, r] = [0, 1].map(i => launchTwister(e, spec, i, at, 0));
+  assert.ok(Math.abs(l.x0 - spec.hands[0][0]) < 1e-9 && Math.abs(l.z0 - spec.hands[0][2]) < 1e-9, 'under its hand');
+  // they bow out to either side, then meet ahead of it
+  const mid = d => [twisterAt(l, d, 0), twisterAt(r, d, 0)];
+  const [ml, mr] = mid(l.len / 2);
+  assert.ok(ml[0] > spec.hands[0][0] && mr[0] < spec.hands[1][0], 'bowing out');
+  const [cl, cr] = mid(l.len);
+  assert.ok(Math.hypot(cl[0] - cr[0], cl[1] - cr[1]) < 1e-6 && Math.abs(cl[1] - at) < 1e-6, 'crossing on the target');
+  const [pl] = mid(l.len + 1);
+  assert.ok(pl[0] < 0 && pl[1] > at, 'and on, the way it came in');
+  // it runs at its speed until it has run its range
+  let steps = 0;
+  while (stepTwister(l, spec, 0.1)) steps++;
+  assert.ok(Math.abs(steps * 0.1 - spec.range / spec.speed) < 0.11);
+  // one left behind stays put (wobbling), for its time
+  const stay = stayTwister(2, 2, 0), still = { ...spec, stay: 1 };
+  let n = 0;
+  while (stepTwister(stay, still, 0.1)) { n++; assert.ok(Math.hypot(stay.x - 2, stay.z - 2) < 0.15); }
+  assert.ok(n >= 9 && n <= 10, `${n} steps`);
+});
+test('a twister catches a body it touches and lifts it, spinning it ever faster', () => {
+  const spec = TORNADO.attacks[0].twister, tw = { x: 0, y: 0, z: 0 }, body = (x, y = 0) => ({ x, y, z: 0, r: 0.3, h: 1.1 });
+  assert.ok(catches(tw, spec, body(0.5)));
+  assert.ok(!catches(tw, spec, body(0.7)), 'too far off');
+  assert.ok(!catches(tw, spec, body(0, spec.height + 0.1)), 'over it');
+  assert.ok(!catches(tw, spec, body(0, -1.5)), 'under it');
+  const a = twirlAt(spec, 0), b = twirlAt(spec, spec.spin * 0.6), c = twirlAt(spec, spec.spin);
+  assert.ok(a.up === 0 && Math.abs(b.up - spec.lift) < 1e-9 && Math.abs(c.up - spec.lift) < 1e-9, 'up, then held there');
+  assert.ok(c.angle > 3 * 2 * Math.PI, 'round three times and more');
+  assert.ok(twirlAt(spec, spec.spin).angle - twirlAt(spec, spec.spin * 0.9).angle > twirlAt(spec, spec.spin * 0.1).angle, 'faster at the end');
 });
 test('the Fire-cat pounce stops short of its target and eases through the leap', () => {
   const { lunge } = FIRECAT;

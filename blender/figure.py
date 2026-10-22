@@ -156,11 +156,13 @@ TRIANGLE_BUDGET = {
     "Triangle": 6000, "Spicy": 6000, "Wolk": 6000,
     "FireCat": 8000, "Shraps": 8000, "Wolla": 8000, "Gusto": 8000,     # many parts
     "Mecked": 7000,                                                      # (teeth, ears and a long tail)
+    "Tornado": 7000,                                                     # (two skirts with scalloped hems)
     "Totnar": 10000, "SnapSkull": 3000,                                  # (Totnar: three skulls and a ball of sticks)
     "Squarlo": 8000, "Squirtle": 5000,                                   # (Squarlo: drawn huge as a giant)
     "Flip": 10000,                                                       # (41 little loops)
     "Foggery": 12000,                                                    # (a frog and his ball, both on fire)
     "FireFaceBall": 1500, "ShrapsIceBall": 1500, "TrianglePunch": 1500, "TotnarSkull": 1500, "SquirtleDrop": 800, "FlipBall": 1200, "FoggeryEye": 1500,   # projectiles
+    "TornadoTwister": 1500,                                              # (its twisters)
 }
 # How much the collapse spares material borders (joints: 1, kept outright). Fully kept, the
 # Fire-cat's stripes alone would eat its budget; at 0.9 they collapse late and stay clean.

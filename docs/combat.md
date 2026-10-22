@@ -235,6 +235,39 @@ The controls are the same for all.
   mecked's bites poison), then shoved away on your feet at 1.9 s, stunned for 0.3 s. A stagger
   (a friend's blow, a heavy one) or its death makes it let go early: you drop. It dies reeling
   back and toppling over onto its side.
+- Tornado (`blender/tornado.py`, after the kids' sketch): a little wind spirit, light purple, a
+  floating face with angry V brows over a thin body whose two arms rise up either side of it
+  like a U, a round, scalloped overskirt over a long A-line skirt, both swirl-striped, and four
+  stubby feet pattering under the hem. The game turns its two skirts about their axes, the other
+  way each (`waves`, `render/enemies.js`), faster while it spins up twisters or rides one. It fights
+  from afar (`style: 'ranged'`, 2.2–4.2 cells) with twisters (`core/twisters.js`,
+  `game/twisters.js`, drawn with its `TornadoTwister` prop by `render/twisters.js`):
+  - Two twisters (`twister`, from 1.6 to 4.6 cells; four times in five where it could slam
+    too): it lifts its hands and whirls them, a twister spinning up over each (from clip frame
+    6), then flings them down and forward at frame 27. The twisters drop to the floor below its
+    hands and run out at 2.6 cells/s, bowing out to either side to cross where you stood as it
+    let go (it stops turning at 0.7 s), then on the way they came in, 6.5 cells in all. Up a
+    step or down one they go on; a wall, a tree or a drop ends them. One that touches you
+    (within 0.3 cells of its middle, from a little under its foot to 1.1 cells over it) catches
+    you (`game/twirl.js`): you are lifted 1.3 cells and spun round, faster and faster, for 1.1 s,
+    held like in a grab (nothing else hurts you, you cannot strike), then flung down the way it
+    was going: the blow through the armor alone (no shield stops the wind), and you go over.
+    Stepping aside as it lets go dodges them.
+  - The hop (`ride` with `back`, within 1.6 cells): when you come close it crouches, a twister
+    spins up under it and carries it 2.6 cells straight back from you between 0.3 s and 1.1 s, up
+    to 1.1 cells over the way (`game/enemyai.js` ride: the way runs over the floor it can stand
+    on, so it is not carried off a ledge or through a wall). A twister stays behind where it took
+    off for 1.4 s and catches whoever comes in after it.
+  - The slam (`ride` with `onto`, once in five, from 2.2 to 4.4 cells): its shadow (a beam of kind
+    `stomp`, like Squarlo's) shows under you from 0.2 s on and follows you at 1.8 cells/s, holding
+    still for the last 0.3 s; a twister lifts it from 0.3 s, up to 1.5 cells, and carries it onto
+    the shadow, and at 1.5 s (frame 45) it crashes down there, slamming both hands down: within
+    0.85 cells you are knocked down (1.2 of its damage).
+  While it rides (`airborne`, `steady`) nothing bumps into it, no blade reaches it (arrows and
+  spells do), and no blow staggers or shoves it; killed up there, it comes down where it is. It
+  dies spinning round and round, slower and slower, and topples over onto its side. Kinds: Dust
+  tornado (ochre), Frost tornado (pale blue), Fire tornado (on fire: its twisters and its slam
+  burn).
 - The glow lives in `render/enemies.js`: each of the three (and the Fire shraps) carries a light from the
   shared light pool (`trackLight`), bones named `flame*` keep flickering over any clip,
   the Triangle's emissive materials pulse with its hover beat, fire sheds embers, and
@@ -283,7 +316,7 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
   - `skirmish` (spiders, snakes, Fire-cats): backs off after a blow, circles at `circle` cells
     (spiders scuttle sideways facing you, `strafe`; the others walk round), switching sides
     when blocked and now and then, and darts in once the cooldown is over.
-  - `ranged` (Fire-face, Triangle, Spicy, Wolla, Wolk): backs away while closer than `keep[0]`, sidesteps while the
+  - `ranged` (Fire-face, Triangle, Spicy, Wolla, Wolk, Tornado): backs away while closer than `keep[0]`, sidesteps while the
     throw recovers, and moves for a clear shot when it has none.
   - `brute` (Stunder, Octonaut, Shraps, Mecked): holds its ground. The Stunder `charge`s: it runs the
     last 1.5–5 cells at 1.8× its chase speed when it can strike again (the Mecked at 1.4×).
@@ -424,7 +457,7 @@ these do not change inventory or combat stats. Swimming / climbing hides the pro
 vertical speed advances its phase, descent reverses it, and stopping holds
 the grip. Regenerate via the Blender commands in
 `character.py`, `spider.py`, `stunder.py`, `snake.py`, `octonaut.py`, `fireface.py`,
-`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py`, `wolk.py`, `mecked.py` and `sword.py` (the SDF creatures share `blender/creature.py`
+`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py`, `wolk.py`, `mecked.py`, `tornado.py` and `sword.py` (the SDF creatures share `blender/creature.py`
 and can also be rebuilt from a Blender MCP session; previews land in `blender/previews/`). Tests check balance, hit timing,
 direction / reach / height, cancellations, deterministic spawns, clearance,
 navigation and the exported asset/clip contract.
@@ -444,6 +477,7 @@ await checks.runGetUpChecks(); // knockdown -> ragdoll -> GetUpFront / GetUpBack
 await checks.runRangedChecks(); // bow / crossbow / staff: sockets, hold pose, drawn string and arrow, range and walking up, pierce, reload, burst
 await checks.runTravelCheck(); // real portal; leaves the player in the next cube
 await (await import('./tests/browser/mecked.js')).runMeckedChecks(); // Mecked bite, grab: held, two bites (poison), shoved off, dropped when it lets go
+await (await import('./tests/browser/tornado.js')).runTornadoChecks(); // Tornado twisters: spun up, let go, caught, lifted and flung (or sidestepped); hop, slam, burning twisters
 const water = await import('./tests/browser/water.js');
 await water.runWaterChecks(); // all fluids: edge guard, jumps/high falls, ragdolls, effects, dry respawn
 const inventory = await import('./tests/browser/inventory.js');

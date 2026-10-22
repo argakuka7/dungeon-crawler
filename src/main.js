@@ -66,6 +66,8 @@ import { spicies } from './game/spicy.js';
 import { wollas } from './game/wolla.js';
 import { wolks } from './game/wolk.js';
 import { meckeds } from './game/mecked.js';
+import { tornados } from './game/tornado.js';
+import { twisters } from './game/twisters.js';
 import { projectiles } from './game/projectiles.js';
 import { beams } from './game/beams.js';
 import { tickBurning } from './render/burning.js';
@@ -258,7 +260,7 @@ window.__game = {
   get map() { return state.map; }, player, generate, loadCube, updatePlayer, groundAt,
   get transitioning() { return state.transitioning; }, get spiders() { return spiders; }, updateSpiders, state,
   get stunders() { return stunders; }, get snakes() { return snakes; }, get octonauts() { return octonauts; },
-  get fireFaces() { return fireFaces; }, get triangles() { return triangles; }, get fireCats() { return fireCats; }, get shraps() { return shraps; }, get spicies() { return spicies; }, get wollas() { return wollas; }, get wolks() { return wolks; }, get meckeds() { return meckeds; },
+  get fireFaces() { return fireFaces; }, get triangles() { return triangles; }, get fireCats() { return fireCats; }, get shraps() { return shraps; }, get spicies() { return spicies; }, get wollas() { return wollas; }, get wolks() { return wolks; }, get meckeds() { return meckeds; }, get tornados() { return tornados; }, get twisters() { return twisters; },
   get projectiles() { return projectiles; }, get beams() { return beams; },
   get enemies() { return allEnemies(); }, updateEnemies,
   musicInfo, musicMood: forceMood,   // musicMood('boss') holds a mood to listen to it, musicMood() lets go

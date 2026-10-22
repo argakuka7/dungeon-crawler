@@ -15,6 +15,7 @@ import { immuneTo } from '../core/potions.js';
 import { absent, airborne } from '../core/enemies.js';
 import { SIT_IMPACT } from '../core/constants.js';
 import { grabPlayer } from './grab.js';
+import { twirlPlayer } from './twirl.js';
 import { guardBlow, wornDefense } from './armor.js';
 import { tr, msg } from '../i18n/i18n.js';
 
@@ -37,12 +38,14 @@ export const playerFloor = (height, p = player) => p.grounded && !p.swimming && 
 // one that squashes (its `daze`: a giant landing on us) knocks us flat onto our bottom, dazed and
 // seeing stars, as long.
 // A grab's (its `grab`: the id of the enemy that caught us) is carried out by game/grab.js; held
-// in its hands, nothing else hurts us. The rest goes through the shield and the armor first
-// (game/armor.js guardBlow): a blocked blow is a small one that does nothing else.
+// in its hands, nothing else hurts us. So is a twister's (its `twirl`), by game/twirl.js. The
+// rest goes through the shield and the armor first (game/armor.js guardBlow): a blocked blow is
+// a small one that does nothing else.
 export function hitPlayer(blow, fx, fz, nx, nz) {
   const p = player;
   if (p.held) return;
   if (typeof blow.grab === 'string') { grabPlayer(blow, fx, fz); return; }
+  if (blow.twirl) { twirlPlayer(blow, nx, nz); return; }   // caught in a twister (game/twirl.js)
   blow = guardBlow(blow);
   if (blow.blocked) {   // caught on the shield: a little of it gets through, nothing else (game/armor.js shows it)
     if (p.hp <= blow.damage) { knockDown({ damage: blow.damage, reason: blow.reason, by: blow.by ?? null }); return; }
