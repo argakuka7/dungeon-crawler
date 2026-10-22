@@ -9,6 +9,7 @@ import { strikeBolt, eruptGeyser } from '../render/beams.js';
 import { cannonJet, jetSplash } from '../render/giantfx.js';
 import { groundAt } from '../physics/collide.js';
 import { N } from '../core/constants.js';
+import { tr } from '../i18n/i18n.js';
 
 let stop = 0;
 // world-space camera offset that springs back (camera.js)
@@ -42,7 +43,7 @@ export function quakeAt(x, z, amount, far) {
 export function enemyHitFx(e, dmg, killed, dx, dz, crit = false, felt = true) {
   const l = Math.hypot(dx, dz) || 1, nx = dx / l, nz = dz / l;
   if (e.proxy) {   // a boss's proxy: no blood, no number, it goes up in a cloud (render/enemies.js)
-    floatText('Poof!', { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z }, { color: '#e8eef8', size: 0.3, life: 0.9, rise: 0.8, pop: 1 });
+    floatText(tr('Poof!'), { x: e.x, y: e.y + e.profile.bodyHeight + 0.25, z: e.z }, { color: '#e8eef8', size: 0.3, life: 0.9, rise: 0.8, pop: 1 });
     if (felt) { if (crit) hitstop(0.07); cameraKick(nx, nz, 0.1); }
     return;
   }
@@ -285,12 +286,12 @@ function boltFx(b, what) {
 }
 // the player stunned by a bolt (game/enemycombat.js)
 export function zappedFx() {
-  floatText('Zapped!', q => q.set(player.x, player.visY + 1.65, player.z), { color: '#fff3a0', size: 0.22, life: 0.9, rise: 0.6 });
+  floatText(tr('Zapped!'), q => q.set(player.x, player.visY + 1.65, player.z), { color: '#fff3a0', size: 0.22, life: 0.9, rise: 0.6 });
 }
 // an enemy stunned by a Zappy weapon (game/enchants.js); its sparks: render/statuses.js
 export function enemyZappedFx(e) {
   if (e.proxy) return;
-  floatText('Zap!', { x: e.x, y: e.y + e.profile.bodyHeight + 0.35, z: e.z }, { color: '#fff3a0', size: 0.2, life: 0.7, rise: 0.6 });
+  floatText(tr('Zap!'), { x: e.x, y: e.y + e.profile.bodyHeight + 0.35, z: e.z }, { color: '#fff3a0', size: 0.2, life: 0.7, rise: 0.6 });
   sfx('zap', { at: e, volume: 0.6, pitch: 1.3 });
 }
 // squashed flat by a giant landing on us (game/enemycombat.js, a blow's `daze`): the hero goes
@@ -298,7 +299,7 @@ export function enemyZappedFx(e) {
 export const FLAT = 0.9;   // s the squash shows
 export function squashedFx() {
   player.flat = FLAT;
-  floatText('Squashed!', q => q.set(player.x, player.visY + 1.3, player.z), { color: '#bff4ff', size: 0.28, life: 1.2, rise: 0.5, pop: 1 });
+  floatText(tr('Squashed!'), q => q.set(player.x, player.visY + 1.3, player.z), { color: '#bff4ff', size: 0.28, life: 1.2, rise: 0.5, pop: 1 });
   sfx('bonk', { at: player, pitch: 0.7 });
   sfx('dizzy', { at: player });
 }

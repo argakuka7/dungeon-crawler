@@ -15,7 +15,7 @@
 // leaves everyone be.
 import { LH } from '../core/constants.js';
 import { state, setStatus, player } from './state.js';
-import { FLIP, ENEMY_KINDS, makeEnemy } from '../core/enemies.js';
+import { FLIP, ENEMY_KINDS, makeEnemy, enemyName } from '../core/enemies.js';
 import { FLIP_FIGHT as G, splitHp, summonCount, barred, nextDown, turnTo, orientIndex, ORIENTS, downFace } from '../core/flip.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -25,6 +25,7 @@ import { living, engage, leave, minionFloors, minion, sweep } from './bossfight.
 import { summonFx } from './juice.js';
 import { resetFlipWorld, turning } from './flipworld.js';
 import { clearBlackHoles } from '../render/flipview.js';
+import { tr } from '../i18n/i18n.js';
 
 export let flips = [];
 let fights = [];
@@ -108,7 +109,7 @@ function split(f) {
   const e = f.e;
   Object.assign(e, { hpFloor: 0, mode: 'split', speed: 0, path: null, t: 0, shield: G.splitTime + 0.4 });
   f.split = G.splitTime;
-  setStatus(`${e.profile.label} spins up!`);
+  setStatus(tr('{name} spins up!', { name: enemyName(e.profile) }));
 }
 // the world turned so that side `face` is down (game/flipworld.js does it, on every game)
 function turnWorld(f, face) {

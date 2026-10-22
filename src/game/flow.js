@@ -43,6 +43,7 @@ import { checkSmith } from '../core/save.js';
 import { depthOf } from '../themes/depth.js';
 import { enterTrial, restartTrial, refreshTrialView, sealedIn, warnTrials } from './trials.js';
 import { setFluidPalettes } from '../render/fluidpal.js';
+import { tr } from '../i18n/i18n.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -76,8 +77,8 @@ export function hurt(amount, reason, by = null) {
   player.lastHurt = { reason, by };
   takeDamage(player, amount, state.time);
   flash();
-  if (player.hp <= 0) { setStatus('You died (' + reason + ') - back to where you came in'); die(); }
-  else { setStatus(reason); recover(); }
+  if (player.hp <= 0) { setStatus(tr('You died ({reason}) - back to where you came in', { reason: tr(reason) })); die(); }
+  else { setStatus(tr(reason)); recover(); }
 }
 
 // The cube as you came in. A death puts it back: the enemies you defeated since return and
@@ -168,7 +169,7 @@ export function backBeforeTrial(message) {
   state.transitioning = true;
   cancelSword(true); cancelCast();
   fadeOut();
-  const done = () => { state.transitioning = false; if (message) setStatus(message); };
+  const done = () => { state.transitioning = false; if (message) setStatus(tr(message)); };
   setTimeout(() => whenReady(cubes.get(t.from)).then(c => {
     if (state.cubes !== cubes) return;
     enterCube(c, t.fromDir);
@@ -285,7 +286,7 @@ export function settleIn(neighbors = true) {
   showStats(c.map, state.cubeKey, state.cubes.seed, c.visits);
   noteDepth(c.map, state.cubes.seed);   // the first time this deep: into the chronicle
   if (neighbors) showNeighbors(visitedNeighbors(state.cubeKey));
-  if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map, guardianKind(state.map)?.label));
+  if (gateLocked(state.map, state.run)) setStatus(guardianLockMessage(state.map, guardianKind(state.map)));
   prefetchAround(c);
 }
 
@@ -407,10 +408,10 @@ export function endWorld() {
 
 export function nextCube() {
   if (state.transitioning) return;
-  if (online.role === 'guest') { setStatus('Only the host starts a new world'); return; }
+  if (online.role === 'guest') { setStatus(tr('Only the host starts a new world')); return; }
   state.transitioning = true;
   fadeOut();
-  setTimeout(() => newWorld().then(() => setStatus('A new world')), 380);
+  setTimeout(() => newWorld().then(() => setStatus(tr('A new world'))), 380);
 }
 export const loadCube = () => newWorld(state.baseSeed);
 

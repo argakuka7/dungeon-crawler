@@ -22,15 +22,16 @@ import { supportedPoint } from '../physics/respawn.js';
 import { moversNow } from '../physics/collide.js';
 import { sfx } from '../audio/sfx.js';
 import { emit, glow, soft, rand } from '../render/particles.js';
+import { msg, tr } from '../i18n/i18n.js';
 
 // how far over the lava a spot must stand to be safe (units): a floor of the top, just over it;
 // any other, well over it (the lava may still be rising)
 const OVER_TOP = 0.05, OVER = 1.6;
 
 // the boss's fluid this is, in whose fight it does not kill: Foggery's lava, Squarlo's tide; else null
-const LAVA_RESCUE = { share: FOGGERY_FIGHT.rescue, reason: 'Burned by Foggery\'s lava!', status: 'Burned by the lava! Magic pulls you out of it',
+const LAVA_RESCUE = { share: FOGGERY_FIGHT.rescue, reason: msg("Burned by Foggery's lava!"), status: msg('Burned by the lava! Magic pulls you out of it'),
   sound: 'burn', colors: ['#ffd25a', '#ff8a2a', '#ff4a17'], spot: lavaSpot };
-const TIDE_RESCUE = { share: SQUARLO_FIGHT.rescue, reason: 'Nearly drowned in Squarlo\'s tide!', status: 'Nearly drowned! Magic pulls you out of the water',
+const TIDE_RESCUE = { share: SQUARLO_FIGHT.rescue, reason: msg("Nearly drowned in Squarlo's tide!"), status: msg('Nearly drowned! Magic pulls you out of the water'),
   sound: 'splash', colors: ['#ffffff', '#c8f0ff', '#7fcaf0'], spot: tideSpot };
 function rescueOf(fluid) {
   if (fluid === LAVA && state.map?.tower) return LAVA_RESCUE;
@@ -52,7 +53,7 @@ export function fluidRescue(fluid, x = player.x, y = player.y, z = player.z) {
   burst(x, y, z, r.colors, 1);
   spawnAt(spot.x, spot.y, spot.z);
   burst(spot.x, spot.y, spot.z, ['#ffffff', '#ffe9a0', '#9fdcff'], 0);
-  setStatus(r.status);
+  setStatus(tr(r.status));
   return true;
 }
 

@@ -62,7 +62,12 @@ export const displayName = item => sayName(item, ENCHANT[item?.gen?.enchant]?.na
 // itemId, gen: { name, rarity, enchant } } }, which say() (src/i18n/i18n.js) turns into its name.
 export const itemWords = item => ({ item: { itemId: item.itemId, ...(item.gen && { gen: { name: item.gen.name, rarity: item.gen.rarity,
   ...(item.gen.enchant && { enchant: item.gen.enchant }) } }) } });
-sayAs('item', it => ITEMS[it?.itemId] ? (it.gen ? displayName(it) : tr(ITEMS[it.itemId].name)) : '');
+sayAs('item', it => ITEMS[it?.itemId] ? (it.gen ? displayName(it) : tr(ITEMS[it.itemId].name)) : '', it => {
+  if (!it || typeof it !== 'object' || !Object.hasOwn(ITEMS, it.itemId)) return null;
+  const g = it.gen && typeof it.gen === 'object' ? it.gen : null;
+  return { itemId: it.itemId, ...(g && typeof g.name === 'string' && { gen: { name: g.name.slice(0, 80), rarity: String(g.rarity ?? 'vanilla').slice(0, 20),
+    ...(typeof g.enchant === 'string' && { enchant: g.enchant.slice(0, 20) }) } }) };
+});
 export const baseLine = item => item?.gen && !namesBase(item.gen.rarity) ? tr(ITEMS[item.itemId].name) : null;
 export const affixLines = item => (item?.gen?.affixes ?? []).map(describeAffix);
 // ... with each affix's name: [{ name: 'Pointy', text: '+5 damage' }]

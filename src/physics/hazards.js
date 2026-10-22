@@ -11,6 +11,7 @@ import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
 import { holeFallDamage } from '../game/flipworld.js';
 import { allEnemies } from '../game/enemies.js';
+import { msg } from '../i18n/i18n.js';
 
 // returns false when the player got respawned. Lava and acid are fatal, and water over the
 // head (physics/fluid.js); walking is kept off such edges (and holes into the void) by canMove,
@@ -31,12 +32,12 @@ function falls(dt, ci) {
     const lx = player.x - Math.floor(player.x), lz = player.z - Math.floor(player.z);
     const dist = [lx, 1 - lx, lz, 1 - lz][f.d], lat = f.d < 2 ? lz : lx;
     if (dist > 0.45 || lat < 0.06 || lat > 0.94 || player.y > f.top * LH || player.y < f.bot * LH - 0.5) continue;
-    if (f.type === LAVA) { knockDown({ damage: 50, reason: 'Burned by a lavafall!', respawn: 'safe' }); return false; }
+    if (f.type === LAVA) { knockDown({ damage: 50, reason: msg('Burned by a lavafall!'), respawn: 'safe' }); return false; }
     if (f.type === ACID) {
       takeDamage(player, 40 * dt, state.time);
       if (!player.toxic) poisonPlayer(toxinOf(ACID_TOXIN, player.maxHp), 'Poisoned by acid');
       if (!state.statusMsg) state.statusMsg = 'Acid rain!';
-      if (player.hp <= 0) { knockDown({ reason: 'Dissolved by acid' }); return false; }
+      if (player.hp <= 0) { knockDown({ reason: msg('Dissolved by acid') }); return false; }
     }
     player.vx += DIRS[f.d][0] * 9 * dt; player.vz += DIRS[f.d][1] * 9 * dt;
     if (!player.grounded) player.vy -= 12 * dt;

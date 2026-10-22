@@ -9,6 +9,7 @@
 //           weight (when drawn among the kinds that fit), color, built (planned at all),
 //           strict (its themes hold even for a sunken room's stages: the ice slide is ice only),
 //           population (how many enemies live in the room, times the usual) }
+import { msg } from '../i18n/i18n.js';
 
 export const TRIALS = {
   flood: { name: 'Rising water', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#3fa8ff', built: true,
@@ -239,7 +240,7 @@ export function stepTrial(s, dt, input = {}) {
 // Sealed (docs/trials.md "Sealing"): while an event of a sealed kind is armed or running, no
 // portal, open face, scroll or teleport takes anyone out of its room
 export const trialSealed = s => !!s && !!TRIALS[s.kind]?.sealed && (s.phase === 'armed' || s.phase === 'running');
-export const SEALED_MESSAGE = 'The way out is sealed';
+export const SEALED_MESSAGE = msg('The way out is sealed');   // (said with tr where it shows)
 
 // the goal is met (level: the water's level then, for it to drain back from)
 export function resolveTrial(s, level = null) {

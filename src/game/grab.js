@@ -9,7 +9,7 @@
 // it out, after the enemy as it is shown there (net/foes.js).
 import { player, setStatus } from './state.js';
 import { allEnemies } from './enemies.js';
-import { attackOf } from '../core/enemies.js';
+import { attackOf, enemyName } from '../core/enemies.js';
 import { gripAt } from '../core/gusto.js';
 import { muzzleAt } from '../core/beams.js';
 import { knockDown } from './ragdoll.js';
@@ -19,6 +19,7 @@ import { groundAt } from '../physics/collide.js';
 import { STEP } from '../core/constants.js';
 import { playerHurtFx } from './juice.js';
 import { sfx } from '../audio/sfx.js';
+import { tr } from '../i18n/i18n.js';
 
 // the grab under way, if the enemy still holds on: its attack's grab spec
 function holding(h) {
@@ -36,7 +37,7 @@ export function grabPlayer(blow, fx, fz) {
   cancelSword();
   Object.assign(player, { held: { e, attacks: e.attacks, blow, fx, fz }, vx: 0, vy: 0, vz: 0, gust: null, climb: null, getUp: null });
   sfx('grab', { at: player });
-  setStatus(`${e.profile.label} grabbed you!`);
+  setStatus(tr('{name} grabbed you!', { name: enemyName(e.profile) }));
 }
 
 // every step while held (game/update.js): carried along, then thrown or let go

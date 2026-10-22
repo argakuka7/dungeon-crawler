@@ -24,6 +24,7 @@ import { questTarget, questWay } from './questworld.js';
 import { warnedFace } from './trials.js';
 import { TRIALS } from '../core/trials.js';
 import { DISPLAY, BODY } from '../render/fonts.js';
+import { tr } from '../i18n/i18n.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
@@ -90,7 +91,7 @@ function spot(b, cx, Y, cz) {
 // where a friend is when not on this map
 function whereabouts(b, Y) {
   const by = isInterior(b.cube) ? NaN : parse(b.cube)[1];
-  return isInterior(b.cube) ? 'in a house' : by === Y ? 'far away' : `depth ${-by}`;
+  return isInterior(b.cube) ? tr('in a house') : by === Y ? tr('far away') : tr('depth {depth}', { depth: -by });
 }
 
 export function drawMinimap() {
@@ -115,10 +116,10 @@ export function drawMinimap() {
   const tp = state.run.townPortal, friends = online.buddies.filter(b => b.cube), away = friends.filter(b => !spot(b, cx, Y, cz));
   // a line of text under the map each: the cube and depth, being in a house, the town portal,
   // each friend off the map
-  const lines = [[`cube ${X0}, ${Z0}   depth ${-Y}`, '#aab3c2']];
-  if (inside) lines.push(['in a house', '#aab3c2']);
-  if (tp) lines.push([`portal open: depth ${tp.depth}`, '#c9a8ff']);
-  for (const b of away) lines.push([`${b.name}: ${whereabouts(b, Y)} (F: go)`, playerColor(b.slot)]);
+  const lines = [[tr('cube {x}, {z}   depth {depth}', { x: X0, z: Z0, depth: -Y }), '#aab3c2']];
+  if (inside) lines.push([tr('in a house'), '#aab3c2']);
+  if (tp) lines.push([tr('portal open: depth {depth}', { depth: tp.depth }), '#c9a8ff']);
+  for (const b of away) lines.push([tr('{name}: {where} (F: go)', { name: b.name, where: whereabouts(b, Y) }), playerColor(b.slot)]);
   const height = SIZE + 14 * lines.length;
   const w = Math.round(SIZE * scale), h = Math.round(height * scale);
   if (canvas.width !== w) canvas.width = w;

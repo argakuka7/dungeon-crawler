@@ -91,7 +91,7 @@ import { ITEMS } from '../core/items.js';
 import { RARITY } from '../core/gear/rarities.js';
 
 // raised whenever two versions of the game could no longer understand each other
-export const PROTOCOL = 13;
+export const PROTOCOL = 14;
 
 export const MAX_PLAYERS = 4;
 // what the host passes on from one guest to the others

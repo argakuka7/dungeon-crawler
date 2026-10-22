@@ -142,14 +142,15 @@
   <div class="cols">
     <div>
       <p lang="en">Bottom left in the game is the <b>chat box</b>. It remembers what happened while you played: you died, you reached level 5, you found a Remarkable bow, a horde woke up. Press <kbd>Enter</kbd> and it opens, so you can scroll back.</p>
-      <p lang="de">Unten links im Spiel ist die <b>Chat-Box</b>. Sie merkt sich, was beim Spielen passiert ist: Du bist gestorben, du hast Stufe 5 erreicht, du hast einen Remarkable-Bogen gefunden, eine Horde ist aufgewacht. Drück <kbd>Enter</kbd>, dann öffnet sie sich und du kannst zurückblättern.</p>
+      <p lang="de">Unten links im Spiel ist die <b>Chat-Box</b>. Sie merkt sich, was beim Spielen passiert ist: Du bist gestorben, du hast Stufe 5 erreicht, du hast einen bemerkenswerten Bogen gefunden, eine Horde ist aufgewacht. Drück <kbd>Enter</kbd>, dann öffnet sie sich und du kannst zurückblättern.</p>
       <p lang="en">The game calls it the <b>chronicle</b>. Each line is a small <a class="w" href="words.html#object">object</a>, an <i>entry</i>: what kind of thing happened, and its details. A death, for example:</p>
       <p lang="de">Das Spiel nennt es die <b>Chronik</b>. Jede Zeile ist ein kleines <a class="w" href="words.html#object">Objekt</a>, ein <i>Eintrag</i>: welche Art Sache passiert ist, und die Einzelheiten. Ein Tod zum Beispiel:</p>
       <pre class="wrap" data-label="an entry (shortened)">{ kind: 'death', who: null,
-  data: { cause: 'bitten by a Redback',
-          by: { label: 'Redback', level: 7 },
+  data: { cause: 'Bitten by a Redback!',
+          by: { words: { noun: 'Redback' }, level: 7 },
           depth: 4, place: 'Volcanic',
-          weapon: 'Old Sword', level: 6 } }</pre>
+          weapon: { item: { itemId: 'weapon_sword_old' } },
+          level: 6 } }</pre>
       <p lang="en">It keeps the last <b data-val="src/core/chronicle.js#LOG_LIMIT">200</b> entries, and only for this visit: like the rest of the run, it's gone when you close the page.</p>
       <p lang="de">Sie behält die letzten <b data-val="src/core/chronicle.js#LOG_LIMIT">200</b> Einträge, und nur für diesen Besuch: Wie der Rest des Durchgangs ist sie weg, wenn du die Seite schließt.</p>
     </div>
@@ -160,6 +161,8 @@
       <p lang="de">Warum nicht einfach den Satz "Du bist gestorben" aufschreiben? Weil deine Freunde beim Zusammenspielen auch davon hören. Auf ihrem Bildschirm muss "Anna ist gestorben" stehen, nicht "Du bist gestorben".</p>
       <p lang="en">So the game keeps only the facts. The words are made when the line is shown, from whoever reads it. <code>who: null</code> means "it happened to me"; for a friend's news it's their number and name.</p>
       <p lang="de">Darum hebt das Spiel nur die Fakten auf. Die Wörter werden erst gemacht, wenn die Zeile gezeigt wird, je nachdem, wer sie liest. <code>who: null</code> heißt "das ist mir passiert"; bei der Nachricht eines Freundes stehen dort seine Nummer und sein Name.</p>
+      <p lang="en">The same trick works for languages. Your friend may play in German while you play in English, so the entry doesn't keep "Redback" as a word to show: it keeps <code>{ noun: 'Redback' }</code>, "the thing called Redback". Your game says "a Redback", a German one "einem Rotrücken".</p>
+      <p lang="de">Derselbe Trick klappt auch für Sprachen. Dein Freund spielt vielleicht auf Deutsch, während du auf Englisch spielst. Darum hebt der Eintrag "Rotrücken" nicht als fertiges Wort auf, sondern <code>{ noun: 'Redback' }</code>, "das Ding namens Redback". Ein deutsches Spiel sagt dann "einem Rotrücken", ein englisches "a Redback".</p>
       <p class="small muted" lang="en">Some kinds stay with you (your kills, what you bought). Others go to your friends as a <code>news</code> letter: deaths, level ups, guardians, new depths.</p>
       <p class="small muted" lang="de">Manche Arten bleiben bei dir (deine Siege, was du gekauft hast). Andere gehen als <code>news</code>-Brief an deine Freunde: Tode, Stufenaufstiege, Wächter, neue Tiefen.</p>
       <a class="portal" href="network.html#messages" lang="en">Letters between the games</a>
@@ -239,12 +242,14 @@
       <ul>
         <li lang="en"><code>{ kind, data: d = {}, who }</code>: the function takes the entry apart right away. <code>d</code> is its details (an empty object if there are none).</li>
         <li lang="de"><code>{ kind, data: d = {}, who }</code>: Die Funktion nimmt den Eintrag gleich auseinander. <code>d</code> sind seine Einzelheiten (ein leeres Objekt, wenn es keine gibt).</li>
-        <li lang="en"><code>const S = who ? who.name : 'You'</code>: who the sentence is about. Every sentence below starts with <code>S</code>, so the same entry says "You died" or "Anna died".</li>
-        <li lang="de"><code>const S = who ? who.name : 'You'</code>: über wen der Satz ist. Jeder Satz unten fängt mit <code>S</code> an, darum sagt derselbe Eintrag "You died" oder "Anna died".</li>
+        <li lang="en"><code>const name = who?.name, you = !who</code>: who the sentence is about. Most kinds have two sentences, one for you and one for a friend, so the same entry says "You died" or "Anna died".</li>
+        <li lang="de"><code>const name = who?.name, you = !who</code>: über wen der Satz ist. Die meisten Arten haben zwei Sätze, einen für dich und einen für einen Freund, darum sagt derselbe Eintrag "Du bist gestorben" oder "Anna ist gestorben".</li>
+        <li lang="en"><code>tr('You died: {cause} · {where}', ...)</code> translates: the English sentence is looked up in the language you play in, and the details are put into its <code>{gaps}</code>. That's how the game speaks German.</li>
+        <li lang="de"><code>tr('You died: {cause} · {where}', ...)</code> übersetzt: Der englische Satz wird in der Sprache nachgeschlagen, in der du spielst, und die Einzelheiten kommen in seine <code>{Lücken}</code>. So spricht das Spiel Deutsch.</li>
         <li lang="en"><code>switch (kind)</code> is a decision with many branches: one <code>case</code> for every kind of entry. The first <code>case</code> that matches gives the answer with <code>return</code>.</li>
         <li lang="de"><code>switch (kind)</code> ist eine Entscheidung mit vielen Zweigen: ein <code>case</code> für jede Art von Eintrag. Der erste <code>case</code>, der passt, gibt mit <code>return</code> die Antwort.</li>
         <li lang="en">One more trick in <code>addEntry</code>: kills right after kills go onto the <i>same</i> line ("Defeated 5 enemies"), so a big fight doesn't fill the whole box.</li>
-        <li lang="de">Noch ein Trick in <code>addEntry</code>: Siege direkt nach Siegen kommen auf <i>dieselbe</i> Zeile ("Defeated 5 enemies"), damit ein großer Kampf nicht die ganze Box füllt.</li>
+        <li lang="de">Noch ein Trick in <code>addEntry</code>: Siege direkt nach Siegen kommen auf <i>dieselbe</i> Zeile ("5 Monster besiegt"), damit ein großer Kampf nicht die ganze Box füllt.</li>
       </ul>
     </div>
   </div>

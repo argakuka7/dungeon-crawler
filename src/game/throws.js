@@ -24,6 +24,7 @@ import { screenToWorld, aimReach } from '../core/stick.js';
 import { relay } from '../net/online.js';
 import { drawFlasks, removeFlaskViews, drawAreas, removeAreaViews, drawArc } from '../render/throws.js';
 import { absent, hurtBy } from '../core/enemies.js';
+import { tr } from '../i18n/i18n.js';
 
 export let flasks = [], areas = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -66,7 +67,7 @@ export function throwFlask(p, stats, target, yaw) {
   flasks.push(f);
   flaskFx(f, 'launch');
   relay.toss?.(f);
-  if (!readiedItem(inv)) { syncEquippedWeapon(); setStatus('That was the last one'); }
+  if (!readiedItem(inv)) { syncEquippedWeapon(); setStatus(tr('That was the last one')); }
   return f;
 }
 

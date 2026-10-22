@@ -17,6 +17,7 @@ import { player, state, setStatus } from './state.js';
 import { addEnemies, removeEnemies, mirroring, allEnemies } from './enemies.js';
 import { online } from '../net/online.js';
 import { sfx } from '../audio/sfx.js';
+import { msg, phrase, noun } from '../i18n/i18n.js';
 
 const bodies = () => [player, ...online.buddies.filter(b => b.here && b.hp > 0)].filter(b => b.hp > 0);
 
@@ -102,8 +103,10 @@ export function lightBeacon(s) {
 let warden = null;   // its id
 const wardens = new Map();   // kind -> the warden's kind
 function wardenKind(base) {
+  const kind = noun(base.label);
   if (!wardens.has(base)) wardens.set(base, enemyKind(base, { mods: HUNTER.mods, type: base.type, label: `Raging ${base.label.toLowerCase()}`,
-    mass: base.mass * HUNTER.mass, knock: base.knock * 1.3, reason: `Caught by the raging ${base.label.toLowerCase()}!` }));
+    words: { t: msg('Raging {kind:lower}'), p: { kind }, of: 'kind', caps: true },
+    mass: base.mass * HUNTER.mass, knock: base.knock * 1.3, reason: phrase('Caught by the raging {kind:lower}!', { kind }) }));
   return wardens.get(base);
 }
 function dropWarden() {

@@ -6,6 +6,7 @@
 import { enemyKind, ENEMY_KINDS, depthLevel } from './enemies.js';
 import { DEPTH_SPAWNS } from './spawns.js';
 import { mulberry32, hash32 } from './util.js';
+import { noun, msg } from '../i18n/i18n.js';
 
 export const BOUNTY = { hp: 4, damage: 1.3, xp: 4, size: 1.2, poise: 1.2 };
 export const BOUNTY_NAMES = ['Grimfang', 'Old Snapjaw', 'Bristleback', 'Nightcrawler', 'Big Bertha', 'Thornback', 'Ironhide',
@@ -18,7 +19,9 @@ export function bountyKind(type, name) {
   if (kinds.has(key)) return kinds.get(key);
   const base = ENEMY_KINDS[type];
   if (!base) throw new TypeError(`Unknown enemy kind: ${type}`);
-  const k = enemyKind(base, { type: 'bounty' + base.type, label: `${name} the ${base.label.toLowerCase()}`, bounty: true,
+  // 'Grimfang the spider' (its name and its kind's, said in any language: core/enemies.js enemyWords)
+  const words = { t: msg('{name} the {kind:lower}'), p: { name: noun(name, { proper: true }), kind: noun(base.label) }, of: 'kind', proper: true };
+  const k = enemyKind(base, { type: 'bounty' + base.type, label: `${name} the ${base.label.toLowerCase()}`, words, bounty: true,
     poise: Math.max(base.poise ?? 0, BOUNTY.poise), light: '#ffcf4a', sparks: ['#ffcf4a', '#fff2c0'],
     colors: Object.fromEntries(Object.keys(base.parts ?? {}).map(role => [role, role === 'eyes' ? 'oklch(0.35 0.08 60)' : 'oklch(0.82 0.15 85)'])),
     mods: { hp: BOUNTY.hp, damage: BOUNTY.damage, xp: BOUNTY.xp, size: BOUNTY.size } });

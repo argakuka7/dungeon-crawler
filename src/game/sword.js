@@ -12,8 +12,9 @@ import { fireShot } from './shots.js';
 import { throwFlask } from './throws.js';
 import { cooldownLeft } from '../core/potions.js';
 import { relay } from '../net/online.js';
-import { absent } from '../core/enemies.js';
+import { absent, enemyName } from '../core/enemies.js';
 import { enchantHit } from './enchants.js';
+import { tr } from '../i18n/i18n.js';
 
 const BUFFER = 0.3;   // s a queued attack waits for the current swing to allow the next
 // the critical-hit roll of each blade hit, in 0..1 (browser checks pin it to keep numbers exact)
@@ -48,7 +49,7 @@ export function updateSword(dt) {
   if (!s.requested) return;
   if ((s.buffer -= dt) < 0) { s.requested = false; return; }
   const target = s.target, stats = combatStats(player);
-  if (!stats) { s.requested = false; setStatus('No weapon equipped'); return; }
+  if (!stats) { s.requested = false; setStatus(tr('No weapon equipped')); return; }
   if (stats.kind === 'throw' && cooldownLeft(player, stats.flask, state.time) > 0) return;   // waits in the buffer
   if (!startSwing(player, aimYaw(target))) return;
   s.requested = false; s.target = target;
@@ -85,7 +86,7 @@ export function hitWithSword(list) {
     if (!hit) continue;
     hitEnemy(e, hit, before, e.x - p.x, e.z - p.z, p.sword.stats?.knockback ?? 1);
     enchantHit(e, hit, p.sword.stats);
-    if (e.hp) setStatus(`Slashed Lv ${e.level} ${e.profile.label} (${e.hp}/${e.profile.hp})`);
+    if (e.hp) setStatus(tr('Slashed Lv {level} {name} ({hp}/{max})', { level: e.level, name: enemyName(e.profile), hp: e.hp, max: e.profile.hp }));
   }
 }
 export const cancelSword = (resetCooldown = false) => cancelSwing(player, resetCooldown);

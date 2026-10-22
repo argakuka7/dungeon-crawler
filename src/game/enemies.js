@@ -25,7 +25,7 @@ import { updateRewind, resetRewind, drawRewind } from './rewind.js';
 import { resetMovers } from './movers.js';
 import { updateFlipWorld, updateBlackHoles, resetFlipWorld, turning } from './flipworld.js';
 import { clearBlackHoles } from '../render/flipview.js';
-import { STAGE_PROFILES } from '../core/enemies.js';
+import { STAGE_PROFILES, enemyName, enemyWords } from '../core/enemies.js';
 import { contactEnemies, resetEnemyCombat, updateBurning, updateChill, updateToxic } from './enemycombat.js';
 import { stepEnemies, stepCalls, resetCalls } from './enemyai.js';
 import { spawnLineup } from './devspawn.js';
@@ -55,6 +55,7 @@ import { log } from './log.js';
 import { questEvent } from './quests.js';
 import { groundAt } from '../physics/collide.js';
 import { walkable } from '../physics/enemynav.js';
+import { tr } from '../i18n/i18n.js';
 
 let defenceThink = 0, hordeGroups = [];
 
@@ -129,14 +130,15 @@ function awardKills(list) {
       xp += reward.xp; levels += reward.levels; killed++;
       if (droppedHere(e)) dropLoot(e, reward.coins);
       if (e.guardianGate) {
-        unlocked = e.profile.label;
-        log('guardian', { label: e.profile.label, level: e.level, depth: state.map.depth, boss: !!e.boss }, { share: true });
+        unlocked = enemyName(e.profile);
+        log('guardian', { label: enemyWords(e.profile), level: e.level, depth: state.map.depth, boss: !!e.boss }, { share: true });
       }
       relay.defeated?.(e);
     }
   }
   if (killed) {
-    setStatus(`${unlocked ? `${unlocked} defeated · Gate unlocked!` : `Defeated ${killed} enem${killed === 1 ? 'y' : 'ies'}`} · +${xp} XP${levels ? ` · Level ${player.level}!` : ''}`);
+    setStatus([unlocked ? tr('{name} defeated · Gate unlocked!', { name: unlocked }) : tr('{n, plural, one {Defeated # enemy} other {Defeated # enemies}}', { n: killed }),
+      tr('+{xp} XP', { xp }), ...levels ? [tr('Level {level}!', { level: player.level })] : []].join(' · '));
     log('kill', { count: killed, xp });
   }
   if (levels) log('level', { level: player.level }, { share: true });
@@ -203,7 +205,7 @@ export function updateEnemies(dt) {
     coordinateDefence(state.map, state.run, list, state.map.guardian ? nearestTo(state.map.guardian.x, state.map.guardian.z) : player);
   }
   const horde = hordeGroups[0], bodies = party();
-  if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus('Horde awakened!'); log('horde'); }
+  if (coordinateHordes(hordeGroups, horde && bodies.length > 1 ? nearestTo(horde.anchor.x, horde.anchor.z, bodies) : player, dt)) { setStatus(tr('Horde awakened!')); log('horde'); }
   stepCalls(dt);
   // Flip's world turning (game/flipworld.js): everything in it turns with it
   updateFlipWorld(list, dt);

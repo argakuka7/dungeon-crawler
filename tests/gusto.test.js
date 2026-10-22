@@ -59,7 +59,7 @@ test('he is as strong as a descent guardian, and his attacks are telegraphed', (
   const t = GUARDIAN_TIERS.descent;
   assert.ok(GUSTO.hp >= t.hp); assert.equal(GUSTO.xp, t.xp); assert.ok(GUSTO.poise >= t.poise);
   assert.equal(ENEMY_KINDS.gusto, GUSTO); assert.equal(ENEMY_KINDS.custotriangle, CUSTO_TRIANGLE);
-  assert.equal(GUSTO.guardianRole, 'descent'); assert.equal(guardianTitle('descent', GUSTO.label), '♛ Gusto');
+  assert.equal(GUSTO.guardianRole, 'descent'); assert.equal(guardianTitle('descent', GUSTO), '♛ Gusto');
   assert.deepEqual(GUSTO.attacks.map(a => a.name), ['grab', 'summon', 'inhale', 'stuck']);
   assert.deepEqual(GUSTO_SPLIT.attacks.map(a => a.name).sort(), ['grab', 'inhale', 'stuck', 'summon', 'vortex']);
   assert.equal(GUSTO_SPLIT.hp, GUSTO.hp);

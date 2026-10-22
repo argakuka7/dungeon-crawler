@@ -5,6 +5,9 @@ import { createLog, addEntry, clearLog, LOG_LIMIT, MERGE_TIME, KINDS, NEWS, desc
 import { RELAYED, CHAT_BURST, CHAT_WINDOW, chatAllowed, PROTOCOL } from '../src/net/protocol.js';
 import { ITEMS } from '../src/core/items.js';
 import { ENEMY_KINDS } from '../src/core/enemies.js';
+import { noun, useLanguage, loadLocale } from '../src/i18n/i18n.js';
+
+const de = await loadLocale('de');
 
 const items = Object.values(ITEMS).map(d => ({ value: d.id, label: d.name }));
 const best = q => match(q, items)[0]?.value;
@@ -139,9 +142,9 @@ test('a death record says what did it, where, and reads for us and for a friend'
   assert.equal(phrase('Bitten by a Redback!'), 'bitten by a Redback');
   assert.equal(phrase('Drowned!'), 'drowned');
   assert.equal(phrase(''), '');
-  const rec = deathRecord({ reason: 'Pinched by a Fire shraps!', by: { label: 'Fire shraps', level: 7, guardian: false } },
+  const rec = deathRecord({ reason: 'Pinched by a Fire shraps!', by: { words: noun('Fire shraps', { caps: true }), level: 7, guardian: false } },
     { depth: 4, place: 'Volcanic', cube: '1,-4,2', weapon: 'Rusty Long Sword', level: 6, session: 754.4 });
-  assert.equal(rec.cause, 'pinched by a Fire shraps');
+  assert.equal(rec.cause, 'Pinched by a Fire shraps!', 'kept as the message, said when shown');
   assert.equal(rec.session, 754);
   assert.equal(describe({ kind: 'death', data: rec, who: null }), 'You died: pinched by a Fire shraps (Lv 7) · depth 4, Volcanic');
   assert.equal(describe({ kind: 'death', data: rec, who: { slot: 1, name: 'Anna' } }), 'Anna died: pinched by a Fire shraps (Lv 7) · depth 4, Volcanic');
@@ -151,6 +154,12 @@ test('a death record says what did it, where, and reads for us and for a friend'
   assert.equal(clock(3725), '1:02:05');
   assert.equal(describe({ kind: 'kill', data: { count: 1, xp: 4 } }), 'Defeated 1 enemy · +4 XP');
   assert.equal(describe({ kind: 'chat', data: { text: 'hi' }, who: { slot: 2, name: 'Bo' } }), 'Bo: hi');
+  // the same entry, read in German
+  useLanguage('de', de);
+  try {
+    assert.equal(describe({ kind: 'death', data: rec, who: { slot: 1, name: 'Anna' } }), 'Anna ist gestorben: Von einem Feuershraps gezwickt (Stufe 7) · Tiefe 4, Volcanic');
+    assert.equal(describe({ kind: 'kill', data: { count: 2, xp: 4 } }), '2 Monster besiegt · +4 XP');
+  } finally { useLanguage('en'); }
 });
 
 test("a friend's news is cleaned before it is shown", () => {
@@ -161,9 +170,14 @@ test("a friend's news is cleaned before it is shown", () => {
   assert.equal(cleanNews('kill', { count: 1, xp: 1 }), null);
   assert.equal(cleanNews('level', { level: 1.5 }), null);
   assert.deepEqual(cleanNews('level', { level: 4, extra: 'x' }), { level: 4 });
-  assert.deepEqual(cleanNews('loot', { name: 'x'.repeat(100), rarity: 'remarkable' }), { name: 'x'.repeat(60), rarity: 'remarkable' });
-  assert.equal(cleanNews('loot', { name: 'Sword', rarity: 'shiny' }), null);
-  assert.deepEqual(cleanNews('down', { cause: 'bitten\n', by: { label: 'Spider', level: 'x' } }), { cause: 'bitten', by: { label: 'Spider', level: null, guardian: false } });
+  const sword = { itemId: 'weapon_sword_long', gen: { name: 'x'.repeat(100), rarity: 'remarkable', extra: 1 } };
+  assert.deepEqual(cleanNews('loot', { item: { item: sword }, rarity: 'remarkable' }),
+    { item: { item: { itemId: 'weapon_sword_long', gen: { name: 'x'.repeat(80), rarity: 'remarkable' } } }, rarity: 'remarkable' });
+  assert.equal(cleanNews('loot', { item: { item: { itemId: 'nothing' } }, rarity: 'remarkable' }), null);
+  assert.equal(cleanNews('loot', { item: 'Sword', rarity: 'shiny' }), null);
+  assert.deepEqual(cleanNews('down', { cause: 'bitten\n', by: { label: 'Spider', level: 'x' } }), { cause: 'bitten', by: { words: 'Spider', level: null, guardian: false } });
+  assert.deepEqual(cleanNews('guardian', { label: { t: 'Guardian {kind}', p: { kind: { noun: 'Spider', caps: true, evil: '<b>' } }, of: 'kind', caps: true }, depth: 2 }),
+    { label: { t: 'Guardian {kind}', p: { kind: { noun: 'Spider', caps: true } }, of: 'kind', caps: true }, level: null, depth: 2, boss: false });
   assert.equal(cleanNews('death', null), null);
   assert.equal(cleanText(' a\u0000b\n ', 10), 'ab');
 });

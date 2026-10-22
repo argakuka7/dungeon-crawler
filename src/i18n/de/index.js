@@ -5,8 +5,9 @@ import { grammar } from './grammar.js';
 import { names } from './names.js';
 import ui from './ui.js';
 import items from './items.js';
+import enemies from './enemies.js';
 
-export const parts = { ui, items };
+export const parts = { ui, items, enemies };
 
 export default {
   code: 'de',

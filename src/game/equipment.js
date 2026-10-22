@@ -10,6 +10,7 @@ import { displayName } from '../core/gear/stats.js';
 import { dropAtFeet } from './loot.js';
 import { equippedWeapon, canChangeWeapon, readiedFlask } from '../core/combat.js';
 import { prepareSword, equipSword } from '../render/character.js';
+import { tr } from '../i18n/i18n.js';
 
 let request = 0;
 export const equipmentAllowed = () => !state.transitioning && !state.equipping && canChangeWeapon(player);
@@ -22,7 +23,7 @@ export async function syncEquippedWeapon() {
   } finally { if (token === request) state.equipping = false; }
 }
 export async function equipOwnedWeapon(instanceId) {
-  if (!equipmentAllowed()) { setStatus('Finish your current action before changing weapons'); return false; }
+  if (!equipmentAllowed()) { setStatus(tr('Finish your current action before changing weapons')); return false; }
   const inventory = player.inventory, slot = ownedItem(inventory, instanceId), def = ITEMS[slot?.itemId];
   if (!def?.weapon) return false;
   const token = ++request;
@@ -32,11 +33,11 @@ export async function equipOwnedWeapon(instanceId) {
     if (token !== request || inventory !== player.inventory || !canChangeWeapon(player) || state.transitioning
         || ownedItem(inventory, instanceId) !== slot) return false;
     equipItem(inventory, instanceId); equipSword(model); sfx('equip');
-    setStatus(`Equipped ${displayName(slot)}`);
+    setStatus(tr('Equipped {item}', { item: displayName(slot) }));
     return true;
   } catch (error) {
     console.error('weapon failed to load', error);
-    setStatus('Could not load this weapon; your previous sword is still equipped');
+    setStatus(tr('Could not load this weapon; your previous sword is still equipped'));
     return false;
   } finally { if (token === request) state.equipping = false; }
 }
@@ -45,7 +46,7 @@ export function wearArmor(instanceId) {
   const slot = ownedItem(player.inventory, instanceId);
   if (!wearItem(player.inventory, instanceId)) return false;
   sfx('equip', { pitch: 0.8 }); sfx('clink', { pitch: 0.6, volume: 0.6 });
-  setStatus(`Wearing ${displayName(slot)}`);
+  setStatus(tr('Wearing {item}', { item: displayName(slot) }));
   return true;
 }
 // take off what is worn in `slot` (it stays in the bag)
@@ -53,21 +54,21 @@ export function takeOffArmor(slot) {
   const was = wornItem(player.inventory, slot);
   if (!takeOffItem(player.inventory, slot)) return false;
   sfx('toss', { volume: 0.5 });
-  setStatus(`Took off ${displayName(was)}`);
+  setStatus(tr('Took off {item}', { item: displayName(was) }));
   return true;
 }
 // Take flask `itemId` in hand to throw it (null: put it away, the weapon back in hand).
 export async function readyFlask(itemId) {
   const inventory = player.inventory, def = itemId && ITEMS[itemId];
-  if (!equipmentAllowed()) { setStatus('Finish your current action first'); return false; }
-  if (itemId && !readyItem(inventory, itemId)) { setStatus(`No ${def?.name ?? 'flask'} left`); return false; }
+  if (!equipmentAllowed()) { setStatus(tr('Finish your current action first')); return false; }
+  if (itemId && !readyItem(inventory, itemId)) { setStatus(tr('No {item} left', { item: def ? tr(def.name) : tr('flask') })); return false; }
   if (!itemId) readyItem(inventory, null);
   await syncEquippedWeapon();
   if (inventory !== player.inventory) return false;
   sfx(itemId ? 'toss' : 'equip', { volume: 0.6 });
   // (touch controls, game/touch.js: aimed with the action button)
-  const how = globalThis.document?.body.classList.contains('touch') ? 'aim with the action button' : 'click where to throw it';
-  setStatus(itemId ? `${def.name} in hand: ${how}` : `${displayName(equippedItemOf(inventory)) || 'Weapon'} back in hand`);
+  const how = globalThis.document?.body.classList.contains('touch') ? tr('aim with the action button') : tr('click where to throw it');
+  setStatus(itemId ? tr('{item} in hand: {how}', { item: tr(def.name), how }) : tr('{item} back in hand', { item: displayName(equippedItemOf(inventory)) || tr('Weapon') }));
   return true;
 }
 const equippedItemOf = inv => ownedItem(inv, inv.equipped);
@@ -77,7 +78,7 @@ const devRoll = (itemId, rarity, ilvl) => rollWeapon(Math.random, ilvl, { itemId
 export async function devSwapWeapon(itemId, rarity = 'vanilla', ilvl = 1) {
   if (!state.dev || !ITEMS[itemId]?.weapon || !equipmentAllowed()) return false;
   const id = addInstance(player.inventory, devRoll(itemId, rarity, ilvl));
-  if (!id) { setStatus('Inventory is full'); return false; }
+  if (!id) { setStatus(tr('Inventory is full')); return false; }
   return equipOwnedWeapon(id);
 }
 export function devDropWeapon(itemId, rarity = 'unusual', ilvl = 8) {
@@ -88,7 +89,7 @@ export function devDropWeapon(itemId, rarity = 'unusual', ilvl = 8) {
 export function devWearArmor(itemId, rarity = 'vanilla', ilvl = 1) {
   if (!state.dev || !ITEMS[itemId]?.armor) return false;
   const id = addInstance(player.inventory, rollArmor(Math.random, ilvl, { itemId, rarity }));
-  if (!id) { setStatus('Inventory is full'); return false; }
+  if (!id) { setStatus(tr('Inventory is full')); return false; }
   return wearArmor(id);
 }
 export function devDropArmor(itemId, rarity = 'unusual', ilvl = 8) {
@@ -100,6 +101,6 @@ export function devDropArmor(itemId, rarity = 'unusual', ilvl = 8) {
 export function devWear(itemId) {
   if (!state.dev) return false;
   if (itemId == null) { takeOffArmor('head'); return true; }
-  if (ITEMS[itemId]?.slot !== 'head') { setStatus('Only headwear on the player'); return false; }
+  if (ITEMS[itemId]?.slot !== 'head') { setStatus(tr('Only headwear on the player')); return false; }
   return devWearArmor(itemId, 'vanilla', 1);
 }

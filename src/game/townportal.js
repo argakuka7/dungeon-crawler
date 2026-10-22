@@ -20,6 +20,7 @@ import { whenReady, fadeOut, fadeIn } from './hud.js';
 import { enterCube } from './flow.js';
 import { cancelSword } from './sword.js';
 import { clearMouseInput } from './orders.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 const FADE_MS = 380;
 
@@ -32,23 +33,23 @@ function say(message) {
 // why the scroll cannot be read right now (null: it can)
 function castBlocked() {
   const p = player;
-  if (!state.map || state.transitioning) return 'Not now';
-  if (isTown(state.cubeKey) || isInterior(state.cubeKey)) return 'You are already in town';
-  if (sealedIn()) return SEALED_MESSAGE;   // a trial room while its event runs (game/trials.js)
-  if (state.fallFrom || p.hp <= 0 || p.ragdoll || p.getUp || p.climb || p.swimming || !p.grounded) return 'You need firm ground to open a portal';
-  if (p.stun > 0 || p.sword.active) return 'Finish your current action first';
+  if (!state.map || state.transitioning) return tr('Not now');
+  if (isTown(state.cubeKey) || isInterior(state.cubeKey)) return tr('You are already in town');
+  if (sealedIn()) return tr(SEALED_MESSAGE);   // a trial room while its event runs (game/trials.js)
+  if (state.fallFrom || p.hp <= 0 || p.ragdoll || p.getUp || p.climb || p.swimming || !p.grounded) return tr('You need firm ground to open a portal');
+  if (p.stun > 0 || p.sword.active) return tr('Finish your current action first');
   return null;
 }
 
 // use the scroll: start casting (or stop a cast in progress)
 export function useTownPortal() {
-  if (state.cast) { cancelCast('Portal cancelled'); return false; }
+  if (state.cast) { cancelCast(tr('Portal cancelled')); return false; }
   const why = castBlocked();
   if (why) { say(why); return false; }
   // look for room first: no point standing still for 5 s to learn there is none
-  if (!padSpot()) { say(NO_ROOM); sfx('fizzle'); return false; }
+  if (!padSpot()) { say(tr(NO_ROOM)); sfx('fizzle'); return false; }
   startCast({ kind: 'townPortal', duration: CAST_TIME, firm: true, done: openTownPortal });
-  setStatus('Opening a portal to town... hold still');
+  setStatus(tr('Opening a portal to town... hold still'));
   return true;
 }
 
@@ -74,7 +75,7 @@ export function tickCast(dt, moving) {
   const drift = Math.hypot(p.x - c.x, p.z - c.z);
   if (moving || p.sword.active || p.sword.requested || p.lastDamageAt > c.since || p.ragdoll || state.fallFrom
     || (c.firm ? p.climb || p.swimming || !p.grounded || drift > 0.2 : drift > 1 || c.y - p.y > 1)) {
-    cancelCast('Portal interrupted');
+    cancelCast(tr('Portal interrupted'));
     return;
   }
   c.t += dt;
@@ -88,7 +89,7 @@ const nearPortal = (x, z) => state.map.portals.some(q => (q.kind === 'up' || q.k
   return Math.hypot(x - Math.max(cx, Math.min(cx + 1, x)), z - Math.max(cz, Math.min(cz + 1, z))) < PAD_RADIUS + 0.4;
 }));
 
-const NO_ROOM = 'No room for a portal here';
+const NO_ROOM = msg('No room for a portal here');
 // the disc stays inside the cube, and off an open face: whoever stands in it is not
 // crossing over (they cross within 0.4 of it, game/portals.js)
 const edgeClear = (x, z) => DIRS.every((_, d) => faceDistance({ x, z }, d)
@@ -117,12 +118,12 @@ function padSpot() {
 
 function openTownPortal() {
   const pad = padSpot();
-  if (!pad) { say(NO_ROOM); sfx('fizzle'); return; }
+  if (!pad) { say(tr(NO_ROOM)); sfx('fizzle'); return; }
   const back = respawnPoint({ x: player.x, y: player.y, z: player.z });
   state.run.townPortal = { key: state.cubeKey, depth: state.map.depth, pad, back };
   setTownPortal(state.world, pad);
   sfx('portal', { at: pad });
-  setStatus('A portal to town opens');
+  setStatus(tr('A portal to town opens'));
 }
 
 // where you stand in town: beside the town end, towards the plaza
@@ -149,12 +150,12 @@ export function takeTownPortal() {
     enterCube(c, null, null, at);
     if (toTown) player.yaw = at.yaw;
     state.transitioning = false;
-    say(toTown ? `The portal back to depth ${tp.depth} stays open` : 'The portal closes behind you');
+    say(toTown ? tr('The portal back to depth {depth} stays open', { depth: tp.depth }) : tr('The portal closes behind you'));
   }, () => {
     if (state.cubes !== cubes) return;
     state.transitioning = false;
     fadeIn();
-    say('The portal does not open');
+    say(tr('The portal does not open'));
   }), FADE_MS);
   return true;
 }

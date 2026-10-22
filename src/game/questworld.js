@@ -20,6 +20,7 @@ import { bountyKind, bountyLevel } from '../core/bounties.js';
 import { residentsOf, spotOfGiver, keyOfSpot } from '../core/npcs.js';
 import { TOWN_KEY, isInterior } from '../world/town.js';
 import { parse, step, faceKey } from '../world/coords.js';
+import { tr } from '../i18n/i18n.js';
 
 const FIND_REACH = 0.75;   // cells: walking this close to a thing picks it up
 
@@ -205,8 +206,8 @@ export function noticeQuestGoals() {
   const log = state.run?.quests;
   if (!log || !state.map) return;
   const goals = questGoalsIn(log, state.map.key).map(g => g.stage.goal);
-  if (goals.includes('bounty')) setStatus('Something big is prowling about here...');
-  else if (goals.includes('rescue')) setStatus('You hear somebody calling for help!');
-  else if (goals.includes('find') || goals.includes('gather')) setStatus('Something glints somewhere here...');
-  else if (goals.includes('open')) setStatus('The cross on the map must be here somewhere!');
+  if (goals.includes('bounty')) setStatus(tr('Something big is prowling about here...'));
+  else if (goals.includes('rescue')) setStatus(tr('You hear somebody calling for help!'));
+  else if (goals.includes('find') || goals.includes('gather')) setStatus(tr('Something glints somewhere here...'));
+  else if (goals.includes('open')) setStatus(tr('The cross on the map must be here somewhere!'));
 }

@@ -21,6 +21,7 @@ import { walkable, groundY, neighbors, findPath } from '../physics/enemynav.js';
 import { mulberry32, hash32 } from '../core/util.js';
 import { hashString } from '../core/gear/drops.js';
 import { sfx } from '../audio/sfx.js';
+import { tr } from '../i18n/i18n.js';
 
 // start: how close to the cart the raid starts; reach: how close to it a raider takes from it;
 // drain: how much of it one raider takes a second; engage: how close a player draws a raider off
@@ -49,7 +50,7 @@ function begin(goal, spot) {
     && Math.hypot(f.x + .5 - cart.x, f.z + .5 - cart.z) <= RAID.reach - 0.2);
   raid = { quest: goal.quest.id, cube: state.cubeKey, depth: state.map.depth, cart, ring, hp: 1, wave: 0, waves: goal.stage.waves,
     phase: 'countdown', t: RAID.countdown, ids: new Set(), seed: hash32(hashString(goal.quest.id) ^ attempt) };
-  setStatus('The keeper rings the bell: here they come! Keep them off the cart!');
+  setStatus(tr('The keeper rings the bell: here they come! Keep them off the cart!'));
   sfx('unlock');
 }
 
@@ -73,7 +74,7 @@ function spawnWave() {
   const R = mulberry32(hash32(raid.seed ^ Math.imul(raid.wave + 1, 0x9e37))), kinds = raiders(raid.depth);
   const n = (RAID.sizes[raid.wave] ?? RAID.sizes.at(-1) + raid.wave) + Math.floor(raid.depth / 6);
   const level = depthLevel(raid.depth), list = [], from = arrivals(Math.max(...kinds.map(([k]) => k.height)));
-  if (!from.length || !raid.ring.length) { end('off', () => {}); calmUntil = state.time + 30; setStatus('Nothing comes... maybe another time.'); return; }
+  if (!from.length || !raid.ring.length) { end('off', () => {}); calmUntil = state.time + 30; setStatus(tr('Nothing comes... maybe another time.')); return; }
   for (let i = 0; i < n; i++) {
     let r = R() * kinds.reduce((s, [, w]) => s + w, 0), kind = kinds.at(-1)[0];
     for (const [k, w] of kinds) if ((r -= w) < 0) { kind = k; break; }
@@ -95,9 +96,9 @@ function end(result, event) {
   const quest = raid.quest, ids = raid.ids;
   raid = null;
   hideBar();
-  if (result === 'won') { setStatus('They give up! The cart is safe.'); sfx('levelUp'); event({ kind: 'defended', quest }); return; }
+  if (result === 'won') { setStatus(tr('They give up! The cart is safe.')); sfx('levelUp'); event({ kind: 'defended', quest }); return; }
   removeEnemies(e => ids.has(e.id) && e.mode !== 'dead');   // they run off with what they got
-  if (result === 'lost') { setStatus('The cart is emptied... the raid is lost.'); event({ kind: 'lost', quest }); }
+  if (result === 'lost') { setStatus(tr('The cart is emptied... the raid is lost.')); event({ kind: 'lost', quest }); }
 }
 
 // every frame (game time): event raises a quest event (game/quests.js questEvent; `lost`: the

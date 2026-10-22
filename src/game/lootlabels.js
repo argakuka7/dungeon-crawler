@@ -15,6 +15,7 @@ import { lootView } from '../render/loot.js';
 import { rarityOf } from '../core/gear/rarities.js';
 import { labelled } from '../core/loot.js';
 import { displayName } from '../core/gear/stats.js';
+const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
 import { state } from './state.js';
 import { lootHere } from './loot.js';
 import { pointer, hoveredEnemy } from './pointer.js';
@@ -27,9 +28,12 @@ import { talkative } from './action.js';
 import { peopleHere } from './npcs.js';
 import { closedChests } from './chests.js';
 import { RARITY } from '../core/gear/rarities.js';
+import { tr, say, onLanguageChange } from '../i18n/i18n.js';
 
 const layer = document.getElementById('loot-labels'), canvas = renderer.domElement;
 const labels = new Map();   // pickup id (or 'chest:' + site id) -> { el, p, w, h }
+// another language: the labels are made again in it
+onLanguageChange(() => { for (const l of labels.values()) l.el.remove(); labels.clear(); });
 const PICK = 26;             // px: how close the cursor must be to an item to hover it
 const CHEST_PICK = 40;       // ... and to a chest
 const VILLAGER_PICK = 46;    // ... and to a villager's head
@@ -66,7 +70,7 @@ function label(p) {
   const el = document.createElement('button');
   el.className = 'loot-label'; el.tabIndex = -1;
   const part = isPart(p);
-  el.textContent = textOf(p) ?? (p.prestige ? 'Treasure chest' : p.questItem ? `${p.label ? p.label[0].toUpperCase() + p.label.slice(1) : displayName(p)} · quest`
+  el.textContent = textOf(p) ?? (p.prestige ? tr('Treasure chest') : p.questItem ? tr('{thing} · quest', { thing: p.label ? capital(say(p.label)) : displayName(p) })
     : displayName(p) + (p.count > 1 ? ` (${p.count})` : ''));
   el.style.color = part ? PART_COLOR : isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
   if (p.gen) { el.dataset.rarity = rarityOf(p).id; el.classList.toggle('rainbow', !!rarityOf(p).glow?.rainbow); }

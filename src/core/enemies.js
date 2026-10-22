@@ -19,6 +19,7 @@
 import { hash32, mulberry32 } from './util.js';
 import { toxinOf } from './status.js';
 import { paint } from './palette.js';
+import { noun, msg, say, form } from '../i18n/i18n.js';
 
 // a kind's colours: role -> palette swatch (core/palette.js), as colour strings for recolorFn
 const paints = roles => Object.fromEntries(Object.entries(roles).map(([role, name]) => [role, paint(name)]));
@@ -344,7 +345,7 @@ const GUSTO_INHALE = {
 const GUSTO_STUCK = {
   name: 'stuck', clip: 'stuck', weight: 0, reach: 0, hitAt: 60 / 30, trackUntil: 0, attackTime: 60 / 30, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Gusto',
-  exposed: { until: 48 / 30, damage: 1.5, thud: true, say: 'missed! Hit him while he is down' },
+  exposed: { until: 48 / 30, damage: 1.5, thud: true, say: msg('{name} missed! Hit him while he is down') },
 };
 export const GUSTO = {
   type: 'gusto', species: 'gusto', label: 'Gusto', hp: 1000, damage: 24, knock: 4,
@@ -464,7 +465,7 @@ const SQUARLO_SUMMON = {
 const SQUARLO_REST = {
   name: 'rest', clip: 'rest', weight: 0, reach: 40, hitAt: 6 / 30, trackUntil: 0, attackTime: 66 / 30, hitReach: 0,
   arc: -1, power: 0, knock: 0, knockDown: false, hop: 0, reason: 'Squarlo', cast: 'rest', recover: 0.3,
-  exposed: { from: 0.2, until: 58 / 30, damage: 1.3, say: 'is out of breath! Hit him now' },
+  exposed: { from: 0.2, until: 58 / 30, damage: 1.3, say: msg('{name} is out of breath! Hit him now') },
 };
 // (the giant's attacks are sized with him, like any kind's: a blow's reaches are given here in
 // cells over his size, GIANT; a beam's, a gust's and a cast's stay as they are)
@@ -475,7 +476,7 @@ const SQUARLO_STOMP = {
   beam: { kind: 'stomp', aim: 'feet', time: 42 / 30, track: 0, lock: 15 / 30, radius: 1.15, range: 14, sky: 7, clear: false,
     foot: true, muzzle: [-0.07, 0, 0.124] },
   wave: { speed: 7, reach: 4.8, width: 0.8, rise: 0.4, power: 0.55, knock: 6, hop: 3 },
-  exposed: { from: 54 / 30, until: 78 / 30, damage: 1.4, say: 'is stuck! Hit his foot' },
+  exposed: { from: 54 / 30, until: 78 / 30, damage: 1.4, say: msg('{name} is stuck! Hit his foot') },
 };
 const SQUARLO_JUMP = {
   name: 'jump', clip: 'jump', weight: 3, reach: 11, minReach: 3, rise: 3, hitAt: 51 / 30, trackUntil: 18 / 30, attackTime: 78 / 30, hitReach: 0,
@@ -705,6 +706,21 @@ export const RENEW_TWIN = {
   attacks: [RENEW_TWIN_SWING, RENEW_TWIN_DASH, RENEW_ROLL], phase: 4, circle: 2,
 };
 export const BOSS_PROFILES = [GUSTO, TOTNAR, SQUARLO, FLIP, FOGGERY, RENEW];
+
+// What an enemy kind is called, as words to say in any language (src/i18n/i18n.js say): its kind's
+// noun ('Spider', a Spinne in German), a boss's name, a guardian's 'Guardian Spider' or 'Temp
+// Boss Spider', a bounty's own (core/bounties.js). `label` stays the English name.
+export function enemyWords(k) {
+  if (!k) return '';
+  if (k.words) return k.words;
+  if (k.boss) return noun(k.label, { proper: true });
+  if (k.baseLabel) return { t: k.guardianRole === 'descent' ? msg('Temp Boss {kind}') : msg('Guardian {kind}'),
+    p: { kind: noun(k.baseLabel, { caps: true }) }, of: 'kind', caps: true };
+  return noun(k.label, { caps: true });
+}
+export const enemyName = k => say(enemyWords(k));
+// the plural ('Spiders'), for a kind of the roster
+export const enemiesName = k => form(enemyWords(k), 'pl');
 // what a ranged attack sends out: its projectile, its beam or its gust (null for a blow)
 export const shotOf = a => a.projectile ?? a.beam ?? a.gust ?? null;
 
@@ -962,7 +978,7 @@ const guardianMods = (base, t) => ({
 // `.descent`: colours, glow, `finish` and the like, in place of these): the Wolk's are grey and
 // silver.
 export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
-  type: 'guardian' + base.type, label: 'Guardian ' + base.label, guardian: true, guardianRole: 'side', bossPlaceholder: false,
+  type: 'guardian' + base.type, label: 'Guardian ' + base.label, baseLabel: base.label, guardian: true, guardianRole: 'side', bossPlaceholder: false,
   colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'pink.vivid']))),
   light: '#ff3fa8', sparks: ['#ff3fa8', '#ffd0ee'], ichor: ['#ff3fa8', '#9b165d'],
   poise: Math.max(base.poise, GUARDIAN_TIERS.side.poise), mods: guardianMods(base, GUARDIAN_TIERS.side),
@@ -972,7 +988,7 @@ export const GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [bas
 // descent guardian as a Temp Boss: it holds the place of the depth's real boss to come
 // (core/bosses.js); a side guardian as the Guardian of its species.
 export const DESCENT_GUARDIAN_KINDS = Object.fromEntries(ENEMY_PROFILES.map(base => [base.species, enemyKind(base, {
-  type: 'descentGuardian' + base.type, label: 'Temp Boss ' + base.label,
+  type: 'descentGuardian' + base.type, label: 'Temp Boss ' + base.label, baseLabel: base.label,
   guardian: true, guardianRole: 'descent', bossPlaceholder: true,
   colors: paints(Object.fromEntries(Object.keys(base.parts).map(role => [role, role === 'eyes' ? 'eyes.bone' : 'amber.vivid']))),
   light: '#ff9b35', sparks: ['#ff9b35', '#fff0cc'], ichor: ['#ff9b35', '#9b4b16'],

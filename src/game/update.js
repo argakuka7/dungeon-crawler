@@ -18,6 +18,7 @@ import { tickCast, cancelCast } from './townportal.js';
 import { tickEffects, effectMod } from '../core/potions.js';
 import { absent } from '../core/enemies.js';
 import { iceStep } from './trials.js';
+import { msg, tr } from '../i18n/i18n.js';
 
 // during the wind-up, step in towards an enemy that is just out of reach
 // learn: combat.html#chain (see learn/README.md)
@@ -36,11 +37,11 @@ export function updatePlayer(dt) {
   // a portal's charge only carries over while checkPortals sees us standing in it
   const charge = state.portalCharge;
   state.portalCharge = null;
-  if (player.ragdoll) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); stepRagdoll(dt); return; }
+  if (player.ragdoll) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); stepRagdoll(dt); return; }
   // in a boss's hands (game/grab.js): carried, then thrown
-  if (player.held) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); tickHeld(dt); return; }
+  if (player.held) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); tickHeld(dt); return; }
   // carried round as Flip turns the world, in his tractor beam or inside a black hole (game/flipworld.js moves us)
-  if (player.flipping) { cancelSword(); cancelCast('Portal interrupted'); clearOrder(); return; }
+  if (player.flipping) { cancelSword(); cancelCast(tr('Portal interrupted')); clearOrder(); return; }
   if (player.getUp) tickGetUp(dt);
   // keys win over mouse orders
   const keys = inputDir();
@@ -80,7 +81,7 @@ export function updatePlayer(dt) {
   // something soft, physics/move.js landingSpeed)
   const landed = landingSpeed(gr, effectMod(player, 'jump'));
   if (landed > RAGDOLL_IMPACT) {
-    knockDown({ damage: Math.min(FALL_DAMAGE, (landed - RAGDOLL_IMPACT) * 6), reason: 'Hard landing!' });
+    knockDown({ damage: Math.min(FALL_DAMAGE, (landed - RAGDOLL_IMPACT) * 6), reason: msg('Hard landing!') });
     return;
   }
   if (landed > SIT_IMPACT) { player.stun = 1.5; sfx('dizzy'); }

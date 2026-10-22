@@ -12,7 +12,7 @@
 // (`follow`). While he splits or is away (modes 'split' and 'gone') the AI leaves him be.
 // Only the game that runs the enemies runs the fight; the others see its result (net/foes.js).
 import { state, setStatus } from './state.js';
-import { GUSTO, GUSTO_SPLIT, ENEMY_KINDS, enemyProfile, makeEnemy, attackOf } from '../core/enemies.js';
+import { GUSTO, GUSTO_SPLIT, ENEMY_KINDS, enemyProfile, makeEnemy, attackOf, enemyName } from '../core/enemies.js';
 import { GUSTO_FIGHT as G, splitHp, summonCount } from '../core/gusto.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -21,6 +21,7 @@ import { groundY } from '../physics/enemynav.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { players, living, nearest, engage, put, fitting, leave as letGo, minionFloors, minion, sweep } from './bossfight.js';
 import { summonFx } from './juice.js';
+import { tr } from '../i18n/i18n.js';
 
 export let gustos = [];
 let fights = [];
@@ -107,7 +108,7 @@ function split(f) {
   const e = f.e;
   Object.assign(e, { hpFloor: 0, mode: 'split', speed: 0, path: null, shield: G.splitTime + G.appear });
   f.phase = 'split'; f.t = G.splitTime;
-  setStatus(`${e.profile.label} splits into three! Find the real one`);
+  setStatus(tr('{name} splits into three! Find the real one', { name: enemyName(e.profile) }));
 }
 function vanish(f) {
   const e = f.e;

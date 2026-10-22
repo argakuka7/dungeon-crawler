@@ -9,13 +9,14 @@ import { die } from './flow.js';
 import { standUp } from './ragdoll.js';
 import { sfx } from '../audio/sfx.js';
 import { REVIVE_TIME, REVIVE_REACH, REVIVE_HP, BLEED_OUT } from '../core/downed.js';
-import { phrase, cleanBy } from '../core/chronicle.js';
+import { cleanBy } from '../core/chronicle.js';
 import { log } from './log.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 // the friends here and on their feet, who can help
 const helpers = () => online.buddies.filter(b => b.here && !b.out && b.hp > 0);
 // who can help you up, said in a few words
-export const helperName = (list = helpers()) => list.length === 1 ? list[0].name : 'A friend';
+export const helperName = (list = helpers()) => list.length === 1 ? list[0].name : tr('A friend');
 
 // the ragdoll of a fatal blow came to rest: lie there (true), or not (alone: false, die)
 // learn: network.html#help-up (see learn/README.md)
@@ -23,8 +24,8 @@ export function goDown() {
   const list = helpers();
   if (!list.length) return false;
   player.down = { t: 0, revive: 0, by: null };
-  setStatus(`Down! ${helperName(list)} can help you up`);
-  log('down', { cause: phrase(player.lastHurt?.reason) || 'knocked out', by: cleanBy(player.lastHurt?.by) }, { share: true });
+  setStatus(tr('Down! {who} can help you up', { who: helperName(list) }));
+  log('down', { cause: player.lastHurt?.reason || msg('Knocked out'), by: cleanBy(player.lastHurt?.by) }, { share: true });
   return true;
 }
 
@@ -42,7 +43,7 @@ export function tickDown(dt) {
   player.down = null; player.ragdoll = null;
   player.hp = Math.ceil(player.maxHp * REVIVE_HP);
   sfx('levelUp');
-  setStatus('Back on your feet!');
+  setStatus(tr('Back on your feet!'));
   log('up', { by: d.by }, { share: true });
   standUp(r);
 }

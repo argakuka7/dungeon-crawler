@@ -56,7 +56,7 @@ import { flipModel } from './flipmodel.js';
 import { foggeryModel } from './foggerymodel.js';
 import { makeFoggeryLook, foggeryLook, disposeFoggeryLook } from './foggeryview.js';
 import { isFigure, animateFigures, removeFigureViews } from './renewview.js';
-import { STAGE_PROFILES } from '../core/enemies.js';
+import { STAGE_PROFILES, enemyName } from '../core/enemies.js';
 import { SQUARLO_FIGHT } from '../core/squarlo.js';
 import { standingAt } from '../physics/fluid.js';
 import { surfaceY } from './surface.js';
@@ -506,7 +506,7 @@ function makeView(e, prefab) {
   const color = guardianColor(e.guardianRole);
   const hpBar = makeBar({ onTop: true, ...e.guardian && { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } }), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, { onTop: true, ...e.guardian && { color, title: guardianTitle(e.guardianRole, e.profile.label) } });
+  const label = makeLevelLabel(e.level, { onTop: true, ...e.guardian && { color, title: guardianTitle(e.guardianRole, e.profile) } });
   label.position.y = e.profile.height + .33; group.add(label);
   const mark = makeAlertMark(); mark.position.y = e.profile.height + .62; group.add(mark);
   const fx = GLOW[e.profile.fx ?? e.profile.species] ?? (e.guardian ? { light: [color, 2, 3, .5], pulse: .35 } : null), flames = [];
@@ -640,7 +640,7 @@ export function animateEnemies(list, dt, off = { x: 0, y: 0, z: 0 }) {
     v.label.visible = v.bar.visible || !e.hordeId && Math.hypot(e.x - player.x, e.z - player.z) < e.profile.aggro + 1;
     // a guardian always says what it is; any other enemy while hovered (or locked on: what a
     // click goes for, game/pointer.js), else only its level
-    if (!e.guardian) v.label.setLevel(e.level, e.hovered ? e.profile.label : null);
+    if (!e.guardian) v.label.setLevel(e.level, e.hovered ? enemyName(e.profile) : null);
     inverseYaw.setFromAxisAngle(up, -v.yaw);
     v.bar.quaternion.copy(inverseYaw).multiply(camera.quaternion);
     v.hpBar.set(e.hp / e.profile.hp);

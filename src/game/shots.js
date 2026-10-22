@@ -12,6 +12,8 @@ import { shotFx } from './juice.js';
 import { drawShots, removeShotViews } from '../render/shots.js';
 import { relay } from '../net/online.js';
 import { enchantHit } from './enchants.js';
+import { tr } from '../i18n/i18n.js';
+import { enemyName } from '../core/enemies.js';
 
 export let shots = [];
 const solid = (x, y, z) => insideSolid(x, z, y);
@@ -44,7 +46,7 @@ function strike(shot, e, share = 1) {
   const [dx, dz] = share < 1 ? [e.x - shot.x, e.z - shot.z] : [shot.vx, shot.vz];
   hitEnemy(e, hit, before, dx, dz, shot.stats.knockback ?? 1);
   enchantHit(e, hit, shot.stats);
-  if (e.hp) setStatus(`Hit Lv ${e.level} ${e.profile.label} (${e.hp}/${e.profile.hp})`);
+  if (e.hp) setStatus(tr('Hit Lv {level} {name} ({hp}/{max})', { level: e.level, name: enemyName(e.profile), hp: e.hp, max: e.profile.hp }));
 }
 
 export function updateShots(dt, enemies) {

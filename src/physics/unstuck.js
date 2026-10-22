@@ -10,6 +10,7 @@ import { player, state, setStatus } from '../game/state.js';
 import { groundAt, blockedAt, solidTop } from './collide.js';
 import { canMove } from './canmove.js';
 import { supportedPoint, respawnPoint } from './respawn.js';
+import { tr } from '../i18n/i18n.js';
 
 export const WEDGED_TIME = 0.3;   // s wedged before the body is moved
 const CORE = 0.45;     // the body's middle: a low ceiling over the head is no wall through it
@@ -83,6 +84,6 @@ export function unstick(dt) {
   const s = freeSpot(), g = groundAt(s.x, s.z, s.y + 0.05, 0);
   Object.assign(player, { x: s.x, y: s.y, z: s.z, visY: s.y, vx: 0, vy: 0, vz: 0, grounded: true, swimming: false,
     support: g.s, airTime: 0 });
-  setStatus('Unstuck');
+  setStatus(tr('Unstuck'));
   return true;
 }

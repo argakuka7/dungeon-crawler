@@ -6,11 +6,18 @@
 //   who:  null when it happened to us, { slot, name } when to a friend (or they said it)
 //   at:   Date.now() when it happened; time: seconds since the page opened
 // The words are made only when an entry is shown (describe), so the same entry reads "You
-// died" on our screen and "Anna died" on a friend's: playing together, some kinds are told to
-// the others (NEWS, net/session.js `news`) and every chat line is (`chat`).
+// died" on our screen and "Anna died" on a friend's, and each in the reader's language: what an
+// entry keeps about things is English text (a message: src/i18n/) or words (src/i18n/i18n.js
+// say), never words in one language. Playing together, some kinds are told to the others (NEWS,
+// net/session.js `news`) and every chat line is (`chat`).
 //
 // Nothing of it is saved: a reload starts a new diary.
 import { RARITY } from './gear/rarities.js';
+import { ENCHANT } from './gear/enchants.js';
+import { AFFIX } from './gear/affixes.js';
+import { formatCoins } from './inventory.js';
+import './gear/stats.js';   // (an item's words say themselves: sayAs('item'))
+import { tr, msg, say, language, cleanWords } from '../i18n/i18n.js';
 
 // learn: memory.html#diary (see learn/README.md)
 export const LOG_LIMIT = 200;   // entries kept; the oldest go first
@@ -24,17 +31,19 @@ export const KINDS = {
   down: { group: 'events' },     // { cause, by }: lying downed, a friend can help (game/downed.js)
   up: { group: 'events' },       // { by }: helped up again
   level: { group: 'events' },    // { level }
-  guardian: { group: 'events' }, // { label, level, depth, boss }: a guardian (boss: a real boss) defeated, its gate open
+  guardian: { group: 'events' }, // { label, level, depth, boss }: a guardian (boss: a real boss) defeated, its gate open;
+                                 // label: its words (core/enemies.js enemyWords)
   depth: { group: 'events' },    // { depth, place }: the first time down there in this world
-  loot: { group: 'events' },     // { name, rarity }: a rare (or better) weapon or piece of armor picked up
+  loot: { group: 'events' },     // { item, rarity }: a rare (or better) weapon or piece of armor picked up (item: its
+                                 // words, core/gear/stats.js itemWords)
   kill: { group: 'events' },     // { count, xp }: enemies defeated (merged, MERGE_TIME)
   horde: { group: 'events' },    // {}: a horde woke up
   trial: { group: 'events' },    // { name, depth, what: 'resolved' | 'failed' }: a trial room (core/trials.js) met or failed
-  trade: { group: 'events' },    // { item, price }: bought something
-  craft: { group: 'events' },    // { what: 'enchant' | 'reroll', item, name, into?, price }: the Enchanter or the
-                                 // Smith worked on a weapon (core/crafting.js): enchanted it `name`, or
-                                 // re-rolled its affix `name` (into: what it became)
-  quest: { group: 'events' },    // { title, what, giver?, xp?, coins? }: a quest taken ('taken'), its goals done
+  trade: { group: 'events' },    // { item, copper }: bought something
+  craft: { group: 'events' },    // { what: 'enchant' | 'reroll', item, enchant | affix, into?, copper }: the Enchanter
+                                 // or the Smith worked on a weapon (core/crafting.js): enchanted it (an
+                                 // enchantment's id), or re-rolled an affix (ids; into: what it became)
+  quest: { group: 'events' },    // { title, what, giver?, xp?, copper? }: a quest taken ('taken'), its goals done
                                  // ('ready'), handed in and paid ('done'), failed or started again
   party: { group: 'events' },    // { text }: someone joined or left
   world: { group: 'events' },    // { seed, name? }: a new world began (name: a saved one, back in it)
@@ -69,23 +78,31 @@ export function addEntry(log, kind, data = {}, { who = null, at = 0, time = 0 } 
 
 // --- what a death says -----------------------------------------------------------------------
 
-// A blow's reason ('Bitten by a Redback!') as part of a sentence ('bitten by a Redback')
+// A blow's reason ('Bitten by a Redback!') as part of a sentence ('bitten by a Redback'): in
+// English, where the reasons are written to stand alone; another language says it as it is.
+// The reason is kept in English (the message: src/i18n/), and said when it is shown.
 export function phrase(reason) {
   const s = String(reason ?? '').trim().replace(/[!.]+$/, '');
   if (!s) return '';
   return /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
 }
-// the enemy behind a blow (game/enemycombat.js attacker): { label, level, guardian }
+export const sayCause = cause => !cause ? '' : typeof cause !== 'string' ? say(cause)
+  : language() === 'en' ? phrase(cause) : tr(cause).trim().replace(/[!.]+$/, '');
+// the enemy behind a blow (game/enemycombat.js attacker): { words, level, guardian }; words: what
+// it is called (core/enemies.js enemyWords), in any language
 export function cleanBy(by) {
-  if (!by || typeof by !== 'object' || typeof by.label !== 'string') return null;
+  if (!by || typeof by !== 'object') return null;
+  const words = cleanWords(by.words ?? by.label);
+  if (words == null) return null;
   const level = Number.isInteger(by.level) && by.level > 0 && by.level < 1000 ? by.level : null;
-  return { label: cleanText(by.label, 40), level, guardian: !!by.guardian };
+  return { words, level, guardian: !!by.guardian };
 }
 
 // What the chronicle keeps about a death: what did it, where, with what, and when.
-// hurt: the last blow ({ reason, by }, player.lastHurt); the rest about us and the place.
+// hurt: the last blow ({ reason, by }, player.lastHurt); the rest about us and the place (place
+// and weapon: words, said when shown).
 export function deathRecord(hurt, { depth = 0, place = '', cube = '', weapon = '', level = 1, session = 0 } = {}) {
-  return { cause: phrase(hurt?.reason) || 'out of luck', by: cleanBy(hurt?.by), depth, place, cube, weapon, level,
+  return { cause: String(hurt?.reason ?? '').trim() || msg('Out of luck'), by: cleanBy(hurt?.by), depth, place, cube, weapon, level,
     session: Math.max(0, Math.round(session)) };
 }
 
@@ -94,44 +111,76 @@ export function clock(seconds) {
   const s = Math.max(0, Math.floor(seconds)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, pad = n => String(n).padStart(2, '0');
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
 }
-const where = (depth, place) => depth > 0 ? `depth ${depth}, ${place}` : place || 'the surface';
-const lv = by => by?.level ? ` (Lv ${by.level})` : '';
+// words kept in an entry: an English text (a message) or words of another kind (src/i18n/i18n.js)
+const w = x => typeof x === 'string' ? tr(x) : say(x);
+const where = (depth, place) => depth > 0 ? tr('depth {depth}, {place}', { depth, place: w(place) }) : place ? w(place) : tr('the surface');
+const lv = by => by?.level ? ` (${tr('Lv {level}', { level: by.level })})` : '';
+const enemy = by => by ? `${w(by.words)}${lv(by)}` : '';
 
-// The entry as words, from our point of view (who: null, "You") or a friend's ("Anna").
+// The entry as words, from our point of view (who: null, "You") or a friend's ("Anna"), in the
+// language of the moment.
 // learn: memory.html#diary-code (see learn/README.md)
 export function describe({ kind, data: d = {}, who }) {
-  const S = who ? who.name : 'You';
+  const name = who?.name, you = !who;
+  const by = d.by ? enemy(d.by) : '', cause = sayCause(d.cause);
   switch (kind) {
-    case 'chat': return `${S}: ${d.text}`;
-    case 'death': return `${S} died: ${d.cause}${lv(d.by)} · ${where(d.depth, d.place)}`;
-    case 'down': return who ? `${S} is down: ${d.cause}${lv(d.by)}. Stand next to them to help them up` : `You are down: ${d.cause}${lv(d.by)}`;
-    case 'up': return who ? `${S} is back on their feet` : d.by ? `${d.by} helped you up` : 'You are back on your feet';
-    case 'level': return `${S} reached level ${d.level}`;
-    case 'guardian': return `${S} defeated ${d.boss ? '' : 'the '}${d.label}${lv(d)} on depth ${d.depth}: its gate is open`;
-    case 'depth': return `${S} reached depth ${d.depth}: ${d.place}`;
-    case 'loot': return `${S} found ${d.name}${RARITY[d.rarity] ? ` (${RARITY[d.rarity].name})` : ''}`;
-    case 'kill': return `Defeated ${d.count} ${d.count === 1 ? 'enemy' : 'enemies'} · +${d.xp} XP`;
-    case 'horde': return 'A horde woke up!';
-    case 'trial': return d.what === 'failed' ? `${S} failed ${d.name} on depth ${d.depth}` : `${S} mastered ${d.name} on depth ${d.depth}: the way on is open`;
-    case 'trade': return `Bought ${d.item} for ${d.price}`;
-    case 'craft': return d.what === 'enchant' ? `The Enchanter made ${d.item} ${d.name} for ${d.price}`
-      : `The Smith re-rolled ${d.item}'s ${d.name}${d.into && d.into !== d.name ? ` into ${d.into}` : ''} for ${d.price}`;
-    case 'quest': return { taken: `Quest taken: ${d.title}`, ready: `Quest done: ${d.title} · back to ${d.giver}`,
-      done: `Quest complete: ${d.title}${d.xp ? ` · +${d.xp} XP` : ''}${d.coins ? ` · ${d.coins}` : ''}`, failed: `Quest failed: ${d.title}`,
-      restarted: `Quest started again: ${d.title}` }[d.what] ?? `Quest: ${d.title}`;
-    case 'world': return d.name ? `${d.name} · seed ${d.seed}` : `A new world · seed ${d.seed}`;
-    default: return String(d.text ?? '');
+    case 'chat': return `${you ? tr('You') : name}: ${d.text}`;
+    case 'death': return you ? tr('You died: {cause} · {where}', { cause: cause + lv(d.by), where: where(d.depth, d.place) })
+      : tr('{name} died: {cause} · {where}', { name, cause: cause + lv(d.by), where: where(d.depth, d.place) });
+    case 'down': return you ? tr('You are down: {cause}', { cause: cause + lv(d.by) })
+      : tr('{name} is down: {cause}. Stand next to them to help them up', { name, cause: cause + lv(d.by) });
+    case 'up': return !you ? tr('{name} is back on their feet', { name }) : d.by ? tr('{name} helped you up', { name: d.by }) : tr('You are back on your feet');
+    case 'level': return you ? tr('You reached level {level}', { level: d.level }) : tr('{name} reached level {level}', { name, level: d.level });
+    case 'guardian': {
+      const p = { name, who: d.label, level: lv(d), depth: d.depth };
+      return you ? tr('You defeated {who:the}{level} on depth {depth}: its gate is open', p) : tr('{name} defeated {who:the}{level} on depth {depth}: its gate is open', p);
+    }
+    case 'depth': return you ? tr('You reached depth {depth}: {place}', { depth: d.depth, place: w(d.place) })
+      : tr('{name} reached depth {depth}: {place}', { name, depth: d.depth, place: w(d.place) });
+    case 'loot': {
+      const item = d.item ? say(d.item) : String(d.name ?? ''), r = RARITY[d.rarity] ? ` (${tr(RARITY[d.rarity].name)})` : '';
+      return you ? tr('You found {item}', { item }) + r : tr('{name} found {item}', { name, item }) + r;
+    }
+    case 'kill': return tr('{count, plural, one {Defeated # enemy} other {Defeated # enemies}} · +{xp} XP', { count: d.count, xp: d.xp });
+    case 'horde': return tr('A horde woke up!');
+    case 'trial': {
+      const p = { name, trial: w(d.name), depth: d.depth };
+      if (d.what === 'failed') return you ? tr('You failed {trial} on depth {depth}', p) : tr('{name} failed {trial} on depth {depth}', p);
+      return you ? tr('You mastered {trial} on depth {depth}: the way on is open', p) : tr('{name} mastered {trial} on depth {depth}: the way on is open', p);
+    }
+    case 'trade': return tr('Bought {item} for {price}', { item: w(d.item), price: formatCoins(d.copper ?? 0) });
+    case 'craft': {
+      const item = w(d.item), price = formatCoins(d.copper ?? 0);
+      if (d.what === 'enchant') return tr('The Enchanter made {item} {enchant} for {price}', { item, enchant: tr(ENCHANT[d.enchant]?.name ?? ''), price });
+      const affix = tr(AFFIX[d.affix]?.name ?? ''), into = tr(AFFIX[d.into]?.name ?? '');
+      return d.into && d.into !== d.affix ? tr("The Smith re-rolled {item}'s {affix} into {into} for {price}", { item, affix, into, price })
+        : tr("The Smith re-rolled {item}'s {affix} for {price}", { item, affix, price });
+    }
+    case 'quest': {
+      const title = w(d.title);
+      switch (d.what) {
+        case 'taken': return tr('Quest taken: {title}', { title });
+        case 'ready': return tr('Quest done: {title} · back to {giver}', { title, giver: w(d.giver) });
+        case 'done': return [tr('Quest complete: {title}', { title }), ...d.xp ? [tr('+{xp} XP', { xp: d.xp })] : [],
+          ...d.copper ? [formatCoins(d.copper)] : []].join(' · ');
+        case 'failed': return tr('Quest failed: {title}', { title });
+        case 'restarted': return tr('Quest started again: {title}', { title });
+        default: return tr('Quest: {title}', { title });
+      }
+    }
+    case 'world': return d.name ? tr('{name} · seed {seed}', { name: d.name, seed: String(d.seed) }) : tr('A new world · seed {seed}', { seed: String(d.seed) });
+    default: return w(d.text ?? '');
   }
 }
 // the death record in full, line by line (the console shows it when the line is clicked)
 export function details({ kind, data: d }) {
   if (kind !== 'death') return [];
   return [
-    `Killed by: ${d.by ? `${d.by.label}${lv(d.by)}` : d.cause}`,
-    `Where: ${where(d.depth, d.place)}${d.cube ? ` · cube ${d.cube}` : ''}`,
-    ...d.weapon ? [`Weapon: ${d.weapon}`] : [],
-    `Level: ${d.level}`,
-    `After: ${clock(d.session)} of playing`,
+    tr('Killed by: {what}', { what: d.by ? enemy(d.by) : sayCause(d.cause) }),
+    d.cube ? tr('Where: {where} · cube {cube}', { where: where(d.depth, d.place), cube: d.cube }) : tr('Where: {where}', { where: where(d.depth, d.place) }),
+    ...d.weapon ? [tr('Weapon: {weapon}', { weapon: w(d.weapon) })] : [],
+    tr('Level: {level}', { level: d.level }),
+    tr('After: {time} of playing', { time: clock(d.session) }),
   ];
 }
 
@@ -143,28 +192,30 @@ const int = (x, lo, hi) => Number.isInteger(x) && x >= lo && x <= hi ? x : null;
 
 // A friend's news (net/session.js `news`) as an entry's data we can show, or null: only the
 // NEWS kinds, only the fields they have, of the right kinds and short.
+// Words (a cause, a place, an item) only of the shapes say() knows (src/i18n/i18n.js cleanWords).
 export function cleanNews(kind, d) {
   if (!NEWS.has(kind) || !d || typeof d !== 'object') return null;
   const text = (x, max = 60) => typeof x === 'string' ? cleanText(x, max) : '';
+  const words = (x, fallback = '') => cleanWords(x) ?? fallback;
   switch (kind) {
     case 'death': {
       const depth = int(d.depth, 0, 999), level = int(d.level, 1, 999);
       if (depth === null || level === null) return null;
-      return { cause: text(d.cause) || 'out of luck', by: cleanBy(d.by), depth, place: text(d.place, 30), cube: text(d.cube, 30),
-        weapon: text(d.weapon), level, session: int(d.session, 0, 1e7) ?? 0 };
+      return { cause: words(d.cause) || msg('Out of luck'), by: cleanBy(d.by), depth, place: words(d.place), cube: text(d.cube, 30),
+        weapon: words(d.weapon), level, session: int(d.session, 0, 1e7) ?? 0 };
     }
-    case 'down': return { cause: text(d.cause) || 'knocked out', by: cleanBy(d.by) };
+    case 'down': return { cause: words(d.cause) || msg('Knocked out'), by: cleanBy(d.by) };
     case 'up': return { by: text(d.by, 16) || null };
     case 'level': { const level = int(d.level, 1, 999); return level === null ? null : { level }; }
     case 'guardian': {
-      const depth = int(d.depth, 0, 999);
-      return depth === null || !text(d.label) ? null : { label: text(d.label), level: int(d.level, 1, 999), depth, boss: !!d.boss };
+      const depth = int(d.depth, 0, 999), label = words(d.label, null);
+      return depth === null || !label ? null : { label, level: int(d.level, 1, 999), depth, boss: !!d.boss };
     }
-    case 'depth': { const depth = int(d.depth, 1, 999); return depth === null ? null : { depth, place: text(d.place, 30) }; }
-    case 'loot': return text(d.name) && Object.hasOwn(RARITY, d.rarity) ? { name: text(d.name), rarity: d.rarity } : null;
+    case 'depth': { const depth = int(d.depth, 1, 999); return depth === null ? null : { depth, place: words(d.place) }; }
+    case 'loot': { const item = words(d.item, null); return item && Object.hasOwn(RARITY, d.rarity) ? { item, rarity: d.rarity } : null; }
     case 'trial': {
-      const depth = int(d.depth, 0, 999);
-      return depth === null || !text(d.name) ? null : { name: text(d.name, 40), depth, what: d.what === 'failed' ? 'failed' : 'resolved' };
+      const depth = int(d.depth, 0, 999), name = words(d.name, null);
+      return depth === null || !name ? null : { name, depth, what: d.what === 'failed' ? 'failed' : 'resolved' };
     }
   }
   return null;

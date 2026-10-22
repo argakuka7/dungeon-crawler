@@ -37,7 +37,7 @@ function castBlocked() {
   const p = player;
   if (!state.map || state.transitioning || !state.arrival) return tr('Not now');
   if (state.fallFrom) return tr('Not while falling');
-  if (sealedIn()) return SEALED_MESSAGE;   // a trial room while its event runs (game/trials.js)
+  if (sealedIn()) return tr(SEALED_MESSAGE);   // a trial room while its event runs (game/trials.js)
   if (p.hp <= 0 || p.ragdoll || p.getUp || p.down) return tr('Get up first');
   if (p.stun > 0 || p.sword.active) return tr('Finish your current action first');
   return null;

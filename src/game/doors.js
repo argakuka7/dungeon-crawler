@@ -10,6 +10,7 @@ import { enterCube } from './flow.js';
 import { cancelSword } from './sword.js';
 import { cancelCast } from './townportal.js';
 import { clearMouseInput } from './orders.js';
+import { tr } from '../i18n/i18n.js';
 
 const FADE_MS = 380;
 
@@ -41,7 +42,7 @@ export function takeDoor(d) {
     if (state.cubes !== cubes) return;
     state.transitioning = false;
     fadeIn();
-    setStatus('The door is stuck');
+    setStatus(tr('The door is stuck'));
   }), FADE_MS);
   return true;
 }

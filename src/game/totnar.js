@@ -13,7 +13,7 @@
 // game/projectiles.js), and takes his skulls off. While a skull bursts off (mode 'split') the AI
 // leaves him be.
 import { state, setStatus } from './state.js';
-import { TOTNAR, ENEMY_KINDS, makeEnemy } from '../core/enemies.js';
+import { TOTNAR, ENEMY_KINDS, makeEnemy, enemyName } from '../core/enemies.js';
 import { TOTNAR_FIGHT as G, stageFloor, summonCount, spell, barred } from '../core/totnar.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -22,6 +22,7 @@ import { groundY } from '../physics/enemynav.js';
 import { removeEnemyViews } from '../render/enemies.js';
 import { living, engage, fitting, leave, minionFloors, minion, sweep } from './bossfight.js';
 import { summonFx } from './juice.js';
+import { tr } from '../i18n/i18n.js';
 
 export let totnars = [];
 let fights = [];
@@ -83,7 +84,7 @@ function shed(f) {
   Object.assign(e, { hpFloor: stageFloor(e.profile.hp, e.stage), mode: 'split', speed: 0, path: null, shield: G.shedTime + 0.3, dark: 0 });
   f.shed = G.shedTime; f.cool = G.shedTime + G.firstSummon; f.gloom = G.shedTime + G.shedLight;
   if (e.stage === 3) for (const m of f.minions) if (m.type === 'snapskull') leave(m, G.leave);   // (no more thrown skulls)
-  setStatus(e.stage === 2 ? `${e.profile.label} loses a skull! Now he rolls` : `${e.profile.label} loses another skull! A storm gathers`);
+  setStatus(e.stage === 2 ? tr('{name} loses a skull! Now he rolls', { name: enemyName(e.profile) }) : tr('{name} loses another skull! A storm gathers', { name: enemyName(e.profile) }));
 }
 // the gloom's hit frame: dark if it was light, light if it was dark, for a while
 function gloom(f) {

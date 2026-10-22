@@ -15,6 +15,7 @@ import { takeTownPortal } from './townportal.js';
 import { checkDoors } from './doors.js';
 import { sealedIn } from './trials.js';
 import { SEALED_MESSAGE } from '../core/trials.js';
+import { tr } from '../i18n/i18n.js';
 
 export const PORTAL_CHARGE = 1.5;
 export const portalChargeDuration = kind => kind === 'town' ? TOWN_PORTAL_CHARGE : kind === 'down' ? PORTAL_CHARGE / 2 : PORTAL_CHARGE;
@@ -64,8 +65,8 @@ export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge
   for (let d = 0; d < 4; d++) {
     if (!isFaceOpen(state.openedFaces, state.cubeKey, d) || state.boundaryLock === d || !approachingFace(player, d, dx, dz)) continue;
     if (railedAcross(d)) continue;
-    if (sealed) { setStatus(SEALED_MESSAGE); continue; }
-    if (portalLocked(state.map, state.run, { dir: d })) { setStatus(lockMessage(state.map, d, guardianKind(state.map)?.label)); continue; }
+    if (sealed) { setStatus(tr(SEALED_MESSAGE)); continue; }
+    if (portalLocked(state.map, state.run, { dir: d })) { setStatus(lockMessage(state.map, d, guardianKind(state.map))); continue; }
     if (fightHolds(d, steer)) continue;
     startTravel(state.map.portals.find(q => q.kind === 'side' && q.dir === d) || { kind: 'side', dir: d });
     return true;
@@ -76,8 +77,8 @@ export function checkPortals(dx = 0, dz = 0, dt = 0, charge = state.portalCharge
     const at = inside(q);
     if (state.portalLock === q.id) { if (!at) state.portalLock = 0; continue; }
     if (!at) continue;
-    if (sealed) { setStatus(SEALED_MESSAGE); continue; }
-    if (portalLocked(state.map, state.run, q)) { setStatus(lockMessage(state.map, q.dir, guardianKind(state.map)?.label)); continue; }
+    if (sealed) { setStatus(tr(SEALED_MESSAGE)); continue; }
+    if (portalLocked(state.map, state.run, q)) { setStatus(lockMessage(state.map, q.dir, guardianKind(state.map))); continue; }
     if (q.kind === 'side' && fightHolds(q.dir, steer)) continue;
     if (q.kind === 'up' || q.kind === 'down') {
       const c = charge?.key === state.cubeKey && charge.id === q.id ? charge : { key: state.cubeKey, id: q.id, t: 0 };

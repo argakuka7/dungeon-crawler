@@ -15,12 +15,13 @@
 // 'tide') is announced by every game as he starts. Squarlo's jet is a gust (kind 'jet').
 import { player, setStatus } from './state.js';
 import { party, alive } from './party.js';
-import { attackOf, blowOf } from '../core/enemies.js';
+import { attackOf, blowOf, enemyName } from '../core/enemies.js';
 import { muzzleAt } from '../core/beams.js';
 import { inGust, gustDir } from '../core/gusts.js';
 import { hitBody, attacker } from './enemycombat.js';
 import { clearLine } from '../physics/enemynav.js';
 import { stormFx, felledFx, tideCallFx } from './juice.js';
+import { tr } from '../i18n/i18n.js';
 
 export function updateGusts(list, dt, hurt = true) {
   player.pull = null;
@@ -67,10 +68,10 @@ function breathe(e, a, g, t0, t, dt) {
 // a grab that caught nothing: down he goes (`thud`); and what every game says about it
 function felled(e, x) {
   if (x.thud) felledFx(e);
-  if (x.say && Math.hypot(e.x - player.x, e.z - player.z) < 14) setStatus(`${e.profile.label} ${x.say}`);
+  if (x.say && Math.hypot(e.x - player.x, e.z - player.z) < 14) setStatus(tr(x.say, { name: enemyName(e.profile) }));
 }
 // Squarlo starts calling the tide
 function calls(e) {
   tideCallFx(e);
-  if (Math.hypot(e.x - player.x, e.z - player.z) < 24) setStatus(`${e.profile.label} calls the tide! Get up a hill!`);
+  if (Math.hypot(e.x - player.x, e.z - player.z) < 24) setStatus(tr('{name} calls the tide! Get up a hill!', { name: enemyName(e.profile) }));
 }

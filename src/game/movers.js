@@ -13,6 +13,7 @@ import { setMovers } from '../physics/collide.js';
 import { platformsAt, PLATFORMS } from '../core/foggery.js';
 import { LH } from '../core/constants.js';
 import { sfx } from '../audio/sfx.js';
+import { tr } from '../i18n/i18n.js';
 
 const RISE = 1.8, DEPTH = 1.6;   // s they take to rise, from how far under their height (units)
 const SINK = 1.5, DRAINED = 1;   // how fast they float down (units/s); how far the lava fell from its highest (levels): the fight is over
@@ -38,7 +39,7 @@ export function updateMovers(dt) {
       dx: 0, dz: 0, cs: Array(4).fill(m.top), split: 0, c: -2, x: -1, z: -1, id: -1, fluid: 0, layer: 0, top: m.top / LH, bottom: (m.top - m.thick) / LH,
       link: [null, null, null, null] }));
     setMovers(list);
-    setStatus('Platforms rise out of the lava!');
+    setStatus(tr('Platforms rise out of the lava!'));
     sfx('rumble', { at: { x: 8, y: m.top, z: 8 }, pitch: 0.8 });
   }
   // the lava draining away: the fight is over, they float down and under the floor

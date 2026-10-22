@@ -60,7 +60,7 @@ test('his arena holds him alone, with braziers lit round it, and loads his minio
 test('he is as strong as a descent guardian; his attacks are telegraphed', () => {
   const t = GUARDIAN_TIERS.descent;
   assert.ok(TOTNAR.hp >= t.hp); assert.equal(TOTNAR.xp, t.xp); assert.ok(TOTNAR.poise >= t.poise);
-  assert.equal(ENEMY_KINDS.totnar, TOTNAR); assert.equal(guardianTitle('descent', TOTNAR.label), '♛ Totnar');
+  assert.equal(ENEMY_KINDS.totnar, TOTNAR); assert.equal(guardianTitle('descent', TOTNAR), '♛ Totnar');
   assert.deepEqual(TOTNAR.attacks.map(a => a.name), ['throw', 'gloom', 'spiders', 'roll', 'storm', 'stunders']);
   for (const a of TOTNAR.attacks) assert.ok(fireAt(a) >= 0.35 && a.attackTime > a.hitAt, a.name);
   const roll = named('roll');

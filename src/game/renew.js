@@ -16,7 +16,7 @@
 // Movement and attacks are the shared enemy AI's (game/enemyai.js); the fight chains his blows,
 // starts his dodges, carries out his casts at their hit frames and runs the tape.
 import { state, setStatus, player } from './state.js';
-import { RENEW, STAGE_PROFILES, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf, lungeAt } from '../core/enemies.js';
+import { RENEW, STAGE_PROFILES, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf, lungeAt, enemyName } from '../core/enemies.js';
 import { RENEW_FIGHT as G, PHASES, risenAt, newTape, record, spanAt, bodyRow, bodyAt, rewindTime, rewoundAt, summonCount, barred } from '../core/renew.js';
 import { muzzleAt } from '../core/beams.js';
 import { damageEnemy } from '../core/combat.js';
@@ -29,6 +29,7 @@ import { summonFx, cameraKick } from './juice.js';
 import { clearProjectiles } from './projectiles.js';
 import { glow, soft, emit, rand } from '../render/particles.js';
 import { sfx } from '../audio/sfx.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 export let renews = [];
 let fights = [];
@@ -73,7 +74,7 @@ function run(f, dt) {
   if (!e.on) {
     if (!(e.mode === 'chase' || e.mode === 'attack' || e.hp < e.profile.hp)) return;
     e.on = true;   // the fight starts, and the room's clock with it
-    setStatus(`${e.profile.label} draws his sword`);
+    setStatus(tr('{name} draws his sword', { name: enemyName(e.profile) }));
   }
   if (e.rising) { e.clock += dt; e.t += dt; rise(f, dt); return; }   // (the echoes play on meanwhile)
   // the room's time runs on, and the tape records it
@@ -170,7 +171,7 @@ function windup(f) {
   const e = f.e;
   Object.assign(e, { mode: 'split', speed: 0, path: null, t: 0, shield: G.windup + 0.5, attack: 0 });
   f.windup = G.windup;
-  setStatus(e.stage < PHASES ? `${e.profile.label}: "Not yet." He turns back time!` : `${e.profile.label}: "One more time..."`);
+  setStatus(e.stage < PHASES ? tr('{name}: "Not yet." He turns back time!', { name: enemyName(e.profile) }) : tr('{name}: "One more time..."', { name: enemyName(e.profile) }));
   sfx('clockwind', { at: e });
 }
 function startRewind(f) {
@@ -222,9 +223,10 @@ function endRewind(f) {
   e.barred = barred({ stage: e.stage });
   f.rewind = null; f.tape = newTape(); f.next = 0; f.cool = G.firstSummon; f.combo = 0; f.dodge = 1; f.leap = 1;
   engage(e);
-  setStatus([null, null, `${e.profile.label} takes up a bow. Your echo does again what you did!`,
-    `${e.profile.label} takes up a morning star. Two of your echoes walk again!`,
-    `${e.profile.label} takes up a morning star with two balls! Three of your echoes walk again!`][e.stage]);
+  const said = [null, null, msg('{name} takes up a bow. Your echo does again what you did!'),
+    msg('{name} takes up a morning star. Two of your echoes walk again!'),
+    msg('{name} takes up a morning star with two balls! Three of your echoes walk again!')][e.stage];
+  setStatus(said ? tr(said, { name: enemyName(e.profile) }) : null);
   sfx('rewound', { at: e });
 }
 
@@ -238,7 +240,7 @@ function ascend(f) {
   Object.assign(e, { mode: 'split', t: 0, speed: 0, path: null, attack: 0, shield: 99, rewinding: false, rewound: false, clock: 0,
     hpFloor: 0, rising: { t: 0, from: e.y, u: 0 } });
   f.rewind = null;
-  setStatus(`${e.profile.label} has no more time. He rises away into the sky...`);
+  setStatus(tr('{name} has no more time. He rises away into the sky...', { name: enemyName(e.profile) }));
   sfx('portal', { at: e, pitch: 0.7 });
 }
 function rise(f, dt) {
@@ -249,7 +251,7 @@ function rise(f, dt) {
   e.lootFrom = { x: e.x, y: e.y, z: e.z };
   Object.assign(e, { y: r.from, rising: null, ascended: true, shield: 0 });
   damageEnemy(e, e.hp);
-  setStatus(`${e.profile.label} is gone, back into time. What he had falls out of the sky`);
+  setStatus(tr('{name} is gone, back into time. What he had falls out of the sky', { name: enemyName(e.profile) }));
   sfx('dawn', { at: e });
 }
 

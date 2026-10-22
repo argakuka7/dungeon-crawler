@@ -8,7 +8,7 @@ import { playerHurtFx, burnHurtFx, poisonHurtFx, zappedFx, squashedFx } from './
 import { knockDown } from './ragdoll.js';
 import { canMove } from '../physics/canmove.js';
 import { walkable, stepEnemy } from '../physics/enemynav.js';
-import { attackOf, blowOf } from '../core/enemies.js';
+import { attackOf, blowOf, enemyWords } from '../core/enemies.js';
 import { ignite, burnStep, burntOut, chillFrom, chillStep } from '../core/projectiles.js';
 import { afflict, statusStep, statusOver } from '../core/status.js';
 import { immuneTo } from '../core/potions.js';
@@ -16,16 +16,17 @@ import { absent, airborne } from '../core/enemies.js';
 import { SIT_IMPACT } from '../core/constants.js';
 import { grabPlayer } from './grab.js';
 import { guardBlow, wornDefense } from './armor.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 export const resetEnemyCombat = () => { player.burning = null; player.chilled = null; player.toxic = null; player.gust = null; player.pull = null; player.shocked = 0; player.dazed = 0; player.flat = 0; player.held = null; };
 // who struck a blow, for the chronicle when it kills us (game/log.js logDeath); it goes along
 // with the blow (core/enemies.js blowOf), over the network too
-export const attacker = e => ({ label: e.profile.label, level: e.level, guardian: !!e.guardian });
+export const attacker = e => ({ words: enemyWords(e.profile), level: e.level, guardian: !!e.guardian });
 // poison the player (a venomous bite, acid; core/status.js), unless an antidote keeps it off;
 // by: the enemy that did it (attacker)
 export function poisonPlayer(toxin, reason, by = null) {
   if (!toxin || immuneTo(player, 'toxic') || player.hp <= 0) return false;
-  if (!player.toxic) setStatus('Poisoned! An antidote cures it');
+  if (!player.toxic) setStatus(tr('Poisoned! An antidote cures it'));
   player.toxic = { ...afflict(toxin, reason), by };
   return true;
 }
@@ -54,13 +55,13 @@ export function hitPlayer(blow, fx, fz, nx, nz) {
   const by = blow.by ?? null;
   if (blow.burn && p.hp > blow.damage) { p.burning = { ...ignite(blow.burn, blow.reason), by }; p.chilled = null; }
   if (blow.chill && p.hp > blow.damage) { p.chilled = chillFrom(blow.chill); p.burning = null; }
-  if (blow.toxin && p.hp > blow.damage) poisonPlayer(blow.toxin, (blow.reason ?? 'Bitten!').replace(/^Bitten/, 'Poisoned'), by);
+  if (blow.toxin && p.hp > blow.damage) poisonPlayer(blow.toxin, (blow.reason ?? msg('Bitten!')).replace(/^Bitten/, 'Poisoned'), by);   // (src/i18n/sources.js has these)
   // only a heavy blow or a deadly one knocks you over; the rest are a short flinch and a shove
   if (blow.knockDown || p.hp <= blow.damage) {
     knockDown({ damage: blow.damage, hop: blow.hop, reason: blow.reason, by }); return;
   }
   if (blow.damage > 0) p.lastHurt = { reason: blow.reason, by };
-  takeDamage(p, blow.damage, state.time); flash(); setStatus(blow.reason);
+  takeDamage(p, blow.damage, state.time); flash(); setStatus(tr(blow.reason));
   p.vx *= 0.6; p.vz *= 0.6; p.stun = 0.15;
   // a fire geyser (Foggery's) pops the player up into the air
   if (blow.pop > 0 && blow.pop < 12 && !p.climb) { p.vy = blow.pop; p.grounded = false; }
@@ -113,7 +114,7 @@ export function updateToxic(dt) {
   const damage = statusStep(d, dt) * (1 - wornDefense().poisonResist / 100);   // (armor of the Iron Stomach)
   if (damage > 0) {
     poisonHurtFx(Math.min(damage, p.hp));
-    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: d.reason || 'Poisoned', by: d.by });
+    if (!p.ragdoll && p.hp <= damage) knockDown({ damage, reason: d.reason || msg('Poisoned'), by: d.by });
     else takeDamage(p, Math.min(damage, p.hp), state.time);
   }
   if (statusOver(d)) p.toxic = null;

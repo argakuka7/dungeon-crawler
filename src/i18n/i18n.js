@@ -16,7 +16,7 @@
 //   {name:form}                    a noun's grammar form, by language (src/i18n/<code>/grammar.js):
 //                                  English 'the', 'a', 'pl', 'it', 'this' ..., German 'den', 'einem',
 //                                  'seine', 'ihn' ... (the case and the article, said by the
-//                                  masculine word)
+//                                  masculine word); with a capital ('The', 'Den') it starts with one
 //   {n, plural, one {...} other {...}}   by the language's plural rules; # is the number, =0 {...} exact
 //   {x, select, a {...} other {...}}     by a text, or a noun's gender ('m', 'f', 'n', 'pl')
 //
@@ -104,7 +104,7 @@ export function tr(source, params) {
     const e = textOf(entryOf(source));
     if (e != null) text = e; else missing.add(source);
   }
-  return format(compile(text), params ?? {});
+  try { return format(compile(text), params ?? {}); } catch { return String(source); }   // (words from elsewhere)
 }
 // the same English text meaning different things: tc('toggle', 'Off'); the catalogs have it as
 // 'toggle|Off'
@@ -125,10 +125,33 @@ export const msg = source => source;
 export const phrase = (source, params) => (params ? { t: source, p: params } : { t: source });
 export const noun = (source, flags) => ({ noun: source, ...flags });
 export const person = (name, g) => ({ name, ...(g && { g }) });
-// Other kinds of words say themselves: sayAs('item', fn) for { item: ... } (core/gear/stats.js:
-// an item's name, generated or not).
-const sayers = new Map();
-export function sayAs(key, fn) { sayers.set(key, fn); }
+// Other kinds of words say themselves: sayAs('item', fn, clean) for { item: ... } (core/gear/stats.js:
+// an item's name, generated or not); clean(value): the value from elsewhere made safe, or null.
+const sayers = new Map(), cleaners = new Map();
+export function sayAs(key, fn, clean = null) { sayers.set(key, fn); if (clean) cleaners.set(key, clean); }
+
+// Words from elsewhere (a friend's news): only plain data of the shapes say() knows, short, or null.
+const short = (s, max) => String(s).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, max);
+const GENDERS = ['m', 'f', 'n', 'pl'];
+export function cleanWords(x, depth = 0) {
+  if (typeof x === 'string') return short(x, 200);
+  if (typeof x === 'number') return Number.isFinite(x) ? x : null;
+  if (!x || typeof x !== 'object' || Array.isArray(x) || depth > 4) return null;
+  const flags = { ...(x.proper === true && { proper: true }), ...(x.proper === false && { proper: false }), ...(x.caps === true && { caps: true }),
+    ...(GENDERS.includes(x.g) && { g: x.g }) };
+  if (typeof x.t === 'string') {
+    const p = {};
+    for (const [k, v] of Object.entries(x.p && typeof x.p === 'object' ? x.p : {}).slice(0, 8)) {
+      const c = /^\w{1,20}$/.test(k) ? cleanWords(v, depth + 1) : null;
+      if (c != null) p[k] = c;
+    }
+    return { t: short(x.t, 300), ...(Object.keys(p).length && { p }), ...(typeof x.of === 'string' && /^\w{1,20}$/.test(x.of) && { of: x.of }), ...flags };
+  }
+  if (typeof x.noun === 'string') return { noun: short(x.noun, 100), ...(typeof x.ctx === 'string' && { ctx: short(x.ctx, 20) }), ...flags };
+  if (typeof x.name === 'string') return { name: short(x.name, 40), ...flags };
+  for (const [key, clean] of cleaners) if (x[key] !== undefined) { const c = clean(x[key]); return c == null ? null : { [key]: c }; }
+  return null;
+}
 export function say(x) {
   if (x == null) return '';
   if (typeof x === 'number') return num(x);
@@ -149,7 +172,12 @@ export function nounOf(x) {
   if (x == null) return { word: '', g: 'n', proper: true };
   if (typeof x === 'string') return { word: x, g: 'n', proper: true };
   if (typeof x.name === 'string') return { word: x.name, g: x.g ?? 'n', proper: true };
-  if (typeof x.t === 'string') return { word: say(x), g: x.g ?? 'n', proper: true };
+  // a phrase as a noun: 'Guardian {kind}' is of its kind's gender (of: 'kind'), and takes an
+  // article unless it is a name (proper)
+  if (typeof x.t === 'string') {
+    const g = x.of ? nounOf(x.p?.[x.of]).g : x.g ?? 'n';
+    return { word: say(x), g, proper: x.proper ?? !x.of, caps: !!x.caps };
+  }
   if (typeof x.noun !== 'string') return { word: say(x), g: 'n', proper: true };
   const source = x.noun, flags = { proper: !!x.proper, caps: !!x.caps };
   if (!locale) { const en = EN_NOUNS[source]; return { word: source, g: 'n', ...en, ...flags }; }
@@ -161,10 +189,16 @@ export function nounOf(x) {
 export const nounGender = x => nounOf(x).g;
 
 const grammar = () => locale?.grammar ?? EN_GRAMMAR;
-// a noun's form ('the', 'den' ...); no form: its word
+// a noun's form ('the', 'den' ...); no form: its word. A form written with a capital ('The', 'Den')
+// starts with one: for the start of a sentence.
 export function form(x, name) {
   const n = nounOf(x);
-  return name ? grammar().form(n, name) : n.word;
+  if (!name) return n.word;
+  if (name[0] === name[0].toUpperCase() && name[0] !== name[0].toLowerCase()) {
+    const s = grammar().form(n, name[0].toLowerCase() + name.slice(1));
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return grammar().form(n, name);
 }
 
 // --- numbers -------------------------------------------------------------------------------------

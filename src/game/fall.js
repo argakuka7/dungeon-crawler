@@ -10,6 +10,7 @@ import { player, state } from './state.js';
 import { startTravel } from './travel.js';
 import { arrivalPoint } from './flow.js';
 import { knockDown } from './ragdoll.js';
+import { msg } from '../i18n/i18n.js';
 
 // fell through the void: into the cube below, if there is one there (else: false)
 export function startFall() {
@@ -27,7 +28,7 @@ export function startFall() {
 
 // the fall is over (landed, or out of the world): full damage, then back where it started
 export function landFall() {
-  knockDown({ damage: FALL_DAMAGE, reason: 'Fell through the void!', respawn: 'safe' });
+  knockDown({ damage: FALL_DAMAGE, reason: msg('Fell through the void!'), respawn: 'safe' });
 }
 
 // a spot that does not lead on (a sealed pit, lava, acid): the nearest top floor that does

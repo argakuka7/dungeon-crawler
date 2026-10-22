@@ -2,7 +2,8 @@
 // pronoun for it. A noun in the catalog says what it needs:
 //   'Lantern': { text: 'Laterne', g: 'f', pl: 'Laternen' }
 //   g: 'm', 'f', 'n' or 'pl' (only plural: 'Feuerwerk' is n, 'Mehlsäcke' pl); pl: the plural
-//   (default: the word); dat: the dative plural, where it is not pl + n
+//   (default: the word); dat: the dative plural, where it is not pl + n; obl: a weak noun's
+//   singular outside the nominative ('Oktonaut': 'den Oktonauten', 'einem Oktonauten')
 //
 // A form is said by its masculine word, which names the case:
 //   der den dem des           the definite article (nominative, accusative, dative, genitive)
@@ -38,7 +39,7 @@ for (const w of EIN_WORDS) for (const [end, c] of Object.entries(ENDING_CASE)) {
 const plural = n => (n.g === 'pl' ? n.word : n.pl ?? n.word);
 // the noun itself in a case: only the dative plural changes ('den Kindern')
 function word(n, c) {
-  if (n.g !== 'pl') return n.word;
+  if (n.g !== 'pl') return c > 0 && n.obl ? n.obl : n.word;
   if (c !== 2) return plural(n);
   return n.dat ?? (/[ns]$/.test(plural(n)) ? plural(n) : `${plural(n)}n`);
 }

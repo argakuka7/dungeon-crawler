@@ -4,7 +4,8 @@
 // comes here with a `who`.
 import { createLog, addEntry, clearLog, deathRecord } from '../core/chronicle.js';
 import { equippedItem } from '../core/inventory.js';
-import { displayName } from '../core/gear/stats.js';
+import { itemWords } from '../core/gear/stats.js';
+import { msg, phrase, noun } from '../i18n/i18n.js';
 import { themeOf } from '../themes/depth.js';
 import { relay } from '../net/online.js';
 import { player, state } from './state.js';
@@ -22,16 +23,17 @@ export function log(kind, data = {}, { who = null, share = false } = {}) {
 export const note = (text, kind = 'system', extra = {}) => log(kind, { text, ...extra });
 export const clearChronicle = () => clearLog(chronicle);
 
-// the name of the place a cube is in
-export const placeOf = map => !map ? '' : map.town ? 'Town' : map.merchantCamp ? 'Merchant camp'
-  : map.interior ? `inside the ${map.interior.building}` : themeOf(map).name;
+// the name of the place a cube is in, as words (said in the reader's language: core/chronicle.js)
+const BUILDINGS = { town_inn_a: msg('Inn'), town_blacksmith_a: msg('Smithy'), town_pet_shop_a: msg('Pet shop'), town_stable_a: msg('Stable') };
+export const placeOf = map => !map ? '' : map.town ? msg('Town') : map.merchantCamp ? msg('Merchant camp')
+  : map.interior ? phrase('inside {building:the}', { building: noun(BUILDINGS[map.interior.building] ?? msg('House')) }) : themeOf(map).name;
 
 // We died (game/flow.js die): what did it is the last blow that hurt us (player.lastHurt,
 // game/enemycombat.js, game/ragdoll.js)
 export function logDeath() {
   const map = state.map, weapon = equippedItem(player.inventory);
   log('death', deathRecord(player.lastHurt, { depth: map?.depth ?? 0, place: placeOf(map), cube: state.cubeKey,
-    weapon: weapon ? displayName(weapon) : '', level: player.level, session: performance.now() / 1000 }), { share: true });
+    weapon: weapon ? itemWords(weapon) : '', level: player.level, session: performance.now() / 1000 }), { share: true });
   player.lastHurt = null;
 }
 

@@ -16,7 +16,7 @@
 // (`keepIn`). Their shockwaves are game/quakes.js's.
 import { N } from '../core/constants.js';
 import { state, player, setStatus } from './state.js';
-import { SQUARLO, SQUARLO_GIANT, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf } from '../core/enemies.js';
+import { SQUARLO, SQUARLO_GIANT, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf, enemyName } from '../core/enemies.js';
 import { SQUARLO_FIGHT as G, splitHp, summonCount, newTide, stepTide, raiseTide, drainTide, barred, jumpLift } from '../core/squarlo.js';
 import { muzzleAt, aiming } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -27,6 +27,7 @@ import { removeEnemyViews } from '../render/enemies.js';
 import { living, engage, leave, minionFloors, minion, sweep as sweepOut, fitting } from './bossfight.js';
 import { alive } from './party.js';
 import { summonFx, leapFx } from './juice.js';
+import { tr } from '../i18n/i18n.js';
 
 export let squarlos = [];
 let fights = [];
@@ -94,7 +95,7 @@ function split(f) {
   const e = f.e;
   Object.assign(e, { hpFloor: 0, mode: 'split', speed: 0, path: null, t: 0, shield: G.morphTime + G.appear });
   f.morph = G.morphTime;
-  setStatus(`${e.profile.label} grows into a giant!`);
+  setStatus(tr('{name} grows into a giant!', { name: enemyName(e.profile) }));
 }
 function grow(f) {
   const e = f.e;
@@ -108,7 +109,7 @@ function cast(f, a) {
   if (a.cast !== 'tide' || !state.map?.tide) return;
   raiseTide(f.tide);
   f.tideIn = Infinity;
-  setStatus('The water is rising! Get up a hill!');
+  setStatus(tr('The water is rising! Get up a hill!'));
 }
 // a summon's hit frame: Squirtles pop out of the floor round him, as many as fill up to the most
 function summon(f, a) {

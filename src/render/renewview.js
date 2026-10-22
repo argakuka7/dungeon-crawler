@@ -98,7 +98,7 @@ function makeView(e) {
   const color = guardianColor('descent');
   const hpBar = makeBar({ color, w: 1.2, onTop: true }), bar = hpBar.group;
   bar.position.y = e.profile.height + 0.12; group.add(bar);
-  const label = makeLevelLabel(e.level, { color, onTop: true, title: guardianTitle('descent', e.profile.label) });
+  const label = makeLevelLabel(e.level, { color, onTop: true, title: guardianTitle('descent', e.profile) });
   label.position.y = e.profile.height + 0.33; group.add(label);
   const light = new THREE.PointLight(e.profile.light ?? '#bdf3ff', 1.1, 3.2, 2);
   light.position.y = 0.9;

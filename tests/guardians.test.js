@@ -150,8 +150,8 @@ test('descent guardians are explicit stronger boss placeholders for every specie
     assert.notEqual(guardianColor('side'), guardianColor('descent'));
     // a side guardian is the Guardian of its species, a descent guardian its Temp Boss
     assert.equal(side.label, `Guardian ${base.label}`); assert.equal(descent.label, `Temp Boss ${base.label}`);
-    assert.equal(guardianTitle('side', side.label), `◆ Guardian ${base.label}`);
-    assert.equal(guardianTitle('descent', descent.label), `♛ Temp Boss ${base.label}`);
+    assert.equal(guardianTitle('side', side), `◆ Guardian ${base.label}`);
+    assert.equal(guardianTitle('descent', descent), `♛ Temp Boss ${base.label}`);
     // each tier meets its floors (damage is rounded to whole points), so the species it promotes
     // decides how it fights, not how strong it is
     for (const [kind, t] of [[side, GUARDIAN_TIERS.side], [descent, GUARDIAN_TIERS.descent]]) {
@@ -189,19 +189,19 @@ test('guardians are pink and amber, except where a species dresses them otherwis
 test('the messages call a guardian by its kind: the one guardianSpots promotes', () => {
   const w = new World(5);
   for (const depth of [0, 1, 3, 4]) for (const [key, g] of w.layout(depth).guardians) {
-    const map = w.cube(key).map, kind = guardianKind(map), label = kind.label;
+    const map = w.cube(key).map, kind = guardianKind(map), label = kind.label;   // (English: the label is its name)
     assert.equal(kind, guardianSpots(map)[0].kind, 'the guardian that stands there');
     const exit = map.portals.find(p => p.dir === map.exit);
     if (g.role === 'side') {
       assert.match(label, /^Guardian /);
-      assert.equal(guardianName(map, label), `The ${label}`);
-      assert.equal(lockMessage(map, exit.dir, label), `Defeat the ${label} to unlock this passage`);
+      assert.equal(guardianName(map, kind), `The ${label}`);
+      assert.equal(lockMessage(map, exit.dir, kind), `Defeat the ${label} to unlock this passage`);
     } else if (bossAt(depth)) {
-      assert.equal(guardianName(map, label), label); assert.equal(guardianLockMessage(map, label), `Defeat ${label} to unlock this descent`);
+      assert.equal(guardianName(map, kind), label); assert.equal(guardianLockMessage(map, kind), `Defeat ${label} to unlock this descent`);
     } else {
       assert.match(label, /^Temp Boss /);
-      assert.equal(guardianName(map, label), `The ${label}`);
-      assert.equal(guardianLockMessage(map, label), `Defeat the ${label} to unlock this descent`);
+      assert.equal(guardianName(map, kind), `The ${label}`);
+      assert.equal(guardianLockMessage(map, kind), `Defeat the ${label} to unlock this descent`);
     }
   }
   const plain = w.cube(w.layout(6).down).map;

@@ -13,6 +13,7 @@ import { bareSlots } from '../core/inventory.js';
 import { showChestOpen } from '../render/chests.js';
 import { spill } from './loot.js';
 import { sfx } from '../audio/sfx.js';
+import { tr } from '../i18n/i18n.js';
 
 const OPEN_REACH = 1.2;   // cells from the chest's centre the player opens it from
 
@@ -42,7 +43,7 @@ export function openChest(site) {
   const a = site.anchor, front = site.approach ?? a;
   spill(`c:${site.id}`, front, copper, items, { kept: true }, { x: a.x, y: a.y + 0.6, z: a.z }, opening);
   sfx('chest', { at: a });
-  setStatus('You opened a treasure chest');
+  setStatus(tr('You opened a treasure chest'));
   return true;
 }
 

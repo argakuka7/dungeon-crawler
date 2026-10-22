@@ -18,6 +18,7 @@ import { knowDepths } from './log.js';
 import { packQuestLog } from '../core/quests.js';
 import { packKills } from '../core/respawn.js';
 import { setCharacterSkin } from '../render/character.js';
+import { tr } from '../i18n/i18n.js';
 
 const CHECK_EVERY = 1000, SAVE_EVERY = 30000;
 
@@ -181,7 +182,7 @@ export function saveNow() {
     if (store.putWorld(w)) current.world = w; else ok = false;
   }
   signature = changes(); saveAt = performance.now() + SAVE_EVERY;
-  if (!ok && !failed) setStatus('Could not save the game (is the storage full?)');
+  if (!ok && !failed) setStatus(tr('Could not save the game (is the storage full?)'));
   failed = !ok;
   return ok;
 }

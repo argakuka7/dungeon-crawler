@@ -29,6 +29,7 @@ import { CHAR_H } from '../core/constants.js';
 import { emit, soft, rand } from '../render/particles.js';
 import { stepSiege, stepChase, dropPortcullis, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
+import { tr } from '../i18n/i18n.js';
 
 const $ = id => document.getElementById(id);
 const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -342,14 +343,14 @@ export function usePart(p, fromOther = false) {
   else if (p.type === 'runestone') {   // the next in the order lights; a wrong one puts them all out
     const key = `${pz.id}:n`, n = s.bits[key] ?? 0;
     if (pz.field.order[n] === p.i) s.bits[key] = n + 1;
-    else { s.bits[key] = 0; if (!fromOther) { sfx('thud'); setStatus('The stones go dark: start over'); } }
+    else { s.bits[key] = 0; if (!fromOther) { sfx('thud'); setStatus(tr('The stones go dark: start over')); } }
   }
   else if (p.type === 'brazier') {   // it and every one linked to it
     const lit = bitsOf(pz, s, 'brazier');
     pressBrazier(lit, pz.field.links, p.i);
     for (const q of pz.parts) if (q.type === 'brazier') s.bits[q.id] = lit[q.i];
   } else useBit(s, p, m.start);
-  if (p.type === 'reset') { ice = null; setStatus('Back to the start'); }
+  if (p.type === 'reset') { ice = null; setStatus(tr('Back to the start')); }
   showTrial();
   return true;
 }
@@ -487,7 +488,7 @@ function stepTimed(m, s, dt) {
   timed.was = open ? 1 : 0;
   if (!open) { timed.asked = false; return; }
   timed.t += dt;
-  if (timed.t >= pz.T && !mirroring()) { s.bits['p0:lever'] = 0; timed.was = 0; sfx('gate'); setStatus('The gate shut: back to the lever'); return; }
+  if (timed.t >= pz.T && !mirroring()) { s.bits['p0:lever'] = 0; timed.was = 0; sfx('gate'); setStatus(tr('The gate shut: back to the lever')); return; }
   const near = Math.hypot(player.x - pz.pad.x, player.z - pz.pad.z) < 1.3 && Math.abs(player.y - pz.pad.y) < 1 && player.hp > 0;
   if (!near) return;
   if (mirroring()) { if (!timed.asked) { timed.asked = true; relay.trialAct?.({ key: s.key, act: 'part', id: 'timed:reach' }); } return; }
@@ -560,7 +561,7 @@ export function failTrial(reason) {
   if (!s || !m || s.phase === 'resolved') return;
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'failed' });
   if (sealedIn()) { backBeforeTrial(reason); return; }
-  setStatus(reason);
+  setStatus(tr(reason));
   restartTrial();
   spawnEntry();
 }

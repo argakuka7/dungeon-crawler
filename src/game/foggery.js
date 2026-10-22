@@ -20,7 +20,7 @@
 // back down onto the top of the tower after one who goes back there.
 import { LH } from '../core/constants.js';
 import { state, setStatus } from './state.js';
-import { FOGGERY, FOGGERY_BALL, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf } from '../core/enemies.js';
+import { FOGGERY, FOGGERY_BALL, ENEMY_KINDS, makeEnemy, enemyProfile, attackOf, enemyName } from '../core/enemies.js';
 import { FOGGERY_FIGHT as G, TOWER, PLATFORMS, LAVA, splitHp, summonCount, barred, newLava, moveLava, stepLava } from '../core/foggery.js';
 import { muzzleAt } from '../core/beams.js';
 import { enemySpots } from './enemyspawn.js';
@@ -34,6 +34,7 @@ import { summonFx } from './juice.js';
 import { moverClock } from './movers.js';
 import { groundAt, moversNow } from '../physics/collide.js';
 import { sfx } from '../audio/sfx.js';
+import { tr } from '../i18n/i18n.js';
 
 export let foggerys = [];
 let fights = [];
@@ -118,7 +119,7 @@ function run(f, dt) {
     if (cats && f.catsIn !== null) f.catsIn = null;
     else if (!cats && f.catsIn === null) {
       f.catsIn = G.catsAgain;
-      setStatus(`${e.profile.label}'s shield is down! Hit him now!`);
+      setStatus(tr("{name}'s shield is down! Hit him now!", { name: enemyName(e.profile) }));
       sfx('shatter', { at: e });
     } else if (!cats) f.catsIn -= dt;
     // (and while he is about to call them: only the while before that leaves him open)
@@ -147,7 +148,7 @@ function wake(f) {
   engage(e);
   if (tower()) {
     moveLava(f.lava, LAVA.high, G.lava.rise);
-    setStatus(`${e.profile.label} croaks: the lava is rising! Up the tower!`);
+    setStatus(tr('{name} croaks: the lava is rising! Up the tower!', { name: enemyName(e.profile) }));
     sfx('rumble', { at: e });
     lieInWait(f);
   }
@@ -190,10 +191,10 @@ function split(f) {
   f.split = time;
   if (first) {
     f.minions.forEach(m => leave(m, G.leave)); f.minions = [];
-    setStatus(`${e.profile.label} curls up into a ball!`);
+    setStatus(tr('{name} curls up into a ball!', { name: enemyName(e.profile) }));
   } else {
     if (tower()) moveLava(f.lava, LAVA.flood, G.lava.flood);
-    setStatus(tower() ? 'The lava swallows the tower! Jump onto the platforms!' : `${e.profile.label} rises up!`);
+    setStatus(tower() ? tr('The lava swallows the tower! Jump onto the platforms!') : tr('{name} rises up!', { name: enemyName(e.profile) }));
     if (tower()) sfx('rumble', { at: e });
   }
 }

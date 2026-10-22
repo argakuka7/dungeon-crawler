@@ -109,7 +109,8 @@ export async function check() {
     try { walk(i18n.parse(text)); } catch { /* reported */ }
     return out;
   };
-  for (const [text, where] of found) for (const f of formsOf(text)) if (!englishForms.has(f)) problems.push({ kind: 'broken', text, where, detail: `no English form "${f}"` });
+  const known = (forms, f) => forms.has(f) || forms.has(f[0].toLowerCase() + f.slice(1));
+  for (const [text, where] of found) for (const f of formsOf(text)) if (!known(englishForms, f)) problems.push({ kind: 'broken', text, where, detail: `no English form "${f}"` });
 
   for (const { code } of i18n.LANGUAGES.filter(l => l.code !== i18n.SOURCE)) {
     const mod = await import(pathToFileURL(join(ROOT, `src/i18n/${code}/index.js`)));
@@ -138,7 +139,7 @@ export async function check() {
       const params = i18n.paramsOf(t);
       for (const p of params) if (!source.has(p)) problems.push({ kind: 'broken', lang: code, text, where, detail: `parameter {${p}} is not in the English` });
       for (const p of source) if (!params.has(p)) problems.push({ kind: 'broken', lang: code, text, where, detail: `parameter {${p}} is left out` });
-      for (const f of formsOf(t)) if (!forms.has(f)) problems.push({ kind: 'broken', lang: code, text, where, detail: `no ${code} form "${f}"` });
+      for (const f of formsOf(t)) if (!known(forms, f)) problems.push({ kind: 'broken', lang: code, text, where, detail: `no ${code} form "${f}"` });
       if (tags(t) !== tags(text)) problems.push({ kind: 'broken', lang: code, text, where, detail: `markup differs: ${tags(text)} / ${tags(t)}` });
       if (typeof e === 'object' && e.g && !['m', 'f', 'n', 'pl'].includes(e.g)) problems.push({ kind: 'broken', lang: code, text, where, detail: `gender "${e.g}"` });
     }

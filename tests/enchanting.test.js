@@ -152,7 +152,7 @@ test('chilled enemies slow down, zaps do not stun bosses, and the chronicle tell
   assert.equal(enemySlow({ chilled: { shown: true } }), 1, 'one shown from another game is not slowed here');
   assert.ok(zappable({ profile: {} })); assert.ok(!zappable({ boss: 'gusto', profile: {} })); assert.ok(!zappable({ profile: { steadfast: true } }));
   assert.ok(bigFoe({ guardian: true })); assert.ok(!bigFoe({}));
-  assert.equal(describe({ kind: 'craft', data: { what: 'enchant', item: 'Duskfang', name: 'Toasty', price: '3s' } }), 'The Enchanter made Duskfang Toasty for 3s');
-  assert.equal(describe({ kind: 'craft', data: { what: 'reroll', item: 'Duskfang', name: 'Pointy', into: 'Rude', price: '1s' } }),
+  assert.equal(describe({ kind: 'craft', data: { what: 'enchant', item: 'Duskfang', enchant: 'toasty', copper: 30 } }), 'The Enchanter made Duskfang Toasty for 3s');
+  assert.equal(describe({ kind: 'craft', data: { what: 'reroll', item: 'Duskfang', affix: 'sharp', into: 'brutal', copper: 10 } }),
     "The Smith re-rolled Duskfang's Pointy into Rude for 1s");
 });

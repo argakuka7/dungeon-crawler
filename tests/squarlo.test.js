@@ -122,7 +122,7 @@ test('the tide drowns the player over the head and inside its box only; he and h
 test('he is as strong as a descent guardian, tiny and fast; a giant of six cells later', () => {
   const t = GUARDIAN_TIERS.descent;
   assert.ok(SQUARLO.hp >= t.hp); assert.equal(SQUARLO.xp, t.xp); assert.ok(SQUARLO.poise >= t.poise);
-  assert.equal(ENEMY_KINDS.squarlo, SQUARLO); assert.equal(guardianTitle('descent', SQUARLO.label), '♛ Squarlo');
+  assert.equal(ENEMY_KINDS.squarlo, SQUARLO); assert.equal(guardianTitle('descent', SQUARLO), '♛ Squarlo');
   assert.ok(SQUARLO.height < 0.85 && SQUARLO.chase > RUN_SPEED, 'smaller than the player, faster');
   assert.ok(SQUARLO.swims && SQUARLO_GIANT.swims);
   assert.equal(SQUARLO_GIANT.height, 6); assert.equal(SQUARLO_GIANT.label, SQUARLO.label);

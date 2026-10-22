@@ -17,6 +17,7 @@ import { flash } from './hud.js';
 import { hurt, die, recover } from './flow.js';
 import { cancelSword } from './sword.js';
 import { goDown, tickDown } from './downed.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 // respawn: 'safe' (last safe spot, game/flow.js recover), or null (get up where you lie);
 // by: the enemy behind it (game/enemycombat.js attacker), for the chronicle should it kill
@@ -28,7 +29,7 @@ export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, h
   if (damage > 0 || player.hp <= 0) player.lastHurt = { reason, by };
   takeDamage(player, damage, state.time);
   if (damage > 0) flash();
-  if (reason) setStatus(reason);
+  if (reason) setStatus(tr(reason));
   const yaw = characterYaw(), fx = Math.sin(yaw), fz = Math.cos(yaw);
   const r = new Ragdoll(beginRagdoll(player.x, player.y, player.z), [player.vx + fx * push, player.vy + hop, player.vz + fz * push]);
   // a push topples the upper body more than the feet
@@ -39,14 +40,14 @@ export function knockDown({ damage = 0, reason = '', respawn = null, push = 0, h
 
 // Entering any fluid is fatal, including when an existing ragdoll tumbles in.
 // The body keeps ragdolling (slowed down, sinking) under a fluid-specific effect.
-const DEATH = { [WATER]: 'Drowned!', [LAVA]: 'Burned up in lava!' };
-const deathReason = fluid => DEATH[fluid] || 'Dissolved in acid!';
+const DEATH = { [WATER]: msg('Drowned!'), [LAVA]: msg('Burned up in lava!') };
+const deathReason = fluid => DEATH[fluid] || msg('Dissolved in acid!');
 const FLUID_DEATH_TIME = 2.2;   // keep the body around long enough for the effect
 
 export function dieInFluid(fluid, surface) {
   if (player.hp <= 0) return;
   if (fluidRescue(fluid)) return;   // a boss's lava or tide: it hurts, magic pulls you out (game/fluidrescue.js)
-  if (player.god) { setStatus(deathReason(fluid) + ' (god mode: back to safety)'); recover(); return; }   // dev: /god on
+  if (player.god) { setStatus(tr(deathReason(fluid)) + ' (god mode: back to safety)'); recover(); return; }   // dev: /god on
   player.swimming = false; player.fluid = 0;
   const { x, z } = player;   // before a no-asset fallback respawns the player
   player.lastHurt = { reason: deathReason(fluid), by: null };
@@ -76,7 +77,7 @@ export function stepRagdoll(dt) {
   // a fatal blow on dry land, playing together: lie there for the friend to help you up
   if (player.hp <= 0 && !player.fluidDeath && pel[1] >= -3 && !state.fallFrom && goDown()) return;
   player.ragdoll = null; player.fluidDeath = 0;
-  if (player.hp <= 0) { setStatus('You died - back to the entry'); die(); return; }
+  if (player.hp <= 0) { setStatus(tr('You died - back to the entry')); die(); return; }
   if (player.ragdollThen === 'safe' || pel[1] < -3 || state.fallFrom) { recover(); return; }
   standUp(r);
 }

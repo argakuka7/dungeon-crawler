@@ -34,6 +34,7 @@ import { hurt } from './flow.js';
 import { sfx } from '../audio/sfx.js';
 import { turnBox, showCovers, drawBlackHoles, beamFx, drawTractor, holesOpenFx, landFx, breakWalls, restoreWalls } from '../render/flipview.js';
 import { fitting } from './bossfight.js';
+import { msg, tr } from '../i18n/i18n.js';
 
 let w = null;
 const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
@@ -279,7 +280,7 @@ function endTurn(list) {
   const at = t.carry || w.limbo?.transport ? turnPoint(R, t.p.x, t.p.y, t.p.z) : null;
   const to = at && ((ledge && clearSpot(PLAYER_BODY, at.x, at.y, at.z, placed, boss, 2.2, ledge))
     ?? clearSpot(PLAYER_BODY, at.x, at.y, at.z, placed, boss, 2.5) ?? clearSpot(PLAYER_BODY, at.x, at.y, at.z, []));
-  if (ledge && to?.shelf) setStatus('Up on the balcony!');
+  if (ledge && to?.shelf) setStatus(tr('Up on the balcony!'));
   if (t.carry && player.flipping?.kind === 'turn') {
     Object.assign(player, { x: at.x, y: at.y, z: at.z, visY: at.y, vx: 0, vy: 0, vz: 0, grounded: false, support: null });
     if (to) beamTo(to, boss); else player.flipping = null;
@@ -322,7 +323,7 @@ function strays(dt, boss) {
   const to = clearSpot(PLAYER_BODY, player.x, player.y, player.z, [], boss, 2.5) ?? clearSpot(PLAYER_BODY, player.x, player.y, player.z, []);
   if (!to) return;
   beamTo(to, boss);
-  setStatus('Flip pulls you back into the fight!');
+  setStatus(tr('Flip pulls you back into the fight!'));
 }
 // The beam carries the player over to their spot (rising a little on the way) and sets them down
 function stepBeam(dt) {
@@ -413,10 +414,10 @@ function swallow(boss, h, own) {
   const damage = Math.round(boss.profile.damage * G.hole.damage);
   sfx('wellDown', { at: h, pitch: 0.7 });
   takeDamage(player, damage, state.time); flash();
-  player.lastHurt = { reason: 'Swallowed by a black hole!', by: null };
+  player.lastHurt = { reason: msg('Swallowed by a black hole!'), by: null };
   if (player.hp <= 0) { hurt(0, 'Swallowed by a black hole!'); return; }
   Object.assign(player, { flipping: { kind: 'limbo' }, vanished: true, vx: 0, vy: 0, vz: 0, pull: null });
-  setStatus('Swallowed by a black hole!');
+  setStatus(tr('Swallowed by a black hole!'));
   // the game that runs him turns the world for it (game/flip.js); a friend's lets them out again
   w.limbo = { t: 0, turns: boss.turns ?? 0, waits: own && !!w.base.flip && !!boss.swallowed };
   if (w.limbo.waits) boss.swallowed(h);
@@ -439,5 +440,5 @@ function limbo(boss, dt) {
   player.safe = { x: f.x + 0.5, y, z: f.z + 0.5 };
   w.exits.push({ x: f.x + 0.5, y, z: f.z + 0.5, t: 0 });
   sfx('ringUp', { at: player, pitch: 0.8 });
-  setStatus('Spat out of a black hole!');
+  setStatus(tr('Spat out of a black hole!'));
 }

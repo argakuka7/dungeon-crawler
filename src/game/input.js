@@ -49,6 +49,7 @@ import { forwardYaw } from '../core/view.js';
 import { canReachPickup, takePickup } from './loot.js';
 import { canReachChest, openChest } from './chests.js';
 import { canReachPart, usePart } from './trials.js';
+import { msg, tr } from '../i18n/i18n.js';
 export { clearInput };
 
 const { keys } = controls;
@@ -70,15 +71,15 @@ const PRESS = {
   jump: () => { controls.jumpPressed = true; },
   // a tap between two frames still swings (holding is handled every frame in update.js)
   attack: () => { if (!state.transitioning) autoAttack(); },
-  music: () => setStatus(toggleMusic() ? 'Music on' : 'Music off'),
+  music: () => setStatus(toggleMusic() ? tr('Music on') : tr('Music off')),
   turnLeft: () => { view.yawTarget -= Math.PI / 2; },
   turnRight: () => { view.yawTarget += Math.PI / 2; },
-  respawn: () => { spawnEntry(); setStatus('Respawned where you came in'); },
+  respawn: () => { spawnEntry(); setStatus(tr('Respawned where you came in')); },
   labels: () => toggleLabels(),
   action: () => useAction(),   // chest, villager, collect, else nothing
   zoomIn: () => { view.zoomTarget = stepZoom(view.zoomTarget, -1); },
   zoomOut: () => { view.zoomTarget = stepZoom(view.zoomTarget, 1); },
-  knockOver: () => { if (!player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: 'Whoops!' }); },
+  knockOver: () => { if (!player.ragdoll) knockDown({ push: 3, hop: 2.5, reason: msg('Whoops!') }); },
   path: () => { state.showPath = !state.showPath; if (state.world) state.world.pathLine.visible = state.showPath; },
 };
 

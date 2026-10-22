@@ -40,7 +40,7 @@ import { enemyDrops } from '../core/gear/drops.js';
 import { enchantOf } from '../core/gear/enchants.js';
 import { dropSource } from '../core/respawn.js';
 import { favoredKind } from '../core/combat.js';
-import { displayName } from '../core/gear/stats.js';
+import { displayName, itemWords } from '../core/gear/stats.js';
 import { inFluid } from '../physics/fluid.js';
 import { restGround, scatterSpot, settle } from '../physics/rest.js';
 import { drawLoot, lootLanded } from '../render/loot.js';
@@ -49,6 +49,7 @@ import { floatText } from '../render/floattext.js';
 import { sfx } from '../audio/sfx.js';
 import { online, relay } from '../net/online.js';
 import { log } from './log.js';
+import { tr } from '../i18n/i18n.js';
 
 export const TOSS_TIME = 0.55;   // the arc out of the body
 const TAKE_REACH = 0.6;          // a clicked pickup is taken from this close (cells)
@@ -139,11 +140,11 @@ export function dropAtFeet(item) {
 // a bag item onto the floor (the inventory): false when there is no such item
 export function dropFromBag(instanceId) {
   const slot = player.inventory.slots.find(s => s?.instanceId === instanceId);
-  if (slot && isBound(slot.itemId)) { setStatus(`${ITEMS[slot.itemId].name} cannot be dropped`); return false; }
+  if (slot && isBound(slot.itemId)) { setStatus(tr('{item} cannot be dropped', { item: tr(ITEMS[slot.itemId].name) })); return false; }
   const item = takeItem(player.inventory, instanceId);
   if (!item) return false;
   dropAtFeet(item); sfx('toss');
-  setStatus(`Dropped ${displayName(item)}`);
+  setStatus(tr('Dropped {item}', { item: displayName(item) }));
   return true;
 }
 
@@ -164,13 +165,13 @@ function credit(p) {
   const def = ITEMS[p.itemId];
   if (def.category === 'currency') { gained.copper += def.value * p.count; sfx('coin', { pitch: def.value >= 1000 ? 0.8 : def.value >= 10 ? 0.9 : 1 }); }
   else {
-    const name = displayName(p);
+    const name = displayName(p);   // (said now: the line is shown at once)
     gained.items.set(name, (gained.items.get(name) || 0) + p.count);
     if (p.gen) {
       const r = rarityOf(p);
       gained.color = r.css;
       // an unusual one (or better) goes into the chronicle; a remarkable one (or better) the friends hear of
-      if (r.rank >= RARITY.unusual.rank) log('loot', { name, rarity: r.id }, { share: r.rank >= RARITY.remarkable.rank });
+      if (r.rank >= RARITY.unusual.rank) log('loot', { item: itemWords(p), rarity: r.id }, { share: r.rank >= RARITY.remarkable.rank });
     }
     sfx('pickup');
   }
@@ -180,7 +181,7 @@ function credit(p) {
 // ours now, into the bag; no room after all (it filled up meanwhile): down at our feet again
 function receive(p) {
   if (credit(p)) return;
-  setStatus('Inventory is full');
+  setStatus(tr('Inventory is full'));
   dropAtFeet({ itemId: p.itemId, count: p.count, ...p.gen ? { gen: p.gen } : {} });
 }
 
@@ -189,7 +190,7 @@ function announce(dt) {
   const parts = [...gained.copper ? ['+' + formatCoins(gained.copper)] : [], ...[...gained.items].map(([n, c]) => c > 1 ? `+${c} ${n}` : `+${n}`)];
   const single = gained.items.size === 1 && !gained.copper && gained.color;
   floatText(parts.join('  '), q => q.set(player.x, player.visY + 1.55, player.z), { life: single ? 1.6 : 1.2, ...single ? { color: single } : {} });
-  setStatus('Picked up ' + parts.join(', ').replace(/\+/g, ''));
+  setStatus(tr('Picked up {what}', { what: parts.join(', ').replace(/\+/g, '') }));
   gained = null;
 }
 
@@ -197,7 +198,7 @@ const available = p => p.toss >= 1 && !p.fly && !p.claim && lootHere().includes(
 // the clicked pickup p: the player is at it (game/orders.js); fly it in, or say why not
 export function takePickup(p) {
   if (!available(p)) return false;
-  if (!room(p)) { setStatus('Inventory is full'); return false; }
+  if (!room(p)) { setStatus(tr('Inventory is full')); return false; }
   claim(p, 0, 0.22);
   return true;
 }
@@ -207,7 +208,7 @@ export const canReachPickup = p => Math.hypot(p.x - player.x, p.z - player.z) <=
 export function takeNow(p) {
   const list = lootHere(), i = list.indexOf(p);
   if (i < 0 || p.fly || p.claim || drowned(p)) return false;
-  if (!room(p)) { setStatus('Inventory is full'); return false; }
+  if (!room(p)) { setStatus(tr('Inventory is full')); return false; }
   claim(p);
   if (p.claim === 'mine') { list.splice(list.indexOf(p), 1); receive(p); }
   return true;
@@ -231,7 +232,7 @@ export function updateLoot(dt, time) {
       if (p.refused) { p.refused = near; continue; }
       const take = settled && near ? 'walk' : collect && inCollectReach(p, player.x, player.y, player.z) ? 'collect' : null;
       if (!take || drowned(p)) continue;   // (none out of a deep fluid over it)
-      if (!room(p)) { p.refused = true; setStatus('Inventory is full'); continue; }
+      if (!room(p)) { p.refused = true; setStatus(tr('Inventory is full')); continue; }
       const d = Math.hypot(p.x - player.x, p.z - player.z);
       if (take === 'walk') claim(p, 0, 0.16 + d * 0.12);
       else claim(p, d * 0.07 + Math.random() * 0.05, 0.28 + d * 0.1);   // the near ones first

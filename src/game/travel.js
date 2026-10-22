@@ -29,6 +29,7 @@ import { slideVisuals, endVisuals } from './travelfx.js';
 import { fallPoint } from './fall.js';
 import { townPadIn } from '../core/townportal.js';
 import { cancelCast } from './townportal.js';
+import { tr as translate } from '../i18n/i18n.js';   // (tr: the travel under way)
 
 const GAP = CUBE_H + BASE;   // vertical distance between strata while sliding
 let tr = null;
@@ -47,7 +48,7 @@ export const truePosition = () => tr ? (tr.last ?? tr.S) : player;
 // force: ignore guardian locks (dev tools, game/dev.js); the gate itself stays locked.
 export function startTravel(p, { force = false } = {}) {
   if (state.transitioning || state.inventoryOpen) return;
-  if (!force && portalLocked(state.map, state.run, p)) { setStatus(lockMessage(state.map, p.dir, guardianKind(state.map)?.label)); return; }
+  if (!force && portalLocked(state.map, state.run, p)) { setStatus(lockMessage(state.map, p.dir, guardianKind(state.map))); return; }
   clearMouseInput();
   state.transitioning = true;
   cancelSword(); cancelCast();
@@ -62,7 +63,7 @@ export function startTravel(p, { force = false } = {}) {
   }, () => {
     hidePortalCloud();
     if (state.cubes !== cubes || state.cubeKey !== source) return;
-    state.transitioning = false; setStatus('The portal does not open');
+    state.transitioning = false; setStatus(translate('The portal does not open'));
   });
 }
 
@@ -81,7 +82,7 @@ function slide(p, c, cloud) {
   if (crossing && (railedFace(A.x, A.z, A.y, OPP6[p.dir]) || [[0, 0], [player.r, 0], [-player.r, 0], [0, player.r], [0, -player.r]].some(([dx, dz]) =>
     blockedAt(A.x + dx, A.z + dz, A.y, player.swimming ? SWIM_STEP : STEP)))) {
     state.map = oldMap; state.transitioning = false; hidePortalCloud();
-    setStatus('The way across is blocked');
+    setStatus(translate('The way across is blocked'));
     return;
   }
   // a forced (dev) trip past a guardian leaves its gate locked and closed

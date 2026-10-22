@@ -30,6 +30,7 @@ import { animateEnemies, removeEnemyViews } from '../render/enemies.js';
 import { drawShots, removeShotViews } from '../render/shots.js';
 import { hitBody } from './enemycombat.js';
 import { sfx } from '../audio/sfx.js';
+import { msg } from '../i18n/i18n.js';
 
 let boss = null, stage = 0, tape = newTape(), next = 0, rewinding = false, echoes = [], dusk = 0;
 let ghosts = { pr: new Set(), shots: new Set() }, whirr = 0, outro = 0;
@@ -198,7 +199,7 @@ function echoPose(x, dt) {
 function strikeAs(x, clock, e) {
   if (x.going) return;
   const blow = { damage: Math.max(1, Math.round(e.profile.damage * G.echo.power)), knock: 3.5, knockDown: false, hop: 3,
-    reason: 'Struck by your own echo!', by: { label: 'your echo', level: player.level, guardian: false } };
+    reason: msg('Struck by your own echo!'), by: { words: msg('your echo'), level: player.level, guardian: false } };
   const can = player.hp > 0 && !player.flipping && !player.ragdoll && !player.held;
   while (x.struck < x.strikes.length && x.strikes[x.struck].t <= clock) {
     const s = x.strikes[x.struck++];
@@ -213,7 +214,7 @@ function strikeAs(x, clock, e) {
     const spec = { kind: 'orb', speed: 8, radius: 0.15, range: 7, color: '#ffe9a8', muzzle: [0, 0.75, 0.35] };
     const sx = Math.sin(s.yaw), cz = Math.cos(s.yaw);
     addProjectile({ kind: 'orb', spec, x: s.x + sx * 0.35, y: s.y + 0.75, z: s.z + cz * 0.35, vx: sx * spec.speed, vy: 0, vz: cz * spec.speed,
-      travelled: 0, t: 0, blow: { ...blow, reason: 'Shot by your own echo!' }, profile: null, only: player });
+      travelled: 0, t: 0, blow: { ...blow, reason: msg('Shot by your own echo!') }, profile: null, only: player });
   }
 }
 

@@ -36,7 +36,8 @@ import { updateQuickbar } from './game/quickbar.js';
 import { updateTeleportMenu } from './game/teleportmenu.js';
 import { updateLeave } from './game/leavefight.js';
 import { updateTouch } from './game/touch.js';
-import './game/language.js';   // the page's own words in the game's language
+import { missingTranslations } from './game/language.js';   // the page's own words in the game's language
+import { language, tr } from './i18n/i18n.js';
 import './game/nozoom.js';   // the page never zooms, only the game's view
 import { updateLoot } from './game/loot.js';
 import { updateLootLabels } from './game/lootlabels.js';
@@ -82,7 +83,7 @@ import { musicInfo } from './audio/music.js';
 import { travelling, updateTravel, drawTravelEnemies } from './game/travel.js';
 import { updateOnline, hostGame, joinGame, leaveGame, sessionStatus } from './net/session.js';
 import { online } from './net/online.js';
-import { frameRate, antialias, onSettingsChange } from './game/settings.js';
+import { frameRate, antialias, onSettingsChange, chooseLanguage } from './game/settings.js';
 import { setMsaa, beginFrame, endFrame } from './render/msaa.js';
 import { updateSaves, store, play, saveAs, saveNow, savedHero, savedWorld } from './game/save.js';
 import { openMainMenu, updateMenu, quitToMenu, heroBox } from './game/menu.js';
@@ -248,7 +249,7 @@ onSettingsChange(() => setMsaa(antialias()));
 // the dev tools and ?seed= start in a world, everyone else in the main menu (game/state.js mode)
 if (state.mode === 'play') {
   loadCube();
-  setStatus('Welcome to town. Follow the path through the grove to leave.');
+  setStatus(tr('Welcome to town. Follow the path through the grove to leave.'));
 } else openMainMenu();
 // debug / test hooks
 window.__game = {
@@ -264,6 +265,7 @@ window.__game = {
   menu: { open: openMainMenu, quit: quitToMenu },   // the main menu (game/menu.js)
   chat: { open: openChat, close: closeChat, say, run: runCommand, chronicle },   // the chat box (game/console.js)
   teach,   // drawings, lenses, pause / slow / step, tuning with a way back (game/teach.js)
+  i18n: { language, setLanguage: chooseLanguage, get missing() { return missingTranslations(); } },   // the language (src/i18n/)
   devSwapWeapon: state.dev ? devSwapWeapon : undefined, devDropWeapon: state.dev ? devDropWeapon : undefined,
   devWear: state.dev ? devWear : undefined,   // devWear('wear_wizard_hat'), devWear(null)
   ...(state.dev && { spawnEnemy: spawnEnemies, killEnemies, clearEnemies, goHorde, goSpan, goFeature }),   // (the console's /spawn, /kill ...)
