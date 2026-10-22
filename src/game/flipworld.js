@@ -206,7 +206,7 @@ function startTurn(O, boss, list) {
   if (w.removed) rebuild(list, list.length > 0);   // (the box whole again for the turn: a black hole's)
   showCovers(w.world, null, 0);
   sfx('flip', { at: player });
-  if (!gentle) setStatus(Math.abs(found.q) === 2 ? 'Flip turns the world upside down!' : 'Flip flips the world!');
+  if (!gentle) setStatus(Math.abs(found.q) === 2 ? tr('Flip turns the world upside down!') : tr('Flip flips the world!'));
 }
 
 // a point turned about the middle of the box by angle a about the axis

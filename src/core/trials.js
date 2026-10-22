@@ -12,34 +12,34 @@
 import { msg } from '../i18n/i18n.js';
 
 export const TRIALS = {
-  flood: { name: 'Rising water', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#3fa8ff', built: true,
+  flood: { name: msg('Rising water'), family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#3fa8ff', built: true,
     population: 0.5 },
-  sunken: { name: 'The sunken room', family: 'event', sealed: false, timed: false, depths: [2, 19], themes: null, weight: 1, color: '#3fd0c0', built: true,
+  sunken: { name: msg('The sunken room'), family: 'event', sealed: false, timed: false, depths: [2, 19], themes: null, weight: 1, color: '#3fd0c0', built: true,
     population: 0.3 },
-  collapse: { name: 'Crumbling floor', family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050', built: true,
+  collapse: { name: msg('Crumbling floor'), family: 'event', sealed: true, timed: true, depths: [1, 19], themes: null, weight: 1, color: '#e0a050', built: true,
     population: 0.3 },
-  cold: { name: 'Cold snap', family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff', built: true,
+  cold: { name: msg('Cold snap'), family: 'event', sealed: true, timed: true, depths: [3, 10], themes: ['peaks', 'frozen'], weight: 1.5, color: '#9fe8ff', built: true,
     population: 0.5 },
-  storm: { name: 'The storm', family: 'event', sealed: true, timed: true, depths: [1, 6],
+  storm: { name: msg('The storm'), family: 'event', sealed: true, timed: true, depths: [1, 6],
     themes: ['meadow', 'clouds', 'lagoon', 'karst', 'peaks', 'highlands', 'badlands', 'saltflats', 'canyon'], weight: 1, color: '#b0b8ff', built: true,
     population: 0.3 },
-  siege: { name: 'Hold the beacon', family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a', built: true,
+  siege: { name: msg('Hold the beacon'), family: 'event', sealed: true, timed: true, depths: [2, 19], themes: null, weight: 1, color: '#ff7a3a', built: true,
     population: 0.3, armByPart: true },
-  chase: { name: 'The relic', family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
+  chase: { name: msg('The relic'), family: 'event', sealed: true, timed: true, depths: [4, 19], themes: null, weight: 1, color: '#ff4060', built: true,
     population: 0, armByPart: true },
-  miasma: { name: 'Sinking fog', family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
+  miasma: { name: msg('Sinking fog'), family: 'event', sealed: true, timed: true, depths: [5, 19], themes: 'walled', weight: 1, color: '#9adf50', built: true,
     population: 0.5 },
-  slide: { name: 'Ice slide', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['peaks', 'frozen'], strict: true, weight: 2, color: '#bfe8ff', built: true,
+  slide: { name: msg('Ice slide'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['peaks', 'frozen'], strict: true, weight: 2, color: '#bfe8ff', built: true,
     population: 0.5 },
-  mirror: { name: 'Mirror beam', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
+  mirror: { name: msg('Mirror beam'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['mines', 'forge', 'ruins', 'abyss', 'highlands'], weight: 1.5, color: '#ffe060', built: true,
     population: 0.5 },
-  braziers: { name: 'Lights out', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040', built: true,
+  braziers: { name: msg('Lights out'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#ffa040', built: true,
     lean: { ossuary: 2.5, ruins: 2.5 }, population: 0.5 },
-  crates: { name: 'Crates on plates', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060', built: true,
+  crates: { name: msg('Crates on plates'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#c09060', built: true,
     population: 0.5 },
-  timedgate: { name: 'Timed gate', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0', built: true,
+  timedgate: { name: msg('Timed gate'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: null, weight: 1, color: '#f0d0a0', built: true,
     population: 0.5 },
-  runes: { name: 'Rune order', family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff',
+  runes: { name: msg('Rune order'), family: 'puzzle', sealed: false, timed: false, depths: [1, 19], themes: ['ruins', 'highlands', 'ossuary', 'karst', 'abyss'], weight: 1.5, color: '#c0a0ff',
     built: true, population: 0.5 },
 };
 for (const [id, t] of Object.entries(TRIALS)) {
@@ -304,10 +304,10 @@ export function crustState(m, s, q) {
 //   gate     a portcullis across a gap (a box in the way while shut)
 //   reset    F puts the puzzle back to its start
 // The puzzle's state is a few bits and small numbers (state.trial.bits: part id -> value).
-export const PART_LABELS = { button: 'Press the button', lever: 'Pull the lever', reset: 'Pull the lever: start again',
-  mirror: 'Turn the mirror', brazier: 'Light or put out the brazier', crate: null, valve: 'Open the vent valve',
-  warm: 'Light the brazier', fire: 'Light the great fire', rod: 'Pull the lightning rod', beacon: 'Light the beacon',
-  portcullis: null, relic: 'Take the relic', runestone: 'Press the runestone', tablet: 'Read the carved tablet' };
+export const PART_LABELS = { button: msg('Press the button'), lever: msg('Pull the lever'), reset: msg('Pull the lever: start again'),
+  mirror: msg('Turn the mirror'), brazier: msg('Light or put out the brazier'), crate: null, valve: msg('Open the vent valve'),
+  warm: msg('Light the brazier'), fire: msg('Light the great fire'), rod: msg('Pull the lightning rod'), beacon: msg('Light the beacon'),
+  portcullis: null, relic: msg('Take the relic'), runestone: msg('Press the runestone'), tablet: msg('Read the carved tablet') };
 export const USE_TIME = 1;   // s an F on a part takes
 
 // --- slide (docs/trials.md, `slide`) -------------------------------------------------------------

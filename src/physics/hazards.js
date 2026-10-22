@@ -11,7 +11,7 @@ import { poisonPlayer } from '../game/enemycombat.js';
 import { toxinOf, ACID_TOXIN } from '../core/status.js';
 import { holeFallDamage } from '../game/flipworld.js';
 import { allEnemies } from '../game/enemies.js';
-import { msg } from '../i18n/i18n.js';
+import { msg, tr } from '../i18n/i18n.js';
 
 // returns false when the player got respawned. Lava and acid are fatal, and water over the
 // head (physics/fluid.js); walking is kept off such edges (and holes into the void) by canMove,
@@ -35,8 +35,8 @@ function falls(dt, ci) {
     if (f.type === LAVA) { knockDown({ damage: 50, reason: msg('Burned by a lavafall!'), respawn: 'safe' }); return false; }
     if (f.type === ACID) {
       takeDamage(player, 40 * dt, state.time);
-      if (!player.toxic) poisonPlayer(toxinOf(ACID_TOXIN, player.maxHp), 'Poisoned by acid');
-      if (!state.statusMsg) state.statusMsg = 'Acid rain!';
+      if (!player.toxic) poisonPlayer(toxinOf(ACID_TOXIN, player.maxHp), msg('Poisoned by acid'));
+      if (!state.statusMsg) state.statusMsg = tr('Acid rain!');
       if (player.hp <= 0) { knockDown({ reason: msg('Dissolved by acid') }); return false; }
     }
     player.vx += DIRS[f.d][0] * 9 * dt; player.vz += DIRS[f.d][1] * 9 * dt;
@@ -51,8 +51,8 @@ export function applyHazards(dt, gr) {
   if (player.y < -3) {
     if (state.fallFrom) landFall();
     // out through a hole in Flip's box (game/flipworld.js): back where we last stood
-    else if (state.map.flip) hurt(holeFallDamage(allEnemies()), 'Fell out of the world!');
-    else hurt(25, 'Fell out of the cube');
+    else if (state.map.flip) hurt(holeFallDamage(allEnemies()), msg('Fell out of the world!'));
+    else hurt(25, msg('Fell out of the cube'));
     return false;
   }
   if (state.time > state.statusUntil) state.statusMsg = '';

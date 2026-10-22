@@ -18,6 +18,7 @@ import { rig, createFigure, takeOff, wearLike, wornKey, animateWorn } from './fi
 import { trackLight, untrackLight } from './lightpool.js';
 import { makeBar, makeLevelLabel, makeNote } from './bars.js';
 import { playerColor } from '../net/online.js';
+import { tr } from '../i18n/i18n.js';
 
 // a player's colour, lighter (towards white by `k`)
 const shade = (slot, k) => new THREE.Color(playerColor(slot)).lerp(new THREE.Color(0xffffff), k);
@@ -177,5 +178,5 @@ export function showHelp(slot, ko, name) {
   const fig = figs.get(slot);
   if (!fig) return;
   if (!ko) { fig.note.setText(null); return; }
-  fig.note.setText(ko[0] > 0 ? `Helping ${name} up ${ko[0]}%` : `${name} is down! Stand next to them`, ko[0] > 0 ? '#9be05a' : '#ff9a8a');
+  fig.note.setText(ko[0] > 0 ? tr('Helping {name} up {n}%', { name, n: ko[0] }) : tr('{name} is down! Stand next to them', { name }), ko[0] > 0 ? '#9be05a' : '#ff9a8a');
 }

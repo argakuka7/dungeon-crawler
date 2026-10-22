@@ -29,29 +29,29 @@ import { CHAR_H } from '../core/constants.js';
 import { emit, soft, rand } from '../render/particles.js';
 import { stepSiege, stepChase, dropPortcullis, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
-import { tr } from '../i18n/i18n.js';
+import { tr, msg } from '../i18n/i18n.js';
 
 const $ = id => document.getElementById(id);
 const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // what the HUD says while a puzzle waits to be solved
 const PUZZLE_HINT = {
-  slide: 'Slide across the ice onto the plate by the closed gate',
-  mirror: 'Turn the mirrors till the beam shines through every crystal into the receiver',
-  braziers: 'Light every brazier: each one lights or puts out those it is linked to',
-  crates: 'Push a crate onto every plate (the lever by the way in puts them back)',
-  timedgate: 'Pull the lever, then run the causeway to the exit before the gate shuts',
-  runes: 'Press the runestones in the order the carved tablet tells',
+  slide: msg('Slide across the ice onto the plate by the closed gate'),
+  mirror: msg('Turn the mirrors till the beam shines through every crystal into the receiver'),
+  braziers: msg('Light every brazier: each one lights or puts out those it is linked to'),
+  crates: msg('Push a crate onto every plate (the lever by the way in puts them back)'),
+  timedgate: msg('Pull the lever, then run the causeway to the exit before the gate shuts'),
+  runes: msg('Press the runestones in the order the carved tablet tells'),
 };
 // what the banner says as an event arms
 const HOW = {
-  flood: 'The water is coming. Climb to the summit and press the button.',
-  collapse: 'The floor crumbles behind you. Run for the far side!',
-  miasma: 'Poison fog sinks from above. Get down to the vent valve!',
-  cold: 'The cold sets in. Light the braziers on your way to the great fire!',
-  storm: 'Gusts tear off the hill. Climb in the lulls, wait out the gusts behind the boulders, pull the lightning rod on top!',
+  flood: msg('The water is coming. Climb to the summit and press the button.'),
+  collapse: msg('The floor crumbles behind you. Run for the far side!'),
+  miasma: msg('Poison fog sinks from above. Get down to the vent valve!'),
+  cold: msg('The cold sets in. Light the braziers on your way to the great fire!'),
+  storm: msg('Gusts tear off the hill. Climb in the lulls, wait out the gusts behind the boulders, pull the lightning rod on top!'),
   ...EVENT_HOW,
 };
-const SEALED = 'The portals are sealed.';
+const SEALED = msg('The portals are sealed.');
 export const trialHere = () => state.trial;
 const mapTrial = () => state.map?.trial ?? null;
 const resolvedIn = (map, run) => !!map?.trial && run.unlockedGates.has(map.trial.gate);
@@ -81,7 +81,7 @@ function stepCrust(m, s, dt) {
   if (fell) sfx('rumble', { volume: 0.35, pitch: 1.3 });
   setCrust(state.world, crust, dt, s.phase === 'resolved');
   // all of it gone, and still not across: there is no way over any more
-  if (s.phase === 'running' && gone.size === m.crust.length && !mirroring()) failTrial('The way across is gone');
+  if (s.phase === 'running' && gone.size === m.crust.length && !mirroring()) failTrial(msg('The way across is gone'));
 }
 // the sinking fog (miasma): a head in it hurts, more the longer it stays (core/trials.js fogHurt),
 // told in half-second bites
@@ -91,7 +91,7 @@ function stepFog(m, s, dt) {
   if (y == null || player.hp <= 0 || player.y + CHAR_H < y) { fog.inFor = 0; fog.owed = 0; return; }
   fog.owed += fogHurt(player.maxHp, fog.inFor) * dt;
   fog.inFor += dt;
-  if (fog.owed >= player.maxHp * 0.03) { const n = fog.owed; fog.owed = 0; hurt(n, 'Choking in the fog!'); }
+  if (fog.owed >= player.maxHp * 0.03) { const n = fog.owed; fog.owed = 0; hurt(n, msg('Choking in the fog!')); }
 }
 // the cold snap: our own cold meter (core/trials.js coldStep) while it runs, warm by a lit brazier;
 // at 100 we freeze (a death: back in the room before). Frost creeps in from the screen's edges.
@@ -101,7 +101,7 @@ function stepCold(m, s, dt) {
   if (on) {
     const warm = m.parts.some(p => (p.type === 'warm' ? s.bits[p.id] : false) && Math.hypot(p.x - player.x, p.z - player.z) <= COLD.radius && Math.abs(p.y - player.y) < 2);
     cold = coldStep(cold, dt, warm);
-    if (cold >= 100) { cold = 0; hurt(player.hp + 1, 'Frozen solid'); }
+    if (cold >= 100) { cold = 0; hurt(player.hp + 1, msg('Frozen solid')); }
   } else if (m.kind !== 'cold' || s.phase !== 'armed') cold = Math.max(0, cold - 40 * dt);
   frost(m.kind === 'cold' ? cold / 100 : 0);
 }
@@ -232,8 +232,8 @@ export function updateTrial(dt) {
 // what a phase coming says: the banner and the rumble as it arms
 function announce(s, happened) {
   if (happened === 'armed') {
-    setStatus(`${TRIALS[s.kind].name}! ${SEALED}`);
-    banner(TRIALS[s.kind].name, HOW[s.kind] ?? '');
+    setStatus(`${tr(TRIALS[s.kind].name)}! ${tr(SEALED)}`);
+    banner(tr(TRIALS[s.kind].name), HOW[s.kind] ? tr(HOW[s.kind]) : '');
     sfx('rumble'); sfx('gate', { delay: 0.4 });
   }
   if (happened === 'running') sfx('rumble', { pitch: 0.7 });
@@ -312,8 +312,10 @@ export function partInReach() {
   const best = near.find(p => p.type === 'tablet') ?? near.reduce((a, b) => !a || partDist(b) < partDist(a) ? b : a, null);
   return best && { ...best, label: partLabel(best) };
 }
-export const partLabel = p => p.type === 'runestone' ? `Press the runestone ${p.glyph}` : p.type === 'brazier' ? (state.trial?.bits[p.id] ? 'Put out the brazier (and its links)' : 'Light the brazier (and its links)')
-  : PART_LABELS[p.type] ?? 'Use it';
+// in the language of the moment
+export const partLabel = p => p.type === 'runestone' ? tr('Press the runestone {glyph}', { glyph: p.glyph })
+  : p.type === 'brazier' ? (state.trial?.bits[p.id] ? tr('Put out the brazier (and its links)') : tr('Light the brazier (and its links)'))
+  : PART_LABELS[p.type] ? tr(PART_LABELS[p.type]) : tr('Use it');
 
 // the action key on part p (fromOther: another player used it, we own the trial). Shown another's
 // trial, the press goes to its owner.
@@ -338,7 +340,7 @@ export function usePart(p, fromOther = false) {
   if (p.type === 'warm') { if (!fromOther) sfx('fireball'); s.bits[p.id] = 1; showTrial(); return true; }
   if (!fromOther) sfx(p.type === 'lever' || p.type === 'reset' ? 'door' : p.type === 'brazier' ? 'fireball' : p.type === 'mirror' ? 'thunk' : 'clink');
   const pz = m.puzzles?.[p.puzzle ?? 0];
-  if (m.kind === 'timedgate' && p.type === 'lever') { s.bits[p.id] = 1; timed.t = 0; setStatus(`The gate is open: ${pz.T} s to reach it`); sfx('gate', { delay: 0.2 }); }
+  if (m.kind === 'timedgate' && p.type === 'lever') { s.bits[p.id] = 1; timed.t = 0; setStatus(tr('The gate is open: {time} s to reach it', { time: pz.T })); sfx('gate', { delay: 0.2 }); }
   else if (p.type === 'mirror') s.bits[p.id] = s.bits[p.id] ? 0 : 1;
   else if (p.type === 'runestone') {   // the next in the order lights; a wrong one puts them all out
     const key = `${pz.id}:n`, n = s.bits[key] ?? 0;
@@ -366,10 +368,12 @@ export function resolve(tell = true) {
   refreshOpenFaces();
   if (tell) relay.trialDone?.({ key: s.key, gate: m.gate, time: s.t });   // resolved for everyone (net/session.js)
   sfx('unlock'); sfx('levelUp', { delay: 0.2 });
-  setStatus(`${TRIALS[m.kind].name}: done! The way on is open`);
-  banner(isPuzzle(m.kind) ? 'Solved!' : 'Well done!', { flood: 'The water drains away.', miasma: 'The vents open: the fog lifts.', cold: 'The great fire burns: the cold lifts.', storm: 'Lightning strikes the rod: the storm ends.', ...EVENT_DONE, collapse: 'The keystone holds: the floor is whole again.',
-    sunken: 'The room is drained: the way on is clear.', timedgate: 'You made it through: the gate stays open.',
-    slide: m.role === 'branch' ? 'The gate is open, and the vault with it.' : 'The gate is open: the way on too.' }[m.kind] ?? '');
+  setStatus(tr('{trial}: done! The way on is open', { trial: tr(TRIALS[m.kind].name) }));
+  const done = { flood: msg('The water drains away.'), miasma: msg('The vents open: the fog lifts.'), cold: msg('The great fire burns: the cold lifts.'),
+    storm: msg('Lightning strikes the rod: the storm ends.'), ...EVENT_DONE, collapse: msg('The keystone holds: the floor is whole again.'),
+    sunken: msg('The room is drained: the way on is clear.'), timedgate: msg('You made it through: the gate stays open.'),
+    slide: m.role === 'branch' ? msg('The gate is open, and the vault with it.') : msg('The gate is open: the way on too.') }[m.kind];
+  banner(isPuzzle(m.kind) ? tr('Solved!') : tr('Well done!'), done ? tr(done) : '');
   log('trial', { name: TRIALS[m.kind].name, depth: state.map.depth, what: 'resolved' }, { share: tell });
   showTrial();
   return true;
@@ -382,8 +386,8 @@ function readTablet(key) {
   if (!c) return;
   state.run.trials.set(clueMark(c.key), 1);
   sfx('clink');
-  banner('A carved tablet', `Press them in this order:  ${c.glyphs.join('  ')}`);
-  setStatus(`The tablet reads ${c.glyphs.join(' ')}: you will remember it`);
+  banner(tr('A carved tablet'), tr('Press them in this order:  {glyphs}', { glyphs: c.glyphs.join('  ') }));
+  setStatus(tr('The tablet reads {glyphs}: you will remember it', { glyphs: c.glyphs.join(' ') }));
 }
 
 // --- the HUD: the banner on arming, the trial's line while it runs -------------------------------
@@ -405,44 +409,46 @@ function hud() {
   const show = !!s && !!m && (s.phase === 'armed' || s.phase === 'running' || (isPuzzle(s.kind) || s.kind === 'sunken' || s.kind === 'siege') && s.phase !== 'resolved');
   el.hidden = !show;
   if (!show) return;
-  $('trial-name').textContent = TRIALS[s.kind].name;
+  $('trial-name').textContent = tr(TRIALS[s.kind].name);
   let line = '', fill = 0;
   if (s.kind === 'flood') {
     const tl = m.timeline, next = nextPulse(tl, s.t);
-    if (s.phase === 'armed') line = `The water comes in ${Math.ceil(ARM_TIME - s.t)}…`;
-    else line = next != null ? `The water rises in ${Math.ceil(next - s.t)} s` : 'The water rises…';
+    if (s.phase === 'armed') line = tr('The water comes in {n}…', { n: Math.ceil(ARM_TIME - s.t) });
+    else line = next != null ? tr('The water rises in {n} s', { n: Math.ceil(next - s.t) }) : tr('The water rises…');
     fill = Math.min(1, s.t / floodEnd(tl));
   }
-  if (isPuzzle(s.kind)) line = PUZZLE_HINT[s.kind] ?? '';
+  if (isPuzzle(s.kind)) line = PUZZLE_HINT[s.kind] ? tr(PUZZLE_HINT[s.kind]) : '';
   if (s.kind === 'runes') {   // read the clue: the order shows; else where to find it
     const pz = m.puzzles[0], order = pz.field.order.map(i => pz.field.glyphs[i]), n = s.bits[`${pz.id}:n`] ?? 0;
-    line = state.run.trials.has(clueMark(m.key)) ? `The order: ${order.map((g, i) => i < n ? `[${g}]` : g).join('  ')}`
-      : 'Press the runestones in the right order: a carved tablet in a room before this one tells it';
+    line = state.run.trials.has(clueMark(m.key)) ? tr('The order: {glyphs}', { glyphs: order.map((g, i) => i < n ? `[${g}]` : g).join('  ') })
+      : tr('Press the runestones in the right order: a carved tablet in a room before this one tells it');
     fill = n / order.length;
   }
-  if (s.kind === 'timedgate' && timedOpen(m, s)) { const T = m.puzzles[0].T; line = `The gate is open: ${Math.max(0, Math.ceil(T - timed.t))} s`; fill = Math.max(0, 1 - timed.t / T); }
+  if (s.kind === 'timedgate' && timedOpen(m, s)) { const T = m.puzzles[0].T; line = tr('The gate is open: {n} s', { n: Math.max(0, Math.ceil(T - timed.t)) }); fill = Math.max(0, 1 - timed.t / T); }
   if (s.kind === 'sunken') {
-    line = `Stage ${(s.stage ?? 0) + 1} of ${m.stages}: solve the dry platform's puzzle to drain the room`;
+    line = tr("Stage {n} of {of}: solve the dry platform's puzzle to drain the room", { n: (s.stage ?? 0) + 1, of: m.stages });
     fill = (s.stage ?? 0) / m.stages;
   }
   const ev = m && eventHud(m, s);
   if (ev) ({ line, fill } = ev);
   if (s.kind === 'storm') {
     const g = stormPhase(s.t);
-    line = s.phase === 'armed' ? 'The wind rises…' : g.phase === 'warning' ? `A gust is coming! Behind a boulder (${Math.ceil(g.left)})` : g.phase === 'gust' ? 'GUST! Hold on behind the boulders' : `A lull: climb on (${Math.ceil(g.left)})`;
+    line = s.phase === 'armed' ? tr('The wind rises…') : g.phase === 'warning' ? tr('A gust is coming! Behind a boulder ({n})', { n: Math.ceil(g.left) })
+      : g.phase === 'gust' ? tr('GUST! Hold on behind the boulders') : tr('A lull: climb on ({n})', { n: Math.ceil(g.left) });
     fill = g.phase === 'gust' ? 1 : g.phase === 'warning' ? 1 - g.left / STORM.warning : g.left / STORM.lull;
   }
   if (s.kind === 'cold') {
-    line = s.phase === 'armed' ? 'The cold sets in…' : `Cold ${Math.round(cold)}%: keep near a lit brazier`;
+    line = s.phase === 'armed' ? tr('The cold sets in…') : tr('Cold {n}%: keep near a lit brazier', { n: Math.round(cold) });
     fill = cold / 100;
   }
   if (s.kind === 'miasma') {
     const tl = m.timeline, next = nextPulse(tl, s.t);
-    line = s.phase === 'armed' ? `The fog comes in ${Math.ceil(ARM_TIME - s.t)}…` : next != null ? `The fog sinks in ${Math.ceil(next - s.t)} s` : 'The fog is down: open the valve!';
+    line = s.phase === 'armed' ? tr('The fog comes in {n}…', { n: Math.ceil(ARM_TIME - s.t) }) : next != null ? tr('The fog sinks in {n} s', { n: Math.ceil(next - s.t) })
+      : tr('The fog is down: open the valve!');
     fill = Math.min(1, s.t / floodEnd(tl));
   }
   if (s.kind === 'collapse') {
-    line = s.phase === 'armed' ? 'The floor shakes…' : 'Run! Reach the far side';
+    line = s.phase === 'armed' ? tr('The floor shakes…') : tr('Run! Reach the far side');
     fill = m.crust.length ? gone.size / m.crust.length : 0;
   }
   $('trial-line').textContent = line;
@@ -549,7 +555,7 @@ export function devTrial(what) {
     if (s.phase === 'resolved') { state.run.unlockedGates.delete(m.gate); s.phase = 'idle'; }
     restartTrial(); return `${TRIALS[m.kind].name}: back as built`;
   }
-  if (what === 'fail') { failTrial('The trial is lost'); return `${TRIALS[m.kind].name}: failed`; }
+  if (what === 'fail') { failTrial(msg('The trial is lost')); return `${TRIALS[m.kind].name}: failed`; }
   if (what === 'solve') return solveLens();
   return `Unknown: ${what}`;
 }
@@ -642,7 +648,7 @@ export function updateTrialTip() {
   }
   el.hidden = !show;
   if (!show) return;
-  const t = TRIALS[show.kind], text = `${t.name} · ${t.family === 'event' ? 'an event: it seals the room' : 'a puzzle'}`;
+  const t = TRIALS[show.kind], text = `${tr(t.name)} · ${t.family === 'event' ? tr('an event: it seals the room') : tr('a puzzle')}`;
   if (el.textContent !== text) { el.textContent = text; el.style.borderColor = t.color; }
   el.style.left = `${Math.round(show.x)}px`; el.style.top = `${Math.round(show.y - 34)}px`;
 }
@@ -809,8 +815,8 @@ function solveStage(i) {
   relay.trialStage?.({ key: m.key, stage: s.stage });
   sfx('unlock'); sfx('splash', { delay: 0.3, volume: 0.6 });
   if (s.stage >= m.stages) { resolve(); return; }
-  setStatus(`Stage ${s.stage} of ${m.stages}: the water sinks`);
-  banner('The water sinks', 'A way down is clear: on to the next platform.');
+  setStatus(tr('Stage {n} of {of}: the water sinks', { n: s.stage, of: m.stages }));
+  banner(tr('The water sinks'), tr('A way down is clear: on to the next platform.'));
   showTrial();
 }
 // playing together: a stage drained somewhere (by whoever): drained for us too

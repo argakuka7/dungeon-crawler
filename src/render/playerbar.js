@@ -9,6 +9,7 @@ import { REVIVE_TIME, BLEED_OUT } from '../core/downed.js';
 import { player } from '../game/state.js';
 import { xpProgress } from '../core/progression.js';
 import { CHAR_H } from '../core/constants.js';
+import { tr } from '../i18n/i18n.js';
 
 const group = new THREE.Group();
 const hp = makeBar({ color: 0xe0584c, onTop: true });
@@ -49,6 +50,6 @@ export function updatePlayerBar(close = false) {
   xp.set(p.current / p.required);
   label.setLevel(player.level);
   const d = player.down;
-  note.setText(!d ? null : d.revive > 0 ? `${d.by ?? 'A friend'} is helping you up ${Math.round(100 * d.revive / REVIVE_TIME)}%`
-    : `Down! ${helperName()} can help you up · ${Math.ceil(BLEED_OUT - d.t)}s · R: give up`, d?.revive > 0 ? '#9be05a' : '#ff9a8a');
+  note.setText(!d ? null : d.revive > 0 ? tr('{name} is helping you up {n}%', { name: d.by ?? tr('A friend'), n: Math.round(100 * d.revive / REVIVE_TIME) })
+    : tr('Down! {name} can help you up · {n}s · R: give up', { name: helperName(), n: Math.ceil(BLEED_OUT - d.t) }), d?.revive > 0 ? '#9be05a' : '#ff9a8a');
 }

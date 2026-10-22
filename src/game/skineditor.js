@@ -9,6 +9,7 @@ import { SkinPainter } from '../render/skinpaint.js';
 import { SkinPreview } from '../render/skinpreview.js';
 import { writeSkinFile, deleteSkinFile, skinImage, readNamedSkin, writeNamedSkin, rollbackNamedSkin, SkinLibraryFull } from './skinfiles.js';
 import { cleanSkinName, skinNameKey, SKIN_NAME_MAX, MAX_SKINS, isNinjaSkinCode, NINJA_SKIN_CODE } from '../core/skin.js';
+import { tr } from '../i18n/i18n.js';
 
 let active = false;
 const escapeText = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
@@ -20,25 +21,24 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
   active = true;
   const previousFocus = document.activeElement, dialog = document.createElement('dialog');
   dialog.id = 'skin-editor'; dialog.setAttribute('aria-labelledby', 'skin-title');
-  dialog.innerHTML = `<h2 id="skin-title">${name ? 'Paint Skin' : 'New Skin'} <small>2048 × 2048</small></h2>
-    <div class="skin-tools" role="group" aria-label="Paint tools">
-      <button data-tool="pen" aria-pressed="true">Pen</button>
-      <button data-tool="fill" aria-pressed="false">Fill</button>
-      <label>Color <input id="skin-color" type="color" value="#4287ff"></label>
-      <button data-tool="erase" aria-pressed="false">Eraser</button>
-      <button data-tool="rotate" aria-pressed="false">Rotate</button>
-      <label>Brush size <input id="skin-size" type="range" min="1" max="32" value="4"></label>
+  dialog.innerHTML = `<h2 id="skin-title">${escapeText(name ? tr('Paint Skin') : tr('New Skin'))} <small>2048 × 2048</small></h2>
+    <div class="skin-tools" role="group" aria-label="${escapeText(tr('Paint tools'))}">
+      <button data-tool="pen" aria-pressed="true">${escapeText(tr('Pen'))}</button>
+      <button data-tool="fill" aria-pressed="false">${escapeText(tr('Fill'))}</button>
+      <label>${escapeText(tr('Color'))} <input id="skin-color" type="color" value="#4287ff"></label>
+      <button data-tool="erase" aria-pressed="false">${escapeText(tr('Eraser'))}</button>
+      <button data-tool="rotate" aria-pressed="false">${escapeText(tr('Rotate'))}</button>
+      <label>${escapeText(tr('Brush size'))} <input id="skin-size" type="range" min="1" max="32" value="4"></label>
     </div>
     <div id="skin-view"></div>
-    <p>Draw a fully closed outline, then choose Fill and click inside it. Gaps must be closed first.
-      Hold the right mouse button and drag to rotate, or use Rotate. Scroll to zoom in.</p>
+    <p>${escapeText(tr('Draw a fully closed outline, then choose Fill and click inside it. Gaps must be closed first. Hold the right mouse button and drag to rotate, or use Rotate. Scroll to zoom in.'))}</p>
     <div class="skin-tools skin-library">
-      <label for="skin-name">Skin name</label>
-      <input id="skin-name" type="text" maxlength="${SKIN_NAME_MAX}" required placeholder="Name your skin" autocomplete="off">
+      <label for="skin-name">${escapeText(tr('Skin name'))}</label>
+      <input id="skin-name" type="text" maxlength="${SKIN_NAME_MAX}" required placeholder="${escapeText(tr('Name your skin'))}" autocomplete="off">
     </div>
-    <p>Saving keeps the skin under this name (up to ${MAX_SKINS} skins) and puts it on ${escapeText(hero.name)}.</p>
-    <div class="skin-tools"><button id="skin-save" disabled>Save Skin</button><button id="skin-cancel">Cancel</button></div>
-    <p id="skin-status" role="status">Loading skin …</p>`;
+    <p>${escapeText(tr('Saving keeps the skin under this name (up to {max} skins) and puts it on {name}.', { max: MAX_SKINS, name: hero.name }))}</p>
+    <div class="skin-tools"><button id="skin-save" disabled>${escapeText(tr('Save Skin'))}</button><button id="skin-cancel">${escapeText(tr('Cancel'))}</button></div>
+    <p id="skin-status" role="status">${escapeText(tr('Loading skin …'))}</p>`;
   document.body.append(dialog); dialog.showModal();
   const $ = s => dialog.querySelector(s), status = $('#skin-status');
   $('#skin-name').value = cleanSkinName(name);
@@ -58,9 +58,9 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
   dialog.addEventListener('keydown', e => e.stopPropagation());
   dialog.addEventListener('cancel', e => {
     e.preventDefault();
-    if (!dirty || busy || confirm('Discard your unsaved painting?')) close();
+    if (!dirty || busy || confirm(tr('Discard your unsaved painting?'))) close();
   });
-  $('#skin-cancel').onclick = () => { if (!dirty || busy || confirm('Discard your unsaved painting?')) close(); };
+  $('#skin-cancel').onclick = () => { if (!dirty || busy || confirm(tr('Discard your unsaved painting?'))) close(); };
   try {
     await Promise.all([rigReady, characterReady]);
     const record = name ? await readNamedSkin(name) : null;
@@ -124,7 +124,7 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
     function requiredName() {
       const name = cleanSkinName($('#skin-name').value);
       $('#skin-name').value = name;
-      if (!name) { status.textContent = 'Enter a skin name first.'; $('#skin-name').focus(); }
+      if (!name) { status.textContent = tr('Enter a skin name first.'); $('#skin-name').focus(); }
       return name;
     }
     $('#skin-name').addEventListener('keydown', e => {
@@ -138,8 +138,8 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
     });
     async function loadSecret() {
       if (busy) return;
-      if (dirty && !confirm('Loading a skin will replace your unsaved painting. Continue?')) return;
-      busy = true; status.textContent = 'Loading secret skin …';
+      if (dirty && !confirm(tr('Loading a skin will replace your unsaved painting. Continue?'))) return;
+      busy = true; status.textContent = tr('Loading secret skin …');
       try {
         const record = await readNamedSkin(NINJA_SKIN_CODE);
         const image = await skinImage(record.blob);
@@ -147,8 +147,8 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
         strokes.length = 0; pointer = null; last = null;
         painter.copy(texture, true); texture.dispose();
         $('#skin-name').value = record.name; dirty = true; requestDraw();
-        status.textContent = 'Easter egg unlocked: Ninjajavamc! Choose Save Skin to keep it.';
-      } catch (e) { console.error(e); status.textContent = 'Could not load the secret skin. Try again with Enter.'; }
+        status.textContent = tr('Easter egg unlocked: Ninjajavamc! Choose Save Skin to keep it.');
+      } catch (e) { console.error(e); status.textContent = tr('Could not load the secret skin. Try again with Enter.'); }
       finally { busy = false; }
     }
     const point = e => {
@@ -158,10 +158,10 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
     function stroke(from, to) {
       strokes.push({ from, to, radius: Number($('#skin-size').value) / 2,
         color: $('#skin-color').value, erase: tool === 'erase' });
-      dirty = true; status.textContent = 'Unsaved changes'; requestDraw();
+      dirty = true; status.textContent = tr('Unsaved changes'); requestDraw();
     }
     async function fill(p) {
-      busy = true; status.textContent = 'Filling area …';
+      busy = true; status.textContent = tr('Filling area …');
       try {
         // Flush any preceding stroke before taking a texture snapshot.
         draw();
@@ -171,9 +171,9 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
         const changed = hit ? await painter.fill(hit.uv, $('#skin-color').value) : 0;
         requestDraw();
         if (changed > 0) dirty = true;
-        status.textContent = changed < 0 ? 'Close the outline completely before filling it.'
-          : changed > 0 ? 'Area filled · Unsaved changes' : 'Click inside a closed outline.';
-      } catch (e) { console.error(e); status.textContent = 'Could not fill this area.'; }
+        status.textContent = changed < 0 ? tr('Close the outline completely before filling it.')
+          : changed > 0 ? tr('Area filled · Unsaved changes') : tr('Click inside a closed outline.');
+      } catch (e) { console.error(e); status.textContent = tr('Could not fill this area.'); }
       finally { busy = false; }
     }
     canvas.onpointerdown = e => {
@@ -209,12 +209,12 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
       if (busy) return;
       const newName = requiredName();
       if (!newName) return;
-      busy = true; $('#skin-save').disabled = true; status.textContent = 'Saving texture …';
+      busy = true; $('#skin-save').disabled = true; status.textContent = tr('Saving texture …');
       let file, receipt;
       try {
         if (skinNameKey(newName) !== skinNameKey(name) && await readNamedSkin(newName)
-            && !confirm(`Replace the saved skin named “${newName}”?`)) {
-          status.textContent = 'Choose a different name to keep both skins.';
+            && !confirm(tr('Replace the saved skin named “{name}”?', { name: newName }))) {
+          status.textContent = tr('Choose a different name to keep both skins.');
           busy = false; $('#skin-save').disabled = false; return;
         }
         draw();
@@ -228,13 +228,13 @@ export async function openSkinEditor({ hero, name = '', save, onClose }) {
       } catch (e) {
         if (receipt) await rollbackNamedSkin(receipt).catch(console.warn);
         if (file) await deleteSkinFile(file).catch(console.warn);
-        if (e instanceof SkinLibraryFull) status.textContent = `There are ${MAX_SKINS} skins already: save over one of them, or delete one in Choose Skin.`;
-        else { console.error(e); status.textContent = 'Could not save. Is the browser storage full?'; }
+        if (e instanceof SkinLibraryFull) status.textContent = tr('There are {max} skins already: save over one of them, or delete one in Choose Skin.', { max: MAX_SKINS });
+        else { console.error(e); status.textContent = tr('Could not save. Is the browser storage full?'); }
         busy = false; $('#skin-save').disabled = false;
       }
     };
   } catch (error) {
     console.error('Skin editor failed', error);
-    if (dialog.isConnected) status.textContent = 'Could not load the skin editor.';
+    if (dialog.isConnected) status.textContent = tr('Could not load the skin editor.');
   }
 }

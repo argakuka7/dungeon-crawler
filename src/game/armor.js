@@ -21,6 +21,7 @@ import { character } from '../render/character.js';
 import { wear, takeOff, thingLoaded, loadThing, animateWorn } from '../render/figure.js';
 import { floatText } from '../render/floattext.js';
 import { emit, glow, rand } from '../render/particles.js';
+import { tr } from '../i18n/i18n.js';
 
 // a bow needs both hands: the shield goes on the back and blocks nothing
 export const shieldInHand = (p = player) => equippedWeapon(p)?.weapon?.kind !== 'bow';
@@ -77,7 +78,7 @@ export function guardBlow(blow) {
 // the clang of a block: a word over the hero, a spray of sparks from the shield
 function blocked(damage) {
   sfx('block', { pitch: 0.9 + Math.random() * 0.2 });
-  floatText(damage >= 0.5 ? `Blocked! −${Math.ceil(damage)}` : 'Blocked!', q => q.set(player.x, player.visY + 1.3, player.z),
+  floatText(damage >= 0.5 ? tr('Blocked! −{n}', { n: Math.ceil(damage) }) : tr('Blocked!'), q => q.set(player.x, player.visY + 1.3, player.z),
     { color: '#cfe3ff', size: 0.22, life: 0.9, rise: 0.7, pop: 0.6 });
   const shield = character.worn?.shield?.object;
   const at = shield ? shield.getWorldPosition(_v) : { x: player.x, y: player.y + 0.5, z: player.z };

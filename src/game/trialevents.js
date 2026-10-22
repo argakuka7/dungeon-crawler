@@ -17,7 +17,7 @@ import { player, state, setStatus } from './state.js';
 import { addEnemies, removeEnemies, mirroring, allEnemies } from './enemies.js';
 import { online } from '../net/online.js';
 import { sfx } from '../audio/sfx.js';
-import { msg, phrase, noun } from '../i18n/i18n.js';
+import { msg, phrase, noun, tr } from '../i18n/i18n.js';
 
 const bodies = () => [player, ...online.buddies.filter(b => b.here && b.hp > 0)].filter(b => b.hp > 0);
 
@@ -63,7 +63,7 @@ function spawnWave(m, s, k) {
   }
   addEnemies(list);
   sfx('rumble', { volume: 0.4 });
-  setStatus(k === 0 ? 'They are coming from the dark!' : `Wave ${k + 1} of ${SIEGE.waves}!`);
+  setStatus(k === 0 ? tr('They are coming from the dark!') : tr('Wave {n} of {of}!', { n: k + 1, of: SIEGE.waves }));
 }
 
 // in the ring: a body within its radius, about its level
@@ -145,7 +145,7 @@ function spawnWarden(m) {
   warden = id;
   addEnemies([e]);
   sfx('rumble', { volume: 0.7, pitch: 0.5 });
-  setStatus(`A ${kind.label.toLowerCase()} breaks out of its lair!`);
+  setStatus(tr('{kind:A} breaks out of its lair!', { kind: noun(ENEMY_KINDS[kind.type]?.label ?? kind.label) }));
 }
 // the lever dropped the portcullis: one already through the gate is gone, one in the hall trapped
 export function dropPortcullis(m) {
@@ -163,26 +163,26 @@ export function wardenGap() {
 // the HUD's line for these kinds: { line, fill } (null: not one of them)
 export function eventHud(m, s) {
   if (s.kind === 'siege') {
-    if (s.phase === 'idle') return { line: 'Light the beacon when you are ready, then hold its ring', fill: 0 };
-    const hold = holdTime(state.map.depth), k = (s.bits.hold ?? 0) / hold;
-    if (s.phase === 'armed') return { line: 'The beacon blazes: something stirs in the dark…', fill: 0 };
-    return { line: bodies().some(b => inRing(m, b)) ? `Hold the ring: ${Math.floor(k * 100)}%` : `Get back in the ring! (${Math.floor(k * 100)}%)`, fill: k };
+    if (s.phase === 'idle') return { line: tr('Light the beacon when you are ready, then hold its ring'), fill: 0 };
+    const hold = holdTime(state.map.depth), k = (s.bits.hold ?? 0) / hold, n = Math.floor(k * 100);
+    if (s.phase === 'armed') return { line: tr('The beacon blazes: something stirs in the dark…'), fill: 0 };
+    return { line: bodies().some(b => inRing(m, b)) ? tr('Hold the ring: {n}%', { n }) : tr('Get back in the ring! ({n}%)', { n }), fill: k };
   }
   if (s.kind === 'chase') {
-    if (s.phase === 'idle') return { line: 'Take the relic from its altar, then run for the gate', fill: 0 };
+    if (s.phase === 'idle') return { line: tr('Take the relic from its altar, then run for the gate'), fill: 0 };
     const gap = wardenGap();
-    if (gap == null) return { line: 'The relic is taken: something stirs in its lair…', fill: 0 };
-    return { line: `Run! It is ${gap} cells away: through the gate and pull the lever`, fill: Math.max(0, Math.min(1, 1 - gap / 12)) };
+    if (gap == null) return { line: tr('The relic is taken: something stirs in its lair…'), fill: 0 };
+    return { line: tr('Run! It is {n} cells away: through the gate and pull the lever', { n: gap }), fill: Math.max(0, Math.min(1, 1 - gap / 12)) };
   }
   return null;
 }
 export const EVENT_HOW = {
-  siege: 'Hold the beacon\'s ring against the waves!',
-  chase: 'The relic is taken, and its warden wakes. Run back through the gate and drop the portcullis!',
+  siege: msg("Hold the beacon's ring against the waves!"),
+  chase: msg('The relic is taken, and its warden wakes. Run back through the gate and drop the portcullis!'),
 };
 export const EVENT_DONE = {
-  siege: 'The beacon flares: they flee into the dark.',
-  chase: 'The portcullis crashes down: the warden is shut in with its hall.',
+  siege: msg('The beacon flares: they flee into the dark.'),
+  chase: msg('The portcullis crashes down: the warden is shut in with its hall.'),
 };
 export const isActorEvent = kind => kind === 'siege' || kind === 'chase';
 export { TRIALS };

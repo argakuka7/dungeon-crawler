@@ -3,6 +3,7 @@
 // ever hides them.
 import * as THREE from 'three';
 import { DISPLAY } from './fonts.js';
+import { tr } from '../i18n/i18n.js';
 
 const INDICATOR_SCALE = 1.15;
 const LABEL_SCALE = INDICATOR_SCALE * 1.15;   // level / name labels a touch larger than the bars
@@ -38,7 +39,7 @@ export function makeLevelLabel(level, { color = '#ffe4ae', onTop = false, title 
   const made = title;
   let shown = null;
   sprite.setLevel = (n, title = made) => {
-    const text = title ? `${title} · Lv ${n}` : `Lv ${n}`;
+    const text = title ? tr('{title} · Lv {level}', { title, level: n }) : tr('Lv {level}', { level: n });
     if (text === shown) return;
     shown = text;
     ctx.font = `bold 48px ${DISPLAY}`;

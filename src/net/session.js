@@ -82,6 +82,7 @@ import { detachWorld } from '../game/save.js';
 import { takeQuestLog, guestQuestAct, questRewarded, questLogPacked } from '../game/quests.js';
 import { TrialOwner, trialMessage, trialAct } from './trials.js';
 import { takeTrialWord, trialActFrom, shareTrialResolved, shareTrialStage, sealedIn } from '../game/trials.js';
+import { tr, msg, phrase, say as sayWords } from '../i18n/i18n.js';
 
 const FADE_MS = 380;
 const BESIDE = 0.9;      // cells from the friend where going to them puts you
@@ -141,39 +142,44 @@ function dropPeer(slot) {
   setPartnerSkin(slot, null);
   skinSends.delete(slot);
 }
-const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
+// 'Anna, Ben and Cleo' (in the language of the moment)
+const names = list => list.length < 2 ? list.join('') : tr('{some} and {last}', { some: list.slice(0, -1).join(', '), last: list.at(-1) });
 
 // what the Esc menu shows (game/escmenu.js): { phase, text }; phase: idle | opening | waiting |
 // joining | connected
 const listeners = new Set();
-let status = { phase: 'idle', text: '' };
+// text: in the language of the moment (words: what is kept, src/i18n/i18n.js say)
+let status = { phase: 'idle', words: '', get text() { return sayWords(this.words); } };
 export const sessionStatus = () => status;
 export function onSessionChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function setPhase(phase, text = '') { status = { phase, text }; for (const fn of listeners) fn(status); }
+function setPhase(phase, words = '') { status = { phase, words, get text() { return sayWords(this.words); } }; for (const fn of listeners) fn(status); }
 // connected (or the host waiting): who we play with
 function showPlayers(note = null) {
   const list = names([...peers.values()].sort((a, b) => a.slot - b.slot).map(p => p.name)), free = MAX_PLAYERS - 1 - peers.size;
   if (online.role === 'host') {
     if (!room) return;
-    if (!peers.size) setPhase('waiting', `${note ? note + '. ' : ''}Room ${online.code} is open. Waiting for friends...`);
-    else setPhase('connected', `Playing with ${list}.${free ? ` Room ${online.code} is open for ${free} more.` : ''}`);
-  } else if (online.slot !== null) setPhase('connected', `Playing with ${list}`);
+    const open = phrase('Room {code} is open. Waiting for friends...', { code: online.code });
+    if (!peers.size) setPhase('waiting', note ? phrase('{note}. {open}', { note, open }) : open);
+    else setPhase('connected', free ? phrase('Playing with {list}. Room {code} is open for {n} more.', { list, code: online.code, n: free })
+      : phrase('Playing with {list}.', { list }));
+  } else if (online.slot !== null) setPhase('connected', phrase('Playing with {list}', { list }));
 }
 
 // what the player needs to see: over the character, and in the chat box (setStatus)
-function say(text) {
+function say(words) {
+  const text = sayWords(words);
   setStatus(text);
   floatText(text, q => q.set(player.x, player.visY + 2.1, player.z), { color: '#cfe2ff', size: 0.2, life: 2.2, rise: 0.35 });
 }
 // ... and what the chronicle keeps: someone came or went
 function tell(text) { say(text); log('party', { text }); }
 
-const reason = e => ({
-  'unavailable-id': 'That room code is taken',
-  'peer-unavailable': 'There is no game with that code',
-  'browser-incompatible': 'This browser cannot play online',
-  'timeout': 'No answer: check the code and the internet connection',
-}[e?.type] ?? 'Could not connect');
+const reason = e => phrase({
+  'unavailable-id': msg('That room code is taken'),
+  'peer-unavailable': msg('There is no game with that code'),
+  'browser-incompatible': msg('This browser cannot play online'),
+  'timeout': msg('No answer: check the code and the internet connection'),
+}[e?.type] ?? msg('Could not connect'));
 
 // --- sending ---------------------------------------------------------------------------------
 
@@ -207,7 +213,7 @@ export async function hostGame({ name, local: viaTabs = false } = {}) {
   if (online.role) return;
   myName = cleanName(name); local = viaTabs;
   online.role = 'host';
-  setPhase('opening', 'Opening a room...');
+  setPhase('opening', phrase('Opening a room...'));
   for (let tries = 0; ; tries++) {
     const code = roomCode(crypto.getRandomValues ? cryptoRandom : Math.random);
     try {
@@ -233,7 +239,7 @@ export async function joinGame(code, { name, local: viaTabs = false } = {}) {
   if (online.role) return false;
   myName = cleanName(name); local = viaTabs;
   online.role = 'guest'; online.code = code;
-  if (!rejoin) setPhase('joining', `Joining ${code}...`);
+  if (!rejoin) setPhase('joining', phrase('Joining {code}...', { code }));
   try {
     const l = await joinRoom(code, { local });
     if (online.role !== 'guest') { l.close(); return false; }   // left while joining
@@ -255,8 +261,8 @@ export async function joinGame(code, { name, local: viaTabs = false } = {}) {
 // learn: network.html#broken (see learn/README.md)
 function retry() {
   if (!rejoin) return;
-  if (rejoin.tries++ >= REJOIN_TRIES) { rejoin = null; setPhase('idle', 'The connection was lost'); return; }
-  setPhase('joining', `Connection lost. Trying again (${rejoin.tries}/${REJOIN_TRIES})...`);
+  if (rejoin.tries++ >= REJOIN_TRIES) { rejoin = null; setPhase('idle', phrase('The connection was lost')); return; }
+  setPhase('joining', phrase('Connection lost. Trying again ({n}/{of})...', { n: rejoin.tries, of: REJOIN_TRIES }));
   const r = rejoin;
   joinGame(r.code, { name: myName, local }).then(ok => { if (!ok && rejoin === r) r.timer = setTimeout(retry, REJOIN_EVERY); });
 }
@@ -303,7 +309,7 @@ function guestArrived(l) {
     if (m?.t !== 'hello') return;
     if (m.v !== PROTOCOL) {
       l.send({ t: 'version', v: PROTOCOL }); setTimeout(() => l.close(), 300);
-      tell('A friend with another version of the game tried to join: both reload the page');
+      tell(phrase('A friend with another version of the game tried to join: both reload the page'));
       return;
     }
     const id = typeof m.pid === 'string' ? m.pid : null;
@@ -332,7 +338,7 @@ function welcome(l, slot, name, id, again) {
   deliver({ t: 'joined', slot, name, from: 0 }, undefined, slot);
   together();
   showPlayers();
-  tell(again ? `${name} is back` : `${name} joined`);
+  tell(again ? phrase('{name} is back', { name }) : phrase('{name} joined', { name }));
 }
 
 function fromGuest(p, l, m) {
@@ -355,8 +361,8 @@ function lostGuest(p) {
   dropPeer(p.slot);
   deliver({ t: 'left', slot: p.slot, from: 0 }, undefined, p.slot);
   if (!peers.size) apart();
-  showPlayers(`${p.name} left`);
-  tell(`${p.name} left`);
+  showPlayers(phrase('{name} left', { name: p.name }));
+  tell(phrase('{name} left', { name: p.name }));
 }
 
 // --- a guest: what the host says ---------------------------------------------------------------
@@ -369,7 +375,7 @@ function fromHost(m) {
   if (m.t === 'bye') { const l = link; lost(true); l?.close(); return; }
   if (online.slot === null) {
     if (m.t === 'welcome') welcomed(m);
-    else if (m.t === 'full') { const l = link; unhook(l); end(); l?.close(); online.role = null; online.code = null; setPhase('idle', `That game has ${MAX_PLAYERS} players already`); }
+    else if (m.t === 'full') { const l = link; unhook(l); end(); l?.close(); online.role = null; online.code = null; setPhase('idle', phrase('That game has {n} players already', { n: MAX_PLAYERS })); }
     else if (m.t === 'version') refuse();
     return;
   }
@@ -377,12 +383,12 @@ function fromHost(m) {
   if (m.from === 0 && m.t === 'joined' && Number.isInteger(m.slot) && m.slot !== online.slot) {
     const known = peers.has(m.slot), name = cleanName(m.name);
     addPeer(m.slot, name); showPlayers();
-    if (!known) tell(`${name} joined`);
+    if (!known) tell(phrase('{name} joined', { name }));
     return;
   }
   if (m.from === 0 && m.t === 'left') {
     const p = peers.get(m.slot);
-    if (p) { dropPeer(m.slot); showPlayers(); tell(`${p.name} left`); }
+    if (p) { dropPeer(m.slot); showPlayers(); tell(phrase('{name} left', { name: p.name })); }
     return;
   }
   if (m.from === 0 && m.t === 'world' && Number.isFinite(m.seed)) { pendingSeed = m.seed; return; }
@@ -413,7 +419,7 @@ function welcomed(m) {
   }
   together();
   showPlayers();
-  tell(`Joined ${peers.get(0)?.name ?? 'your friend'}'s world`);
+  tell(peers.get(0)?.name ? phrase("Joined {name}'s world", { name: peers.get(0).name }) : phrase("Joined your friend's world"));
 }
 
 // we (a guest) lost the host: it said goodbye (bye), or the connection broke (then we try to
@@ -424,9 +430,9 @@ function lost(bye = false) {
   unhook(link);
   end();
   online.role = null; online.code = null;
-  if (wasIn && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', 'Connection lost. Trying again...'); }
-  else setPhase('idle', name ? `${name} left the game` : 'The connection was lost');
-  if (name) tell(bye || !wasIn ? `${name} left` : 'Connection lost');
+  if (wasIn && !bye) { rejoin = { code, tries: 0, timer: setTimeout(retry, 500) }; setPhase('joining', phrase('Connection lost. Trying again...')); }
+  else setPhase('idle', name ? phrase('{name} left the game', { name }) : phrase('The connection was lost'));
+  if (name) tell(bye || !wasIn ? phrase('{name} left', { name }) : phrase('Connection lost'));
 }
 
 function refuse() {
@@ -434,7 +440,7 @@ function refuse() {
   l?.send({ t: 'version', v: PROTOCOL });
   unhook(l); end(); l?.close();
   online.role = null; online.code = null;
-  setPhase('idle', 'Your friend has another version of the game: both reload the page');
+  setPhase('idle', phrase('Your friend has another version of the game: both reload the page'));
 }
 
 // every second, to everyone (also from a background tab); silence for LOST: gone
@@ -764,19 +770,19 @@ function beside(p) {
 // why we cannot go over to the other player p now (null: we can)
 function unreachable(p) {
   const them = p.timeline.latest();
-  if (!them) return 'Not here yet';
-  if (them.seed !== state.cubes?.seed) return 'In another world';
-  if (them.busy) return 'On the move';
-  if (them.sealed) return 'Sealed in a trial room';   // (a trial room while its event runs: game/trials.js)
+  if (!them) return tr('Not here yet');
+  if (them.seed !== state.cubes?.seed) return tr('In another world');
+  if (them.busy) return tr('On the move');
+  if (them.sealed) return tr('Sealed in a trial room');   // (a trial room while its event runs: game/trials.js)
   const [x, , z] = them.body;
-  if (them.cube === state.cubeKey && Math.hypot(x - player.x, z - player.z) < 2) return 'Right beside you';
+  if (them.cube === state.cubeKey && Math.hypot(x - player.x, z - player.z) < 2) return tr('Right beside you');
   return null;
 }
 travel.targets = () => [...peers.values()].sort((a, b) => a.slot - b.slot).map(p => ({ slot: p.slot, name: p.name, why: unreachable(p) }));
 // fade over to the cube player `slot` is in, and stand next to them
 travel.goTo = slot => {
-  const p = peers.get(slot), why = !p ? 'They left' : busy() || player.down || player.ragdoll ? 'Not now' : unreachable(p);
-  if (why) { say(p ? `${p.name}: ${why}` : why); return false; }
+  const p = peers.get(slot), why = !p ? tr('They left') : busy() || player.down || player.ragdoll ? tr('Not now') : unreachable(p);
+  if (why) { say(p ? phrase('{name}: {why}', { name: p.name, why }) : why); return false; }
   follow(p.timeline.latest(), p.name);
   return true;
 };
@@ -787,7 +793,7 @@ function follow(them, name) {
   state.transitioning = true; state.portalCharge = null;
   cancelSword(true); cancelCast(); clearMouseInput();
   fadeOut();
-  say(`Off to ${name}`);
+  say(phrase('Off to {name}', { name }));
   setTimeout(() => whenReady(cubes.get(key)).then(c => {
     following = false;
     if (state.cubes !== cubes) return;

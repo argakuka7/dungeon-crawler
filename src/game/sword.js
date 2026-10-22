@@ -53,7 +53,7 @@ export function updateSword(dt) {
   if (stats.kind === 'throw' && cooldownLeft(player, stats.flask, state.time) > 0) return;   // waits in the buffer
   if (!startSwing(player, aimYaw(target))) return;
   s.requested = false; s.target = target;
-  setStatus(KINDS[s.stats.kind].verb);
+  setStatus(tr(KINDS[s.stats.kind].verb));
   swingFx(s.stats.kind);
 }
 
