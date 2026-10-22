@@ -83,7 +83,7 @@ export function prepareHeld(weapon, item) {
         l.visible = true; links.push(pivot(l, middle));
       }
       h.balls.push({ part: pivot(ball, new THREE.Vector3(ends[i * 3] ?? 0, ends[i * 3 + 1] ?? 0, ends[i * 3 + 2] ?? 0)),
-        dir: dir.clone().normalize(), reach: dir.length(), pos: null, prev: new THREE.Vector3(), links });
+        dir: dir.clone().normalize(), reach: dir.length(), side: ends[i * 3] ?? 0, pos: null, prev: new THREE.Vector3(), links });
     }
   }
   weapon.userData.held = h;
@@ -144,7 +144,13 @@ function swingFlail(h, dt) {
   let root = item;
   while (root.parent && !root.parent.isScene) root = root.parent;
   const feet = root.getWorldPosition(_c).y;
-  for (const b of h.balls) if (!b.pos || jumped || b.pos.distanceTo(A) > L * 3) { b.pos = A.clone(); b.pos.y -= L; b.prev.copy(b.pos); }
+  // (hung each a little to its own side, as they lie in the model: balls started in one spot
+  // would move as one forever, drawn as a single ball)
+  for (const b of h.balls) if (!b.pos || jumped || b.pos.distanceTo(A) > L * 3) {
+    b.pos = A.clone(); b.pos.y -= L;
+    if (b.side) b.pos.addScaledVector(_u.set(1, 0, 0).transformDirection(item.matrixWorld), b.side * k);
+    b.prev.copy(b.pos);
+  }
   if (jumped) was.copy(A);
   const steps = dt > 0 ? Math.min(8, Math.ceil(dt / FLAIL.step)) : 0, h2 = (dt / Math.max(1, steps)) ** 2;
   for (let i = 1; i <= steps; i++) {
@@ -163,7 +169,9 @@ function swingFlail(h, dt) {
       const a = h.balls[x], b = h.balls[y], min = (a.reach + b.reach) * 0.7 * k;
       _p.subVectors(b.pos, a.pos);
       const d = _p.length();
-      if (d < min && d > 1e-6) { _p.multiplyScalar((min - d) / d / 2); a.pos.sub(_p); b.pos.add(_p); }
+      if (d >= min) continue;
+      if (d < 1e-6) { _p.set(min / 2, 0, 0); a.pos.sub(_p); b.pos.add(_p); continue; }   // (one on the other: apart along x)
+      _p.multiplyScalar((min - d) / d / 2); a.pos.sub(_p); b.pos.add(_p);
     }
   }
   was.copy(A);
