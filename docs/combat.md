@@ -224,6 +224,17 @@ The controls are the same for all.
   cloud drops and squashes flat, its arms pop off and land beside it, and it turns light blue
   again. Its side guardian is a grey rain cloud, its descent guardian a polished silver one
   that glints (`guardianLooks` in `core/enemies.js`, `finish` in `render/enemies.js`).
+- Mecked (`blender/mecked.py`, after the kids' sketch): a round-bellied beast standing on two
+  stubby legs, with long rabbit ears, a long neck, a crocodile snout full of zig-zag teeth, two
+  short striped arms and a ringed tail curled into a spiral. It waddles after you
+  (`style: 'brute'`, a `charge` of 1.4×) and, from 1.05 cells, mostly grabs (two times in three)
+  or bites (clip frame 13). Both have the same reach: it strikes as soon as you are in reach, so
+  a shorter grab would hardly ever be picked. Caught at frame 15 (`grab`, `game/grab.js`), you are
+  held up against its belly, where nothing else can hurt you and you cannot strike, and bitten at
+  1.0 s and 1.5 s (`bites`: each 0.6 of its damage, through the armor but past the shield; a Bog
+  mecked's bites poison), then shoved away on your feet at 1.9 s, stunned for 0.3 s. A stagger
+  (a friend's blow, a heavy one) or its death makes it let go early: you drop. It dies reeling
+  back and toppling over onto its side.
 - The glow lives in `render/enemies.js`: each of the three (and the Fire shraps) carries a light from the
   shared light pool (`trackLight`), bones named `flame*` keep flickering over any clip,
   the Triangle's emissive materials pulse with its hover beat, fire sheds embers, and
@@ -274,8 +285,8 @@ times a second (0.2 s, jittered so a pack does not decide in lockstep) and acts 
     when blocked and now and then, and darts in once the cooldown is over.
   - `ranged` (Fire-face, Triangle, Spicy, Wolla, Wolk): backs away while closer than `keep[0]`, sidesteps while the
     throw recovers, and moves for a clear shot when it has none.
-  - `brute` (Stunder, Octonaut, Shraps): holds its ground. The Stunder `charge`s: it runs the
-    last 1.5–5 cells at 1.8× its chase speed when it can strike again.
+  - `brute` (Stunder, Octonaut, Shraps, Mecked): holds its ground. The Stunder `charge`s: it runs the
+    last 1.5–5 cells at 1.8× its chase speed when it can strike again (the Mecked at 1.4×).
   Cooldowns vary by ±20% per blow. Throws are aimed ahead of a running player by half the way
   they would run before the throw arrives; changing direction dodges them.
 - Blows start within 0.75 height (a stair step or a ramp) and land within 0.85.
@@ -413,7 +424,7 @@ these do not change inventory or combat stats. Swimming / climbing hides the pro
 vertical speed advances its phase, descent reverses it, and stopping holds
 the grip. Regenerate via the Blender commands in
 `character.py`, `spider.py`, `stunder.py`, `snake.py`, `octonaut.py`, `fireface.py`,
-`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py`, `wolk.py` and `sword.py` (the SDF creatures share `blender/creature.py`
+`triangle.py`, `firecat.py`, `shraps.py`, `spicy.py`, `wolla.py`, `wolk.py`, `mecked.py` and `sword.py` (the SDF creatures share `blender/creature.py`
 and can also be rebuilt from a Blender MCP session; previews land in `blender/previews/`). Tests check balance, hit timing,
 direction / reach / height, cancellations, deterministic spawns, clearance,
 navigation and the exported asset/clip contract.
@@ -432,6 +443,7 @@ await checks.runClimbChecks(); // ladder controller, reverse / hold / exits, dyn
 await checks.runGetUpChecks(); // knockdown -> ragdoll -> GetUpFront / GetUpBack, move time, idle pose
 await checks.runRangedChecks(); // bow / crossbow / staff: sockets, hold pose, drawn string and arrow, range and walking up, pierce, reload, burst
 await checks.runTravelCheck(); // real portal; leaves the player in the next cube
+await (await import('./tests/browser/mecked.js')).runMeckedChecks(); // Mecked bite, grab: held, two bites (poison), shoved off, dropped when it lets go
 const water = await import('./tests/browser/water.js');
 await water.runWaterChecks(); // all fluids: edge guard, jumps/high falls, ragdolls, effects, dry respawn
 const inventory = await import('./tests/browser/inventory.js');

@@ -379,6 +379,11 @@ const SOUNDS = {
     sweep(t, 0.16, 900 * p, 2400 * p, 1200 * p, 2, 0.4, out, 0.01);
     tone('sine', 180 * p, 110 * p, t + 0.08, 0.12, amp(t + 0.08, 0.004, 0.6, 0.12, out));
   },
+  chomp(t, out, p) {     // a Mecked biting down on what it holds: a wet crunch and its teeth clacking shut
+    noise(t, 0.09, filter('bandpass', 1500 * p, 1.2, amp(t, 0.002, 0.7, 0.09, out)));
+    noise(t + 0.01, 0.025, filter('highpass', 3200 * p, 2, amp(t + 0.01, 0.001, 0.5, 0.025, out)));
+    tone('sine', 160 * p, 70 * p, t, 0.12, amp(t, 0.003, 0.6, 0.12, out));
+  },
   skullthrow(t, out, p) {   // Totnar hurling a skull: a whoosh and its teeth chattering as it flies
     sweep(t, 0.35, 500 * p, 1500 * p, 700 * p, 1.5, 0.5, out, 0.03);
     for (let i = 0; i < 6; i++) { const at = t + 0.05 + i * 0.05; noise(at, 0.015, filter('bandpass', 2400 * p, 6, amp(at, 0.001, 0.3, 0.015, out))); }

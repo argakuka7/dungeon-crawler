@@ -8,6 +8,7 @@
 //                   and all of its shove and what it would set on you; the armor takes its share
 //                   (armorReduction, against the striker's level) off the rest, and Standing Firm
 //                   some of the shove
+//   armorOnly       a blow through the armor alone (held in a grab, game/grab.js: no shield)
 //   wornDefense     what the armor adds up to now (the inventory shows it)
 import * as THREE from 'three';
 import { player, state } from './state.js';
@@ -74,6 +75,14 @@ export function guardBlow(blow) {
     return { damage, knock: 0, reason: blow.reason, by: blow.by, blocked: true };
   }
   return { ...blow, damage: blow.damage * cut, knock: blow.knock * (1 - d.steady / 100) };
+}
+// The blow as the armor alone lets it through: held in a grab (game/grab.js), the shield cannot
+// come up and there is nothing to stand firm on.
+export function armorOnly(blow) {
+  const d = wornDefense();
+  if (!d.armor) return blow;
+  const level = Number.isFinite(blow.by?.level) ? blow.by.level : depthLevel(state.map?.depth);
+  return { ...blow, damage: blow.damage * (1 - armorReduction(d.armor, level)) };
 }
 // the clang of a block: a word over the hero, a spray of sparks from the shield
 function blocked(damage) {

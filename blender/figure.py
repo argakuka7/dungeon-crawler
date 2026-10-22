@@ -155,6 +155,7 @@ TRIANGLE_BUDGET = {
     "Spider": 6000, "Stunder": 6000, "Snake": 6000, "Octonaut": 6000, "FireFace": 6000,
     "Triangle": 6000, "Spicy": 6000, "Wolk": 6000,
     "FireCat": 8000, "Shraps": 8000, "Wolla": 8000, "Gusto": 8000,     # many parts
+    "Mecked": 7000,                                                      # (teeth, ears and a long tail)
     "Totnar": 10000, "SnapSkull": 3000,                                  # (Totnar: three skulls and a ball of sticks)
     "Squarlo": 8000, "Squirtle": 5000,                                   # (Squarlo: drawn huge as a giant)
     "Flip": 10000,                                                       # (41 little loops)

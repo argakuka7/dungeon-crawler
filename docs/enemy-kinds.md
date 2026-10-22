@@ -171,6 +171,10 @@ again. The lineup is planned with the room (`cubegen/testrooms.js` `lineUp`), so
 | Squirtle | (base) | `azure.mid` | | | | | | 1–2, 10 |
 | Coral squirtle | Squirtle | `crimson.mid@+10` | ×1.5 | ×1.4 | ×1.1 | 1 | ×1.43 | 9–10, 13 |
 | Moss squirtle | Squirtle | `moss.mid` | ×1.2 | ×1.15 | 1 | 1 | ×1.17 | 9, 13 |
+| Mecked | (base) | `ochre.mid` | | | | | | 6–8 |
+| Frost mecked | Mecked | `frost.light` | ×1.3 | ×1.1 | ×0.9 | 1 | ×1.2 | 9–10 |
+| Bog mecked | Mecked | `moss.deep` | ×1.25 | ×1.25 | ×1.05 | 1 | ×1.25 | 11–13 |
+| Bone mecked | Mecked | `stone.pale` | ×1.5 | ×1.45 | ×1.15 | ×1.1 | ×1.47 | 14–15 |
 
 The base kinds are painted from the palette too (their `colors`); the other columns are theirs.
 Depths are those whose rosters draw the kind (`src/core/spawns.js`, [depths.md](depths.md)).
@@ -206,6 +210,12 @@ The Spicies: the green Spicy, the orange Habanero (its laser orange, `beamColor`
 Nightshade, whose laser poisons (`toxin`). The Wolks: the pale blue Wolk, the ochre Dust wolk
 over the badlands and canyons, and the dark Storm wolk with violet lightning (`beamColor`),
 its cloud darkening almost to black (`gloom`).
+
+The Meckeds are strength tiers that each keep to their own caves: the ochre Mecked in the root
+caves (and now and then in the deep canyon), the pale blue Frost mecked in the frozen caves, the
+dark green Bog mecked in the swamp and the cenote, whose bites poison (also those while it holds
+you), and the bone-white Bone mecked, the biggest and strongest, in the nests and the ossuary.
+Their inner ears go with their bellies (`belly` role).
 
 The Wollas are strength tiers too: blue, then green in the swamp, purple in the cenote, the nests,
 the mines and the ruins, orange in the volcanic depths and the abyss. Their eyes take a contrasting

@@ -52,6 +52,7 @@ import { totnarModel } from './totnarmodel.js';
 import { snapSkullModel } from './snapskullmodel.js';
 import { squarloModel } from './squarlomodel.js';
 import { squirtleModel } from './squirtlemodel.js';
+import { meckedModel } from './meckedmodel.js';
 import { flipModel } from './flipmodel.js';
 import { foggeryModel } from './foggerymodel.js';
 import { makeFoggeryLook, foggeryLook, disposeFoggeryLook } from './foggeryview.js';
@@ -78,7 +79,7 @@ import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
 const prefabs = { spider: spiderModel, stunder: stunderModel, snake: snakeModel, octonaut: octonautModel,
   fireface: fireFaceModel, triangle: triangleModel, firecat: fireCatModel, shraps: shrapsModel, spicy: spicyModel, wolla: wollaModel, wolk: wolkModel, gusto: gustoModel,
-  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, flip: flipModel, foggery: foggeryModel };
+  totnar: totnarModel, snapskull: snapSkullModel, squarlo: squarloModel, squirtle: squirtleModel, mecked: meckedModel, flip: flipModel, foggery: foggeryModel };
 // the models of these species (core/spawns.js speciesIn), loaded once
 export const loadSpecies = species => Promise.all(species.map(s => prefabs[s]?.load()));
 // light: [color, intensity, distance, height]; pulse: emissive / light swing with the

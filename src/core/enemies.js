@@ -295,7 +295,41 @@ export const SQUIRTLE = {
   style: 'ranged', keep: [2.4, 4.4],
   seedSalt: 0x5917e1, spacing: 3,
 };
-export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK, SQUIRTLE];
+// A round-bellied beast on two stubby legs with long rabbit ears, a crocodile snout full of
+// zig-zag teeth and a long tail curled into a spiral (blender/mecked.py, after the kids' sketch).
+// It grabs more often than it bites (clip frame 13), both from the same reach (it starts a blow
+// as soon as the player is in reach, so a shorter grab would hardly ever be picked): a `grab`
+// with `bites` holds the player against its belly
+// (game/grab.js) and bites them at those times, each bite the blow's damage, then lets go at
+// `throwAt`, shoving them `throw` cells/s away on their feet (a grab that `knockDown`s throws them
+// down instead). As with Gusto's grab, only a stagger or its death makes it let go early.
+const MECKED_BITE = {
+  name: 'bite', clip: 'bite', weight: 1, reach: 1.05, hitAt: 13 / 30, trackUntil: 0.3, attackTime: 1, hitReach: 1.35,
+  arc: 0.5, power: 1, knock: 4, knockDown: false, hop: 3.5, reason: 'Bitten by a Mecked!',
+};
+const MECKED_GRAB = {
+  name: 'grab', clip: 'grab', weight: 2, reach: 1.05, hitAt: 15 / 30, trackUntil: 0.4, attackTime: 72 / 30, hitReach: 1.3,
+  arc: 0.5, power: 0.6, knock: 0, knockDown: false, hop: 0, reason: 'Chewed on by a Mecked!',
+  grab: { throwAt: 57 / 30, step: 2 / 30, hold: 0.6, throw: 3.5, bites: [30 / 30, 45 / 30],
+    grip: [[0, 0.623, 0.641], [0, 0.677, 0.631], [0, 0.802, 0.598], [0, 0.881, 0.56], [0, 0.884, 0.557], [0, 0.914, 0.549],
+      [0, 0.86, 0.571], [0, 0.767, 0.598], [0, 0.785, 0.599], [0, 0.848, 0.575], [0, 0.878, 0.559], [0, 0.903, 0.553],
+      [0, 0.903, 0.552], [0, 0.885, 0.558], [0, 0.826, 0.587], [0, 0.76, 0.602], [0, 0.799, 0.589], [0, 0.888, 0.56],
+      [0, 0.888, 0.557], [0, 0.878, 0.559], [0, 0.782, 0.618], [0, 0.626, 0.672]] },
+};
+export const MECKED = {
+  type: 'mecked', species: 'mecked', label: 'Mecked', hp: 105, damage: 20, knock: 4,
+  xp: 66, coins: [14, 26],
+  radius: 0.36, height: 1.8, bodyHeight: 1.35, mass: 2.2,
+  aggro: 4.5, giveUp: 8, chase: 1.8, wander: 0.55, homeSpeed: 0.9,
+  ...MECKED_BITE, cooldown: 1.3, ichor: ['#c8d890', '#5a6a2a'], pitch: 0.9,
+  attacks: [MECKED_BITE, MECKED_GRAB],
+  poise: 0.6, hitStun: 0.22, deathTime: 2, corpseTime: 4,
+  parts: { skin: ['MeckedSkin', 'MeckedStripes'], belly: ['MeckedBelly', 'MeckedEarInner'], eyes: ['MeckedEyes_glow'] },
+  colors: paints({ skin: 'ochre.mid', belly: 'ochre.pale', eyes: 'eyes.sun' }),
+  style: 'brute', charge: 1.4,
+  seedSalt: 0x3ec4ed1, spacing: 4,
+};
+export const ENEMY_PROFILES = [SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, SPICY, WOLLA, WOLK, SQUIRTLE, MECKED];
 
 // Gusto, the first real boss (blender/gusto.py), in place of the first descent guardian
 // (core/bosses.js). A round white-grey head with red eyes and jagged teeth, two long arms with
@@ -932,6 +966,27 @@ export const MOSS_SQUIRTLE = enemyKind(SQUIRTLE, {
   colors: paints({ body: 'moss.mid', belly: 'ochre.pale' }), ichor: ['#c8f0a0', '#4f8f2a'],
   mods: { hp: 1.2, damage: 1.15 },
 });
+// The Meckeds: a pale blue one in the frozen caves, a dark green one in the swamp and the cenote
+// whose bites poison, and a bone-white one, the strongest, in the nests and the ossuary.
+const meckedAttacks = (bite, chew, more = {}) => [{ ...MECKED_BITE, reason: bite, ...more }, { ...MECKED_GRAB, reason: chew, ...more }];
+export const FROST_MECKED = enemyKind(MECKED, {
+  type: 'frostmecked', label: 'Frost mecked', reason: 'Bitten by a Frost mecked!',
+  attacks: meckedAttacks('Bitten by a Frost mecked!', 'Chewed on by a Frost mecked!'),
+  colors: paints({ skin: 'frost.light', belly: 'frost.pale@+8', eyes: 'eyes.ember' }), ichor: ['#c4ecff', '#4f8fbf'],
+  mods: { hp: 1.3, damage: 1.1, speed: 0.9 },
+});
+export const BOG_MECKED = enemyKind(MECKED, {
+  type: 'bogmecked', label: 'Bog mecked', reason: 'Bitten by a Bog mecked!', toxin: { time: 4, ticks: 4, share: 0.5 },
+  attacks: meckedAttacks('Bitten by a Bog mecked!', 'Chewed on by a Bog mecked!'),
+  colors: paints({ skin: 'moss.deep', belly: 'moss.light', eyes: 'eyes.sun' }), ichor: ['#b4e67e', '#3f6f1a'],
+  mods: { hp: 1.25, damage: 1.25, speed: 1.05 },
+});
+export const BONE_MECKED = enemyKind(MECKED, {
+  type: 'bonemecked', label: 'Bone mecked', reason: 'Bitten by a Bone mecked!',
+  attacks: meckedAttacks('Bitten by a Bone mecked!', 'Chewed on by a Bone mecked!'),
+  colors: paints({ skin: 'stone.pale', belly: 'stone.light', eyes: 'eyes.ember' }), ichor: ['#efe6cf', '#8a8070'],
+  mods: { hp: 1.5, damage: 1.45, speed: 1.15, size: 1.1 },
+});
 // from half his health on: a giant, six cells tall (the model at `size`), who stomps, jumps, kicks
 // and blasts; he walks over the hills on the floors like any enemy, but keeps clear of the bank
 // (game/squarlo.js); nothing staggers him and blows hurt him less, unless he is exposed
@@ -1086,7 +1141,7 @@ export const TOT_STUNDER = enemyKind(STUNDER, {
 export const ENEMY_KINDS = Object.fromEntries([...ENEMY_PROFILES, ...Object.values(GUARDIAN_KINDS), ...Object.values(DESCENT_GUARDIAN_KINDS), SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA, FROST_SPIDER, BOG_SPIDER,
   REDBACK, FROST_STUNDER, STONE_STUNDER, MAGMA_STUNDER, BOG_OCTONAUT, CORAL_OCTONAUT, EMERALD_TRIANGLE, CRIMSON_TRIANGLE, FIRE_SHRAPS,
   BOG_WOLLA, STORM_WOLLA, EMBER_WOLLA, CORAL_SQUIRTLE, BLAZE_FACE, WISP_FACE, ASH_CAT, VOID_CAT, AMETHYST_SHRAPS, HABANERO,
-  NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
+  NIGHTSHADE, DUST_WOLK, STORM_WOLK, MOSS_SQUIRTLE, FROST_MECKED, BOG_MECKED, BONE_MECKED, ...BOSS_PROFILES, CUSTO_TRIANGLE, SNAP_SKULL, TOT_SPIDER, TOT_STUNDER,
   TIDE_SQUIRTLE, SKY_WOLLA, FOG_FACE, FOG_CAT, REN_SPIDER, REN_FACE].map(k => [k.type, k]));
 // gone: not here for now (Gusto between his vanishing and his coming back, game/gusto.js), or
 // under the floor (a burrowing Squirtle, game/enemyai.js): it cannot be seen, hit or touched,

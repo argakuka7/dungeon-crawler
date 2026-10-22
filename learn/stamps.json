@@ -119,7 +119,7 @@
     "src/game/enemies.js#awardKills": "87e6e2a3",
     "src/game/enemies.js#ENTRY_GRACE": "63193708",
     "src/game/enemies.js#shareDefeat": "28ba4397",
-    "src/game/enemies.js#updateEnemies": "8a75a6da",
+    "src/game/enemies.js#updateEnemies": "72b72d0b",
     "src/game/enemyai.js#act": "8b7f0531",
     "src/game/enemyai.js#decide": "4a357081",
     "src/game/enemyai.js#notices": "6d10a4db",

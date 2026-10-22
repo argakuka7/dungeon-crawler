@@ -162,7 +162,7 @@ keeping each prop's exact bounds in its extras, and regenerates the prop metadat
 
 ```sh
 Blender -b --python blender/props.py          # likewise character, spider, stunder, snake, octonaut,
-                                              # fireface, triangle, firecat, shraps, spicy, wolla, wolk, gusto, sword
+                                              # fireface, triangle, firecat, shraps, spicy, wolla, wolk, mecked, gusto, sword
 Blender -b --python blender/clutter.py        # libraries: clutter, items, town, town_trees
 Blender -b --python blender/tests/test_clutter.py
 Blender -b --python blender/trials.py         # the trial rooms' parts (assets/trials.glb, docs/trials.md)

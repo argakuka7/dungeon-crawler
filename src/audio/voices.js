@@ -204,6 +204,11 @@ export function voices({ amp, noise, filter, tone, sweep }) {
       windup: (t, out, p) => noise(t, 0.18, filter('highpass', 3000 * p, 0.8, amp(t, 0.03, 0.18, 0.15, out))),
       death: (t, out, p) => { bend(t, 0.5, 1000 * p, 700 * p, 250 * p, 2500 * p, 0.3, out); gloops(t + 0.2, 5, 400 * p, 2 * 400 * p, 0.05, 0.2, out); },
     },
+    mecked: {    // a Mecked: a goofy honking bark, a snort and its jaws clacking open, a long gurgling groan
+      alert: (t, out, p) => { bend(t, 0.22, 260 * p, 380 * p, 300 * p, 900 * p, 0.45, out); bend(t + 0.26, 0.2, 280 * p, 400 * p, 260 * p, 900 * p, 0.4, out); },
+      windup: (t, out, p) => { noise(t, 0.16, filter('bandpass', 900 * p, 1.2, amp(t, 0.01, 0.4, 0.15, out))); clicks(t + 0.12, 3, 0.05, 2200 * p, 0.35, out); },
+      death: (t, out, p) => { bend(t, 1.0, 300 * p, 220 * p, 70 * p, 700 * p, 0.5, out); gloops(t + 0.5, 4, 120 * p, 240 * p, 0.09, 0.2, out, false); },
+    },
     snapskull: {   // a skull come to life: chattering teeth, a hollow clack, a crack
       alert: (t, out, p) => clicks(t, 7, 0.04, 2600 * p, 0.45, out),
       windup: (t, out, p) => { clicks(t, 3, 0.05, 2000 * p, 0.35, out); tone('sine', 520 * p, 300 * p, t, 0.08, amp(t, 0.002, 0.2, 0.08, out)); },

@@ -13,7 +13,7 @@
 //             the guide's German never calls a thing by its English name where it has a German one.
 // What stays the same in every language: the world names (they are made from the seed and give
 // it back: core/names.js), the bosses' names (Gusto, Totnar, Squarlo, Flip, Foggery, Renew), the
-// made-up kinds (Stunder, Shraps, Spicy, Wolla, Wolk, Squirtle), "Seed" and "XP".
+// made-up kinds (Stunder, Shraps, Spicy, Wolla, Wolk, Squirtle, Mecked), "Seed" and "XP".
 import { ITEMS } from '../core/items.js';
 import { RARITIES } from '../core/gear/rarities.js';
 import { AFFIXES } from '../core/gear/affixes.js';

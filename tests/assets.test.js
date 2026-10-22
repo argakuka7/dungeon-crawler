@@ -8,7 +8,7 @@ import { SLASH_CLIP, SHOOT_CLIP, CROSSBOW_CLIP, CAST_CLIP, THROW_CLIP, KINDS } f
 import { MUZZLES } from '../src/core/shots.js';
 import { WEAPONS, WEARABLES, OUTFIT_SLOTS, POTIONS } from '../src/core/items.js';
 import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, GUSTO, GUSTO_SPLIT, TOTNAR, SNAP_SKULL,
-  SQUARLO, SQUARLO_GIANT, SQUIRTLE, FLIP, FOGGERY, FOGGERY_BALL, fireAt } from '../src/core/enemies.js';
+  SQUARLO, SQUARLO_GIANT, SQUIRTLE, MECKED, FLIP, FOGGERY, FOGGERY_BALL, fireAt } from '../src/core/enemies.js';
 import { CHAR_SCALE } from '../src/core/constants.js';
 
 await decoderReady;
@@ -35,7 +35,7 @@ const BUDGETS = {
   firecat: { FireCat: 8000 }, shraps: { Shraps: 8000, ShrapsIceBall: 1500 }, spicy: { Spicy: 6000 }, wolla: { Wolla: 8000 }, wolk: { Wolk: 6000 },
   gusto: { Gusto: 8000 }, totnar: { Totnar: 10000, TotnarSkull: 1500 }, snapskull: { SnapSkull: 3000 },
   squarlo: { Squarlo: 8000 }, squirtle: { Squirtle: 5000, SquirtleDrop: 800 }, flip: { Flip: 10000, FlipBall: 1200 },
-  foggery: { Foggery: 12000, FoggeryEye: 1500 },
+  foggery: { Foggery: 12000, FoggeryEye: 1500 }, mecked: { Mecked: 7000 },
 };
 test('characters and enemies keep to their triangle budgets', () => {
   for (const [file, budget] of Object.entries(BUDGETS)) {
@@ -497,6 +497,27 @@ test('the Squirtle sways, spits from its beak at its hit frame and wilts', () =>
   const names = new Set(j.materials.map(m => m.name));
   for (const m of Object.values(SQUIRTLE.parts).flat()) assert.ok(names.has(m), m);
   assert.ok(j.nodes.some(n => n.name === 'SquirtleDrop'));
+});
+test('the Mecked waddles, bites and grabs on its attacks\' timings, and holds what it grabs along its clip', () => {
+  const { json: j, duration } = glb('mecked'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));
+  assert.deepEqual(Object.keys(a).sort(), ['MeckedBite', 'MeckedDeath', 'MeckedGrab', 'MeckedWalk']);
+  assert.equal(a.MeckedWalk.extras.loop, true); assert.equal(a.MeckedWalk.extras.speed, MECKED.wander);
+  const bite = MECKED.attacks.find(t => t.name === 'bite'), grab = MECKED.attacks.find(t => t.grab), g = grab.grab;
+  assert.equal(a.MeckedBite.extras.hit_frame / 30, bite.hitAt);
+  assert.ok(Math.abs(duration(a.MeckedBite) - bite.attackTime) < 1e-5);
+  const x = a.MeckedGrab.extras;
+  assert.equal(x.hit_frame / 30, grab.hitAt); assert.equal(x.release_frame / 30, g.throwAt);
+  assert.deepEqual(x.bite_frames.map(f => f / 30), g.bites);
+  assert.ok(Math.abs(duration(a.MeckedGrab) - grab.attackTime) < 1e-5);
+  // where it holds you: off the clip, between its hands, every `step` from the catch to the release
+  assert.deepEqual(x.grip, g.grip);
+  assert.equal(g.grip.length, Math.round((g.throwAt - grab.hitAt) / g.step) + 1);
+  for (const [gx, up, ahead] of g.grip) assert.ok(gx === 0 && up > 0.5 && up < 1 && ahead > MECKED.radius && ahead < grab.hitReach, 'held up in front of it');
+  assert.ok(g.bites.every(t => t > grab.hitAt && t < g.throwAt), 'it bites while it holds you');
+  assert.ok(Math.abs(duration(a.MeckedDeath) - MECKED.deathTime) < 1e-5); assert.equal(a.MeckedDeath.extras.hold_last_frame, true);
+  const names = new Set(j.materials.map(m => m.name));
+  for (const m of Object.values(MECKED.parts).flat()) assert.ok(names.has(m), m);
+  for (const bone of ['jaw', 'ear.L', 'ear_tip.R', 'hand.L', 'tail_1', 'tail_8']) assert.ok(j.nodes.some(n => n.name === bone), bone);
 });
 test('the snapping skull hops, bites at its hit frame and crumbles', () => {
   const { json: j, duration } = glb('snapskull'), a = Object.fromEntries(j.animations.map(c => [c.name, c]));

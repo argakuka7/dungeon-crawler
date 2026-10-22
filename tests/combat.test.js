@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, makeEnemy, attackOf, pickAttack,
+import { SPIDER, STUNDER, SNAKE, OCTONAUT, FIREFACE, TRIANGLE, FIRECAT, SHRAPS, FIRE_SHRAPS, SPICY, WOLK, MECKED, ENEMY_KINDS, GUSTO, makeEnemy, attackOf, pickAttack,
   attacksInReach, isRanged, attackDamage, blowOf, lungeDistance, lungeAt, retreatAt, fireAt, shotOf } from '../src/core/enemies.js';
 import { startBeam, aimBeam, castBeam, beamHits, beamDistance, muzzleAt, aiming, aimPoint } from '../src/core/beams.js';
 import { launch, touches, stepProjectile, ignite, burnStep, burntOut, chillFrom, chillStep, chillFactor, THAW } from '../src/core/projectiles.js';
@@ -300,6 +300,27 @@ test('the Wolk lightning shows for 0.8 s, then strikes from its cloud to the flo
   // a bolt runs no further than just past its aim: over a drop it does not fall on
   const over = castBeam(startBeam(e, WOLK.beam, aimPoint(p, WOLK.beam)), () => false);
   assert.ok(over.length < Math.hypot(p.x - WOLK.beam.muzzle[2], WOLK.beam.muzzle[1]) + 0.35);
+});
+test('the Mecked mostly grabs, now and then bites: two bites while it holds you, then a shove', () => {
+  const [bite, grab] = MECKED.attacks;
+  assert.equal(bite.name, 'bite'); assert.ok(grab.grab && !grab.knockDown, 'its grab lets go on your feet');
+  assert.ok(grab.weight > bite.weight, 'it grabs more often than it bites');
+  // it starts a blow as soon as you are in reach: a grab of shorter reach would hardly ever be picked
+  assert.equal(grab.reach, bite.reach);
+  // the bites it holds you for hurt a little more than one bite, and a grab is no faster
+  const chew = blowOf(MECKED, grab).damage * grab.grab.bites.length, one = blowOf(MECKED, bite).damage;
+  assert.ok(chew > one && chew < 1.5 * one, `${chew} vs ${one}`);
+  assert.ok(grab.attackTime > 2 * bite.attackTime);
+  // in reach: both, from the first moment it can strike
+  assert.deepEqual(attacksInReach(MECKED, MECKED.reach - 0.01, 0), [0, 1]);
+  assert.deepEqual(attacksInReach(MECKED, MECKED.reach + 0.01, 0), []);
+  // the kinds: each says its own name when it bites or chews, the Bog mecked's bites poison
+  for (const k of Object.values(ENEMY_KINDS).filter(k => k.species === 'mecked' && !k.guardian))
+    for (const a of k.attacks) assert.ok(a.reason.endsWith(` ${k.label}!`), `${k.type} ${a.name}: ${a.reason}`);
+  const bog = ENEMY_KINDS.bogmecked;
+  assert.ok(blowOf(bog, bog.attacks[1]).toxin && blowOf(bog, bog.attacks[0]).toxin && !blowOf(MECKED, grab).toxin);
+  // Gusto's grab still throws you down
+  assert.ok(GUSTO.attacks.find(a => a.grab).knockDown);
 });
 test('the Fire-cat pounce stops short of its target and eases through the leap', () => {
   const { lunge } = FIRECAT;

@@ -17,6 +17,7 @@ import { gustos, resetGustos, updateGustos, detachGustos } from './gusto.js';
 import { totnars, resetTotnars, updateTotnars, detachTotnars } from './totnar.js';
 import { squarlos, resetSquarlos, updateSquarlos, detachSquarlos } from './squarlo.js';
 import { squirtles, resetSquirtles, updateSquirtles, detachSquirtles } from './squirtles.js';
+import { meckeds, resetMeckeds, updateMeckeds, detachMeckeds } from './mecked.js';
 import { updateTide, resetTide, drownEnemies, floatSwimmers, walkOnLava } from './tide.js';
 import { flips, resetFlips, updateFlips, detachFlips } from './flip.js';
 import { foggerys, resetFoggerys, updateFoggerys, detachFoggerys } from './foggery.js';
@@ -94,7 +95,7 @@ export function mirrorEnemies(m) {
   }
 }
 
-export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...gustos, ...totnars, ...squarlos, ...flips, ...foggerys, ...renews, ...spawned];
+export const allEnemies = () => mirror ? mirror.list : [...spiders, ...stunders, ...snakes, ...octonauts, ...fireFaces, ...triangles, ...fireCats, ...shraps, ...spicies, ...wollas, ...wolks, ...squirtles, ...meckeds, ...gustos, ...totnars, ...squarlos, ...flips, ...foggerys, ...renews, ...spawned];
 export function resetEnemies() {
   resetFlipWorld(); clearBlackHoles();   // (Flip's box the right way up again: game/flipworld.js)
   resetEnemyCombat(); clearProjectiles(); clearBeams(); clearQuakes(); clearJets(); clearShots(); clearThrows(); resetCalls();
@@ -103,7 +104,7 @@ export function resetEnemies() {
   removeEnemyViews(spawned); spawned = [];
   state.enemyGrace = ENTRY_GRACE;
   if (mirror) { removeEnemyViews(mirror.list); mirror.list = []; mirror.reset(); return; }
-  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetGustos(); resetTotnars(); resetSquarlos(); resetFlips(); resetFoggerys(); resetRenews();
+  resetSpiders(); resetStunders(); resetSnakes(); resetOctonauts(); resetFireFaces(); resetTriangles(); resetFireCats(); resetShraps(); resetSpicies(); resetWollas(); resetWolks(); resetSquirtles(); resetMeckeds(); resetGustos(); resetTotnars(); resetSquarlos(); resetFlips(); resetFoggerys(); resetRenews();
   spawnLineup();   // a dev test room's every kind (game/devspawn.js)
   for (const e of allEnemies()) liveAgain(state.run, e);   // those come back in a life of their own (core/respawn.js)
   defenceThink = 0;
@@ -210,7 +211,7 @@ export function updateEnemies(dt) {
   // Flip's world turning (game/flipworld.js): everything in it turns with it
   updateFlipWorld(list, dt);
   updateSpiders(dt); updateStunders(dt); updateSnakes(dt); updateOctonauts(dt);
-  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateSquirtles(dt); updateGustos(dt); updateTotnars(dt); updateSquarlos(dt); updateFlips(dt); updateFoggerys(dt); updateRenews(dt);
+  updateFireFaces(dt); updateTriangles(dt); updateFireCats(dt); updateShraps(dt); updateSpicies(dt); updateWollas(dt); updateWolks(dt); updateSquirtles(dt); updateMeckeds(dt); updateGustos(dt); updateTotnars(dt); updateSquarlos(dt); updateFlips(dt); updateFoggerys(dt); updateRenews(dt);
   stepEnemies(spawned, dt);
   spawned = spawned.filter(e => e.mode !== 'dead' || e.deadT < e.profile.corpseTime || (removeEnemyViews([e]), false));
   // a boss's tide (game/tide.js): it drowns, but those that swim float
@@ -251,5 +252,5 @@ export function detachEnemies() {
   clearProjectiles(); clearBeams(); clearQuakes(); clearJets(); clearShots(); clearThrows(); hordeGroups = [];
   if (mirror) { const list = mirror.list; mirror.list = []; return list; }
   return [...detachSpiders(), ...detachStunders(), ...detachSnakes(), ...detachOctonauts(),
-    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachFlips(), ...detachFoggerys(), ...detachRenews(), ...detachSpawned()];
+    ...detachFireFaces(), ...detachTriangles(), ...detachFireCats(), ...detachShraps(), ...detachSpicies(), ...detachWollas(), ...detachWolks(), ...detachSquirtles(), ...detachMeckeds(), ...detachGustos(), ...detachTotnars(), ...detachSquarlos(), ...detachFlips(), ...detachFoggerys(), ...detachRenews(), ...detachSpawned()];
 }
