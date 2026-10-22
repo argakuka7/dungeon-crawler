@@ -7,7 +7,8 @@
 // Also here: the clues a quest gives about a place (from what the layout knows of it) and the
 // people somebody may have lost.
 import { mulberry32, hash32 } from './util.js';
-import { residentOf, npcGiver, NAMES } from './npcs.js';
+import { residentOf, npcGiver, NAMES, isShe } from './npcs.js';
+import { msg, phrase, noun } from '../i18n/i18n.js';
 
 export const MAX_DEPTH = 20;
 // quests per depth: heavier near the top, where a run spends its first hours
@@ -74,37 +75,43 @@ export function questPlan(seed, layout) {
 // --- clues ----------------------------------------------------------------------------------------
 
 // What can be said about where a spot (world/spots.js) is, from what the layout knows of its
-// room: never its cube on a map, only words (docs/quests.md "Only where you have been").
+// room: never its cube on a map, only words (docs/quests.md "Only where you have been"), as words
+// to say in any language (src/i18n/i18n.js). landmarkName: a landmark prop's name as said.
 export function clueOf(layout, spot, landmarkName = n => n) {
   const L = layout(spot.depth), k = spot.key, out = [];
   const route = L.route, at = L.routeIndex.get(k) ?? 0, last = route.length - 1;
   const site = (L.sitePlans.get(k) || []).find(i => i.landmark);
   const area = L.areaCells?.get(k), height = L.heightCells?.get(k), span = L.spanCells?.get(k);
-  if (k === L.pinnacle) out.push('up on the needle of rock');
-  else if (k === L.peak) out.push('on top of the lone peak');
-  else if (k === L.lake) out.push('by the great lake');
-  else if (area?.piece.kind === 'spiral') out.push('at the foot of the great mountain');
-  else if (area?.piece.kind === 'hairpin') out.push(area.i === 0 ? 'at the foot of the two bridges' : 'up where the high bridge comes back');
-  else if (height) out.push({ ascent: 'below the great cliff', plateau: 'up on the high plateau', descent: 'where the plateau comes down' }[height.role] ?? 'by the high ground');
-  else if (span?.role === 'island') out.push('on the island at the end of the long bridge');
-  if (site) out.push(`near the ${landmarkName(site.landmark)}`);
-  if (L.hordes.has(k)) out.push('where the horde gathers');
-  if (route.indexOf(k) < 0) out.push('off the main way');
+  if (k === L.pinnacle) out.push(msg('up on the needle of rock'));
+  else if (k === L.peak) out.push(msg('on top of the lone peak'));
+  else if (k === L.lake) out.push(msg('by the great lake'));
+  else if (area?.piece.kind === 'spiral') out.push(msg('at the foot of the great mountain'));
+  else if (area?.piece.kind === 'hairpin') out.push(area.i === 0 ? msg('at the foot of the two bridges') : msg('up where the high bridge comes back'));
+  else if (height) out.push({ ascent: msg('below the great cliff'), plateau: msg('up on the high plateau'), descent: msg('where the plateau comes down') }[height.role]
+    ?? msg('by the high ground'));
+  else if (span?.role === 'island') out.push(msg('on the island at the end of the long bridge'));
+  if (site) out.push(phrase('near {landmark:the}', { landmark: noun(landmarkName(site.landmark)) }));
+  if (L.hordes.has(k)) out.push(msg('where the horde gathers'));
+  if (route.indexOf(k) < 0) out.push(msg('off the main way'));
   const gates = [...L.guardians].filter(([g, x]) => x.role === 'side' && route.indexOf(g) < at).length;
-  if (gates) out.push(gates > 1 ? 'past the guardians\' gates' : 'past the guardian\'s gate');
-  if (!out.length) out.push(at <= 2 ? 'not far from where the depth begins' : at >= last - 2 ? 'close to the way down' : 'about halfway along');
-  return out.slice(0, 2).join(', ');
+  if (gates) out.push(gates > 1 ? msg("past the guardians' gates") : msg("past the guardian's gate"));
+  if (!out.length) out.push(at <= 2 ? msg('not far from where the depth begins') : at >= last - 2 ? msg('close to the way down') : msg('about halfway along'));
+  const said = out.slice(0, 2).map(x => typeof x === 'string' ? phrase(x) : x);
+  return said.length > 1 ? phrase('{a}, {b}', { a: said[0], b: said[1] }) : said[0];
 }
 
 // --- people somebody lost -------------------------------------------------------------------------
 
-const RELATIONS = ['daughter', 'son', 'brother', 'sister', 'friend', 'apprentice', 'cousin', 'grandson', 'granddaughter'];
+// how they are related to the one asking: a girl's or a boy's (as many of each, so a pick takes
+// one random number either way)
+const RELATIONS = { she: ['daughter', 'sister', 'friend', 'apprentice', 'cousin', 'granddaughter'],
+  he: ['son', 'brother', 'friend', 'apprentice', 'cousin', 'grandson'] };
 const LOST_TINTS = ['#e0c7a0', '#d9b48c', '#c99a86', '#b9c79a', '#d6a9a0'];
 const LOST_OUTFITS = [['wear_explorer_hat'], ['wear_headscarf'], ['wear_straw_hat'], ['wear_hood'], ['held_rope'], []];
 // who went missing for quest `seed`, whose `relation` they are to the one asking
 export function lostPerson(seed) {
-  const R = mulberry32(hash32(seed ^ 0x1057));
-  return { name: NAMES[Math.floor(R() * NAMES.length)], relation: RELATIONS[Math.floor(R() * RELATIONS.length)],
+  const R = mulberry32(hash32(seed ^ 0x1057)), name = NAMES[Math.floor(R() * NAMES.length)], relations = RELATIONS[isShe(name) ? 'she' : 'he'];
+  return { name, relation: relations[Math.floor(R() * relations.length)],
     tint: LOST_TINTS[Math.floor(R() * LOST_TINTS.length)], outfit: LOST_OUTFITS[Math.floor(R() * LOST_OUTFITS.length)] };
 }
 // the camp a giver lives at (its spot plan), if it does

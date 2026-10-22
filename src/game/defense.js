@@ -89,7 +89,7 @@ function spawnWave() {
   }
   addEnemies(list);
   raid.phase = 'wave';
-  setStatus(raid.wave === 0 ? 'They are coming!' : `Wave ${raid.wave + 1} of ${raid.waves}!`);
+  setStatus(raid.wave === 0 ? tr('They are coming!') : tr('Wave {n} of {of}!', { n: raid.wave + 1, of: raid.waves }));
 }
 
 function end(result, event) {
@@ -134,7 +134,7 @@ export function updateDefense(dt, event) {
     raid.wave++;
     if (raid.wave >= raid.waves) { end('won', event); return; }
     raid.phase = 'between'; raid.t = RAID.between;
-    setStatus(`Wave ${raid.wave} beaten! Get ready...`);
+    setStatus(tr('Wave {n} beaten! Get ready...', { n: raid.wave }));
   }
 }
 
@@ -146,7 +146,7 @@ function drawBar() {
   if (!bar) {
     bar = document.createElement('div');
     bar.className = 'cart-bar';
-    bar.innerHTML = '<span>Supply cart</span><i><b></b></i>';
+    bar.innerHTML = `<span>${tr('Supply cart')}</span><i><b></b></i>`;
     document.getElementById('loot-labels').append(bar);
   }
   const off = state.world?.group.position ?? { x: 0, y: 0, z: 0 };

@@ -6,7 +6,9 @@
 //   the     'the lantern'       a      'a lantern', 'an urn', 'fireworks' (plural: no article)
 //   lower   'lantern'           pl     'lanterns' (NOUNS[..].pl, else + s)
 //   it      'it', 'them'        this   'this', 'these'
-//   is      'is', 'are'         cap    'Lantern' (the first letter up)
+//   is      'is', 'are'         they   'it', 'they'
+//   cap     'Lantern' (the first letter up)
+// and for people (a name with its gender, src/i18n/i18n.js person): he, him, his ('she', 'her', 'her')
 // A proper name ('Ada', 'Grimfang') keeps its capitals and takes no article; a noun said with
 // `caps` (noun('Redback', { caps: true }): an enemy's kind) keeps its capitals, with an article.
 
@@ -36,11 +38,15 @@ export const grammar = {
       case 'lower': return lower(n);
       case 'cap': return n.word.charAt(0).toUpperCase() + n.word.slice(1);
       case 'pl': return plural(n);
-      case 'it': return many ? 'them' : 'it';
+      case 'it': return many ? 'them' : n.proper && n.g !== 'n' ? (n.g === 'f' ? 'her' : 'him') : 'it';
       case 'this': return many ? 'these' : 'this';
       case 'is': return many ? 'are' : 'is';
+      case 'they': return many ? 'they' : 'it';
+      case 'he': return { f: 'she', m: 'he', pl: 'they' }[n.g] ?? 'it';
+      case 'him': return { f: 'her', m: 'him', pl: 'them' }[n.g] ?? 'it';
+      case 'his': return { f: 'her', m: 'his', pl: 'their' }[n.g] ?? 'its';
       default: throw new Error(`Unknown English form: ${name}`);
     }
   },
-  forms: ['the', 'a', 'lower', 'cap', 'pl', 'it', 'this', 'is'],
+  forms: ['the', 'a', 'lower', 'cap', 'pl', 'it', 'this', 'is', 'they', 'he', 'him', 'his'],
 };

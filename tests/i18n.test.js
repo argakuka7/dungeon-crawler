@@ -88,3 +88,34 @@ test('every message of the game is translated, and every translation is used', a
   const show = problems.slice(0, 20).map(p => `${p.kind} ${p.lang ?? ''} ${JSON.stringify(p.text)} ${p.where?.[0] ?? ''} ${p.detail ?? ''}`);
   assert.deepEqual(show, [], `${problems.length} problems; node tools/i18n.mjs lists them`);
 });
+
+test('every quest of a world reads in every language, nothing missing', async () => {
+  const { makeLayouts } = await import('../src/world/layout.js');
+  const Q = await import('../src/core/quests.js');
+  const { questPlan } = await import('../src/core/questplan.js');
+  const { isNpcGiver } = await import('../src/core/npcs.js');
+  const { missing } = await import('../src/i18n/i18n.js');
+  for (const seed of [5, 4242]) {
+    const layout = makeLayouts(seed), ctx = { seed, layout, gates: new Set(), chests: new Set(), now: 1 };
+    const log = Q.createQuestLog();
+    log.met = [...new Set(questPlan(seed, layout).slots.map(s => s.giver).filter(isNpcGiver))];
+    for (let deepest = 0; deepest <= 20; deepest++) {
+      log.deepest = deepest; log.townOpen = true; Q.refreshOffers(log, ctx);
+      for (const q of log.list) if (q.state === 'offered') q.state = 'done';
+    }
+    const saved = Q.checkQuestLog(JSON.parse(JSON.stringify(Q.packQuestLog(log))));   // as saved and loaded again
+    assert.equal(saved.list.length, log.list.length);
+    for (const code of ['en', 'de']) {
+      useLanguage(code, code === 'de' ? de : undefined);
+      missing.clear();
+      try {
+        for (const q of saved.list) {
+          const words = [q.title, q.text, q.from.where, ...q.stages.flatMap(s => [s.text, s.reply, s.label, s.clue])].filter(Boolean).map(say);
+          words.push(Q.stateText({ ...q, state: 'ready' }));
+          for (const w of words) assert.ok(w && !/[{}]|undefined|NaN|null|\[object/.test(w), `${code}: ${w}`);
+        }
+        assert.deepEqual([...missing], [], `${code}: no translation missing`);
+      } finally { useLanguage('en'); }
+    }
+  }
+});

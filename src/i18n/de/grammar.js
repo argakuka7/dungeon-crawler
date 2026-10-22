@@ -44,7 +44,18 @@ function word(n, c) {
   return n.dat ?? (/[ns]$/.test(plural(n)) ? plural(n) : `${plural(n)}n`);
 }
 
+// a preposition and the article after it, as said: 'zu dem Wirt' -> 'zum Wirt' (said in every message
+// once its parts are in: src/i18n/i18n.js tr)
+const CONTRACT = { an: 'am', in: 'im', von: 'vom', zu: 'zum', bei: 'beim' };
+const keepCase = (from, to) => from[0] === from[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to;
+function finish(s) {
+  return s.replace(/\b([Aa]n|[Ii]n|[Vv]on|[Zz]u|[Bb]ei) dem\b/g, (m, p) => keepCase(p, CONTRACT[p.toLowerCase()]))
+    .replace(/\b([Zz]u) der\b/g, (m, p) => keepCase(p, 'zur'))
+    .replace(/\b([Aa]n|[Ii]n) das\b/g, (m, p) => keepCase(p, p.toLowerCase() === 'an' ? 'ans' : 'ins'));
+}
+
 export const grammar = {
+  finish,
   form(n, name) {
     if (name === 'pl') return plural(n);
     if (name === 'cap') return n.word.charAt(0).toUpperCase() + n.word.slice(1);

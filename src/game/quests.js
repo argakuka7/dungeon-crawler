@@ -19,11 +19,11 @@ import { ITEMS } from '../core/items.js';
 import { dropAtFeet } from './loot.js';
 import { giverOf, giverName, meet, fail, openedGates, makeQuest, refreshOffers, settle, questEvent as noteEvent, accept, archive, restart, handIn, wantsLandmark,
   progressOf, restoreProgress, checkQuestLog, checkRewards, packQuestLog, LANDMARK_REACH } from '../core/quests.js';
-import { cleanText } from '../core/chronicle.js';
 import { pickUpQuestItems, questWorldChanged, bountiesHere } from './questworld.js';
 import { allEnemies, addEnemies, mirroring } from './enemies.js';
 import { rebuildWorld, refreshOpenFaces } from './flow.js';
 import { drawTracker } from './questpanel.js';
+import { tr, say, phrase, cleanWords } from '../i18n/i18n.js';
 
 const CHECK_EVERY = 0.5;   // s (real time): the gates looked at, offers brought up to date, a landmark looked for
 // seen: the quests' states as last told (in run seenIn); sent: the log as last given out
@@ -108,7 +108,7 @@ function payEveryone(q) {
 }
 // A guest: the host says a quest was handed in: our reward (net/session.js)
 export function questRewarded(id, rewards, title) {
-  if (typeof id === 'string' && id.length <= 60) grant(id, checkRewards(rewards), cleanText(title, 80) || 'a quest');
+  if (typeof id === 'string' && id.length <= 60) grant(id, checkRewards(rewards), cleanWords(title) || phrase('a quest'));
 }
 // pay our player for quest `id` (once): XP, coins, and the items into the bag (or at our feet
 // when it is full)
@@ -123,9 +123,9 @@ function grant(id, rewards, title) {
     if (fits(player.inventory, it) && addInstance(player.inventory, it)) { if (ITEMS[it.itemId].use) autoBar(player.inventory, it.itemId); }
     else if (state.map) dropAtFeet(it);
   }
-  const coins = rewards.copper ? formatCoins(rewards.copper) : '';
-  log('quest', { title, what: 'done', xp: rewards.xp, coins });
-  setStatus(`Quest complete: ${title} · +${rewards.xp} XP${coins ? ` · ${coins}` : ''}`);
+  log('quest', { title, what: 'done', xp: rewards.xp, copper: rewards.copper });
+  setStatus([tr('Quest complete: {title}', { title: say(title) }), tr('+{xp} XP', { xp: rewards.xp }),
+    ...rewards.copper ? [formatCoins(rewards.copper)] : []].join(' · '));
   sfx('coin', { pitch: 0.8 });
   if (levels) { log('level', { level: player.level }, { share: true }); sfx('levelUp'); }
 }
@@ -147,10 +147,13 @@ function announce(L) {
     const was = seen.get(q.id);
     if (!was || was === q.state) continue;
     const giver = giverName(q);
-    if (q.state === 'active' && was === 'offered') { log('quest', { title: q.title, what: 'taken' }); setStatus(`Quest taken: ${q.title}`); }
-    else if (q.state === 'active' && was === 'failed') log('quest', { title: q.title, what: 'restarted' });
-    else if (q.state === 'ready') { log('quest', { title: q.title, what: 'ready', giver }); setStatus(`Quest done: ${q.title} · back to ${giver}`); sfx('unlock'); }
-    else if (q.state === 'failed') { log('quest', { title: q.title, what: 'failed' }); setStatus(`Quest failed: ${q.title}`); }
+    const title = q.title, said = say(title);
+    if (q.state === 'active' && was === 'offered') { log('quest', { title, what: 'taken' }); setStatus(tr('Quest taken: {title}', { title: said })); }
+    else if (q.state === 'active' && was === 'failed') log('quest', { title, what: 'restarted' });
+    else if (q.state === 'ready') {
+      log('quest', { title, what: 'ready', giver: phrase('{giver:the}', { giver }) });
+      setStatus(tr('Quest done: {title} · back to {giver}', { title: said, giver: tr('{giver:the}', { giver }) })); sfx('unlock');
+    } else if (q.state === 'failed') { log('quest', { title, what: 'failed' }); setStatus(tr('Quest failed: {title}', { title: said })); }
   }
   seen = now; seenIn = state.run;
 }
@@ -218,7 +221,7 @@ export function devQuest(kind, depth) {
   doAct('accept', q.id);
   share();
   const key = q.stages[0].key ?? q.stages[0].keys?.join(', ');
-  return `${q.title}: ${q.stages[0].text}${key ? ` (cube ${key})` : ''}`;
+  return `${say(q.title)}: ${say(q.stages[0].text)}${key ? ` (cube ${key})` : ''}`;
 }
 
 // --- talking to a giver ---------------------------------------------------------------------------
@@ -233,14 +236,14 @@ export function questTalk(v) {
     if (q.state !== 'active' || q.archived || !['deliver', 'talk'].includes(s?.goal)) continue;
     if (!(giver && s.to.resident === giver || v.helper === q.id)) continue;
     questEvent({ kind: 'talked', quest: q.id });
-    return s.reply || `${s.to.name}: Thank you!`;
+    return s.reply ? say(s.reply) : tr('{name}: Thank you!', { name: s.to.name });
   }
   return null;
 }
 // talking to somebody a quest is looking for (game/questworld.js): found! They thank you
 export function rescue(v) {
   if (!v?.lost || !live()) return false;
-  setStatus(`${v.name}: Thank you! I will go back now. Here, take this.`);
+  setStatus(tr('{name}: Thank you! I will go back now. Here, take this.', { name: v.name }));
   questEvent({ kind: 'rescued', quest: v.lost });
   return true;
 }

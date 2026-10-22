@@ -6,8 +6,9 @@ import { names } from './names.js';
 import ui from './ui.js';
 import items from './items.js';
 import enemies from './enemies.js';
+import quests from './quests.js';
 
-export const parts = { ui, items, enemies };
+export const parts = { ui, items, enemies, quests };
 
 export default {
   code: 'de',

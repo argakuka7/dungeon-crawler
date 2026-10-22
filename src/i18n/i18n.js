@@ -104,7 +104,10 @@ export function tr(source, params) {
     const e = textOf(entryOf(source));
     if (e != null) text = e; else missing.add(source);
   }
-  try { return format(compile(text), params ?? {}); } catch { return String(source); }   // (words from elsewhere)
+  try {
+    const s = format(compile(text), params ?? {});
+    return locale?.grammar.finish ? locale.grammar.finish(s) : s;
+  } catch { return String(source); }   // (words from elsewhere)
 }
 // the same English text meaning different things: tc('toggle', 'Off'); the catalogs have it as
 // 'toggle|Off'
@@ -181,7 +184,8 @@ export function nounOf(x) {
   if (typeof x.noun !== 'string') return { word: say(x), g: 'n', proper: true };
   const source = x.noun, flags = { proper: !!x.proper, caps: !!x.caps };
   if (!locale) { const en = EN_NOUNS[source]; return { word: source, g: 'n', ...en, ...flags }; }
-  const e = entryOf(source);
+  // ctx: the catalog has it as 'ctx|source' (a woman's 'she|hermit'), else as the plain one
+  const e = (x.ctx && entryOf(`${x.ctx}|${source}`)) ?? entryOf(source);
   if (e == null) { missing.add(source); return { word: source, g: 'n', ...flags }; }
   if (typeof e === 'string') return { word: e, g: 'n', ...flags };
   return { ...e, word: e.text, g: e.g ?? 'n', ...flags };

@@ -20,7 +20,7 @@ import { bountyKind, bountyLevel } from '../core/bounties.js';
 import { residentsOf, spotOfGiver, keyOfSpot } from '../core/npcs.js';
 import { TOWN_KEY, isInterior } from '../world/town.js';
 import { parse, step, faceKey } from '../world/coords.js';
-import { tr } from '../i18n/i18n.js';
+import { tr, noun, say } from '../i18n/i18n.js';
 
 const FIND_REACH = 0.75;   // cells: walking this close to a thing picks it up
 
@@ -35,7 +35,7 @@ function overlay(map, log) {
     if (!s) continue;
     if ((stage.goal === 'deliver' || stage.goal === 'talk') && stage.to.spot) {
       const s2 = spotOf(map, stage.to.spot), p = stage.to.person;
-      if (s2) people.push({ id: `${quest.id}:helper`, helper: quest.id, name: stage.to.name, title: stage.to.title, tint: p.tint, outfit: p.outfit,
+      if (s2) people.push({ id: `${quest.id}:helper`, helper: quest.id, name: say(stage.to.name), title: stage.to.title, tint: p.tint, outfit: p.outfit,
         x: s2.anchor.x, y: s2.anchor.y, z: s2.anchor.z, yaw: s2.approach ? Math.atan2(s2.approach.x - s2.anchor.x, s2.approach.z - s2.anchor.z) : 0 });
       continue;
     }
@@ -111,12 +111,13 @@ export function pickUpQuestItems(found) {
   for (const p of questItemsHere()) {
     if (picked.has(p.id) || Math.hypot(p.x - player.x, p.z - player.z) > FIND_REACH || Math.abs(p.y - player.y) > 1) continue;
     picked.add(p.id);
-    const q = state.run.quests.list.find(x => x.id === p.quest), s = q?.stages[q.stage], name = ITEMS[p.itemId].name.toLowerCase();
+    const q = state.run.quests.list.find(x => x.id === p.quest), s = q?.stages[q.stage], thing = noun(ITEMS[p.itemId].name);
+    const giver = q ? giverName(q) : noun('whoever asked', { proper: true });
     sfx('pickup');
     if (p.spot) {
       const have = (s?.got?.filter(Boolean).length ?? 0) + 1, need = s?.got?.length ?? have;
-      setStatus(have >= need ? `That is all of them! Bring them back to ${q ? giverName(q) : 'whoever asked'}` : `Found one! ${have} of ${need}`);
-    } else setStatus(`Found the ${name}! Bring it back to ${q ? giverName(q) : 'whoever asked'}`);
+      setStatus(have >= need ? tr('That is all of them! Bring them back to {giver:the}', { giver }) : tr('Found one! {have} of {need}', { have, need }));
+    } else setStatus(tr('Found {thing:the}! Bring {thing:it} back to {giver:the}', { thing, giver }));
     found({ kind: 'found', quest: p.quest, spot: p.spot });
   }
 }

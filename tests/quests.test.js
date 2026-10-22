@@ -9,6 +9,7 @@ import { npcGiver, isNpcGiver } from '../src/core/npcs.js';
 import { createWorld, checkWorld } from '../src/core/save.js';
 import { mulberry32 } from '../src/core/util.js';
 import { ITEMS } from '../src/core/items.js';
+import { say } from '../src/i18n/i18n.js';
 
 const layouts = new Map();
 const ctxOf = (seed, gates = new Set(), chests = new Set()) => {
@@ -85,7 +86,8 @@ test('offers follow the plan and are about what the world has, never two about o
         'on a hiding place (a defense: at its outpost)');
       if (s.item) assert.equal(ITEMS[s.item].category, 'quest');
       if (s.goal === 'gather') s.spots.forEach((id, i) => assert.ok(L.spotList.some(p => p.id === id && p.kind === 'hide' && p.key === s.keys[i])));
-      assert.ok(q.title && q.text && s.text && !/undefined|NaN|null/.test(q.title + q.text + s.text), q.text);
+      const words = [q.title, q.text, s.text].map(say).join(' ');
+      assert.ok(say(q.title) && say(q.text) && say(s.text) && !/undefined|NaN|null|[{}]|\[object/.test(words), words);
       assert.ok(q.rewards.xp > 0);
     }
   }
@@ -121,7 +123,7 @@ test('a giver has one quest out at a time: the next only once the one taken is d
 test('a clue about a place says what the layout knows of it, never where it is on a map', () => {
   const ctx = ctxOf(123);
   for (let d = 0; d <= 20; d++) for (const s of ctx.layout(d).spotList) {
-    const clue = clueOf(ctx.layout, s);
+    const clue = say(clueOf(ctx.layout, s));
     assert.ok(clue.length > 5 && !/\d+,\s*-?\d+/.test(clue), clue);
   }
 });
@@ -398,7 +400,7 @@ test('a repeatable quest comes back to its giver once the party was away and cam
   assert.ok(log.repeats[0].ready, 'away and back');
   refreshOffers(log, ctx, ['innkeeper']);
   const again = log.list.find(x => x.state === 'offered');
-  assert.ok(again?.repeat && again.kind === 'bounty' && again.title.endsWith('(again)'));
+  assert.ok(again?.repeat && again.kind === 'bounty' && say(again.title).endsWith('(again)'));
   assert.notEqual(again.stages[0].enemyId, q.stages[0].enemyId, 'a new one');
   assert.ok(again.rewards.items.every(i => !i.gen), 'potions, no weapon');
   assert.deepEqual(log.repeats, [], 'it comes back when this one is done');

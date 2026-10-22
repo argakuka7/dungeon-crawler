@@ -372,7 +372,7 @@ export default {
   'Fresh off the anvil.': 'Frisch vom Amboss.',
 
   // the traders (core/shops.js)
-  Alchemist: { text: 'Alchemist', g: 'm' },
+  Alchemist: { text: 'Alchemist', g: 'm', obl: 'Alchemisten' },
   Potions: 'Tränke',
   'what will it be?': 'was darf es sein?',
   Enchanter: { text: 'Verzauberin', g: 'f' },

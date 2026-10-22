@@ -59,8 +59,8 @@ const traders = () => peopleHere().filter(talkative);
 // what a villager's label says: the quest mark, their name, their trade
 function villagerText(v) {
   const shop = shopOf(v), mark = v.lost || v.helper ? '!' : giverOf(v) && state.run?.quests ? giverMark(state.run.quests, giverOf(v)) : '';
-  const name = v.title ?? GIVERS[v.name]?.title ?? shop?.title ?? v.name;
-  return `${mark ? `${mark} ` : ''}${name}${shop ? ` · ${shop.trade}` : ''}`;
+  const name = v.title ? say(v.title) : GIVERS[v.name] ? tr(GIVERS[v.name].title) : shop ? tr(shop.title) : v.name;
+  return `${mark ? `${mark} ` : ''}${name}${shop ? ` · ${tr(shop.trade)}` : ''}`;
 }
 export function toggleLabels() { state.showLabels = !state.showLabels; }
 

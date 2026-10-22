@@ -8,8 +8,10 @@
 //
 // An NPC: { id, giver, name, role, title, tint, outfit, depth, spot, x, y, z, yaw }
 //   giver: the id the quests know them by ('npc:' + the spot's id)
+//   title: 'Ada the hermit', as words (titleWords: said in the reader's language)
 //   outfit: worn and held things (core/items.js WEARABLES), like the villagers'
 import { mulberry32, hash32 } from './util.js';
+import { msg, noun, person } from '../i18n/i18n.js';
 
 // What they are, which kinds of quest they lean towards (core/quests.js), what they wear, and
 // the depths they are found at (light, the sky down to the canyon; caves; the deep)
@@ -27,6 +29,18 @@ export const ROLES = {
 export const NAMES = ['Ada', 'Alma', 'Bodo', 'Bram', 'Clara', 'Cora', 'Dov', 'Edda', 'Emil', 'Finn', 'Frida', 'Greta', 'Gus',
   'Hanna', 'Hugo', 'Ilse', 'Ivo', 'Jonah', 'Juna', 'Kai', 'Kira', 'Lars', 'Lotte', 'Mats', 'Mila', 'Nils', 'Nora', 'Olga',
   'Otto', 'Pip', 'Quinn', 'Rosa', 'Sven', 'Tilda', 'Ulf', 'Vera', 'Wim', 'Yara', 'Zeno', 'Esme'];
+// who of them is a woman: other languages say it ('die Einsiedlerin Ada', 'der Bergmann Bodo')
+const SHE = new Set(['Ada', 'Alma', 'Clara', 'Cora', 'Edda', 'Frida', 'Greta', 'Hanna', 'Ilse', 'Juna', 'Kira', 'Lotte', 'Mila', 'Nora',
+  'Olga', 'Rosa', 'Tilda', 'Vera', 'Yara', 'Esme']);
+export const isShe = name => SHE.has(name);
+// somebody by their name, as words (src/i18n/i18n.js: a name with its gender)
+export const personWords = name => person(name, isShe(name) ? 'f' : 'm');
+// what they are ('hermit', a relation 'daughter'), as a noun for them: a woman's in the languages
+// that have one of her own (German 'Einsiedlerin': the catalog's 'she|hermit')
+export const roleWords = (role, name) => noun(role, isShe(name) ? { ctx: 'she' } : undefined);
+// 'Ada the hermit'
+export const titleWords = (name, role) => ({ t: msg('{name} the {role}'), p: { name: personWords(name), role: roleWords(role, name) },
+  proper: true, g: isShe(name) ? 'f' : 'm' });
 const TINTS = ['#d9b48c', '#c99a86', '#e0c7a0', '#b9c79a', '#b8b0d8', '#9fc3c9', '#d6a9a0', '#c4b48a', '#a8c0a0', '#d8c0d0'];
 export const NPC_R = 0.22;      // how big they are to bump into (world/town.js VILLAGER_R)
 export const NPC_H = 1.1;       // ... and how tall
@@ -47,7 +61,7 @@ export function residentOf(plan) {
     && (r.only ?? null) === (plan.kind === 'outpost' ? 'outpost' : null));
   const [role, r] = roles[Math.floor(R() * roles.length)];
   const name = NAMES[Math.floor(R() * NAMES.length)];
-  return { id: `${plan.id}:resident`, giver: npcGiver(plan.id), name, role, title: `${name} the ${r.title}`,
+  return { id: `${plan.id}:resident`, giver: npcGiver(plan.id), name, role, title: titleWords(name, r.title),
     tint: TINTS[Math.floor(R() * TINTS.length)], outfit: r.outfits[Math.floor(R() * r.outfits.length)],
     depth: plan.depth, spot: plan.id, camp: plan.kind === 'camp' };
 }
