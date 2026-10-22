@@ -52,13 +52,19 @@ docs that explain how the game works, from the big ideas down to the real code:
     on the hero; Cancel leaves it unchanged. Playing together the others see it (sent once, in
     pieces). See `docs/skins.md`.
   - Settings (`src/game/settings.js`, the menu in `src/game/settingsmenu.js`, from the Esc menu
-    and the main menu): the frame rate cap (30, 60 or unlimited, `src/main.js`), the anti-aliasing (MSAA off to
+    and the main menu): the language (English or German; at first the browser's), the frame rate cap (30, 60 or unlimited, `src/main.js`), the anti-aliasing (MSAA off to
     8x, `src/render/msaa.js`), the camera (the overview or the close view behind the hero; Tab or C
     taps between them: `src/game/camera.js`, `docs/camera.md`), the close view's mouse look
     (speed, invert up / down: `src/game/mouselook.js`), music on / off,
     the music's and the sounds' volume, and the keys. Every
     control is an action with a primary and a secondary key (`src/core/keybinds.js`: codes, so
     WASD keeps its place on any layout); kept in `localStorage` as `crawler.settings`.
+  - Languages (`src/i18n/`, `docs/i18n.md`): the English text in the code is the message
+    (`tr('Resume')`), each other language a catalog from it (`src/i18n/de/`), with the grammar a
+    sentence needs (a noun's gender and case, plurals). What is kept or sent is words to say, so
+    saves and friends work across languages. `src/i18n/glossary.js` holds the important words in
+    every language, which the game and the guide both use. `npm run i18n` (`tools/i18n.mjs`, also
+    in `npm test`) lists what is missing, unused or broken.
   - The chat box (Enter, bottom left; `src/game/console.js`): the chronicle of what happened,
     chat when playing together, and commands after a `/` that complete the game's items and
     enemies; with `?dev=1` the developer commands (`` ` ``, `/help`; `docs/console.md`).
@@ -80,7 +86,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   (`node tools/balance.mjs`, see `docs/balance.md`) and the enemy palette page
   (`/tools/palette.html`, see `docs/enemy-kinds.md`).
 - `docs/`: design notes; `docs/assets/` documents the asset libraries.
-- `learn/`: an interactive guide for children (about 12), in English and German, from the
+- `learn/`: an interactive guide for children (about 12), in English and German (the German in the
+  game's own words: `src/i18n/glossary.js`), from the
   big ideas down to the real code (`/learn/` on the dev server), with an AI tutor on every page
   (`learn/tutor/`, needs an API key, see `learn/README.md`). Code it
   explains carries a `// learn: ...` marker. After changing such code, run
@@ -104,8 +111,9 @@ npm run serve            # uv run --no-project tools/serve.py [port]
 # http://localhost:8000/?seed=123   straight into that world, nothing saved
 #   (?dev=1 for dev tools: ` opens their commands; it skips the menu too, ?menu=1 shows it;
 #    ?trial=flood puts a trial of that kind on every depth, docs/trials.md)
-# ?touch=1 forces the touch controls (docs/touch.md)
+# ?touch=1 forces the touch controls (docs/touch.md); ?lang=de or ?lang=en picks the language
 # with RADIUS_API_KEY, ANTHROPIC_API_KEY or OPENAI_API_KEY set, the guide's tutor uses it through the server
+npm run i18n             # what is left to translate (docs/i18n.md)
 npm test
 ```
 

@@ -25,7 +25,9 @@ say to each other (chat) and the commands (the console).
 
 `src/core/chronicle.js` (pure) and `src/game/log.js` (the session's diary). An entry is plain data:
 `{ id, kind, data, who, at, time }`; the words are made when it is shown (`describe`), so the same
-entry reads "You died" on our screen and "Anna died" on a friend's. It is kept for the visit only:
+entry reads "You died" on our screen and "Anna died" on a friend's, each in the reader's language:
+what an entry keeps about things is an English message or words to say (`docs/i18n.md`), never a
+sentence in one language. It is kept for the visit only:
 a reload starts a new diary, a new world adds a separator line. At most `LOG_LIMIT` (200) entries.
 
 | kind | when | data | told to friends |
@@ -33,19 +35,22 @@ a reload starts a new diary, a new world adds a separator line. At most `LOG_LIM
 | `death` | we died (`game/flow.js die`) | the death record | yes |
 | `down` / `up` | knocked out / helped up, playing together (`game/downed.js`) | `{ cause, by }` / `{ by }` | yes |
 | `level` | a level up (`game/enemies.js awardKills`) | `{ level }` | yes |
-| `guardian` | a guardian defeated, its gate open | `{ label, level, depth }` | yes |
+| `guardian` | a guardian defeated, its gate open | `{ label, level, depth, boss }` (label: its words, `enemyWords`) | yes |
 | `depth` | the first time at a depth in this world (`game/flow.js settleIn`) | `{ depth, place }` | yes |
-| `loot` | an Unusual (or better) weapon picked up (`game/loot.js`) | `{ name, rarity }` | Remarkable and better |
+| `loot` | an Unusual (or better) weapon picked up (`game/loot.js`) | `{ item, rarity }` (item: `itemWords`) | Remarkable and better |
 | `kill` | enemies defeated; kills within `MERGE_TIME` (6 s) are one line | `{ count, xp }` | no |
 | `horde` | a horde woke up | `{}` | no |
-| `trade` | bought something (`game/inventory.js`) | `{ item, price }` | no |
+| `trade` | bought something (`game/inventory.js`) | `{ item, copper }` | no |
+| `craft` | the Enchanter or the Smith worked on a weapon | `{ what, item, enchant \| affix, into?, copper }` (ids) | no |
+| `quest` | a quest taken, done, handed in, failed | `{ title, what, giver?, xp?, copper? }` (words) | no |
 | `party` | someone joined or left (`net/session.js`) | `{ text }` | (each sees it) |
 | `world` | a new world began | `{ seed }` | no |
 | `chat` | someone said something | `{ text }` | always |
 | `system` / `dev` | what the console says / a developer command did | `{ text, error? }` | no |
 
 **The death record** (`deathRecord`): the cause (the last blow's reason, `player.lastHurt`,
-"bitten by a Redback"), the enemy behind it (`by`: its name, level, whether a guardian), the depth
+"Bitten by a Redback!", said "bitten by a Redback" in English, "Von einem Rotrücken gebissen" in
+German), the enemy behind it (`by`: its words, level, whether a guardian), the depth
 and its place, the cube, the weapon in hand, our level and how long into the session. Every blow
 carries its enemy along (`game/enemycombat.js attacker`, set on strikes, projectiles and beams;
 it travels with a `hurt` over the network too), and so do the fire and the poison it leaves;

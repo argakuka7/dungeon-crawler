@@ -197,6 +197,11 @@ Steps 1 to 3 of "Order of work" below: the engine, the plan, spots and the peopl
   state: 'offered' | 'active' | 'ready' | 'done' | 'failed', archived, created, finished }
 ```
 
+- **Words**: the title, the text, a stage's text, label, clue and reply, and the giver's name and
+  place are kept as words to say (`phrase`, `noun`, `person`: `docs/i18n.md`), not sentences, so
+  a quest reads in the reader's language. Places, things and people are nouns with their gender
+  (a person's from their name, `core/npcs.js isShe`), and each language's sentence says how they
+  go ("on {where:the}": "auf {where:dem}"). Quests made before kept English sentences.
 - **Stages** run one after another; a chain is just more stages. Each stage has one goal.
 - **Goals** are a few verbs, each fed by something the game does anyway:
 

@@ -68,6 +68,9 @@ being helped up and getting back in. Up to four players, co-op.
   friend is counts once it is read: you fade over to their cube and stand beside them, locked
   out of any portal you arrive in (`online.js travel`, `session.js follow`,
   `game/portals.js lockPortalsHere`). Esc, using the scroll again or moving closes the menu.
+- Friends may play in different languages: each reads their own. What goes between the games
+  about things (news, quests, rewards) carries words to say, not sentences (`docs/i18n.md`), and
+  each game says them in its language.
 - A fifth player is turned away (`full`), another version too (`version`, `PROTOCOL` in
   `src/net/protocol.js`). Leaving sends `bye`; 12 s of silence counts as gone. The host's
   room stays open for new guests. When the host leaves, the game is over for everyone.

@@ -17,6 +17,7 @@
 //   node tools/i18n.mjs              the problems, with where each message is used
 //   node tools/i18n.mjs --todo de    the missing German messages as a ready-to-fill block
 //   node tools/i18n.mjs --list       every message, with where it is used
+//   node tools/i18n.mjs --glossary   the glossary as tables (src/i18n/glossary.js)
 // npm test runs the check (tests/i18n.test.js): every message has every translation.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
@@ -202,6 +203,18 @@ export async function check() {
 
 async function main() {
   const args = process.argv.slice(2);
+  if (args.includes('--glossary')) {
+    const { GLOSSARY, names } = await import(pathToFileURL(join(ROOT, 'src/i18n/glossary.js')));
+    const i18n = await import(pathToFileURL(join(ROOT, 'src/i18n/i18n.js')));
+    const langs = i18n.LANGUAGES.filter(l => l.code !== i18n.SOURCE);
+    const catalogs = Object.fromEntries(await Promise.all(langs.map(async l => [l.code, (await import(pathToFileURL(join(ROOT, `src/i18n/${l.code}/index.js`)))).default.messages])));
+    const said = (code, en) => { const e = catalogs[code][en]; return typeof e === 'string' ? e : e?.text ?? ''; };
+    console.log(`| English | ${langs.map(l => l.name).join(' | ')} | |\n|---|${langs.map(() => '---|').join('')}---|`);
+    for (const t of GLOSSARY) console.log(`| ${t.word.en} | ${langs.map(l => t.word[l.code] ?? '').join(' | ')} | ${t.note} |`);
+    console.log(`\n| English | ${langs.map(l => l.name).join(' | ')} |\n|---|${langs.map(() => '---|').join('')}`);
+    for (const n of names()) console.log(`| ${n} | ${langs.map(l => said(l.code, n)).join(' | ')} |`);
+    return;
+  }
   if (args.includes('--list')) {
     for (const [text, where] of await collect()) console.log(`${JSON.stringify(text)}  ${where.join(' ')}`);
     return;
