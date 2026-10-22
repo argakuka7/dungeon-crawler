@@ -658,4 +658,6 @@ export default {
   'They left': 'Weg',
   '{name}: {why}': '{name}: {why}',
   'Off to {name}': 'Auf zu {name}',
+
+  'The way across is blocked': 'Der Weg hinüber ist versperrt',
 };

@@ -53,6 +53,9 @@ export async function collect() {
   for (const file of walk(join(ROOT, 'src'))) {
     if (/src[\\/]i18n[\\/](?!sources\.js)/.test(file)) continue;
     const src = readFileSync(file, 'utf8');
+    // tr and the others under another name would hide their messages from this tool
+    const alias = /import\s*\{([^}]*)\}\s*from\s*'[^']*i18n\/i18n\.js'/.exec(src)?.[1].match(/\b(tr|tc|msg|noun|phrase)\s+as\s+\w+/);
+    if (alias) add(`\u0001${alias[0]}`, rel(file));
     for (const m of src.matchAll(CALL)) {
       const line = src.slice(0, m.index).split('\n').length, where = `${rel(file)}:${line}`;
       const before = src.slice(src.lastIndexOf('\n', m.index) + 1, m.index);
@@ -100,6 +103,7 @@ export async function check() {
   const found = await collect(), problems = [];
   for (const [text, where] of found) {
     if (text.startsWith('\u0000')) { problems.push({ kind: 'broken', text: text.slice(1), where, detail: 'a message must be a plain string, without ${}: pass the values as parameters' }); continue; }
+    if (text.startsWith('\u0001')) { problems.push({ kind: 'broken', text: text.slice(1), where, detail: 'import it under its own name: this tool finds the messages by it' }); continue; }
     try { i18n.parse(text); } catch (e) { problems.push({ kind: 'broken', text, where, detail: e.message }); }
   }
   const englishForms = new Set(en.grammar.forms);
@@ -122,7 +126,7 @@ export async function check() {
     }
     const unused = Object.keys(messages).filter(k => !found.has(k));
     for (const [text, where] of found) {
-      if (text.startsWith('\u0000')) continue;
+      if (/^[\u0000\u0001]/.test(text)) continue;
       const e = messages[text];
       if (e == null) {
         const like = unused.map(u => [u, alike(text, u)]).filter(([, a]) => a >= 0.5).sort((a, b) => b[1] - a[1])[0];

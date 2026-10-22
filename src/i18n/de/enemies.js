@@ -224,4 +224,6 @@ export default {
   'Defeat the guardian to unlock this passage': 'Besiege den Wächter, um diesen Durchgang zu öffnen',
   '{who:The}': '{who:Der}',
   '{who} still stands. Leave the arena?': '{who} steht noch. Die Arena verlassen?',
+
+  'Thrown off your feet by the shockwave!': 'Von der Schockwelle umgeworfen!',
 };

@@ -1169,7 +1169,7 @@ export function blowOf(profile, a = profile) {
 // what a shockwave (an attack's `wave`, game/quakes.js) does to a player it rolls under
 export function waveBlowOf(profile, a) {
   const w = a.wave;
-  return { damage: Math.round(profile.damage * w.power), knock: w.knock, knockDown: true, hop: w.hop, reason: 'Thrown off your feet by the shockwave!',
+  return { damage: Math.round(profile.damage * w.power), knock: w.knock, knockDown: true, hop: w.hop, reason: msg('Thrown off your feet by the shockwave!'),
     burn: null, chill: null, toxin: null };
 }
 
