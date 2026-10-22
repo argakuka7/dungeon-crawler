@@ -1,7 +1,7 @@
 // Browser integration checks for the chat box (game/console.js): opening and closing it with
 // the keys, typing that does not play, completing and running commands, history, the
 // chronicle (deaths, depths, kills) and chat. Resets to a fresh seed-3 run before and after.
-// With ?dev=1, from the devtools console:
+// With ?dev=1&lang=en (it reads the game's English), from the devtools console:
 //   await (await import('/tests/browser/console.js')).runConsoleChecks()
 import { player, state } from '../../src/game/state.js';
 import { newWorld } from '../../src/game/flow.js';
@@ -125,7 +125,7 @@ export async function runConsoleChecks() {
       player.x + 1, player.z, -1, 0);
     for (let i = 0; i < 200 && !chronicle.entries.some(e => e.kind === 'death'); i++) await delay(50);
     const death = chronicle.entries.find(e => e.kind === 'death');
-    check(death && death.data.cause === 'bitten by a Redback' && death.data.by?.level === 7 && death.data.level === 5
+    check(death && death.data.cause === 'Bitten by a Redback!' && death.data.by?.level === 7 && death.data.level === 5
       && death.data.depth === state.map.depth && death.data.weapon, 'The death record: ' + JSON.stringify(death?.data));
     check([...$('chat-log').children].some(li => li.classList.contains('k-death') && /You died: bitten by a Redback \(Lv 7\)/.test(li.textContent)),
       'The death must show in the box');

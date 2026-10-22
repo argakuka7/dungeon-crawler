@@ -79,7 +79,7 @@ docs that explain how the game works, from the big ideas down to the real code:
 - `blender/`: authoring sources: Blender scripts and `.blend` files that export
   into `assets/`, Blender test scripts in `blender/tests/`, renders in `blender/previews/`.
 - `tests/`: `node --test` unit tests; `tests/browser/` holds integration checks
-  that run from the game's devtools console.
+  that run from the game's devtools console (in English, `?lang=en`: some read what it says).
 - `tools/`: dev server, the prop metadata generator, the GLB compressor (`compress-assets.mjs`;
   `glb.mjs` reads the GLBs for the tools and tests), the depth population measurement, the
   weapon drop tables (`node tools/loot-table.mjs`), the balance simulation
