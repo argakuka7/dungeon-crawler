@@ -14,6 +14,7 @@ import { chatOpen, closeChat, openChat } from '../../src/game/console.js';
 import { runCommand, commands } from '../../src/game/commands.js';
 import { countOf, copperTotal, takeItem, isBound, isWorn } from '../../src/core/inventory.js';
 import { ITEMS, TOOLS } from '../../src/core/items.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -129,6 +130,9 @@ export async function runConsoleChecks() {
       && death.data.depth === state.map.depth && death.data.weapon, 'The death record: ' + JSON.stringify(death?.data));
     check([...$('chat-log').children].some(li => li.classList.contains('k-death') && /You died: bitten by a Redback \(Lv 7\)/.test(li.textContent)),
       'The death must show in the box');
+    check(state.deathAsk && !$('death-overlay').hidden && $('death-cause').textContent === 'Bitten by a Redback!', '"You died" asks what next, and says what did it');
+    answerDeath(true);
+    check(!state.deathAsk && player.hp === player.maxHp, 'Respawning answers it');
     results.push('depths and deaths with their cause go into the chronicle');
 
     // chat alone: kept all the same

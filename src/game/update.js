@@ -33,6 +33,7 @@ function lunge(s) {
 // learn: physics.html#landing (see learn/README.md)
 export function updatePlayer(dt) {
   if (worldPaused() || state.transitioning) return;
+  if (state.deathAsk) return;   // dead, asked what next (game/deathask.js): the body lies where it fell
   tickEffects(player, dt, state.time);   // potions at work (core/potions.js)
   // a portal's charge only carries over while checkPortals sees us standing in it
   const charge = state.portalCharge;

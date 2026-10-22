@@ -76,7 +76,7 @@ export function closeChat() {
 // the chat key (T, Enter): chat; the command key (`): a command (game/settings.js; not with the
 // inventory open, and the other panels' fields left alone)
 addEventListener('keydown', e => {
-  if (open || e.repeat || state.inventoryOpen || state.menuOpen || state.leaveAsk || state.mode !== 'play') return;
+  if (open || e.repeat || state.inventoryOpen || state.menuOpen || state.leaveAsk || state.deathAsk || state.mode !== 'play') return;
   if (!isModifier(e.code) && (e.metaKey || e.ctrlKey || e.altKey)) return;
   if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target?.tagName)) return;
   if (isFor(e, 'chat')) { e.preventDefault(); openChat(''); }

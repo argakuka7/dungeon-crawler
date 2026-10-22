@@ -17,6 +17,7 @@ import { startTravel, travelling, updateTravel } from '../../src/game/travel.js'
 import { animateEnemies, loadSpecies, removeEnemyViews } from '../../src/render/enemies.js';
 import { animateWorld } from '../../src/render/world.js';
 import { renderer, scene, camera } from '../../src/render/scene.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -70,7 +71,7 @@ export async function runGuardianChecks() {
       check(!gateLocked(map, state.run), 'guardian death alone unlocks the well');
       for (let i = 0; i < 40; i++) animateWorld(state.world, 1 / 60, i / 60);
       check(swirl.material.color.getHexString() !== 'ff3547', 'well visibly changes colour on unlock');
-      die();
+      die(); answerDeath(true);   // "You died": respawn (game/deathask.js)
       check(!allEnemies().some(e => e.guardian), 'guardian never respawns after death rollback');
       check(allEnemies().length === population - 1, 'ordinary defenders return on death');
       enterCube(c, entry.dir);
@@ -143,7 +144,7 @@ export async function runSideGuardianChecks() {
         check(!gateLocked(c.map, state.run), 'side guardian death unlocks passage');
         for (let i = 0; i < 40; i++) animateWorld(state.world, 1 / 60, i / 60);
         check(curtain.material.color.getHexString() !== 'ff3547', 'side gate visibly changes on unlock');
-        die();
+        die(); answerDeath(true);   // "You died": respawn (game/deathask.js)
         check(!allEnemies().some(e => e.guardian), 'side guardian stays dead after rollback');
         startTravel(exit);
         for (let i = 0; i < 100 && !travelling(); i++) await delay(50);

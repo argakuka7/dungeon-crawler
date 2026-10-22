@@ -13,7 +13,7 @@ import { tr } from '../i18n/i18n.js';
 
 let key = null;   // the press going on: { code, t0, moved, orbiting }
 
-const canTurn = () => state.mode === 'play' && !state.inventoryOpen && !state.menuOpen && !state.leaveAsk;
+const canTurn = () => state.mode === 'play' && !state.inventoryOpen && !state.menuOpen && !state.leaveAsk && !state.deathAsk;
 
 export function toggleCamera() {
   if (state.mode !== 'play') return;

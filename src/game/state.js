@@ -43,6 +43,7 @@ export const state = {
   showPath: false, transitioning: false, inventoryOpen: false, equipping: false,
   menuOpen: false,   // the Esc menu (game/escmenu.js)
   leaveAsk: null,   // "Leave the fight?" asked: { key, dir } (game/leavefight.js)
+  deathAsk: null,   // "You died" asks what next: { back } (game/deathask.js)
   showLabels: false,   // X: name labels over every item on the floor (game/lootlabels.js)
   run: createRun(),
   statusMsg: '', statusUntil: 0,
@@ -73,9 +74,9 @@ export const state = {
 // view's pitch (core/view.js), and whether the mouse is turning it (game/camerakey.js)
 export const view = { yaw: -Math.PI / 4, yawTarget: -Math.PI / 4, zoom: DEFAULT_ZOOM, zoomTarget: DEFAULT_ZOOM, pitch: PITCH, orbiting: false };
 
-// The inventory, the Esc menu and "Leave the fight?" stop the world, except when playing
+// The inventory, the Esc menu, "Leave the fight?" and "You died" stop the world, except when playing
 // together: the friend plays on, and so do the enemies (only your own input stops)
-export const worldPaused = () => (state.inventoryOpen || state.menuOpen || !!state.leaveAsk) && !together();
+export const worldPaused = () => (state.inventoryOpen || state.menuOpen || !!state.leaveAsk || !!state.deathAsk) && !together();
 
 // what the game just said: a short line in the chat box (game/console.js), not kept (the
 // chronicle, game/log.js, keeps what matters)

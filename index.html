@@ -61,6 +61,16 @@
     </div>
   </section>
 </div>
+<div id="death-overlay" hidden>
+  <section id="death-panel" role="alertdialog" aria-modal="true" aria-labelledby="death-title" aria-describedby="death-cause">
+    <h1 id="death-title" data-t>You died</h1>
+    <p id="death-cause"></p>
+    <div class="leave-buttons">
+      <button id="death-menu" data-t>Quit to the menu</button>
+      <button id="death-respawn" data-t>Respawn <kbd>Enter</kbd></button>
+    </div>
+  </section>
+</div>
 <div id="settings-overlay" hidden>
   <section id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <header><h1 id="settings-title" data-t>Settings</h1><button id="settings-close" aria-label="Close settings" data-t="text aria-label">Done · Esc</button></header>

@@ -20,6 +20,7 @@ import { awardXP, xpScale } from '../../src/core/progression.js';
 import { startSwing, cancelSwing, damageEnemy } from '../../src/core/combat.js';
 import { character } from '../../src/render/character.js';
 import { paused } from './combat.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (condition, message) => { if (!condition) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -124,7 +125,7 @@ export async function runInventoryChecks() {
       const again = allEnemies()[0], againId = again.id;
       damageEnemy(again, again.hp); updateEnemies(1/60);
       check(again.mode === 'dead' && state.run.defeated.has(againId), 'Need a second kill');
-      hurt(player.hp, 'Test death');
+      hurt(player.hp, 'Test death'); answerDeath(true);   // "You died": respawn (game/deathask.js)
       check(!state.run.defeated.has(againId) && allEnemies().some(e=>e.id === againId) && !lootHere().length
         && !allEnemies().some(e=>e.id === id), 'Death must restore the cube as entered (and only that)');
       check(state.enemyGrace === ENTRY_GRACE, 'Enemies must hold their attacks after a respawn');
@@ -199,7 +200,7 @@ export async function runWeaponLootChecks() {
       const kept = weapons().filter(p => p.kept).length;
       dropLoot({ id: 'browser:guardian2', level: 8, guardian: true, guardianRole: 'side', x: player.x, y: player.y, z: player.z }, 0);
       check(weapons().length === kept + 1, 'A side guardian drops one weapon');
-      hurt(player.hp, 'Test death');
+      hurt(player.hp, 'Test death'); answerDeath(true);   // "You died": respawn (game/deathask.js)
       check(weapons().length === kept && weapons().every(p => p.kept), 'A death keeps what you dropped and takes back fresh drops');
       results.push('deaths keep dropped items');
     });

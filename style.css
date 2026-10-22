@@ -130,20 +130,24 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #menu-players i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; }
 #menu-status { margin: 0 !important; color: #cfe2ff !important; text-align: center; }
 #menu-status:empty { display: none; }
-/* "Leave the fight?" (game/leavefight.js): over the game, under the Esc menu */
-#leave-overlay { position: fixed; inset: 0; z-index: 23; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
-#leave-panel { box-sizing: border-box; width: min(360px, 100%); padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c;
+/* "Leave the fight?" (game/leavefight.js) and "You died" (game/deathask.js): over the game, under the Esc menu */
+:is(#leave-overlay, #death-overlay) { position: fixed; inset: 0; z-index: 23; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
+#death-overlay { background: #1a050599; }
+:is(#leave-panel, #death-panel) { box-sizing: border-box; width: min(360px, 100%); padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c;
   border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px; }
-#leave-panel h1 { margin: 0 0 8px; color: #fff; font-size: 16px; letter-spacing: 3px; }
-#leave-panel p { margin: 0 0 14px; color: #aab3c2; }
-#leave-panel .leave-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-#leave-panel button { font-size: 14px; min-height: 42px; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c;
+:is(#leave-panel, #death-panel) h1 { margin: 0 0 8px; color: #fff; font-size: 16px; letter-spacing: 3px; }
+#death-panel h1 { color: #ffb4a4; }
+:is(#leave-panel, #death-panel) p { margin: 0 0 14px; color: #aab3c2; }
+#death-panel p:empty { display: none; }
+:is(#leave-panel, #death-panel) .leave-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+:is(#leave-panel, #death-panel) button { font-size: 14px; min-height: 42px; color: #e6e9ef; background: #2a2f3a; border: 1px solid #444c5c;
   border-radius: 4px; padding: 10px; cursor: pointer; }
-#leave-panel button:hover { background: #364052; color: #fff; }
-#leave-panel button:focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
-#leave-panel #leave-stay { color: #ffe4ae; border-color: #8a7a52; }
-#leave-panel kbd { margin-left: 6px; color: #8a96a8; font-size: 11px; }
-body.touch #leave-panel kbd { display: none; }
+:is(#leave-panel, #death-panel) button:hover { background: #364052; color: #fff; }
+:is(#leave-panel, #death-panel) button:focus-visible { outline: 2px solid #ffcf7a; outline-offset: 1px; }
+:is(#leave-panel #leave-stay, #death-panel #death-respawn) { color: #ffe4ae; border-color: #8a7a52; }
+#death-panel #death-menu.confirm { color: #ffd0c4; border-color: #b0563f; background: #3a2420; }
+:is(#leave-panel, #death-panel) kbd { margin-left: 6px; color: #8a96a8; font-size: 11px; }
+body.touch :is(#leave-panel, #death-panel) kbd { display: none; }
 /* the settings (game/settingsmenu.js): over the Esc menu or the main menu */
 #settings-overlay { position: fixed; inset: 0; z-index: 27; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
 #settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;

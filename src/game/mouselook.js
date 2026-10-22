@@ -39,7 +39,7 @@ export const mouseLook = () => state.mode === 'play' && cameraMode() === 'close'
 // is the mouse captured?
 export const looking = () => document.pointerLockElement === canvas;
 // what needs the cursor
-const busy = () => state.inventoryOpen || state.menuOpen || !!state.leaveAsk || settingsOpen() || teleportMenuOpen() || chatOpen();
+const busy = () => state.inventoryOpen || state.menuOpen || !!state.leaveAsk || !!state.deathAsk || settingsOpen() || teleportMenuOpen() || chatOpen();
 const wanted = () => mouseLook() && !busy();
 // was this Esc the one that just gave the mouse back (game/input.js: it must not close the
 // menu it opened)?

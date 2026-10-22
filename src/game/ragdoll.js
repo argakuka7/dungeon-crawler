@@ -76,8 +76,8 @@ export function stepRagdoll(dt) {
   if (!r.done) return;
   // a fatal blow on dry land, playing together: lie there for the friend to help you up
   if (player.hp <= 0 && !player.fluidDeath && pel[1] >= -3 && !state.fallFrom && goDown()) return;
+  if (player.hp <= 0) { die(); return; }   // (the body lies there until you respawn: game/deathask.js)
   player.ragdoll = null; player.fluidDeath = 0;
-  if (player.hp <= 0) { setStatus(tr('You died - back to the entry')); die(); return; }
   if (player.ragdollThen === 'safe' || pel[1] < -3 || state.fallFrom) { recover(); return; }
   standUp(r);
 }

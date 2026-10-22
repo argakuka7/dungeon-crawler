@@ -34,7 +34,7 @@ export function goDown() {
 export function tickDown(dt) {
   const d = player.down, list = helpers();
   d.t += dt;
-  if (!list.length || d.t >= BLEED_OUT) { player.down = null; player.ragdoll = null; die(); return; }
+  if (!list.length || d.t >= BLEED_OUT) { player.down = null; die(); return; }
   const near = list.find(b => Math.hypot(b.x - player.x, b.z - player.z) < REVIVE_REACH && Math.abs(b.y - player.y) < 1.2);
   d.revive = near ? d.revive + dt : Math.max(0, d.revive - dt);
   d.by = near?.name ?? d.by;   // who is helping (for the note over us, render/playerbar.js)

@@ -44,6 +44,7 @@ import { depthOf } from '../themes/depth.js';
 import { enterTrial, restartTrial, refreshTrialView, sealedIn, warnTrials } from './trials.js';
 import { setFluidPalettes } from '../render/fluidpal.js';
 import { tr } from '../i18n/i18n.js';
+import { askRespawn, forgetDeath } from './deathask.js';
 
 export function spawnAt(x, y, z) {
   cancelSword(true); cancelCast();
@@ -74,10 +75,11 @@ export function spawnEntry() {
 }
 
 export function hurt(amount, reason, by = null) {
+  if (state.deathAsk) return;   // dead already, asked what next (game/deathask.js)
   player.lastHurt = { reason, by };
   takeDamage(player, amount, state.time);
   flash();
-  if (player.hp <= 0) { setStatus(tr('You died ({reason}) - back to where you came in', { reason: tr(reason) })); die(); }
+  if (player.hp <= 0) die();
   else { setStatus(tr(reason)); recover(); }
 }
 
@@ -97,14 +99,17 @@ function restoreVisit(v) {
   forgetPicked();
 }
 
-// died: back to where you came in, in the cube as it was then (after a fall through cubes:
-// the cube the fall started in). The chronicle notes what did it (game/log.js logDeath).
+// died: the chronicle notes what did it (game/log.js logDeath), and "You died" asks what next
+// (game/deathask.js). Respawning is back to where you came in, in the cube as it was then
+// (after a fall through cubes: the cube the fall started in).
 // learn: memory.html#death (see learn/README.md)
 export function die() {
+  if (state.deathAsk) return;
+  const cause = player.lastHurt?.reason;
   sfx('death');
   raidDied();   // a raid going on is lost (game/defense.js)
   logDeath();
-  backAfterDeath();
+  askRespawn(cause, backAfterDeath);
 }
 function backAfterDeath() {
   if (state.fallFrom) { returnFromFall(true); return; }
@@ -357,6 +362,7 @@ export function newWorld(seed = (Math.random() * 1e9) >>> 0, { keepPlayer = stat
   state.transitioning = true;
   cancelSword(true);
   clearInput();
+  forgetDeath();   // ("You died" not answered: game/deathask.js)
   if (!keepPlayer) Object.assign(player, createPlayerStats(state.dev));
   state.run = createRun(); state.inventoryOpen = false;
   if (restore) restoreRun(restore);
@@ -395,7 +401,7 @@ function restoreRun({ run, faces, visited, deepest = 0 }) {
 
 // Back to the main menu (game/menu.js): the world goes, and nothing of it stays in the scene
 export function endWorld() {
-  cancelSword(true); cancelCast(); clearInput();
+  cancelSword(true); cancelCast(); clearInput(); forgetDeath();
   removeEnemyViews(detachEnemies());
   clearNeighbors(); clearNeighborCache();
   disposeWorld(state.world); state.world = null;

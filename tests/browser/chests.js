@@ -25,6 +25,7 @@ import { order } from '../../src/game/orders.js';
 import { loadPropSets } from '../../src/render/props.js';
 import { chestAt, tickChests } from '../../src/render/chests.js';
 import { camera, scene } from '../../src/render/scene.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 // the angle of a site's chest lid about its hinge (degrees; 0 closed, about -108 open)
@@ -138,7 +139,7 @@ export const runChestChecks = () => atRewardSite(async (c, entry, site, results)
   const names = list => list.filter(i => i.gen).map(i => i.gen.name).sort().join();
   check(names(here) === names(want.items) && here.every(p => p.toss === 1), 'the chest spills its seeded weapons');
   check(copperTotal(player.inventory) === copper + want.copper, 'and coins (the magnet takes them in front of the chest)');
-  hurt(player.hp, 'Test death');
+  hurt(player.hp, 'Test death'); answerDeath(true);   // "You died": respawn (game/deathask.js)
   check(state.run.chests.has(site.id) && names(lootHere().filter(p => p.kept)) === names(want.items), 'a death neither closes the chest nor takes its loot');
   enterCube(c, entry.dir);
   check(open(site.id), 'a rebuilt cube shows the chest open');

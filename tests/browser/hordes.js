@@ -13,6 +13,7 @@ import { renderer, scene, camera } from '../../src/render/scene.js';
 import { portalLocked } from '../../src/core/guardians.js';
 import { around } from '../../src/physics/enemynav.js';
 import { floorY } from '../../src/core/surfaces.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 
@@ -65,7 +66,7 @@ export async function runHordeChecks() {
         check(!allEnemies()[0].horde.group.active, 'revisit starts with a quiet survivor group');
         const victim = allEnemies()[0]; damageEnemy(victim, victim.hp); updateEnemies(.001);
         check(state.run.defeated.has(victim.id), 'kill is rewarded once');
-        die();
+        die(); answerDeath(true);   // "You died": respawn (game/deathask.js)
         check(allEnemies().some(e => e.id === victim.id) && !allEnemies().some(e => e.id === scoutId), 'death restores only this visit, not prior kills');
         results.push({ depth, count: list.length, peakAttackers: peak, simulationMs: Math.round(simulationMs) });
       }

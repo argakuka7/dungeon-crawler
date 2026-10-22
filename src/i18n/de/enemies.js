@@ -161,7 +161,6 @@ export default {
   'Struck by your own echo!': 'Von deinem eigenen Echo getroffen!',
   'Shot by your own echo!': 'Von deinem eigenen Echo angeschossen!',
   'your echo': 'dein Echo',
-  'You died ({reason}) - back to where you came in': 'Du bist gestorben ({reason}) – zurück, wo du hereingekommen bist',
   'Raging {kind:lower}': '{kind, select, m {Wütender} f {Wütende} n {Wütendes} other {Wütende}} {kind}',
   'Caught by the raging {kind:lower}!': '{kind, select, f {Von der wütenden {kind}} other {Vom wütenden {kind}}} erwischt!',
 

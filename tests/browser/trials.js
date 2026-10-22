@@ -15,6 +15,7 @@ import { sealedIn, sealedDirs } from '../../src/game/trials.js';
 import { portalLocked } from '../../src/core/guardians.js';
 import { trialFluid } from '../../src/physics/fluid.js';
 import { DIRS } from '../../src/core/constants.js';
+import { answerDeath } from '../../src/game/deathask.js';
 
 const check = (value, message) => { if (!value) throw Error(message); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -328,7 +329,7 @@ export async function runTrialChecks(kind = 'flood') {
   results.push('sealed');
   // dying in it: back in the room before, beside the portal, facing it, the trial room put back
   await delay(200);
-  hurt(player.hp + 1, 'a test');
+  hurt(player.hp + 1, 'a test'); answerDeath(true);   // "You died": respawn (game/deathask.js)
   await until(() => !state.transitioning && state.cubeKey === t.from, 'back in the room before after dying');
   check(player.hp === player.maxHp, 'at full health');
   const back = state.map.portals.find(p => p.dir === t.fromDir);
