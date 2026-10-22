@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { rig, createFigure, poseFigure, takeOff, wearLike, wornKey, animateWorn } from './figure.js';
 import { character, mountWeapon } from './character.js';
 import { paint, load, modelUrl, paintItem, itemModel } from './itempictures.js';
+import { uiScale } from '../game/uiscale.js';
 
 export { itemPicture, itemModelReady, onItemPictures, pictureImg } from './itempictures.js';
 
@@ -71,9 +72,10 @@ function pose(h) {
   for (const [bone, q] of character.holds?.[h.kind] ?? []) h.f.nodes[bone.name]?.quaternion.copy(q);
 }
 
-// a live canvas as big as it is shown (null: not shown)
+// a live canvas as big as it is shown (null: not shown); its size in CSS pixels is before the
+// UI scale's zoom (style.css)
 function fit(c) {
-  const k = Math.min(devicePixelRatio, 2), w = Math.round(c.clientWidth * k), h = Math.round(c.clientHeight * k);
+  const k = Math.min(devicePixelRatio, 2) * uiScale(), w = Math.round(c.clientWidth * k), h = Math.round(c.clientHeight * k);
   if (w < 2 || h < 2) return null;
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
   return c;

@@ -25,11 +25,12 @@ import { warnedFace } from './trials.js';
 import { TRIALS } from '../core/trials.js';
 import { DISPLAY, BODY } from '../render/fonts.js';
 import { tr } from '../i18n/i18n.js';
+import { uiScale } from './uiscale.js';
 
 // R: the map's radius in cubes; REACH: the cubes around ours that can show inside it
 const R = 3.5, CELL = 24, PAD = 6, SIZE = 2 * R * CELL + PAD * 2, C = SIZE / 2, REACH = Math.ceil(R + 0.5);
-// drawn in CSS pixels, its backing store in device pixels (sharp on high-DPI screens); the
-// stylesheet gives its width, the height follows the canvas's proportions
+// drawn in CSS pixels, its backing store in device pixels (sharp on high-DPI screens, and at any
+// UI scale); the stylesheet gives its width, the height follows the canvas's proportions
 const canvas = Object.assign(document.createElement('canvas'), { id: 'minimap', width: SIZE, height: SIZE + 42 });
 document.body.appendChild(canvas);
 const g = canvas.getContext('2d');
@@ -106,7 +107,7 @@ export function drawMinimap() {
   const seen = [state.cubeKey, px(me.x), px(me.z), Math.round(view.yaw * 200), Math.round(player.yaw * 20),
     ...online.buddies.map(b => `${b.cube} ${px(b.x)} ${px(b.z)} ${Math.round(b.yaw * 20)}`)].join('|');
   const now = performance.now();
-  const scale = Math.min(Math.max(devicePixelRatio || 1, 1), 3);
+  const scale = Math.min(Math.max(devicePixelRatio || 1, 1), 3) * uiScale();   // (style.css zooms it by the UI scale)
   if (seen === drawn && scale === drawnScale && now - drawnAt < 1000 / REFRESH) return;
   drawn = seen; drawnAt = now; drawnScale = scale;
   const fx = inside ? (door ? door.x / N : 0.5) : me.x / N, fz = inside ? (door ? door.z / N : 0.5) : me.z / N;

@@ -17,7 +17,8 @@ const mat = (color, onTop) => {
   return mats.get(k);
 };
 
-// a bar (back plate + fill) of width w; set(f) fills it to f in 0..1
+// a bar (back plate + fill) of width w; set(f) fills it to f in 0..1; resize(k) makes it k times
+// its size (the UI scale, game/uiscale.js)
 export function makeBar({ w = 0.66, h = 0.07, color = 0xf2a449, back = 0x231f25, onTop = false } = {}) {
   const group = new THREE.Group(), plate = new THREE.Mesh(barGeo, mat(back, onTop)), fill = new THREE.Mesh(barGeo, mat(color, onTop));
   const fw = w - 0.04, fh = h - 0.025;
@@ -25,7 +26,8 @@ export function makeBar({ w = 0.66, h = 0.07, color = 0xf2a449, back = 0x231f25,
   group.add(plate, fill);
   group.scale.setScalar(INDICATOR_SCALE);
   if (onTop) { plate.renderOrder = 1200; fill.renderOrder = 1201; }
-  return { group, set(f) { f = Math.min(1, Math.max(0, f)); fill.scale.x = fw * f; fill.position.x = -fw / 2 * (1 - f); } };
+  return { group, set(f) { f = Math.min(1, Math.max(0, f)); fill.scale.x = fw * f; fill.position.x = -fw / 2 * (1 - f); },
+    resize(k) { group.scale.setScalar(INDICATOR_SCALE * k); } };
 }
 
 // "Lv N" (or "<title> · Lv N") as a sprite; setLevel(n, title) redraws it only when the text

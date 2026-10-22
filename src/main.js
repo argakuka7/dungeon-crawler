@@ -39,6 +39,7 @@ import { updateTouch } from './game/touch.js';
 import { missingTranslations } from './game/language.js';   // the page's own words in the game's language
 import { language, tr } from './i18n/i18n.js';
 import './game/nozoom.js';   // the page never zooms, only the game's view
+import './game/uiscale.js';  // the HUD and the menus at the UI scale of the settings
 import { updateLoot } from './game/loot.js';
 import { updateLootLabels } from './game/lootlabels.js';
 import { tickFloatText } from './render/floattext.js';

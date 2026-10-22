@@ -1,9 +1,10 @@
 // The cast in progress (reading a portal scroll, game/townportal.js, roomportal.js): a violet
-// bar over the player's own bars. Lives in the scene, not a cube, like the portal charge bar.
+// bar over the player's own bars (those and it as big as the UI scale says, game/uiscale.js). Lives in the scene, not a cube, like the portal charge bar.
 import { scene, camera } from './scene.js';
 import { makeBar } from './bars.js';
 import { player, state } from '../game/state.js';
 import { CHAR_H } from '../core/constants.js';
+import { uiScale } from '../game/uiscale.js';
 
 const bar = makeBar({ w: 0.8, h: 0.08, color: 0xb98cff, onTop: true });
 bar.group.visible = false;
@@ -14,7 +15,9 @@ export function updateCastBar() {
   const c = state.cast;
   bar.group.visible = !!c && !state.transitioning;
   if (!bar.group.visible) return;
-  bar.group.position.set(player.x, player.visY + CHAR_H + 0.85, player.z);
+  const s = uiScale();
+  bar.group.position.set(player.x, player.visY + CHAR_H + 0.4 + 0.45 * s, player.z);
+  bar.resize(s);
   bar.group.quaternion.copy(camera.quaternion);
   bar.set(c.t / c.duration);
 }

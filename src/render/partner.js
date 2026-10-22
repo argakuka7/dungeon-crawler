@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { loadGLB } from './gltf.js';
 import { CHAR_H } from '../core/constants.js';
+import { uiScale } from '../game/uiscale.js';
 import { BONES, Q, packPose, wornOf } from '../net/protocol.js';
 import { lerpAngle } from '../net/sync.js';
 import { scene, camera } from './scene.js';
@@ -165,6 +166,7 @@ export function showPartner(slot, span, name) {
   fig.group.visible = fig.tag.visible = true;
   // the tag: over the head, facing the camera
   fig.tag.position.set(fig.group.position.x, fig.group.position.y + CHAR_H + 0.4, fig.group.position.z);
+  fig.tag.scale.setScalar(uiScale());   // (the UI scale, game/uiscale.js: growing upwards from the bar)
   fig.bars.quaternion.copy(camera.quaternion);
   fig.hp.set(b.hp / (b.maxHp || 1));
   fig.label.setLevel(Number.isFinite(b.level) ? b.level : 1);

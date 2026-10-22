@@ -3,7 +3,11 @@
 :root { --safe-t: env(safe-area-inset-top, 0px); --safe-r: env(safe-area-inset-right, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --pad: calc(16px + var(--safe-t)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));
-  --pad-y: calc(32px + var(--safe-t) + var(--safe-b)); }
+  --pad-y: calc(32px + var(--safe-t) + var(--safe-b)); --ui: 1; }
+/* the UI scale (the settings, game/uiscale.js): the HUD and the menus zoomed as a whole, offsets from the window's edges and all.
+   Inside them nothing uses vw / vh (browsers disagree on whether zoom scales those): percentages of the window instead. */
+:is(#quickbar, #effects, #teleport-menu, #chat, #minimap, #quest-track, #trial-hud, #trial-banner, #loading, #look-hint, #crosshair, #teach-pace,
+  #menu-overlay, #leave-overlay, #death-overlay, #settings-overlay, #inventory-overlay, #title-logo, #title-panel, #title-hero b, #title-hero small) { zoom: var(--ui); }
 html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #2a3140 0%, #12151c 70%, #0b0d12 100%); font: 16px/1.35 var(--font-body); color: #d8dde6; }
 /* the type (vendor/fonts/fonts.css): Cinzel on what is pressed and what names things, Crimson Text for the rest,
    IBM Plex Mono only where columns must line up (the dev panel) */
@@ -51,16 +55,16 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 #dev-hint kbd { font-size: 9px; padding: 0 3px; }
 
 /* the chat box (game/console.js): the chronicle, the game's last word, a line to type in */
-#chat { position: fixed; left: 12px; bottom: 12px; z-index: 18; box-sizing: border-box; width: min(470px, calc(50vw - 200px)); min-width: 280px;
+#chat { position: fixed; left: 12px; bottom: 12px; z-index: 18; box-sizing: border-box; width: min(470px, calc(50% - 200px)); min-width: 280px;
   display: flex; flex-direction: column; font-size: 15px; pointer-events: none; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
-#chat.open { pointer-events: auto; padding: 6px 8px 8px; background: #0b0d12d9; border: 1px solid #444c5c; border-radius: 6px; box-shadow: 0 10px 40px #0007; }
+#chat.open { max-height: calc(42% + 100px); pointer-events: auto; padding: 6px 8px 8px; background: #0b0d12d9; border: 1px solid #444c5c; border-radius: 6px; box-shadow: 0 10px 40px #0007; }
 #chat-tabs { display: flex; gap: 4px; align-items: baseline; margin-bottom: 4px; }
 #chat-tabs button { font-size: 11px; color: #8a96a8; background: none; border: 1px solid transparent; border-radius: 3px; padding: 1px 7px; cursor: pointer; }
 #chat-tabs button.on { color: #fff; border-color: #444c5c; background: #2a2f3a; }
 #chat-tabs span { margin-left: auto; color: #6f7a8c; font-size: 13px; }
 #chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: flex-end;
   max-height: 9.6em; overflow: hidden; line-height: 1.35; }
-#chat.open #chat-log { max-height: min(42vh, 360px); overflow-y: auto; justify-content: flex-start; scrollbar-width: thin; }
+#chat.open #chat-log { max-height: 360px; overflow-y: auto; justify-content: flex-start; scrollbar-width: thin; }
 #chat-log li { flex: none; padding: 1px 0; color: #c9d1dc; white-space: pre-wrap; overflow-wrap: anywhere; transition: opacity 1.2s; }
 #chat-log li.old { opacity: 0; }
 #chat-log li.k-chat { color: #f4f6fa; }
@@ -104,7 +108,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 
 /* the Esc menu (game/escmenu.js): over the game, dimmed; alone the game waits meanwhile */
 #menu-overlay { position: fixed; inset: 0; z-index: 24; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
-#menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
+#menu-panel { box-sizing: border-box; width: min(420px, 100%); max-height: 100%; overflow: auto;
   padding: 16px 20px; background: #12161ef0; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px; }
 #menu-panel header { display: flex; align-items: baseline; gap: 12px; }
 #menu-panel h1 { margin: 0 0 12px; color: #fff; font-size: 16px; letter-spacing: 3px; }
@@ -150,7 +154,7 @@ kbd { display: inline-block; min-width: 1.2em; text-align: center; background: #
 body.touch :is(#leave-panel, #death-panel) kbd { display: none; }
 /* the settings (game/settingsmenu.js): over the Esc menu or the main menu */
 #settings-overlay { position: fixed; inset: 0; z-index: 27; display: grid; place-items: center; padding: var(--pad); background: #080c1399; }
-#settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: calc(100dvh - var(--pad-y)); overflow: auto;
+#settings-panel { box-sizing: border-box; width: min(520px, 100%); max-height: 100%; overflow: auto;
   padding: 16px 20px; background: #12161ef5; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px; }
 #settings-panel header { display: flex; align-items: baseline; gap: 12px; }
 #settings-panel h1 { margin: 0 0 4px; color: #fff; font-size: 16px; letter-spacing: 3px; }
@@ -167,6 +171,7 @@ body.touch :is(#leave-panel, #death-panel) kbd { display: none; }
 #settings-close { margin-left: auto; color: #8a96a8 !important; background: none !important; border: none !important; padding: 0 !important; font-size: 11px !important; }
 #settings-reset { margin-left: auto; padding: 2px 8px !important; font-size: 11px !important; color: #aab3c2 !important; }
 #settings-reset.confirm { color: #ffd0c4 !important; border-color: #b0563f !important; background: #3a2420 !important; }
+#settings-panel .settings-ui { margin-top: 8px; }
 .settings-graphics { display: grid; grid-template-columns: 9em 1fr; align-items: center; gap: 8px 12px; color: #e6e9ef; }
 /* the mouse turning the view (game/camerakey.js) */
 body.orbiting, body.orbiting * { cursor: none !important; }
@@ -188,7 +193,7 @@ body.orbiting, body.orbiting * { cursor: none !important; }
 #inventory-overlay { position: fixed; inset: 0; z-index: 20; background: #080c13b8; display: grid; place-items: center; padding: 16px 16px 84px; }
 /* game/inventory.js: the hero | (floor or shop) | the bag and the actions underneath | the details. Nothing in it changes
    its size with the selection: the details scroll inside their column, the actions keep their rows. */
-#inventory-panel { box-sizing: border-box; width: min(1100px, 100%); max-height: calc(100dvh - 100px); overflow: auto; padding: 18px 22px;
+#inventory-panel { box-sizing: border-box; width: min(1100px, 100%); max-height: 100%; overflow: auto; padding: 18px 22px;
   background: #202631; border: 1px solid #68715e; border-radius: 8px; box-shadow: 0 16px 80px #0009; }
 #inventory-panel.with-floor { width: min(1200px, 100%); }
 #inventory-panel header { display: flex; align-items: center; gap: 18px; }
@@ -293,10 +298,13 @@ body.look #loot-labels .loot-label { pointer-events: none; }
   border: 1px solid #000a; border-radius: 50%; background: #f4ead8e0; box-shadow: 0 0 0 1px #0004; }
 #look-hint { position: fixed; left: 50%; top: calc(50% - 24px); z-index: 5; transform: translate(-50%, -100%); pointer-events: none; padding: 6px 12px;
   font: 15px/1.2 var(--font-body); color: #f4ead8; background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 4px; text-shadow: 0 1px 2px #000; }
-#lock-marker { position: fixed; left: 0; top: 0; z-index: 5; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none;
+#lock-marker { position: fixed; left: 0; top: 0; z-index: 5; width: calc(34px * var(--ui)); height: calc(34px * var(--ui));
+  margin: calc(-17px * var(--ui)) 0 0 calc(-17px * var(--ui)); pointer-events: none;
   border: 2px solid #ffcf7a; border-radius: 50%; box-shadow: 0 0 6px #000a, inset 0 0 4px #000a; box-sizing: border-box; }
 #lock-marker::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #ffcf7a; }
-.loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 15px/1.2 var(--font-body); padding: 2px 6px; white-space: nowrap;
+/* (placed by game/lootlabels.js in the screen's pixels: grown by the UI scale, not zoomed) */
+.loot-label { position: absolute; left: 0; top: 0; pointer-events: auto; font: calc(15px * var(--ui))/1.2 var(--font-body);
+  padding: calc(2px * var(--ui)) calc(6px * var(--ui)); white-space: nowrap;
   background: #0b0e14d0; border: 1px solid #ffffff22; border-radius: 3px; cursor: pointer; text-shadow: 0 1px 2px #000; }
 .loot-label.hovered { background: #1d2532f0; border-color: currentColor; }
 .loot-label[data-rarity="fabled"], .loot-label[data-rarity="impossible"], .loot-label[data-rarity="omg"] { font-weight: bold; }
@@ -351,36 +359,34 @@ body.look #loot-labels .loot-label { pointer-events: none; }
 #inventory-panel .quest-actions .main { color: #10141c; background: #ffcf7a; border-color: #ffcf7a; }
 #inventory-panel .quest-actions .main:hover:not(:disabled) { background: #ffe0a0; }
 #inventory-feedback { height: 22px; margin: 10px 0 6px; color: #ffcf7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* smaller screens: the details under the bag, the hero beside both (with a floor or shop: under it) */
-@media (max-width: 1000px) {
-  .inventory-body { grid-template-columns: 170px minmax(0, 1fr); grid-template-areas: "hero bag" "hero details"; }
-  #inventory-panel.with-floor .inventory-body { grid-template-columns: 170px 80px minmax(0, 1fr); grid-template-areas: "hero floor bag" "hero details details"; }
-  #inventory-details { height: 240px; min-height: 0; }
-  #quests-details { min-height: 380px; }
-  /* the tabs need the room: the coins go to a row of their own */
-  #inventory-panel header { flex-wrap: wrap; gap: 8px 18px; }
-  #inventory-panel header > div:first-child { flex: 1; }
-  #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
-  .coin-slot { flex: 1; }
-}
-@media (max-width: 540px) {
-  #inventory-panel { padding: 12px; }
-  #inventory-panel header { flex-wrap: wrap; gap: 8px; }
-  #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
-  #inventory-panel header > div:first-child { flex: 1; }
-  .coin-slot { flex: 1; }
-  .inventory-body, #inventory-panel.with-floor .inventory-body { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "floor" "bag" "details"; }
-  #inventory-hero { flex: none; height: 180px; }
-  .inventory-scroll { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
-  #inventory-panel .side-slot { width: 64px; }
-  #inventory-panel h2 { margin: 8px 0 6px; }
-  #inventory-act { flex-wrap: wrap; }
-  #inventory-bar { margin-left: 0; }
-  #quests-body { grid-template-columns: minmax(0, 1fr); }
-  #quests-list { flex: none; max-height: 220px; }
-  #quests-details { min-height: 0; }
-  #quests-details-inner { position: static; }
-}
+/* smaller screens: the details under the bag, the hero beside both (with a floor or shop: under it). Not media queries: the
+   width at the UI scale (game/uiscale.js) */
+body.ui-w1000 .inventory-body { grid-template-columns: 170px minmax(0, 1fr); grid-template-areas: "hero bag" "hero details"; }
+body.ui-w1000 #inventory-panel.with-floor .inventory-body { grid-template-columns: 170px 80px minmax(0, 1fr); grid-template-areas: "hero floor bag" "hero details details"; }
+body.ui-w1000 #inventory-details { height: 240px; min-height: 0; }
+body.ui-w1000 #quests-details { min-height: 380px; }
+/* the tabs need the room: the coins go to a row of their own */
+body.ui-w1000 #inventory-panel header { flex-wrap: wrap; gap: 8px 18px; }
+body.ui-w1000 #inventory-panel header > div:first-child { flex: 1; }
+body.ui-w1000 #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
+body.ui-w1000 .coin-slot { flex: 1; }
+/* a phone: one column */
+body.ui-w540 #inventory-panel { padding: 12px; }
+body.ui-w540 #inventory-panel header { flex-wrap: wrap; gap: 8px; }
+body.ui-w540 #inventory-currency { order: 3; flex-basis: 100%; justify-content: stretch; }
+body.ui-w540 #inventory-panel header > div:first-child { flex: 1; }
+body.ui-w540 .coin-slot { flex: 1; }
+body.ui-w540 .inventory-body, body.ui-w540 #inventory-panel.with-floor .inventory-body { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "floor" "bag" "details"; }
+body.ui-w540 #inventory-hero { flex: none; height: 180px; }
+body.ui-w540 .inventory-scroll { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+body.ui-w540 #inventory-panel .side-slot { width: 64px; }
+body.ui-w540 #inventory-panel h2 { margin: 8px 0 6px; }
+body.ui-w540 #inventory-act { flex-wrap: wrap; }
+body.ui-w540 #inventory-bar { margin-left: 0; }
+body.ui-w540 #quests-body { grid-template-columns: minmax(0, 1fr); }
+body.ui-w540 #quests-list { flex: none; max-height: 220px; }
+body.ui-w540 #quests-details { min-height: 0; }
+body.ui-w540 #quests-details-inner { position: static; }
 
 /* quick bar (game/quickbar.js): above the inventory's dimmed backdrop, so items can be assigned */
 #quickbar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 21; display: flex; gap: 6px;
@@ -406,7 +412,7 @@ body.look #loot-labels .loot-label { pointer-events: none; }
 
 /* the teleport scroll asking where to (game/teleportmenu.js): over the quick bar and the effects */
 #teleport-menu { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 21; box-sizing: border-box;
-  width: min(300px, calc(100vw - 24px)); display: grid; gap: 4px; padding: 8px; background: #0b0d12e6; border: 1px solid #b98cff;
+  width: min(300px, calc(100% - 24px)); display: grid; gap: 4px; padding: 8px; background: #0b0d12e6; border: 1px solid #b98cff;
   border-radius: 6px; box-shadow: 0 10px 40px #0008; }
 #teleport-menu h2 { margin: 0 2px 2px; color: #d9c4ff; font-size: 12px; font-weight: normal; letter-spacing: 1px; }
 #teleport-menu button { display: flex; align-items: baseline; gap: 8px; min-height: 38px; padding: 6px 10px; text-align: left; cursor: pointer;
@@ -435,8 +441,8 @@ body.touch #teleport-menu kbd { display: none; }
 *, *::before, *::after { touch-action: manipulation; }
 body.touch canvas, #touch, #touch * { touch-action: none; }
 /* iOS zooms into a field with smaller text when it gets focus (game/nozoom.js) */
-body.touch :is(input, textarea, select) { font-size: 16px !important; }
-@media (pointer: coarse) { :is(input, textarea, select) { font-size: 16px !important; } }
+body.touch :is(input, textarea, select) { font-size: calc(16px / min(var(--ui), 1)) !important; }   /* (16 px still under a UI scale below 100%) */
+@media (pointer: coarse) { :is(input, textarea, select) { font-size: calc(16px / min(var(--ui), 1)) !important; } }
 #touch { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
 #touch-stick { position: absolute; left: 0; bottom: 0; width: 45vw; height: 65vh; pointer-events: auto; }
 #touch-ring { position: fixed; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; box-sizing: border-box;
@@ -493,21 +499,18 @@ body.touch #teleport-menu { top: calc(112px + env(safe-area-inset-top)); bottom:
 body.touch #minimap { width: 120px; height: auto; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); }
 body.touch #loading { bottom: auto; top: 110px; }
 body.touch #inventory-overlay { padding: calc(70px + env(safe-area-inset-top)) 12px 12px; }
-body.touch #inventory-panel { max-height: calc(100dvh - 84px - var(--safe-t)); }
-@media (max-width: 640px) { body.touch #minimap { top: calc(70px + env(safe-area-inset-top)); width: 96px; } }
-body.touch #chat { width: min(420px, 44vw); min-width: 0; }
-/* a tablet (not a phone): the quick bar back at the bottom, centred but always left of the jump button (the touch bar is
-   423px wide: 6 + 2 buttons of 46px, gaps, margins, padding); the chat lifted over it, the inventory clear of it */
-@media (min-width: 700px) and (min-height: 600px) {
-  body.touch #quickbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); left: auto; transform: none;
-    right: max(calc(210px + env(safe-area-inset-right)), calc(50% - 212px)); }
-  body.touch #effects { top: auto; bottom: calc(80px + env(safe-area-inset-bottom)); }
-  body.touch #teleport-menu { top: auto; bottom: calc(120px + env(safe-area-inset-bottom)); }
-  body.touch #loading { top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
-  body.touch #chat { bottom: calc(82px + env(safe-area-inset-bottom)); }
-  body.touch #inventory-overlay { padding: calc(12px + env(safe-area-inset-top)) 12px calc(84px + env(safe-area-inset-bottom)); }
-  body.touch #inventory-panel { max-height: calc(100dvh - 96px - var(--safe-t) - var(--safe-b)); }
-}
+body.touch.ui-w640 #minimap { top: calc(70px + env(safe-area-inset-top)); width: 96px; }
+body.touch #chat { width: min(420px, 44%); min-width: 0; }
+/* a tablet (not a phone; at the UI scale, game/uiscale.js): the quick bar back at the bottom, centred but always left of the
+   jump button (the touch bar is 423px wide: 6 + 2 buttons of 46px, gaps, margins, padding); the chat lifted over it, the
+   inventory clear of it */
+body.touch.ui-roomy #quickbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); left: auto; transform: none;
+  right: max(calc(210px + env(safe-area-inset-right)), calc(50% - 212px)); }
+body.touch.ui-roomy #effects { top: auto; bottom: calc(80px + env(safe-area-inset-bottom)); }
+body.touch.ui-roomy #teleport-menu { top: auto; bottom: calc(120px + env(safe-area-inset-bottom)); }
+body.touch.ui-roomy #loading { top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
+body.touch.ui-roomy #chat { bottom: calc(82px + env(safe-area-inset-bottom)); }
+body.touch.ui-roomy #inventory-overlay { padding: calc(12px + env(safe-area-inset-top)) 12px calc(84px + env(safe-area-inset-bottom)); }
 
 /* the main menu (game/menu.js): the heroes, the worlds, joining a friend */
 body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #loot-labels, #dev, #teach-pace) { display: none !important; }
@@ -522,11 +525,12 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
   #title-overlay { place-items: end center; padding-bottom: max(16px + var(--safe-b), 4vh);
     background: linear-gradient(0deg, #080c13cc 0%, #080c1366 35%, transparent 60%); }
 }
-#title-box { box-sizing: border-box; width: min(360px, 100%); }
-#title-logo { margin: 0 0 18px; text-align: center; color: #ffe4ae; font-size: 30px; font-weight: normal; letter-spacing: 8px; text-transform: uppercase;
+/* (the box is not zoomed, what is in it is: game/menu.js measures it to place the hero beside it) */
+#title-box { box-sizing: border-box; width: min(calc(360px * var(--ui)), 100%); max-height: 100%; display: flex; flex-direction: column; }
+#title-logo { flex: none; margin: 0 0 18px; text-align: center; color: #ffe4ae; font-size: 30px; font-weight: normal; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 0 #8a5a2a, 0 0 24px #ffb45a55; }
 #title-panel { padding: 16px 20px; background: #12161ee6; border: 1px solid #444c5c; border-radius: 8px; box-shadow: 0 16px 60px #0008; font-size: 15px;
-  max-height: calc(100dvh - 120px - var(--safe-t) - var(--safe-b)); overflow: auto; }
+  min-height: 0; overflow: auto; }
 #title-panel h2 { margin: 0 0 10px; color: #fff; font-size: 14px; letter-spacing: 1px; }
 #title-panel h2 small { color: #8a96a8; font-family: var(--font-body); font-weight: normal; font-size: 14px; letter-spacing: 0; margin-left: 6px; }
 #title-panel h3 { margin: 16px 0 6px; color: #c5cdbc; font-size: 12px; font-weight: normal; }
@@ -600,9 +604,10 @@ body.in-menu :is(#quickbar, #teleport-menu, #chat, #minimap, #effects, #touch, #
 #skin-status { min-height: 1.3em; }
 #skin-editor :focus-visible { outline: 2px solid #ffcf7a; outline-offset: 2px; }
 /* an outpost's supply cart under raid (game/defense.js): its strength over it */
-.cart-bar { position: absolute; left: 0; top: 0; width: 100px; font: 12px/1.2 var(--font-display); color: #ffe4ae; text-align: center;
+/* (placed in the screen's pixels: grown by the UI scale, not zoomed) */
+.cart-bar { position: absolute; left: 0; top: 0; width: calc(100px * var(--ui)); font: calc(12px * var(--ui))/1.2 var(--font-display); color: #ffe4ae; text-align: center;
   text-shadow: 0 1px 2px #000; pointer-events: none; }
-.cart-bar i { display: block; height: 6px; margin-top: 2px; background: #0b0e14d0; border: 1px solid #ffffff33; border-radius: 3px; overflow: hidden; }
+.cart-bar i { display: block; height: calc(6px * var(--ui)); margin-top: 2px; background: #0b0e14d0; border: 1px solid #ffffff33; border-radius: 3px; overflow: hidden; }
 .cart-bar b { display: block; height: 100%; background: #e6c35a; transition: width .2s; }
 .cart-bar[data-phase="countdown"] span::after, .cart-bar[data-phase="between"] span::after { content: ' · get ready'; }
 /* the quest followed (game/questpanel.js Track): its title and what to do now, under the minimap */
@@ -624,6 +629,7 @@ body.touch #quest-track { top: calc(150px + env(safe-area-inset-top)); width: 15
 #trial-banner.out { opacity: 0; }
 #trial-banner b { display: block; font: bold 34px/1.2 var(--font-display); letter-spacing: .04em; }
 #trial-banner span { display: block; font: 18px/1.4 var(--font-body); margin-top: 4px; }
-#trial-tip { position: fixed; z-index: 3; pointer-events: none; transform: translateX(-50%); white-space: nowrap; padding: 3px 8px;
-  background: #0b0e14d8; border: 1px solid #fff4; border-radius: 4px; font: 15px/1.3 var(--font-body); color: #e6edf5; }
+/* (placed by game/trials.js in the screen's pixels: grown by the UI scale, not zoomed) */
+#trial-tip { position: fixed; z-index: 3; pointer-events: none; transform: translateX(-50%); white-space: nowrap; padding: calc(3px * var(--ui)) calc(8px * var(--ui));
+  background: #0b0e14d8; border: 1px solid #fff4; border-radius: 4px; font: calc(15px * var(--ui))/1.3 var(--font-body); color: #e6edf5; }
 #trial-tip[hidden] { display: none; }

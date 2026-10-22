@@ -10,6 +10,7 @@ import { player } from '../game/state.js';
 import { xpProgress } from '../core/progression.js';
 import { CHAR_H } from '../core/constants.js';
 import { tr } from '../i18n/i18n.js';
+import { uiScale } from '../game/uiscale.js';
 
 const group = new THREE.Group();
 const hp = makeBar({ color: 0xe0584c, onTop: true });
@@ -27,15 +28,16 @@ group.visible = false;
 scene.add(group);
 
 // In the close view (game/camera.js) over the hero they would cover the middle of the screen:
-// they sit at the bottom instead, over the quick bar, a step in front of the camera.
+// they sit at the bottom instead, over the quick bar, a step in front of the camera. Part of the
+// HUD there: as big as the UI scale says, and as far up as the quick bar grew (game/uiscale.js).
 const SCREEN_Y = -0.71, AHEAD = 1, SIZE = 0.42;   // height on screen (-1..1), units, per screen height
 const fwd = new THREE.Vector3(), up = new THREE.Vector3();
 function onScreen() {
-  const h = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * AHEAD;
+  const h = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * AHEAD, s = uiScale();
   camera.getWorldDirection(fwd);
   up.setFromMatrixColumn(camera.matrixWorld, 1);
-  group.position.copy(camera.position).addScaledVector(fwd, AHEAD).addScaledVector(up, SCREEN_Y * h);
-  group.scale.setScalar(h * SIZE);
+  group.position.copy(camera.position).addScaledVector(fwd, AHEAD).addScaledVector(up, (-1 + (1 + SCREEN_Y) * s) * h);
+  group.scale.setScalar(h * SIZE * s);
 }
 
 // after the camera moved, so the bars face it this frame; close: the close view
@@ -43,7 +45,7 @@ export function updatePlayerBar(close = false) {
   group.visible = character.ready && character.group.visible;   // (not in the main menu)
   if (!group.visible) return;
   if (close) onScreen();
-  else { group.position.set(player.x, player.visY + CHAR_H + 0.4, player.z); group.scale.setScalar(1); }
+  else { group.position.set(player.x, player.visY + CHAR_H + 0.4, player.z); group.scale.setScalar(uiScale()); }   // (growing upwards from the bar)
   bars.quaternion.copy(camera.quaternion);
   hp.set(player.hp / player.maxHp);
   const p = xpProgress(player);

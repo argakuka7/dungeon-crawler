@@ -6,6 +6,7 @@ import { scene, camera } from './scene.js';
 import { makeBar } from './bars.js';
 import { state } from '../game/state.js';
 import { portalChargeDuration } from '../game/portals.js';
+import { uiScale } from '../game/uiscale.js';
 
 const bar = makeBar({ w: 0.8, h: 0.08, color: 0xffffff, onTop: true });
 const pos = new THREE.Vector3();
@@ -21,5 +22,6 @@ export function updatePortalBar() {
   fx.obj.getWorldPosition(pos);
   bar.group.position.set(pos.x, pos.y + 1.95, pos.z);   // above the well or hovering ring
   bar.group.quaternion.copy(camera.quaternion);
+  bar.resize(uiScale());   // (the UI scale, game/uiscale.js)
   bar.set(c.t / portalChargeDuration(fx.obj.userData.portal.kind));
 }

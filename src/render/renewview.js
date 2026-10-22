@@ -34,6 +34,7 @@ import { trackLight, untrackLight } from './lightpool.js';
 import { makeBar, makeLevelLabel } from './bars.js';
 import { glow, soft, emit, rand } from './particles.js';
 import { player } from '../game/state.js';
+import { uiScale } from '../game/uiscale.js';
 
 const TINT = '#8e9cbf', ECHO_TINT = '#cfe6ff', GHOST = 0xff6a5a, GHOST_OPACITY = 0.4;
 const HOOD = 'wear_hood';
@@ -96,14 +97,16 @@ function makeView(e) {
   const clean = Object.values(f.bones).map(b => [b, b.quaternion.clone(), b.position.clone()]);
   const standing = Object.fromEntries(SWING.map(n => [n, f.bones[n].quaternion.clone()]));
   const color = guardianColor('descent');
+  // the bar and the label over it, together over the head (as big as the UI scale says: game/uiscale.js)
+  const tag = new THREE.Group(); tag.position.y = e.profile.height + 0.12; group.add(tag);
   const hpBar = makeBar({ color, w: 1.2, onTop: true }), bar = hpBar.group;
-  bar.position.y = e.profile.height + 0.12; group.add(bar);
+  tag.add(bar);
   const label = makeLevelLabel(e.level, { color, onTop: true, title: guardianTitle('descent', e.profile) });
-  label.position.y = e.profile.height + 0.33; group.add(label);
+  label.position.y = 0.21; tag.add(label);
   const light = new THREE.PointLight(e.profile.light ?? '#bdf3ff', 1.1, 3.2, 2);
   light.position.y = 0.9;
   trackLight(light, group);
-  const v = { figure: true, group, f, clay, ghost, mixer, actions, weights, clean, standing, bar, hpBar, label, light,
+  const v = { figure: true, group, f, clay, ghost, mixer, actions, weights, clean, standing, tag, bar, hpBar, label, light,
     yaw: e.yaw, phase: 0, was: { x: e.x, z: e.z }, speed: 0, attacks: -1, swing: 'slash', weapon: { id: null, object: null, held: null },
     glow: 0, dead: false, seed: Math.random() * 100 };
   for (const p of STAGE_PROFILES[e.boss] ?? []) if (p.weapon) weaponFor(p.weapon);   // (all his weapons, ahead: no hitch as he changes)
@@ -221,6 +224,7 @@ function animate(e, dt, off) {
   v.light.intensity = (e.mode === 'split' ? 2.6 : 1.1) * seen;
   v.bar.visible = v.label.visible = !dead && !ghost && e.mode !== 'gone';
   v.bar.quaternion.copy(INV.setFromAxisAngle(UP, -v.yaw)).multiply(camera.quaternion);
+  v.tag.scale.setScalar(uiScale());
   v.hpBar.set(e.hp / e.profile.hp);
   g.visible = e.mode !== 'gone' && seen > 0.01;
 }

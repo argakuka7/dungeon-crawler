@@ -30,6 +30,7 @@ import { emit, soft, rand } from '../render/particles.js';
 import { stepSiege, stepChase, dropPortcullis, resetEvents, lightBeacon, eventHud, EVENT_HOW, EVENT_DONE } from './trialevents.js';
 import { path as teachPath, label as teachLabel } from './teach.js';
 import { tr, msg } from '../i18n/i18n.js';
+import { uiScale } from './uiscale.js';
 
 const $ = id => document.getElementById(id);
 const SD = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -650,7 +651,7 @@ export function updateTrialTip() {
   if (!show) return;
   const t = TRIALS[show.kind], text = `${tr(t.name)} · ${t.family === 'event' ? tr('an event: it seals the room') : tr('a puzzle')}`;
   if (el.textContent !== text) { el.textContent = text; el.style.borderColor = t.color; }
-  el.style.left = `${Math.round(show.x)}px`; el.style.top = `${Math.round(show.y - 34)}px`;
+  el.style.left = `${Math.round(show.x)}px`; el.style.top = `${Math.round(show.y - 34 * uiScale())}px`;   // (it grows with the UI scale: style.css)
 }
 
 // --- puzzles (docs/trials.md "Puzzles") ----------------------------------------------------------

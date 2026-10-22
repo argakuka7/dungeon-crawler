@@ -72,6 +72,7 @@ import { attackOf, makeEnemy, ENEMY_KINDS } from '../core/enemies.js';
 import { toLinear } from '../core/oklch.js';
 import { guardianColor, guardianTitle } from '../core/guardians.js';
 import { player } from '../game/state.js';
+import { uiScale } from '../game/uiscale.js';
 import { cameraKick, footfallFx } from '../game/juice.js';
 import { makeBar, makeLevelLabel, makeAlertMark } from './bars.js';
 
@@ -301,7 +302,8 @@ function burrowLook(v, e, dt) {
 // A boss whose stages are profiles of their own (Squarlo, core/enemies.js STAGE_PROFILES): while
 // it changes (mode 'split', `t` s into it) it grows from the one's size to the next's in a fog
 // that rolls in round it (the cube's fog thickens too: state.mist, render/look.js), with a long
-// groan; its bar and label go up with it (to its chest at most: a giant's head is far up).
+// groan; its bar and label go up with it (to its chest at most: a giant's head is far up). The
+// bar and the label are as big as the UI scale says (game/uiscale.js), growing upwards.
 const FOG = ['#e6eef2', '#d4e0e6', '#f2f6f8'];
 function sizeOf(e) {
   const stages = STAGE_PROFILES[e.boss];
@@ -318,7 +320,7 @@ function growLook(v, e, dt) {
     if (v.light) { v.light.distance = v.fx.light[2] * Math.sqrt(want); v.light.position.y = v.fx.light[3] * want; }
   }
   const top = Math.min(v.height * v.size, 4.4);
-  v.bar.position.y = top + 0.12; v.label.position.y = top + 0.33; v.mark.position.y = top + 0.62;
+  v.tag.position.y = top + 0.12; v.tag.scale.setScalar(uiScale());
   if (!splitting) { v.morphing = false; return; }
   if (!v.morphing) { v.morphing = true; sfx('morph', { at: e }); }
   if (Math.hypot(e.x - player.x, e.z - player.z) > 22) return;
@@ -504,11 +506,13 @@ function makeView(e, prefab) {
     weights[name] = name === 'walk' ? 1 : 0;
   }
   const color = guardianColor(e.guardianRole);
+  // the bar, the label over it and the "!" over that, together over the head (growLook places and sizes them)
+  const tag = new THREE.Group(); tag.position.y = e.profile.height + 0.12; group.add(tag);
   const hpBar = makeBar({ onTop: true, ...e.guardian && { color, w: e.guardianRole === 'descent' ? 1.2 : .9 } }), bar = hpBar.group;
-  bar.position.y = e.profile.height + 0.12; group.add(bar);
+  tag.add(bar);
   const label = makeLevelLabel(e.level, { onTop: true, ...e.guardian && { color, title: guardianTitle(e.guardianRole, e.profile) } });
-  label.position.y = e.profile.height + .33; group.add(label);
-  const mark = makeAlertMark(); mark.position.y = e.profile.height + .62; group.add(mark);
+  label.position.y = .21; tag.add(label);
+  const mark = makeAlertMark(); mark.position.y = .5; tag.add(mark);
   const fx = GLOW[e.profile.fx ?? e.profile.species] ?? (e.guardian ? { light: [color, 2, 3, .5], pulse: .35 } : null), flames = [];
   model.traverse(o => { if (o.isBone && /^flame/.test(o.name)) flames.push(o); });
   let light = null;
@@ -520,7 +524,7 @@ function makeView(e, prefab) {
   const embers = typeof fx?.embers?.from === 'string' ? model.getObjectByName(fx.embers.from) : null;
   const tentacles = e.profile.flail ? findTentacles(model) : [];
   if (e.proxy || e.summoned) poof(e, puffOf(e));   // it turns up
-  return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
+  return { tentacles, was: { mode: e.mode, x: e.x, z: e.z }, group, model, mixer, actions, prefab, material, parts, colors: material.userData.parts.color, ghost, tag, bar, hpBar, label, mark, markT: 0, yaw: e.yaw, phase: e.phase,
     attacks: -1, dead: false, weights, fx, flames, light, embers, size, wheels: findWheels(model), roll: 0, spin: 0, rolled: null, waves: findWaves(model), whirl: 1, rings: findRings(model), ringSpeed: 0, flash: null, trail: null, sparks: e.profile.sparks ?? EMBERS, seed: Math.random() * 100,
     gloomColor: gloom ? new THREE.Color(...toLinear(gloom.color)) : null, gloom: 0, glimmer: 0,
     shed: findShed(model, e.profile.shed), stage: e.stage ?? 1, dark: e.dark ?? 0, ball: findBall(model, e.profile.tumble), tumble: 0, turned: 0, flash2: 0,

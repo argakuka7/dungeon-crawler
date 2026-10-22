@@ -28,6 +28,7 @@ export default {
   'Frame rate': 'Bildrate',
   'Anti-aliasing': 'Kantenglättung',
   Camera: 'Kamera',
+  'UI scale': 'Größe der Anzeigen',
   Mouse: 'Maus',
   'Look speed': 'Umschau-Tempo',
   'Invert up / down': 'Oben / unten umkehren',

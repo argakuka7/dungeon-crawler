@@ -22,6 +22,7 @@ import { mulberry32, hash32 } from '../core/util.js';
 import { hashString } from '../core/gear/drops.js';
 import { sfx } from '../audio/sfx.js';
 import { tr } from '../i18n/i18n.js';
+import { uiScale } from './uiscale.js';
 
 // start: how close to the cart the raid starts; reach: how close to it a raider takes from it;
 // drain: how much of it one raider takes a second; engage: how close a player draws a raider off
@@ -152,7 +153,8 @@ function drawBar() {
   const off = state.world?.group.position ?? { x: 0, y: 0, z: 0 };
   v.set(raid.cart.x + off.x, raid.cart.y + off.y + 1.3, raid.cart.z + off.z).project(camera);
   bar.hidden = v.z > 1;
-  bar.style.transform = `translate(${Math.round((v.x + 1) / 2 * innerWidth - 50)}px, ${Math.round((1 - v.y) / 2 * innerHeight - 20)}px)`;
+  const s = uiScale();   // (it grows with the UI scale: style.css)
+  bar.style.transform = `translate(${Math.round((v.x + 1) / 2 * innerWidth - 50 * s)}px, ${Math.round((1 - v.y) / 2 * innerHeight - 20 * s)}px)`;
   bar.querySelector('b').style.width = `${Math.max(0, raid.hp) * 100}%`;
   bar.dataset.phase = raid.phase;
 }

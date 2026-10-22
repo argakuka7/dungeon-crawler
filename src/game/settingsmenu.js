@@ -1,5 +1,6 @@
 // The settings menu, from the Esc menu (game/escmenu.js) and the main menu (game/menu.js): the
-// language, the frame rate cap and the anti-aliasing, the camera (overview or close view), the mouse look's speed
+// language, the frame rate cap and the anti-aliasing, the camera (overview or close view), the UI scale (game/uiscale.js:
+// taken when the slider is let go, as the panel itself grows or shrinks with it), the mouse look's speed
 // and inverting it up and down, the music on or off, the music's and the sounds' volume, and the keys: each control's primary and
 // secondary key (core/keybinds.js). Everything is kept as it changes (game/settings.js).
 //
@@ -9,7 +10,7 @@
 // or Delete leaves the place empty. While the settings are open the game gets no keys.
 import { ACTIONS, ACTION, GROUPS, UNBINDABLE } from '../core/keybinds.js';
 import {
-  FRAME_RATES, frameRate, setFrameRate, antialias, setAntialias, cameraMode, setCameraMode,
+  FRAME_RATES, frameRate, setFrameRate, antialias, setAntialias, cameraMode, setCameraMode, uiScale, setUiScale,
   lookSpeed, setLookSpeed, invertLook, setInvertLook,
   musicOn, setMusic, musicVolume, setMusicVolume, soundVolume, setSoundVolume,
   keysOf, bindKey, unbindKey, resetKeys, nameOf, onSettingsChange, languageNow, chooseLanguage,
@@ -62,6 +63,9 @@ function renderGraphics() {
   // the levels this GPU can do; one asked for beyond them shows as the one used
   choice($('settings-msaa'), MSAA_LEVELS.map(n => [n, n ? `${n}x` : tc('toggle', 'Off')]), msaaLevel(antialias()));
   choice($('settings-camera'), [['overview', tr('Overview')], ['close', tc('camera', 'Close')]], cameraMode());
+  const scale = Math.round(uiScale() * 100);
+  $('settings-ui-scale').value = String(scale);
+  $('settings-ui-level').textContent = `${scale}%`;
 }
 function renderMouse() {
   const inverted = invertLook(), speed = Math.round(lookSpeed() * 100);
@@ -189,6 +193,9 @@ $('settings-msaa').addEventListener('click', e => {
   const b = e.target.closest('[data-value]');
   if (b) setAntialias(Number(b.dataset.value));
 });
+// while dragged only the number follows: the panel growing under the pointer would move the slider away from it
+$('settings-ui-scale').addEventListener('input', e => { $('settings-ui-level').textContent = `${e.target.value}%`; });
+$('settings-ui-scale').addEventListener('change', e => setUiScale(e.target.value / 100));
 $('settings-look-speed').addEventListener('input', e => setLookSpeed(e.target.value / 100));
 $('settings-invert').onclick = () => setInvertLook(!invertLook());
 $('settings-music').onclick = () => setMusic(!musicOn());

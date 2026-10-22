@@ -1,6 +1,6 @@
 // The settings (the settings menu, game/settingsmenu.js, changes them): the language (once
 // chosen; before that the browser's, src/i18n/i18n.js startLanguage), the frame rate cap
-// (main.js) and the anti-aliasing (render/msaa.js), the camera (the overview or the close view,
+// (main.js) and the anti-aliasing (render/msaa.js), the UI scale (game/uiscale.js), the camera (the overview or the close view,
 // game/camera.js; the camera key switches it too, game/camerakey.js), the mouse look's speed and
 // whether up and down are inverted (game/mouselook.js), the music on or off, the music's and the sounds' volume, and the keys
 // (core/keybinds.js). Kept in localStorage
@@ -29,12 +29,15 @@ export const ANTIALIAS = [0, 2, 4, 8];        // MSAA samples; 0: off (the GPU m
 // the GPU cannot keep up, render/resolution.js drops it further before the resolution)
 const DEFAULT_FPS = 60, DEFAULT_MSAA = 2;
 export const CAMERAS = ['overview', 'close'];
+// the UI scale: the HUD and the menus 90% to 200% of their size (100%: as they were made)
+export const UI_SCALE_MIN = 0.9, UI_SCALE_MAX = 2;
+export const clampUiScale = s => (Number.isFinite(s) ? Math.round(Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, s)) * 100) / 100 : 1);
 const oneOf = (list, v, fallback) => (list.includes(v) ? v : fallback);
 const stored = read();
 const settings = {
   language: isLanguage(stored.language) ? stored.language : null,   // null: the browser's
   fps: oneOf(FRAME_RATES, stored.fps, DEFAULT_FPS), msaa: oneOf(ANTIALIAS, stored.msaa, DEFAULT_MSAA),
-  camera: oneOf(CAMERAS, stored.camera, CAMERAS[0]),
+  camera: oneOf(CAMERAS, stored.camera, CAMERAS[0]), uiScale: clampUiScale(stored.uiScale),
   lookSpeed: clampLookSpeed(stored.lookSpeed), invertLook: stored.invertLook === true,
   music: stored.music === true,
   musicVolume: volume(stored.musicVolume), soundVolume: volume(stored.soundVolume),
@@ -46,7 +49,7 @@ function changed() {
   setVolume('music', settings.musicVolume);
   setVolume('sounds', settings.soundVolume);
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, ...(settings.language && { language: settings.language }), fps: settings.fps, msaa: settings.msaa, camera: settings.camera,
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, ...(settings.language && { language: settings.language }), fps: settings.fps, msaa: settings.msaa, camera: settings.camera, uiScale: settings.uiScale,
       lookSpeed: settings.lookSpeed, invertLook: settings.invertLook, music: settings.music, musicVolume: settings.musicVolume,
       soundVolume: settings.soundVolume, keys: overrides(settings.keys) }));
   } catch { /* private mode: for this page only */ }
@@ -75,6 +78,8 @@ export const antialias = () => settings.msaa;
 export function setAntialias(samples) { settings.msaa = oneOf(ANTIALIAS, samples, DEFAULT_MSAA); changed(); }
 export const cameraMode = () => settings.camera;
 export function setCameraMode(mode) { settings.camera = oneOf(CAMERAS, mode, CAMERAS[0]); changed(); }
+export const uiScale = () => settings.uiScale;
+export function setUiScale(s) { settings.uiScale = clampUiScale(s); changed(); }
 
 // --- mouse --------------------------------------------------------------------------------------
 
