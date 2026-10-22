@@ -105,7 +105,7 @@ function start(s, focus) {
   ready = new Promise((resolve, reject) => { pending = { resolve, reject, focus }; });
   ready.catch(() => {});
   save();
-  frame.src = new URL(`index.html?dev=1&seed=${seed}`, ROOT).href;
+  frame.src = new URL(`index.html?dev=1&seed=${seed}&lang=${document.documentElement.dataset.lang ?? 'en'}`, ROOT).href;   // (in the guide's language)
   changed();
   return ready;
 }

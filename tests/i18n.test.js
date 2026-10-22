@@ -119,3 +119,15 @@ test('every quest of a world reads in every language, nothing missing', async ()
     }
   }
 });
+
+test('German: an adjective at the start of a name takes the endings', () => {
+  german({ 'Buried ruins': { text: 'Verschüttete Ruinen', adj: 'Verschüttet', g: 'pl' }, 'Deep canyon': { text: 'Tiefe Schlucht', adj: 'Tief', g: 'f' },
+    'in {x:the}': 'in {x:dem}', 'to {x:the}': 'nach {x:den}', 'is {x:a}': 'ist {x:ein}' }, () => {
+    assert.equal(say(noun('Buried ruins')), 'Verschüttete Ruinen');
+    assert.equal(tr('in {x:the}', { x: noun('Buried ruins') }), 'in den Verschütteten Ruinen');
+    assert.equal(tr('in {x:the}', { x: noun('Deep canyon') }), 'in der Tiefen Schlucht');
+    assert.equal(tr('to {x:the}', { x: noun('Deep canyon') }), 'nach die Tiefe Schlucht');
+    assert.equal(tr('is {x:a}', { x: noun('Deep canyon') }), 'ist eine Tiefe Schlucht');
+    assert.equal(tr('is {x:a}', { x: noun('Buried ruins') }), 'ist Verschüttete Ruinen');
+  });
+});

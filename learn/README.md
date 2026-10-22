@@ -51,8 +51,8 @@ Plain HTML, CSS and ES modules, no build step, like the game.
 |---|---|
 | `index.html` | the map: the rooms, the detail level picker (`map.js`) |
 | `nav.js` | makes the guide one long-lived page: links between its pages swap `<main>` (see below) |
-| `decks.js` | the list of rooms in order, their titles in both languages, the game depth (theme) each borrows its look from |
-| `lang.js` | picks the language before the page is drawn: the reader's choice, else the browser's |
+| `decks.js` | the list of rooms in order, their titles in both languages, the game depth (theme) each borrows its look from (its name: the game's, `deck.js` themeName) |
+| `lang.js` | picks the language before the page is drawn: the reader's choice (or `?lang=`, the game's link), else the browser's; the game's words (`src/i18n/`) follow it |
 | `deck.js` | the engine every page loads: slides, quick bar, levels, scroll mode, language switch, glossary tips, live code and values, demo loading; sets each page up as it comes and takes it down as it goes |
 | `refs.js` | finds a definition in a source file, and fingerprints it (used by `deck.js` and the tool) |
 | `crawl.js` | reads the game's import graph from `src/main.js` and its worker, for demos that show the code's structure |
@@ -79,8 +79,14 @@ shared element. Everything else (slides, demos, code, images) exists once. Attri
 `data-de-` twin: `alt="..." data-de-alt="..."`; the title is `<title data-de="...">`. Demos use
 `tr('English', 'Deutsch')` from `deck.js`. The tests fail on a text without its partner.
 
-Names that the game shows in English (Rare, Stunder, Blood viper) stay English in the German
-text. Code and its comments stay as they are.
+The game speaks German too (src/i18n/, docs/i18n.md), and the guide calls things what the game
+calls them: the German text says "Blutviper", "Ungewöhnlich", "Wächter-Spinne", "Aufträge", with the
+words of the glossary (`src/i18n/glossary.js`: Würfel, Tiefe, Stufe, Monster, Wächter ...). Where
+the guide only names a thing, let the game say it: `<span data-name="Blood viper">Blood viper</span>`
+shows the game's name in the page's language (the written one is the fallback). `npm run i18n`
+(and `npm test`) fails on an English name of the game's things in the German text. Names that are
+the same in both languages (Stunder, Gusto, the world names) stay as they are. Code and its
+comments stay as they are.
 
 ## What belongs in the guide
 
@@ -108,6 +114,9 @@ prompting. Specific numbers come live from the code (`data-val`, `data-code`), n
   from the game when the page opens, so it is never out of date. Prefer it over copying code.
   A shortened excerpt is `<pre data-src="path#name"><code>...</code></pre>` (escape `<` and `&`);
   other code is `<pre data-label="...">`. In a narrow column, `class="wrap"` wraps long lines.
+- Names of the game's things: `<td data-name="Pointy">Pointy</td>` shows the game's own name for it,
+  in the page's language (demos: `gameName('Pointy')` from `deck.js`, or the game's own `displayName`,
+  `enemyName` ...).
 - Numbers: `<b data-val="src/core/constants.js#RUN_SPEED">2.8</b>` shows the game's value,
   formatted for the language (`data-fmt="pct"`: 0.17 as 17%). The written text is the fallback;
   `--stamp` keeps it right. Use it for values the code exports.
@@ -139,7 +148,7 @@ or it is 2D), say where it comes from in its first comment.
 Every page of the guide is a whole HTML file, but in the browser the guide is one page that never
 reloads: `nav.js` catches links between the guide's pages, fetches the page, and swaps in its
 `<main>`, title and theme (back and forward work too). So what lives outside `<main>` runs on
-across rooms: the Teacher and the game window. Scripts in the fetched page do not run; `deck.js`
+across rooms: the Teacher and the game window (in the guide's language: `index.html?lang=`). Scripts in the fetched page do not run; `deck.js`
 knows every kind of page (rooms, the map, the word book) and sets it up in `enter()`, and
 `leave()` takes it down: bars, listeners, demos. A reload or a deep link still loads the page
 the ordinary way.

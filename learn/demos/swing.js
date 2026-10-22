@@ -4,7 +4,7 @@
 // swing may start. Clicks are kept for 0.3 s, so a click a little early still chains.
 import { SWORD } from '../../src/core/combat.js';
 import { WEAPONS as ALL } from '../../src/core/items.js';
-import { canvas, loop, html, t as tr } from '../deck.js';
+import { canvas, loop, html, t as tr, gameName } from '../deck.js';
 
 const WEAPONS = ALL.filter(w => w.weapon.kind === 'sword');   // the swords: they swing
 
@@ -12,7 +12,7 @@ const TIMES = ['activeStart', 'activeEnd', 'moveCancel', 'chain', 'duration'];
 
 export default function mount(el) {
   const W = 640, H = 230, { g, c } = canvas(el, W, H);
-  const row = html(el, `<div class="row"><label>${tr('sword', 'Schwert')} <select class="w">${WEAPONS.map((w, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${w.name}</option>`).join('')}</select></label>
+  const row = html(el, `<div class="row"><label>${tr('sword', 'Schwert')} <select class="w">${WEAPONS.map((w, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${gameName(w.name)}</option>`).join('')}</select></label>
     <button class="go">${tr('Swing! (click)', 'Zuschlagen! (klick)')}</button><label><input type="checkbox" class="hold"> ${tr('hold the button', 'Knopf gedrückt halten')}</label>
     <label><input type="checkbox" class="slow" checked> ${tr('slow motion', 'Zeitlupe')}</label></div>`);
   const out = html(el, '<div class="out"></div>');

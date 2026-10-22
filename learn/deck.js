@@ -10,6 +10,8 @@
 // shows one of them (attributes: data-de-alt, data-de-title ... replace alt, title ... in German).
 //   - <pre data-code="src/x.js#name"> shows that definition, read live from the game's code
 //   - <b data-val="src/x.js#NAME.field"> shows that value, read live from the game's code
+//   - <span data-name="Spider"> shows the game's name for that thing in the page's language (the
+//     game's own catalogs, src/i18n/: the guide and the game call things the same)
 //     (demos can show live code too: set data-code on a <pre> and call liveCode)
 //   - slides that stamps.json lists as outdated get a note (tools/learn.mjs, README.md)
 //   - the Teacher, a tutor to ask about the room, in a side panel (tutor/tutor.js)
@@ -18,6 +20,8 @@
 import { DECKS, LEVELS, THEME_NAMES, THEME_NAMES_DE, local, iconUrl } from './decks.js';
 import { parseRefs, extract, readValue, formatValue } from './refs.js';
 import * as nav from './nav.js';
+// the game's words, in the guide's language (it reads <html data-lang>, set by lang.js)
+import { tr } from '../src/i18n/i18n.js';
 
 const store = {
   get: (k, d) => { try { return localStorage.getItem('kids.' + k) ?? d; } catch { return d; } },
@@ -28,8 +32,11 @@ const store = {
 export const lang = document.documentElement.dataset.lang === 'de' ? 'de' : 'en';
 // t('text', 'Text'): the English or the German, for the page's language
 export const t = (en, de) => lang === 'de' ? de : en;
-// a game theme's name (src/themes/), in German by its prop set
-export const themeLabel = theme => lang === 'de' ? THEME_NAMES_DE[theme.props] ?? theme.name : theme.name;
+// a game theme's name (src/themes/) as the game says it; by its key (decks.js THEME_NAMES): themeName
+export const themeLabel = theme => tr(theme.name);
+export const themeName = key => (lang === 'de' && THEME_NAMES_DE[key]) || tr(THEME_NAMES[key] ?? key);
+// the name of a thing of the game ('Spider', 'Unusual'), as the game says it in the guide's language
+export const gameName = name => tr(name);
 // the element of a language pair (or a single element) that is showing
 export const shown = (root, sel) => root.querySelector(`${sel}[lang=${lang}]`) ?? root.querySelector(sel);
 // German attributes and title
@@ -133,6 +140,11 @@ export async function liveCode(pre) {
       `// Dieser Code ließ sich nicht aus den Dateien des Spiels lesen: ${err.message}`);
   }
   highlight(pre);
+}
+// <span data-name="Spider">: the game's name for it, in the guide's language (the written one is
+// the English, for when the game cannot be read)
+function liveNames(root) {
+  for (const el of root.querySelectorAll('[data-name]')) el.textContent = tr(el.dataset.name);
 }
 async function liveValues(root) {
   for (const el of root.querySelectorAll('[data-val]')) {
@@ -248,7 +260,7 @@ function deck(main, page) {
   const { signal } = page.abort, here = nav.here();
   const slides = [...main.querySelectorAll('section.slide')];
   const deckIdx = DECKS.findIndex(d => d.file === here), info = deckIdx >= 0 ? local(DECKS[deckIdx], lang) : null;
-  const themes = lang === 'de' ? THEME_NAMES_DE : THEME_NAMES, lvName = L => lang === 'de' ? L.de : L.name;
+  const lvName = L => lang === 'de' ? L.de : L.name;
   slides.forEach((s, i) => {
     s.id ||= 'slide-' + (i + 1);
     s.dataset.lv ||= '1';
@@ -268,7 +280,7 @@ function deck(main, page) {
   const bar = document.createElement('div');
   bar.className = 'bar';
   bar.innerHTML = `<a href="index.html" title="${t('The map (M)', 'Die Karte (M)')}">\u25C2 ${t('Map', 'Karte')}</a>
-    <div class="where">${info ? `${t('Room', 'Raum')} ${deckIdx + 1}/${DECKS.length} \u00B7 <b>${info.title}</b> \u00B7 <i>${t('depth', 'Tiefe')} ${info.depth} \u00B7 ${themes[info.theme]}</i>` : ''}</div>
+    <div class="where">${info ? `${t('Room', 'Raum')} ${deckIdx + 1}/${DECKS.length} \u00B7 <b>${info.title}</b> \u00B7 <i>${t('depth', 'Tiefe')} ${info.depth} \u00B7 ${themeName(info.theme)}</i>` : ''}</div>
     <div class="tools"><span class="lvpick" title="${t('How much detail do you want?', 'Wie viele Details möchtest du?')}">${[1, 2, 3].map(l =>
       `<button data-lv="${l}" style="--c:${LEVELS[l].color}" title="${lvName(LEVELS[l])}">${LEVELS[l].short}</button>`).join('')}</span>
     <button class="mode" title="${t('Slides or one long page (S)', 'Folien oder eine lange Seite (S)')}"></button><button class="helpbtn" title="${t('Keys (?)', 'Tasten (?)')}">?</button></div>`;
@@ -394,7 +406,7 @@ function enter() {
   const main = document.querySelector('main');
   localize(main);
   for (const pre of main.querySelectorAll('pre')) if (pre.dataset.code != null) liveCode(pre); else highlight(pre);
-  liveValues(main);
+  liveValues(main); liveNames(main);
   if (main.classList.contains('deck')) deck(main, page);
   else {
     const box = document.createElement('div'); box.className = 'langbar'; langSwitch(box); document.body.append(box);

@@ -3,13 +3,13 @@
 import { SWORD, inSwordArc } from '../../src/core/combat.js';
 import { WEAPONS as ALL } from '../../src/core/items.js';
 import { SPIDER, STUNDER } from '../../src/core/enemies.js';
-import { canvas, loop, html, t as tr } from '../deck.js';
+import { canvas, loop, html, t as tr, gameName } from '../deck.js';
 
 const WEAPONS = ALL.filter(w => w.weapon.kind === 'sword');   // the swords: they swing
 
 export default function mount(el) {
   const W = 640, H = 320, PX = 120, { g, c, at } = canvas(el, W, H);
-  const row = html(el, `<div class="row"><label>${tr('sword', 'Schwert')} <select class="w">${WEAPONS.map((w, i) => `<option value="${i}">${w.name}</option>`).join('')}</select></label>
+  const row = html(el, `<div class="row"><label>${tr('sword', 'Schwert')} <select class="w">${WEAPONS.map((w, i) => `<option value="${i}">${gameName(w.name)}</option>`).join('')}</select></label>
     <label>${tr('enemy', 'Gegner')} <select class="e"><option value="spider">${tr('spider', 'Spinne')}</option><option value="stunder">${tr('Stunder (big)', 'Stunder (groß)')}</option></select></label>
     <label>${tr('enemy stands', 'Gegner steht')} <input type="range" class="h" min="-1.5" max="1.5" step="0.05" value="0"> <b class="hv">0</b> ${tr('higher', 'höher')}</label>
     <label>${tr('hero turns', 'Held dreht sich')} <input type="range" class="turn" min="-180" max="180" value="0"></label></div>`);

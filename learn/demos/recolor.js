@@ -3,14 +3,14 @@
 // difference. The kinds' real colours (src/core/enemies.js) are one click away.
 import { recolorFn, toLinear, toHex } from '../../src/core/oklch.js';
 import { SNAKE, SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA } from '../../src/core/enemies.js';
-import { html, t as tr } from '../deck.js';
+import { html, t as tr, gameName } from '../deck.js';
 
 // the snake's own material colours (BODY_HEX, RING_HEX in blender/snake.py, EYE_HEX in creature.py)
 const BASE = { skin: '#a6dd7e', ribs: '#78b552', eyes: '#9b3dff' };
 const KINDS = [SNAKE, SAND_VIPER, BLOOD_VIPER, FROST_ADDER, VENOM_ADDER, SHADOW_MAMBA];
 
 export default function mount(el) {
-  const box = html(el, `<div><div class="row">${KINDS.map((k, i) => `<button data-k="${i}">${k.label}</button>`).join('')}</div>
+  const box = html(el, `<div><div class="row">${KINDS.map((k, i) => `<button data-k="${i}">${gameName(k.label)}</button>`).join('')}</div>
     <div class="row"><label>${tr('lightness', 'Helligkeit')} <input type="range" class="l" min="0.2" max="0.95" step="0.01" value="0.6"></label>
     <label>${tr('colourfulness', 'Buntheit')} <input type="range" class="c" min="0" max="0.25" step="0.005" value="0.19"></label>
     <label>${tr('hue', 'Farbton')} <input type="range" class="h" min="0" max="360" value="27"></label></div>

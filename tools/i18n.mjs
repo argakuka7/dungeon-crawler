@@ -11,7 +11,8 @@
 //   broken      a translation that does not parse, or uses parameters, forms or markup the
 //               English does not have
 //   twice       a message in two parts of a catalog
-//   glossary    a term of src/i18n/glossary.js translated otherwise than the glossary says
+//   glossary    a message that says a word of src/i18n/glossary.js in English, and another in a translation
+//   guide       the kids' guide (learn/) calling a thing of the game by its English name in another language
 //
 //   node tools/i18n.mjs              the problems, with where each message is used
 //   node tools/i18n.mjs --todo de    the missing German messages as a ready-to-fill block
@@ -86,6 +87,18 @@ export async function collect() {
   return found;
 }
 
+// the guide's text in a language (its elements marked lang="..."), without code: [[file, [text ...]]]
+function guideTexts(code) {
+  const dir = join(ROOT, 'learn'), out = [];
+  for (const name of readdirSync(dir).filter(f => f.endsWith('.html')).sort()) {
+    const html = readFileSync(join(dir, name), 'utf8').replace(/<(pre|code|kbd|script|style)\b[^>]*>[\s\S]*?<\/\1>/g, ' ');
+    const texts = [...html.matchAll(new RegExp(`<(\\w+)\\b[^>]*\\blang="${code}"[^>]*>([\\s\\S]*?)</\\1>`, 'g'))]
+      .map(m => m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' '));
+    out.push([`learn/${name}`, texts]);
+  }
+  return out;
+}
+
 const tags = s => [...String(s).matchAll(/<\/?([a-z0-9]+)/gi)].map(m => m[0].toLowerCase()).sort().join(' ');
 // how alike two texts are (0..1): shared words
 function alike(a, b) {
@@ -99,7 +112,7 @@ function alike(a, b) {
 export async function check() {
   const i18n = await import(pathToFileURL(join(ROOT, 'src/i18n/i18n.js')));
   const en = await import(pathToFileURL(join(ROOT, 'src/i18n/en.js')));
-  const { GLOSSARY } = await import(pathToFileURL(join(ROOT, 'src/i18n/glossary.js')));
+  const { GLOSSARY, names: glossaryNames } = await import(pathToFileURL(join(ROOT, 'src/i18n/glossary.js')));
   const found = await collect(), problems = [];
   for (const [text, where] of found) {
     if (text.startsWith('\u0000')) { problems.push({ kind: 'broken', text: text.slice(1), where, detail: 'a message must be a plain string, without ${}: pass the values as parameters' }); continue; }
@@ -160,15 +173,28 @@ export async function check() {
           problems.push({ kind: 'broken', lang: code, text: `names.words.${list}`, detail: `${theirs?.length ?? 0} words, English has ${english.length}` });
       }
     }
-    // the glossary's terms are translated as it says
-    for (const term of GLOSSARY) {
-      const want = term[code];
-      if (want == null || !term.en) continue;
-      const e = messages[term.en];
-      if (e == null) { if (!found.has(term.en)) continue; }
-      const got = typeof e === 'string' ? e : e?.text;
-      if (e != null && got !== want) problems.push({ kind: 'glossary', lang: code, text: term.en, detail: `the glossary says "${want}", the catalog "${got}"` });
-      if (e && typeof e === 'object' && term.g && e.g !== term.g) problems.push({ kind: 'glossary', lang: code, text: term.en, detail: `the glossary says gender ${term.g}, the catalog ${e.g}` });
+    // the glossary's words: a message that says one in English says it in the translation too
+    for (const t of GLOSSARY) {
+      const want = t[code];   // (a pattern for each language but English)
+      if (!(want instanceof RegExp) || !t.word[code]) continue;
+      for (const [text] of found) {
+        const e = messages[text], tx = typeof e === 'string' ? e : e?.text;
+        const english = text.slice(text.indexOf('|') + 1).replace(/\{[^}]*\}/g, '');   // (without a context, and the parameters)
+        if (tx == null || t.except.includes(text) || !t.en.test(english)) continue;
+        if (!want.test(tx)) problems.push({ kind: 'glossary', lang: code, text, where: found.get(text), detail: `says "${t.word.en}": the glossary's word is "${t.word[code]}" (${JSON.stringify(tx)})` });
+      }
+    }
+    // the guide (learn/*.html) calls the game's things by their names in this language
+    for (const [file, texts] of guideTexts(code)) {
+      for (const name of glossaryNames()) {
+        const e = messages[name], tx = typeof e === 'string' ? e : e?.text;
+        if (!tx || tx === name) continue;
+        const re = new RegExp(`(?<![\\w-])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+        for (const t of texts) if (re.test(t)) {
+          problems.push({ kind: 'guide', lang: code, text: name, where: [file], detail: `the guide says "${name}": the game says "${tx}" (${JSON.stringify(t.slice(0, 120))}...)` });
+          break;
+        }
+      }
     }
   }
   return problems;
@@ -198,7 +224,7 @@ async function main() {
     return;
   }
   if (!problems.length) { console.log('All messages are translated.'); return; }
-  const kinds = ['broken', 'twice', 'glossary', 'missing', 'unused'];
+  const kinds = ['broken', 'twice', 'glossary', 'guide', 'missing', 'unused'];
   for (const kind of kinds) {
     const ps = problems.filter(p => p.kind === kind);
     if (!ps.length) continue;

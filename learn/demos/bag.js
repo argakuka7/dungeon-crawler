@@ -7,7 +7,8 @@ import { rollWeapon } from '../../src/core/gear/generate.js';
 import { rarityOf } from '../../src/core/gear/rarities.js';
 import { mulberry32 } from '../../src/core/util.js';
 import { pictureImg } from '../../src/render/itempictures.js';
-import { html, t as tr } from '../deck.js';
+import { html, t as tr, gameName } from '../deck.js';
+import { displayName } from '../../src/core/gear/stats.js';
 
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -28,7 +29,7 @@ export default function mount(el) {
   function cell(slot, count) {
     if (!slot) return '<div class="slot"></div>';
     const r = slot.gen ? rarityOf(slot) : null;
-    return `<div class="slot" style="${r ? `border-color:${r.css}` : ''}" title="${esc(slot.gen?.name ?? ITEMS[slot.itemId].name)}">${pictureImg(slot.itemId)}${count > 1 ? `<span>${count}</span>` : ''}</div>`;
+    return `<div class="slot" style="${r ? `border-color:${r.css}` : ''}" title="${esc(slot.gen ? displayName(slot) : gameName(ITEMS[slot.itemId].name))}">${pictureImg(slot.itemId)}${count > 1 ? `<span>${count}</span>` : ''}</div>`;
   }
   function draw() {
     view.querySelector('.slots').innerHTML = inv.slots.map(s => cell(s, s?.count)).join('');
@@ -45,7 +46,7 @@ export default function mount(el) {
     potion: () => { const ok = addItem(inv, HEALTH_POTION.id, 1); autoBar(inv, HEALTH_POTION.id);
       said = ok ? tr('A potion goes onto the stack that is already there: same kind, one slot.', 'Ein Trank kommt auf den Stapel, der schon da ist: gleiche Sorte, ein Feld.') : tr('The bag is full!', 'Die Tasche ist voll!'); },
     sword: () => { const w = rollWeapon(R, 1 + Math.floor(R() * 12)), id = addInstance(inv, w);
-      said = id ? tr(`<b>${esc(w.gen.name)}</b>: a sword is one of a kind, so it gets its own slot and its own name: ${id}.`, `<b>${esc(w.gen.name)}</b>: Ein Schwert ist einzigartig, darum bekommt es ein eigenes Feld und einen eigenen Namen: ${id}.`)
+      said = id ? tr(`<b>${esc(displayName(w))}</b>: a sword is one of a kind, so it gets its own slot and its own name: ${id}.`, `<b>${esc(displayName(w))}</b>: Ein Schwert ist einzigartig, darum bekommt es ein eigenes Feld und einen eigenen Namen: ${id}.`)
         : tr(`The bag is full (${BAG_SIZE} slots)!`, `Die Tasche ist voll (${BAG_SIZE} Felder)!`); },
     drink: () => { const e = barEntry(inv, 0);
       if (!e?.slot) { said = tr('Nothing to drink: bar slot 1 is empty, or its stack is used up.', 'Nichts zu trinken: Leistenfeld 1 ist leer, oder sein Stapel ist aufgebraucht.'); return; }

@@ -8,7 +8,7 @@ import { AFFIX } from '../../src/core/gear/affixes.js';
 import { ITEMS } from '../../src/core/items.js';
 import { mulberry32 } from '../../src/core/util.js';
 import { pictureImg } from '../../src/render/itempictures.js';
-import { canvas, html, t as tr } from '../deck.js';
+import { canvas, html, t as tr, gameName } from '../deck.js';
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // (every weapon is drawn from its 3D model, like in the game's bag)
@@ -17,11 +17,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 function weaponCard(item) {
   const r = RARITY[item.gen.rarity], s = itemStats(item);
   return `<div class="weapon" style="--rarity:${r.css}">${pictureImg(item.itemId)}
-      <div><h4>${esc(displayName(item))}</h4><div class="base">${r.name} \u00B7 ${tr('item level', 'Stufe')} ${item.gen.ilvl}${baseLine(item) ? ' \u00B7 ' + baseLine(item) : ''}</div>
+      <div><h4>${esc(displayName(item))}</h4><div class="base">${gameName(r.name)} \u00B7 ${tr('item level', 'Stufe')} ${item.gen.ilvl}${baseLine(item) ? ' \u00B7 ' + baseLine(item) : ''}</div>
       <div class="stats">${tr(`${s.damage} damage \u00B7 ${(1 / s.interval).toFixed(2)} attacks per second \u00B7 ${Math.round(weaponDps(s))} damage per second
 ${s.ranged ? 'range' : 'reach'} ${s.range.toFixed(2)} cells \u00B7 ${Math.round(s.crit * 100)}% critical hits`, `${s.damage} Schaden \u00B7 ${(1 / s.interval).toFixed(2)} Angriffe pro Sekunde \u00B7 ${Math.round(weaponDps(s))} Schaden pro Sekunde
 ${s.ranged ? 'Schussweite' : 'Reichweite'} ${s.range.toFixed(2)} Felder \u00B7 ${Math.round(s.crit * 100)}% kritische Treffer`)}</div>
-      <ul>${affixLines(item).map((t, i) => `<li>${t} <span style="color:#5a6678">(${AFFIX[item.gen.affixes[i].id].name}, ${tr('tier', 'Stufe')} ${item.gen.affixes[i].tier})</span></li>`).join('')}</ul></div></div>`;
+      <ul>${affixLines(item).map((t, i) => `<li>${t} <span style="color:#5a6678">(${gameName(AFFIX[item.gen.affixes[i].id].name)}, ${tr('tier', 'Stufe')} ${item.gen.affixes[i].tier})</span></li>`).join('')}</ul></div></div>`;
 }
 
 // one floating card for the whole page, next to the pointer (or the focused tile)
@@ -57,12 +57,12 @@ export default function mount(el) {
     const r = RARITY[item.gen.rarity], base = ITEMS[item.itemId];
     card.innerHTML = weaponCard(item);
     const kinds = item.gen.affixes.map(a => AFFIX[a.id].kind);
-    const list = kinds.length ? item.gen.affixes.map((a, i) => `<b>${AFFIX[a.id].name}</b> (${kinds[i]})`).join(', ') : tr('none', 'keine');
-    out.innerHTML = tr(`The dice decided, step by step:\n1. rarity: <b style="color:${r.css}">${r.name}</b> \u2192 ${r.affixes} affix${r.affixes === 1 ? '' : 'es'}, damage \u00D7${r.damage}\n`
-      + `2. base: <b>${base.name}</b> (${base.weapon.damage} damage at level 1, +5% per item level)\n`
+    const list = kinds.length ? item.gen.affixes.map((a, i) => `<b>${gameName(AFFIX[a.id].name)}</b> (${kinds[i]})`).join(', ') : tr('none', 'keine');
+    out.innerHTML = tr(`The dice decided, step by step:\n1. rarity: <b style="color:${r.css}">${gameName(r.name)}</b> \u2192 ${r.affixes} affix${r.affixes === 1 ? '' : 'es'}, damage \u00D7${r.damage}\n`
+      + `2. base: <b>${gameName(base.name)}</b> (${base.weapon.damage} damage at level 1, +5% per item level)\n`
       + `3. affixes: ${list}\n4. name: <b>${displayName(item)}</b>`,
-      `Die Würfel haben Schritt für Schritt entschieden:\n1. Seltenheit: <b style="color:${r.css}">${r.name}</b> \u2192 ${r.affixes} Affix${r.affixes === 1 ? '' : 'e'}, Schaden \u00D7${r.damage}\n`
-      + `2. Grundtyp: <b>${base.name}</b> (${base.weapon.damage} Schaden auf Stufe 1, +5% pro Gegenstandsstufe)\n`
+      `Die Würfel haben Schritt für Schritt entschieden:\n1. Seltenheit: <b style="color:${r.css}">${gameName(r.name)}</b> \u2192 ${r.affixes} Affix${r.affixes === 1 ? '' : 'e'}, Schaden \u00D7${r.damage}\n`
+      + `2. Grundtyp: <b>${gameName(base.name)}</b> (${base.weapon.damage} Schaden auf Stufe 1, +5% pro Gegenstandsstufe)\n`
       + `3. Affixe: ${list}\n4. Name: <b>${displayName(item)}</b>`);
   }
   $('.lv').oninput = () => { $('.lvv').textContent = $('.lv').value; };
@@ -74,7 +74,7 @@ export default function mount(el) {
     // the best first: by rarity, then by damage per second
     const dps = it => weaponDps(itemStats(it));
     items.sort((a, b) => RARITY[b.gen.rarity].rank - RARITY[a.gen.rarity].rank || dps(b) - dps(a));
-    card.innerHTML = `<div>${RARITIES.filter(r => n[r.id]).map(r => `<span class="chip" style="border-color:${r.css};color:${r.css}">${r.name}: ${n[r.id]}</span>`).join('')}</div>
+    card.innerHTML = `<div>${RARITIES.filter(r => n[r.id]).map(r => `<span class="chip" style="border-color:${r.css};color:${r.css}">${gameName(r.name)}: ${n[r.id]}</span>`).join('')}</div>
       <div class="loots">${items.map((it, i) => `<button class="it" data-i="${i}" style="--rarity:${RARITY[it.gen.rarity].css}" aria-label="${esc(displayName(it))}">${pictureImg(it.itemId)}</button>`).join('')}</div>
       <div class="pinned"></div>`;
     const tiles = [...card.querySelectorAll('.it')], pinned = card.querySelector('.pinned');
@@ -109,14 +109,14 @@ function odds(el) {
       const share = p[i], x = 20 + i * bw, h = Math.max(share > 0 ? 2 : 0, Math.sqrt(share) * 180);
       g.fillStyle = r.css; g.globalAlpha = share ? 1 : 0.25; g.fillRect(x + 6, 200 - h, bw - 12, h); g.globalAlpha = 1;
       g.fillStyle = '#e6e9ef'; g.font = "15px 'Crimson Text', serif"; g.textAlign = 'center';
-      g.fillText(r.name, x + bw / 2, i % 2 ? 236 : 218);   // (every other name a row lower: ten don't fit side by side)
+      g.fillText(gameName(r.name), x + bw / 2, i % 2 ? 236 : 218);   // (every other name a row lower: ten don't fit side by side)
       g.fillStyle = share ? r.css : '#5a6678';
       g.fillText(share ? (share >= 0.01 ? (share * 100).toFixed(1) + '%' : (share * 100).toFixed(2) + '%') : r.guardianOnly ? tr('guardians', 'Wächter') : `lv ${r.minLevel}+`, x + bw / 2, 258);
     });
     g.textAlign = 'left';
     const best = RARITIES.filter((r, i) => p[i] > 0).at(-1);
-    out.innerHTML = tr(`At item level <b>${lv}</b>, the best possible is <b style="color:${best.css}">${best.name}</b>. Bars are drawn by the square root, so tiny chances stay visible.`,
-      `Auf Gegenstandsstufe <b>${lv}</b> ist das Beste, was geht: <b style="color:${best.css}">${best.name}</b>. Die Balken sind mit der Wurzel gezeichnet, damit winzige Chancen sichtbar bleiben.`);
+    out.innerHTML = tr(`At item level <b>${lv}</b>, the best possible is <b style="color:${best.css}">${gameName(best.name)}</b>. Bars are drawn by the square root, so tiny chances stay visible.`,
+      `Auf Gegenstandsstufe <b>${lv}</b> ist das Beste, was geht: <b style="color:${best.css}">${gameName(best.name)}</b>. Die Balken sind mit der Wurzel gezeichnet, damit winzige Chancen sichtbar bleiben.`);
   }
   row.querySelectorAll('input').forEach(i => i.oninput = draw);
   draw();

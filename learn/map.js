@@ -1,7 +1,7 @@
 // The map (index.html in either language): the rooms as cards, and the detail level picker.
 // deck.js calls mountMap() whenever the map comes on screen.
-import { lang, t } from './deck.js';
-import { DECKS, LEVELS, THEME_NAMES, THEME_NAMES_DE, local, iconUrl } from './decks.js';
+import { lang, t, themeName } from './deck.js';
+import { DECKS, LEVELS, local, iconUrl } from './decks.js';
 
 const blurb = () => [null,
   t('Just the big ideas, with pictures and things to try. Start here if this is all new to you.',
@@ -13,12 +13,11 @@ const blurb = () => [null,
 
 export function mountMap(root) {
 const seen = new Set(JSON.parse(localStorage.getItem('kids.visited') || '[]'));
-const themes = lang === 'de' ? THEME_NAMES_DE : THEME_NAMES;
 root.querySelector('#map').innerHTML = DECKS.map((deck, i) => {
   const d = local(deck, lang);
   return `<a class="room ${seen.has(d.file) ? 'visited' : ''}" data-theme="${d.theme}" href="${d.file}">
     <span class="seen"></span><img src="${iconUrl(d)}" alt="">
-    <span class="d">${t('ROOM', 'RAUM')} ${i + 1} \u00B7 ${t('DEPTH', 'TIEFE')} ${d.depth} \u00B7 ${themes[d.theme].toUpperCase()}</span>
+    <span class="d">${t('ROOM', 'RAUM')} ${i + 1} \u00B7 ${t('DEPTH', 'TIEFE')} ${d.depth} \u00B7 ${themeName(d.theme).toUpperCase()}</span>
     <h3>${d.title}</h3><p>${d.teaser}</p></a>`;
 }).join('');
 

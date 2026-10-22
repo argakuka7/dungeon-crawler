@@ -8,12 +8,12 @@ import { maxHealth, levelDamage } from '../../src/core/progression.js';
 import { itemStats } from '../../src/core/gear/stats.js';
 import { OLD_SWORD } from '../../src/core/items.js';
 import { MAX_DEPTH } from '../../src/themes/depth.js';
-import { canvas, html, t as tr } from '../deck.js';
+import { canvas, html, t as tr, gameName } from '../deck.js';
 
 const KINDS = [SPIDER, SNAKE, OCTONAUT, STUNDER];
 
 export default function mount(el) {
-  const row = html(el, `<div class="row"><select class="kind">${KINDS.map((k, i) => `<option value="${i}">${k.label}</option>`).join('')}</select>
+  const row = html(el, `<div class="row"><select class="kind">${KINDS.map((k, i) => `<option value="${i}">${gameName(k.label)}</option>`).join('')}</select>
     <label><input type="checkbox" class="old"> ${tr('keep the Old Sword', 'beim Alten Schwert bleiben')}</label>
     <label><input type="checkbox" class="nolv"> ${tr('never level up', 'nie aufsteigen')}</label></div>`);
   const W = 620, H = 230, { c, g, at } = canvas(el, W, H);
@@ -47,8 +47,8 @@ export default function mount(el) {
     });
     g.textAlign = 'center'; g.fillText(tr('depth', 'Tiefe'), (W + L) / 2, H - 2);
     const r = rows[pick - 1];
-    out.innerHTML = tr(`Depth ${pick}: a level-${r.mlv} ${r.kind.label} has <b>${r.m.hp}</b> health and hits for <b>${r.m.damage}</b>.\nYou, level ${r.plv}: your sword hits for <b>${r.hit}</b>, you have <b>${r.hp}</b> health.\nYou need <b>${r.slashes}</b> slash${r.slashes === 1 ? '' : 'es'}, it needs <b>${r.blows}</b> blow${r.blows === 1 ? '' : 's'}.`,
-      `Tiefe ${pick}: ${r.kind.label} auf Stufe ${r.mlv} hat <b>${r.m.hp}</b> Gesundheit und trifft mit <b>${r.m.damage}</b>.\nDu, Stufe ${r.plv}: Dein Schwert trifft mit <b>${r.hit}</b>, du hast <b>${r.hp}</b> Gesundheit.\nDu brauchst <b>${r.slashes}</b> ${r.slashes === 1 ? 'Hieb' : 'Hiebe'}, es braucht <b>${r.blows}</b> ${r.blows === 1 ? 'Schlag' : 'Schläge'}.`);
+    out.innerHTML = tr(`Depth ${pick}: a level-${r.mlv} ${gameName(r.kind.label)} has <b>${r.m.hp}</b> health and hits for <b>${r.m.damage}</b>.\nYou, level ${r.plv}: your sword hits for <b>${r.hit}</b>, you have <b>${r.hp}</b> health.\nYou need <b>${r.slashes}</b> slash${r.slashes === 1 ? '' : 'es'}, it needs <b>${r.blows}</b> blow${r.blows === 1 ? '' : 's'}.`,
+      `Tiefe ${pick}: ${gameName(r.kind.label)} auf Stufe ${r.mlv} hat <b>${r.m.hp}</b> Gesundheit und trifft mit <b>${r.m.damage}</b>.\nDu, Stufe ${r.plv}: Dein Schwert trifft mit <b>${r.hit}</b>, du hast <b>${r.hp}</b> Gesundheit.\nDu brauchst <b>${r.slashes}</b> ${r.slashes === 1 ? 'Hieb' : 'Hiebe'}, es braucht <b>${r.blows}</b> ${r.blows === 1 ? 'Schlag' : 'Schläge'}.`);
   }
   const move = e => { const [x] = at(e); pick = Math.max(1, Math.min(MAX_DEPTH, Math.floor((x - L) / bw) + 1)); draw(); };
   c.addEventListener('pointermove', move);

@@ -210,6 +210,7 @@ export function form(x, name) {
 const numbers = new Map();
 export function num(n, opts = {}) {
   if (!Number.isFinite(n)) return String(n);
+  if (n === 0) n = 0;   // (never "-0")
   const key = current + JSON.stringify(opts);
   let f = numbers.get(key);
   if (!f) {

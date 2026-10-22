@@ -3,7 +3,9 @@
 //   'Lantern': { text: 'Laterne', g: 'f', pl: 'Laternen' }
 //   g: 'm', 'f', 'n' or 'pl' (only plural: 'Feuerwerk' is n, 'Mehlsäcke' pl); pl: the plural
 //   (default: the word); dat: the dative plural, where it is not pl + n; obl: a weak noun's
-//   singular outside the nominative ('Oktonaut': 'den Oktonauten', 'einem Oktonauten')
+//   singular outside the nominative ('Oktonaut': 'den Oktonauten', 'einem Oktonauten'); adj: the
+//   stem of an adjective the name starts with, which takes the endings ('Verschüttete Ruinen',
+//   adj 'Verschüttet': 'in den Verschütteten Ruinen', 'die Tiefe Schlucht': 'der Tiefen Schlucht')
 //
 // A form is said by its masculine word, which names the case:
 //   der den dem des           the definite article (nominative, accusative, dative, genitive)
@@ -36,6 +38,18 @@ for (const w of EIN_WORDS) for (const [end, c] of Object.entries(ENDING_CASE)) {
 ['dieser', 'diesen', 'diesem', 'dieses'].forEach((f, c) => { FORMS[f] = { kind: 'dies', c }; });
 ['er', 'ihn', 'ihm'].forEach((f, c) => { FORMS[f] = { kind: 'pron', c }; });
 
+// an adjective's endings by case and gender: after der / dieser (weak), after ein / mein (mixed), alone (strong)
+const ADJ = {
+  weak: [['e', 'e', 'e', 'en'], ['en', 'e', 'e', 'en'], ['en', 'en', 'en', 'en'], ['en', 'en', 'en', 'en']],
+  mixed: [['er', 'e', 'es', 'en'], ['en', 'e', 'es', 'en'], ['en', 'en', 'en', 'en'], ['en', 'en', 'en', 'en']],
+  strong: [['er', 'e', 'es', 'e'], ['en', 'e', 'es', 'e'], ['em', 'er', 'em', 'en'], ['en', 'er', 'en', 'er']],
+};
+// the noun with its adjective's ending (n.adj), in case c after an article of declension `decl`
+function withAdj(n, c, decl) {
+  if (!n.adj) return word(n, c);
+  const rest = { ...n, word: n.word.slice(n.word.indexOf(' ') + 1) };
+  return `${n.adj}${ADJ[decl][c][G[n.g] ?? 2]} ${word(rest, c)}`;
+}
 const plural = n => (n.g === 'pl' ? n.word : n.pl ?? n.word);
 // the noun itself in a case: only the dative plural changes ('den Kindern')
 function word(n, c) {
@@ -64,12 +78,11 @@ export const grammar = {
     const g = G[n.g] ?? 2;
     if (f.kind === 'pron') return PRONOUN[f.c][n.proper ? (G[n.g] ?? 0) : g];
     if (n.proper) return n.word;
-    const w = word(n, f.c);
-    if (f.kind === 'def') return `${DEFINITE[f.c][g]} ${w}`;
-    if (f.kind === 'dies') return `dies${DIES[f.c][g]} ${w}`;
-    if (f.stem === 'ein' && g === 3) return w;   // 'ein' has no plural: 'Feuerwerk', 'Mehlsäcke'
+    if (f.kind === 'def') return `${DEFINITE[f.c][g]} ${withAdj(n, f.c, 'weak')}`;
+    if (f.kind === 'dies') return `dies${DIES[f.c][g]} ${withAdj(n, f.c, 'weak')}`;
+    if (f.stem === 'ein' && g === 3) return withAdj(n, f.c, 'strong');   // 'ein' has no plural: 'Feuerwerk', 'Mehlsäcke'
     const end = EIN[f.c][g];
-    return `${f.stem === 'euer' && end ? 'eur' : f.stem}${end} ${w}`;
+    return `${f.stem === 'euer' && end ? 'eur' : f.stem}${end} ${withAdj(n, f.c, 'mixed')}`;
   },
   forms: ['pl', 'cap', ...Object.keys(FORMS)],
 };

@@ -43,7 +43,7 @@ import { playSong } from '../audio/music.js';
 import { readCode } from '../net/protocol.js';
 import { online } from '../net/online.js';
 import { joinGame, leaveGame, sessionStatus, onSessionChange } from '../net/session.js';
-import { tr, onLanguageChange } from '../i18n/i18n.js';
+import { tr, onLanguageChange, language } from '../i18n/i18n.js';
 
 const FADE_MS = 380, CONFIRM_MS = 4000, COPIED_MS = 1500;
 const $ = id => document.getElementById(id);
@@ -145,7 +145,7 @@ function skinPick(s, chosen) {
 const screens = {
   title() {
     const hero = chosen();
-    const more = `<button class="title-item" data-act="settings">${tr('Settings')}</button><a class="title-item title-link" href="learn/" target="_blank" rel="noopener">${tr('The guide')}</a>`;
+    const more = `<button class="title-item" data-act="settings">${tr('Settings')}</button><a class="title-item title-link" href="learn/?lang=${language()}" target="_blank" rel="noopener">${tr('The guide')}</a>`;
     if (!hero) return `<div class="title-list">${noHero()}${more}</div>`;
     const world = store.heroWorld(hero.id), name = esc(hero.name);
     const where = world && `${esc(world.name)} · ${world.heroes.includes(hero.id) ? depthText(world) : tr('not been there yet')}`;
