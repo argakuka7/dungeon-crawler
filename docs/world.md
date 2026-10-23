@@ -1068,7 +1068,11 @@ them join only over ground already covered (`sectionsJoined`): every route room 
 them discovered, and none of their forward exits still guarded. So a route that bends
 back alongside itself opens up once walked, but rooms first reached by a fall or the town
 portal cannot skip unseen rooms or guardians. Locked guardian faces never open through
-discovery. Discovering a cube or unlocking a gate re-checks every discovered cube, since
+discovery. Some rooms join their neighbours only through their own portals (`portalsOnly`):
+- an annex, always
+- a trial room until its trial is resolved; from then on its other faces open like any room's
+
+Their glass box glows orange (below). Discovering a cube or unlocking a gate re-checks every discovered cube, since
 either can join sections elsewhere. On an opened face both gates and both dividing glass
 panes disappear; cube outlines remain. Re-entry, mesh rebuilds and low-detail proxies use
 the same opened-face state.
@@ -1117,6 +1121,10 @@ The player always looks through that box, so it is drawn to be read without bein
   the rim of a pane of glass, not as a line drawn over the world.
 - The numbers are `GLASS` in `render/glass.js`, the same for the full cube's box and the
   proxies' (at 0.6 strength).
+- **A room that joins only through its portals** (`core/boundaries.js portalsOnly`: an annex, a
+  trial room until it is resolved) glows a warm orange instead, its edges and panes stronger
+  (`setGlassShut`, `shut*` in `GLASS`). Its faces are walls however well you know the rooms
+  around it, and the box says so. For a proxy it is the instance's `aFade.w`.
 
 The minimap and the low-detail surroundings only show cubes you have visited; prefetching
 never discovers a cube. There are no exceptions ("Only where you have been"). Surroundings include diagonals and distant cubes on the active

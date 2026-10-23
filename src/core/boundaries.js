@@ -2,6 +2,7 @@
 import { N, DIRS } from './constants.js';
 import { faceKey, step } from '../world/coords.js';
 import { portalLocked } from './guardians.js';
+import { trialGate } from './trials.js';
 
 export const isFaceOpen = (opened, key, dir) => dir < 4 && dir >= 0 && opened.has(faceKey(key, dir));
 export const openedSides = (opened, key) => DIRS.map((_, dir) => isFaceOpen(opened, key, dir));
@@ -29,6 +30,11 @@ export function sectionsJoined(cubes, a, b, run) {
   return true;
 }
 
+// A room that joins its neighbours only through its own portals, never through a whole face: an
+// annex (world/layout.js), and a trial room (world/trials.js) until its trial is resolved (its
+// gate unlocked: game/trials.js resolve). Its glass box glows (render/glass.js setGlassShut).
+export const portalsOnly = (map, run) => !!map && (!!map.annexRoom || (!!map.trialRoom && !run?.unlockedGates.has(trialGate(map.key))));
+
 // Discovery opens faces along actual portal links, or between sections already joined
 // (above), so proximity cannot shorten the route or skip guards.
 export function discoveredFaces(cubes, c, run) {
@@ -36,9 +42,8 @@ export function discoveredFaces(cubes, c, run) {
   if (c.visits) for (let d = 0; d < 4; d++) {
     const neighbor = cubes.get(step(c.key, d));
     if (!neighbor?.visits) continue;
-    // an annex (world/layout.js) and a trial room (world/trials.js) join only through their own
-    // portals, never through a whole face
-    if ((c.map?.annexRoom || neighbor.map?.annexRoom || c.map?.trialRoom || neighbor.map?.trialRoom) && !c.map.portals.some(p => p.dir === d)) continue;
+    // an annex and an unresolved trial room join only through their own portals (portalsOnly)
+    if ((portalsOnly(c.map, run) || portalsOnly(neighbor.map, run)) && !c.map.portals.some(p => p.dir === d)) continue;
     const a = c.map?.routeIndex, b = neighbor.map?.routeIndex;
     if (a != null && b != null && !c.map.portals.some(p => p.dir === d) && !sectionsJoined(cubes, c.map, neighbor.map, run)) continue;
     if (run && (portalLocked(c.map, run, { dir: d }) || portalLocked(neighbor.map, run, { dir: d ^ 1 }))) continue;

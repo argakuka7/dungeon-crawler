@@ -201,7 +201,9 @@ One small set of parts serves every puzzle; a puzzle is a layout of parts plus a
   (the path, the slack it found, the puzzle's minimal solution), for tests and `/trial solve`.
 - Run: a resolved trial is its gate `trial:<key>` in `run.unlockedGates` (the trial room's exit
   face, or a vault's, is a `gateFaces` entry like a side guardian's), so it is saved, shared
-  and respected by discovery (`core/boundaries.js`) the way guardian gates are. `run.trials`
+  and respected by discovery (`core/boundaries.js`) the way guardian gates are. Until then the
+  room joins its neighbours only through its portals, and its glass box glows orange
+  (`portalsOnly`). Resolved, its other faces open by discovery like any room's. `run.trials`
   only holds what a gate cannot (`sunken` stages).
 
 ### Dev: `/trial`

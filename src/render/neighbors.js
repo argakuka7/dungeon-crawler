@@ -14,7 +14,7 @@ import { PARTS } from './parts.js';
 import { partGeometry } from './partmeshes.js';
 import { partMaterial, fluidLook, fluidGlow, PROXY } from './materials.js';
 import { makeFadable, setFade, dither } from './fade.js';
-import { glassState, glassBatch, setGlassFaces } from './glass.js';
+import { glassState, glassBatch, setGlassFaces, setGlassShut } from './glass.js';
 import { inject } from './cutshader.js';
 import { capLight } from './section.js';
 import { LAYER as GHOSTS, glassLook, glassRim } from './ghosts.js';
@@ -265,8 +265,9 @@ function proxy(geo, open, landmarks = []) {
 
 // Reuse common cubes across refreshes and travel. Consume them from `reuse` so callers
 // dispose/fade only the departing proxies. The full source/destination keep their own fades.
+// shut: its room joins only through its portals (its glass glows, render/glass.js)
 export function buildNeighbors(list, reuse = []) {
-  return list.map(({ key, geo, dx, dz, open, landmarks }) => {
+  return list.map(({ key, geo, dx, dz, open, shut, landmarks }) => {
     const index = reuse.findIndex(g => g.key === key && g.source === geo);
     const g = index < 0 ? { key, source: geo, ...proxy(geo, open, landmarks), base: new THREE.Vector3() }
       : reuse.splice(index, 1)[0];
@@ -274,6 +275,7 @@ export function buildNeighbors(list, reuse = []) {
     g.base.set(dx * N, 0, dz * N);
     g.group.position.copy(g.base);
     setGlassFaces(g.glass, open);
+    setGlassShut(g.glass, shut);
     live.add(g);
     return g;
   });

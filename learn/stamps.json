@@ -127,7 +127,7 @@
     "src/game/enemyai.js#turn": "3b0bb33f",
     "src/game/flow.js#beginVisit": "7eda9529",
     "src/game/flow.js#die": "aef07649",
-    "src/game/flow.js#enterCube": "ac322687",
+    "src/game/flow.js#enterCube": "a2234ff5",
     "src/game/flow.js#settleIn": "57993a48",
     "src/game/flow.js#shareFaces": "43e59170",
     "src/game/flow.js#shareVisit": "041d12b2",

@@ -4,12 +4,12 @@
 // so when the slide ends everything is exactly where it belongs.
 import * as THREE from 'three';
 import { N, CUBE_H, BASE, STEP, SWIM_STEP, SNAP } from '../core/constants.js';
-import { isFaceOpen, openedSides, boundaryArrival } from '../core/boundaries.js';
+import { isFaceOpen, openedSides, boundaryArrival, portalsOnly } from '../core/boundaries.js';
 import { portalLocked, gateLocked, guardianLockMessage, lockMessage } from '../core/guardians.js';
 import { guardianKind } from './enemyspawn.js';
 import { step, D6, OPP6, faceKey } from '../world/coords.js';
 import { buildWorld, setWorldOpenFaces } from '../render/world.js';
-import { setGlassFaces } from '../render/glass.js';
+import { setGlassFaces, setGlassShut } from '../render/glass.js';
 import { blockedAt, groundAt } from '../physics/collide.js';
 import { railedFace } from '../physics/canmove.js';
 import { respawnPoint } from '../physics/respawn.js';
@@ -107,6 +107,7 @@ function slide(p, c, cloud) {
   warnTrials(m);   // (the portals into trial rooms warn of them)
   devShores(m);
   state.world = buildWorld(m, state.showPath, portalSeen(k, m), c.geo, openedSides(state.openedFaces, k), gateLocked(m, state.run), townPadIn(m, state.run), state.run.chests);
+  setGlassShut(state.world.glass, portalsOnly(m, state.run));
   enterTrial(m);   // its trial, as built or resolved (game/trials.js)
   // Live crossings retain their height/motion; the death entry must be supported and dry.
   state.arrival = respawnPoint(state.arrival);

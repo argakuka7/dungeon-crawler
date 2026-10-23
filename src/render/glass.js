@@ -8,6 +8,9 @@
 //   - the panes (only the far ones show, behind the terrain) are a touch denser along their
 //     rims and nearly clear in the middle, so an edge reads as the rim of a pane of glass
 // One look for the full cube's box (makeGlass) and every proxy's (glassBatch, instanced).
+// A room that joins its neighbours only through its portals (core/boundaries.js portalsOnly: an
+// annex, a trial room until it is resolved) glows a warm orange instead (setGlassShut): its faces
+// do not open the way the others' do.
 import * as THREE from 'three';
 import { N, CUBE_H, BASE } from '../core/constants.js';
 import { dither } from './fade.js';
@@ -39,6 +42,10 @@ export const GLASS = {
   rim: 0.075,         // a pane's opacity along its rims ...
   centre: 0.35,       // ... and in its middle, as a share of that
   band: 1.2,          // how far in from a pane's rims the denser glass reaches, world units
+  // shut (setGlassShut): the colours, and how much stronger the edges and panes are
+  shutEdgeColor: 0xffa34d, shutPaneColor: 0xff8a33,
+  shutEdge: 1.9,
+  shutPane: 2.6,
 };
 const U = Object.fromEntries(Object.entries(GLASS).filter(([k]) => !k.endsWith('Color')).map(([k, v]) => [k, { value: v }]));
 // The full cube's cut caps are drawn a few steps nearer than its walls (render/section.js
@@ -46,6 +53,7 @@ const U = Object.fromEntries(Object.entries(GLASS).filter(([k]) => !k.endsWith('
 // nearer still or they break up into dashes. Proxies have no caps.
 const CUBE_AHEAD = 64, PROXY_AHEAD = 8;
 const RES = { value: new THREE.Vector2(1, 1) }, PX = { value: 1 };
+const SHUT_EDGE = { value: new THREE.Color(GLASS.shutEdgeColor) }, SHUT_PANE = { value: new THREE.Color(GLASS.shutPaneColor) };
 
 // the size of what is drawn into, for the edges' widths on screen
 const size = new THREE.Vector2();
@@ -121,46 +129,58 @@ const EDGE_VERT = (offset, ahead) => `
   // a hair towards the camera: an edge wins over the cube's own outer walls it lies on
   clip.z -= ${(2 * ahead / 2 ** 24).toExponential(6)} * clip.w;
   gl_Position = clip;`;
-const EDGE_FRAG = `
+// shut: 0..1, the warm glow of a room that joins only through its portals (the outgoing colour
+// towards its own, the alpha stronger)
+const SHUT = (shut, color, boost) => `
+  outgoingLight = mix(outgoingLight, ${color}, ${shut});
+  diffuseColor.a *= mix(1.0, ${boost}, ${shut});`;
+const EDGE_FRAG = shut => `
   float across = abs(vAcross) * vHalf;
   float ink = 1.0 - smoothstep(vCore - 0.5, vCore + uGlassFeather * uGlassPx, across);
   // stronger near the outline's corners, fainter inside the outline
   float corner = max(vCornerA * (1.0 - smoothstep(0.0, uGlassReach, vAlong)),
     vCornerB * (1.0 - smoothstep(0.0, uGlassReach, vLen - vAlong)));
   diffuseColor.a *= uGlassCorner * ink * mix(uGlassMid, 1.0, corner) * mix(uGlassInner, 1.0, vOutline);
+  ${SHUT(shut, 'uGlassShutEdge', 'uGlassShutEdgeBoost')}
   #include <opaque_fragment>`;
-const PANE_FRAG = `
+const PANE_FRAG = shut => `
   // in from the nearest rim of this pane: along it (x or z, whichever is not the pane's own) or up
   vec3 q = abs(vGlassLocal);
   float fromRim = min(${(N / 2).toFixed(1)} - min(q.x, q.z), ${(CUBE_H / 2).toFixed(1)} - q.y);
   float rim = 1.0 - smoothstep(0.0, uGlassBand, fromRim);
   diffuseColor.a *= uGlassRim * mix(uGlassCentre, 1.0, rim * rim);
+  ${SHUT(shut, 'uGlassShutPane', 'uGlassShutPaneBoost')}
   #include <opaque_fragment>`;
+// instanced, a box is shut by its aFade.w; else by its own uniform (makeGlass: one per box)
+const shutOf = instanced => instanced ? 'vFade.w' : 'uGlassShut';
 
-function edgeMaterial(strength, instanced) {
+function edgeMaterial(strength, instanced, shut = null) {
   const mat = new THREE.MeshBasicMaterial({ color: GLASS.edgeColor, transparent: true, opacity: strength,
     depthWrite: false, side: THREE.DoubleSide });
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, { uGlassRes: RES, uGlassPx: PX, uGlassWidth: U.width, uGlassMin: U.minPx, uGlassMax: U.maxPx,
       uGlassFeather: U.feather, uGlassMid: U.mid, uGlassReach: U.reach, uGlassInner: U.inner });
     sh.uniforms.uGlassCorner = U.corner;
+    Object.assign(sh.uniforms, { uGlassShutEdge: SHUT_EDGE, uGlassShutEdgeBoost: U.shutEdge }, shut ? { uGlassShut: shut } : {});
     const varyings = 'varying float vAcross, vHalf, vCore, vAlong, vLen, vOutline, vCornerA, vCornerB;\nuniform float uGlassPx, uGlassFeather';
     sh.vertexShader = `attribute vec3 aA, aB;\nattribute float aEnd, aAcross;\n${varyings}, uGlassWidth, uGlassMin, uGlassMax;\nuniform vec2 uGlassRes;\n`
       + (instanced ? 'attribute vec3 aOffset;\nattribute vec4 aFade;\nflat varying vec4 vFade;\n' : '')
       + sh.vertexShader.replace('#include <project_vertex>', (instanced ? 'vFade = aFade;\n' : '') + EDGE_VERT(instanced ? ' + aOffset' : '', instanced ? PROXY_AHEAD : CUBE_AHEAD));
-    sh.fragmentShader = `${varyings}, uGlassMid, uGlassReach, uGlassCorner, uGlassInner;\n` + (instanced ? 'flat varying vec4 vFade;\n' : '')
-      + sh.fragmentShader.replace('#include <opaque_fragment>', EDGE_FRAG)
+    sh.fragmentShader = `${varyings}, uGlassMid, uGlassReach, uGlassCorner, uGlassInner, uGlassShutEdgeBoost;\nuniform vec3 uGlassShutEdge;\n`
+      + (instanced ? 'flat varying vec4 vFade;\n' : 'uniform float uGlassShut;\n')
+      + sh.fragmentShader.replace('#include <opaque_fragment>', EDGE_FRAG(shutOf(instanced)))
         .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + (instanced ? dither('vFade.x', 'vFade.y', 'vFade.z') : ''));
   };
   mat.customProgramCacheKey = () => instanced ? 'glass-edges-batch' : 'glass-edges';
   return mat;
 }
 
-function paneMaterial(strength, instanced) {
+function paneMaterial(strength, instanced, shut = null) {
   const mat = new THREE.MeshBasicMaterial({ color: GLASS.paneColor, transparent: true, opacity: strength,
     side: THREE.BackSide, depthWrite: false, ...BEHIND });
   mat.onBeforeCompile = sh => {
-    Object.assign(sh.uniforms, { uGlassBand: U.band, uGlassCentre: U.centre, uGlassRim: U.rim });
+    Object.assign(sh.uniforms, { uGlassBand: U.band, uGlassCentre: U.centre, uGlassRim: U.rim, uGlassShutPane: SHUT_PANE, uGlassShutPaneBoost: U.shutPane },
+      shut ? { uGlassShut: shut } : {});
     // instanced: a hidden pane (aPanes, by its side aSide) collapses to a point
     sh.vertexShader = 'varying vec3 vGlassLocal;\n'
       + (instanced ? 'attribute vec3 aOffset;\nattribute vec4 aFade;\nflat varying vec4 vFade;\nattribute float aSide;\nattribute vec4 aPanes;\n' : '')
@@ -169,8 +189,9 @@ function paneMaterial(strength, instanced) {
         ${instanced ? `vFade = aFade;
         if (aPanes[int(aSide)] < 0.5) transformed = vec3(0.0);
         transformed += aOffset;` : ''}`);
-    sh.fragmentShader = 'varying vec3 vGlassLocal;\nuniform float uGlassBand, uGlassCentre, uGlassRim;\n' + (instanced ? 'flat varying vec4 vFade;\n' : '')
-      + sh.fragmentShader.replace('#include <opaque_fragment>', PANE_FRAG)
+    sh.fragmentShader = 'varying vec3 vGlassLocal;\nuniform float uGlassBand, uGlassCentre, uGlassRim, uGlassShutPaneBoost;\nuniform vec3 uGlassShutPane;\n'
+      + (instanced ? 'flat varying vec4 vFade;\n' : 'uniform float uGlassShut;\n')
+      + sh.fragmentShader.replace('#include <opaque_fragment>', PANE_FRAG(shutOf(instanced)))
         .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + (instanced ? dither('vFade.x', 'vFade.y', 'vFade.z') : ''));
   };
   mat.customProgramCacheKey = () => instanced ? 'glass-panes-batch' : 'glass-panes';
@@ -186,12 +207,18 @@ function edgeMesh(geo, mat) {
 export function setGlassFaces(group, open = []) {
   group.userData.panes.forEach((pane, dir) => { pane.visible = !open[dir]; });
 }
+// the box of a room that joins its neighbours only through its portals glows (or no longer)
+export function setGlassShut(group, shut) {
+  group.userData.shut = !!shut;
+  if (group.userData.shutU) group.userData.shutU.value = shut ? 1 : 0;
+}
 
 export function makeGlass(strength = 1, open = []) {
-  const g = new THREE.Group();
-  const edges = edgeMesh(edgeGeometry, edgeMaterial(strength, false));
+  const g = new THREE.Group(), shut = { value: 0 };
+  g.userData.shutU = shut;
+  const edges = edgeMesh(edgeGeometry, edgeMaterial(strength, false, shut));
   edges.userData.sharedGeo = true;
-  const material = paneMaterial(strength, false);
+  const material = paneMaterial(strength, false, shut);
   g.userData.panes = sides.map(geo => {
     const pane = new THREE.Mesh(geo, material);
     pane.userData.sharedGeo = true;
@@ -216,8 +243,8 @@ export function glassState(open = []) {
 
 const CENTER = new THREE.Vector3(N / 2, CUBE_H / 2 - BASE, N / 2);
 
-// per instance: aOffset (the box centre), aFade (fade, inverted, range fade: render/fade.js),
-// aPanes (which side panes show)
+// per instance: aOffset (the box centre), aFade (fade, inverted, range fade: render/fade.js; and
+// shut: setGlassShut), aPanes (which side panes show)
 export function glassBatch(strength) {
   const pos = [], side = [], p = box.attributes.position;
   sides.forEach((geo, s) => { for (const i of geo.index.array) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); side.push(s); } });
@@ -244,7 +271,7 @@ export function glassBatch(strength) {
       if (list.length > capacity) grow(list.length);
       list.forEach((g, i) => {
         offset.setXYZ(i, g.position.x + CENTER.x, g.position.y + CENTER.y, g.position.z + CENTER.z);
-        fade.setXYZW(i, g.fade[0], g.fade[1], g.fade[2], 0);
+        fade.setXYZW(i, g.fade[0], g.fade[1], g.fade[2], g.state.userData.shut ? 1 : 0);
         const [a, b, c, d] = g.state.userData.panes.map(pane => pane.visible ? 1 : 0);
         shown.setXYZW(i, a, b, c, d);
       });

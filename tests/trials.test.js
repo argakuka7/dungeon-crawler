@@ -14,7 +14,7 @@ import { setGoneFloors } from '../src/physics/collide.js';
 import { portalPos } from '../src/world/trials.js';
 import { portalLocked } from '../src/core/guardians.js';
 import { createRun } from '../src/core/progression.js';
-import { discoveredFaces } from '../src/core/boundaries.js';
+import { discoveredFaces, portalsOnly } from '../src/core/boundaries.js';
 import { player } from '../src/game/state.js';
 import { movePlayer } from '../src/physics/move.js';
 import { groundAt } from '../src/physics/collide.js';
@@ -354,10 +354,27 @@ test('discovery joins a trial room only through its portals; its gate keeps the 
       const open = discoveredFaces(rooms, c, run);
       assert.ok(!open.includes(faceKey(t.key, t.exit)), `${seed}/${d}: the exit opens before it is resolved`);
       for (const fk of open) assert.ok(c.map.portals.some(p => faceKey(t.key, p.dir) === fk), `${seed}/${d}: ${fk} is not a portal`);
+      assert.ok(portalsOnly(c.map, run), 'unresolved, it joins only through its portals');
       run.unlockedGates.add(t.gate);
       assert.ok(discoveredFaces(rooms, c, run).includes(faceKey(t.key, t.exit)), `${seed}/${d}: resolved, the exit opens`);
+      // resolved, it is a room like any other: its other faces open by discovery too
+      assert.ok(!portalsOnly(c.map, run));
+      const plain = new Map(rooms);
+      plain.set(t.key, { ...c, map: { ...c.map, trialRoom: false } });
+      assert.deepEqual(discoveredFaces(rooms, c, run), discoveredFaces(plain, plain.get(t.key), run), `${seed}/${d}: resolved, its faces open as any room's`);
     }
   }
+});
+
+test('an annex joins only through its portals, resolved or not; a trial room until it is resolved', () => {
+  const run = createRun();
+  assert.equal(portalsOnly({ key: 'a', annexRoom: true }, run), true);
+  assert.equal(portalsOnly({ key: 'b', trialRoom: true }, run), true);
+  assert.equal(portalsOnly({ key: 'c' }, run), false);
+  assert.equal(portalsOnly(null, run), false);
+  run.unlockedGates.add(trialGate('b'));
+  assert.equal(portalsOnly({ key: 'b', trialRoom: true }, run), false);
+  assert.equal(portalsOnly({ key: 'b', trialRoom: true }), true, 'without a run: as unresolved');
 });
 
 test('the warning: every map knows which of its faces lead into a trial room, as planned', () => {

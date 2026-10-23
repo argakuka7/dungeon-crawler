@@ -1,7 +1,8 @@
 // Level flow: the world of cubes, entering a cube, travelling through portals, spawning and
 // taking damage.
 import { DIRS } from '../core/constants.js';
-import { isFaceOpen, openedSides, discoveredFaces, visitedFaces } from '../core/boundaries.js';
+import { isFaceOpen, openedSides, discoveredFaces, visitedFaces, portalsOnly } from '../core/boundaries.js';
+import { setGlassShut } from '../render/glass.js';
 import { showNeighbors, clearNeighbors, clearNeighborCache } from '../render/neighbors.js';
 import { discoveredCubes } from '../core/viewdistance.js';
 import { WorldClient } from '../world/client.js';
@@ -233,10 +234,13 @@ function openDiscoveredFaces() {
   return state.openedFaces.size !== before;
 }
 
-// A gate unlocked in the cube we are in may join sections discovered earlier.
+// A gate unlocked in the cube we are in may join sections discovered earlier (and a trial
+// resolved no longer keeps its room to its portals: its glass stops glowing).
 export function refreshOpenFaces() {
-  if (!openDiscoveredFaces() || !state.world) return;
-  setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
+  const opened = openDiscoveredFaces();
+  if (!state.world) return;
+  if (opened) setWorldOpenFaces(state.world, openedSides(state.openedFaces, state.cubeKey));
+  setGlassShut(state.world.glass, portalsOnly(state.map, state.run));
   updateNeighbors();
 }
 
@@ -259,6 +263,7 @@ export function enterCube(c, from = null, back = null, at = null) {
   warnTrials(c.map);   // the portals into trial rooms not resolved yet warn of them (game/trials.js)
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(k, c.map), c.geo, openedSides(state.openedFaces, k), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
+  setGlassShut(state.world.glass, portalsOnly(c.map, state.run));
   enterTrial(c.map);   // its trial, as built (or resolved for good: game/trials.js)
   if (back) {
     const { arrival, portalLock, boundaryLock, visit } = back;
@@ -313,6 +318,7 @@ export function visitedNeighbors(k) {
   if (!state.showNeighbors || isInterior(k)) return [];   // inside a house: nothing around
   // (landmarks show in the surroundings too: they are what you find your way by)
   return discoveredCubes(state.cubes.cubes, k).map(c => ({ ...c, open: openedSides(state.openedFaces, c.key),
+      shut: portalsOnly(state.cubes.cubes.get(c.key).map, state.run),
       landmarks: (state.cubes.cubes.get(c.key).map.rewardSites || []).map(s => s.landmark).filter(Boolean) }));
 }
 
@@ -336,6 +342,7 @@ export function rebuildWorld() {
   warnTrials(c.map);
   disposeWorld(state.world);
   state.world = buildWorld(c.map, state.showPath, portalSeen(state.cubeKey, c.map), c.geo, openedSides(state.openedFaces, state.cubeKey), gateLocked(c.map, state.run), townPadIn(c.map, state.run), state.run.chests);
+  setGlassShut(state.world.glass, portalsOnly(c.map, state.run));
   refreshTrialView();
 }
 
