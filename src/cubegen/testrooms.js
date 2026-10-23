@@ -231,6 +231,32 @@ function shores(spec) {
     note: 'a stair into a lake, a bridge on legs over it, a ladder up out of it' });
 }
 
+// What click to move (physics/playernav.js, physics/leaps.js) jumps and climbs, from west to
+// east: the arrival's ground (level 4) to a trench a cell wide (x = 5, level 0: jumped over), a
+// plateau with a ledge a level up (jumped onto) and a tower (level 10, up a ladder in its south),
+// a gap two cells wide (level 0) down to low ground two levels lower (jumped down over), and in
+// it a pit (level 0, out up a ladder in its west). Along the north edge the gap has steps (level
+// 3): the way back up is jumped, a level at a time.
+export const LEAPS = { G: 4, trench: 5, ledge: { x: 7, z0: 2, z1: 4 }, tower: { x: 7, z0: 11, z1: 12, top: 10 },
+  gap: [9, 10], low: 2, pit: { x0: 13, x1: 14, z0: 7, z1: 9 }, steps: 15 };
+function leaps(spec) {
+  const ctx = start(spec), { G, trench, ledge, tower, gap, low, pit, steps } = LEAPS;
+  const level = (x, z) => {
+    if (x === trench) return 0;
+    if (gap.includes(x)) return z === steps ? G - 1 : 0;
+    if (x > gap[1]) return x >= pit.x0 && x <= pit.x1 && z >= pit.z0 && z <= pit.z1 ? 0 : low;
+    if (x === ledge.x && z >= ledge.z0 && z <= ledge.z1) return G + 1;
+    if (x === tower.x && z >= tower.z0 && z <= tower.z1) return tower.top;
+    return G;
+  };
+  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) ctx.put(x, z, { top: level(x, z) });
+  const at = (x, z) => ctx.cols[idx(x, z)][0];
+  ctx.ladder(at(tower.x, tower.z0 - 1), at(tower.x, tower.z0), 'wood');
+  ctx.ladder(at(pit.x0, 8), at(pit.x0 - 1, 8), 'rope');
+  return finish(ctx, spec, { arrival: { x: 2.5, z: 8.5, yaw: Math.PI / 2 },
+    note: 'click across: over the trench, onto the ledge, up the tower, down over the wide gap, into the pit' });
+}
+
 // The boss of the depth (core/bosses.js) in his own arena: the depth's descent arena as the
 // generator builds it (cubegen/guardian.js: the arena type a boss brings, Squarlo's tidal hills
 // and their water, Totnar's braziers, the fight zone), the very one of this world, made a test
@@ -255,7 +281,7 @@ function bossRoom(spec) {
       lineup: [{ type: boss, x: g.x, z: g.z, yaw: g.yaw }] } };
 }
 
-const BUILD = { water_hill: waterHill, fluids, climb, shores, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians'), boss: bossRoom };
+const BUILD = { water_hill: waterHill, fluids, climb, shores, enemies: s => lineupRoom(s, 'enemies'), guardians: s => lineupRoom(s, 'guardians'), boss: bossRoom, leaps };
 // spec: { key, depth, seed, biome (the depth's theme); arena: the boss room's (bossRoom) }
 export function generateTestRoom(spec) {
   const name = testRoomOf(spec.key);

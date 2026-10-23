@@ -14,11 +14,12 @@ const frame = l => {
   return { wx: l.x + 0.5 + dx * 0.5, wz: l.z + 0.5 + dz * 0.5, nx: -dx, nz: -dz };
 };
 
-// try to get onto a ladder (input dx, dz)
-function grab(dx, dz) {
+// try to get onto a ladder (input dx, dz); only: that ladder alone (null: none)
+function grab(dx, dz, only) {
   const p = player;
-  if (!p.grounded || p.swimming || p.stun > 0) return null;
+  if (!p.grounded || p.swimming || p.stun > 0 || only === null) return null;
   for (const l of state.map.ladders || []) {
+    if (only && l !== only) continue;
     const { wx, wz, nx, nz } = frame(l);
     const out = (p.x - wx) * nx + (p.z - wz) * nz, side = (p.x - wx) * -nz + (p.z - wz) * nx;
     if (Math.abs(side) > REACH) continue;
@@ -31,10 +32,12 @@ function grab(dx, dz) {
   return null;
 }
 
-export function climb(dt, dx, dz, jump) {
+// only: the ladder that may be taken hold of (a mouse order's, game/orders.js: none but the one
+// its way climbs; null: none), else any
+export function climb(dt, dx, dz, jump, only = undefined) {
   const p = player;
   if (!p.climb) {
-    const g = grab(dx, dz);
+    const g = grab(dx, dz, only);
     if (!g) return false;
     p.climb = { l: g.l, side: Math.max(-0.15, Math.min(0.15, g.side)) };
     p.y = g.y;

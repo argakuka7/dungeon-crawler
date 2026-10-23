@@ -31,6 +31,8 @@ docs that explain how the game works, from the big ideas down to the real code:
   - `src/themes/`: per-depth data: palettes, lighting, generator settings, structure materials;
     each world picks one theme per depth from its seed (`themes/depth.js`).
   - `src/physics/`, `src/render/`, `src/game/`: movement, drawing and game state/flow.
+    Click to move (`src/game/orders.js`, `docs/clickmove.md`) finds its way over stairs, up and down
+    ladders and over the jumps the hero can make (`src/physics/playernav.js`, `src/physics/leaps.js`).
     `src/game/teach.js` (`window.__game.teach`) draws over the world, shows the game's rules
     (lenses), pauses / steps / slows time and tunes numbers with a way back, for the guide's tutor.
   - `src/net/`: playing together (hosting in the Esc menu, joining in the main menu, up to four

@@ -58,9 +58,11 @@ export function updatePlayer(dt) {
   const len = Math.hypot(dx, dz);
   if (len > 1) { dx /= len; dz /= len; }
   const steer = [dx, dz];   // where we go ourselves (a lunge does not count for leaving a fight)
-  const jump = takeJump();
+  // (a mouse order jumps by itself where its way does: game/orders.js)
+  const jumpKey = takeJump(), jump = jumpKey || !!order?.jump;
   tickCast(dt, len > 0 || jump);   // reading the town portal scroll: moving interrupts it
-  if (climb(dt, dx, dz, jump)) { cancelSword(); clearOrder(); return; }   // on a ladder
+  // on a ladder (a mouse order takes hold of none but its own, and climbs on unless the jump key lets go)
+  if (climb(dt, dx, dz, jump, order ? order.ladder ?? null : undefined)) { cancelSword(); if (!order || jumpKey) clearOrder(); return; }
   if (iceStep(dt, dx, dz)) { cancelSword(); return; }   // on a slide puzzle's ice (game/trials.js)
   // Attacks plant you: no walking until the blade went through (the shot left), then moving
   // cuts the rest short
@@ -69,8 +71,8 @@ export function updatePlayer(dt) {
     if ((dx || dz) && canMoveCancel(player)) cancelSwing(player);
     else [dx, dz] = lunge(s);
   }
-  // always run (mouse orders too), unless Ctrl is held or a swing plants the feet
-  const gr = movePlayer(dt, dx, dz, !wantsWalk() && !s.active, jump);
+  // always run (mouse orders too), unless Ctrl is held (but for an order's jump) or a swing plants the feet
+  const gr = movePlayer(dt, dx, dz, (order?.run || !wantsWalk()) && !s.active, jump);
   updateLayer(gr);
   if (unstick(dt)) return;   // wedged in something: out onto the nearest free spot (physics/unstuck.js)
 

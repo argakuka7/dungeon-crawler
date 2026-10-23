@@ -50,6 +50,13 @@ function horizontal(dt, dx, dz, run) {
 // learn: physics.html#feel #move-code (see learn/README.md)
 const LEAP = 3.4;   // horizontal speed of a jump while moving
 
+// How fast p runs and leaps now, and how much higher than plain it jumps (potions, boots, a
+// chill): what the jumps click to move takes depend on (physics/leaps.js)
+export function jumpPowers(p) {
+  const quick = 1 + effectMod(p, 'moveSpeed') + feet(p);
+  return { run: RUN_SPEED * chillFactor(p.chilled) * quick, leap: LEAP * quick, boost: Math.sqrt(1 + effectMod(p, 'jump')) };
+}
+
 // jump with a little coyote time (just walked off a ledge) and a short input buffer
 // learn: physics.html#feel #move-code (see learn/README.md)
 function jumping(dt, jump) {

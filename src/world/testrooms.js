@@ -17,6 +17,7 @@ export const TEST_ROOMS = Object.freeze({
   guardians: 'every side guardian lined up, idle',
   shores: 'a lake with a stair down into it, a bridge on legs over it and a ladder up out of it',
   boss: 'the boss of a depth (a boss\'s name or his depth), idle in his own arena until hit',
+  leaps: 'what click to move jumps and climbs: a trench, a ledge, a wide gap, steps down, a pit and a tower with ladders',
 });
 export const TEST_ROOM_NAMES = Object.keys(TEST_ROOMS);
 
