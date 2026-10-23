@@ -25,8 +25,8 @@ import { knockDown } from './ragdoll.js';
 import { toggleInventory, toggleQuests, setInventoryOpen, talkTo } from './inventory.js';
 import { controls, clearInput } from './inputstate.js';
 import { pointer, pickFloor, aimPoint, hoveredEnemy, pointAt, updatePointer } from './pointer.js';
-import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart, canTrade } from './orders.js';
-import { hoveredPickup, hoveredChest, hoveredVillager, hoveredPart, toggleLabels, updateLootLabels } from './lootlabels.js';
+import { orderMove, orderAttack, orderPickup, orderChest, clearOrder, orderTrade, orderWalk, orderPart, orderWay, canTrade } from './orders.js';
+import { hoveredPickup, hoveredChest, hoveredVillager, hoveredPart, hoveredWay, toggleLabels, updateLootLabels } from './lootlabels.js';
 import { queueAttack } from './sword.js';
 import { softTarget, combatStats, readiedFlask, LUNGE_REACH } from '../core/combat.js';
 import { throwTarget } from './throws.js';
@@ -200,7 +200,8 @@ export function tapGame(x, y) {
   pointer.inside = false;
 }
 // what a click on the game does: with a flask in hand, throw it there; else go for the enemy,
-// villager, item, chest or trial part under the cursor, or (walk) walk to the floor there
+// villager, item, chest, trial part or way out (a portal, a door) under the cursor, or (walk) walk
+// to the floor there
 function click(walk) {
   if (readiedFlask(player)) {
     pointer.mode = null; clearOrder();
@@ -218,6 +219,8 @@ function click(walk) {
   if (chest) { pointer.mode = null; orderChest(chest); return; }
   const part = hoveredPart();
   if (part) { pointer.mode = null; orderPart(part); return; }
+  const way = hoveredWay();
+  if (way) { pointer.mode = null; orderWay(way); return; }
   if (!walk) { pointer.mode = null; return; }
   pointer.mode = 'move';
   const hit = pickFloor();

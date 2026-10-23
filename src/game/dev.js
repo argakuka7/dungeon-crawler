@@ -370,8 +370,8 @@ export async function goAdjacent(d) {
 }
 
 if (state.dev) {
-  addEventListener('click', e => { const q = portalAt(e); if (q) takePortal(q); });
-  addEventListener('mousemove', e => { document.body.style.cursor = portalAt(e) ? 'pointer' : ''; });
+  // Alt+click on a portal takes it at once (a plain click walks up to it and through, game/orders.js)
+  addEventListener('click', e => { const q = e.altKey && portalAt(e); if (q) takePortal(q); });
   addEventListener('keydown', e => {
     if (e.repeat || state.inventoryOpen || state.leaveAsk || state.deathAsk || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
     if (e.altKey && !e.ctrlKey && !e.metaKey && SCREEN[e.code]) { e.preventDefault(); goAdjacent(screenFace(SCREEN[e.code])); return; }

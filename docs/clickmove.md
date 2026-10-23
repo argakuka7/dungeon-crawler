@@ -1,9 +1,28 @@
 # Click to move
 
 The game plays with the mouse alone, Diablo style (`src/game/orders.js`): click the floor to walk
-there, an enemy to go and hit it, an item, chest, villager or trial part to go and use it. Holding
+there, an enemy to go and hit it, an item, chest, villager or trial part to go and use it, a
+portal or a door to go through it. Holding
 the button keeps walking towards the cursor. WASD (or the touch stick) takes over at once. Taps
 on a touch screen are the same orders.
+
+## Ways out
+
+The ways out of a cube are hovered and clicked like chests (`src/game/ways.js`,
+`game/lootlabels.js`, labelled when hovered):
+- a side portal's gate
+- a well down and a ring up
+- the town portal's pad
+- a town house's door, and the door back out
+
+A click walks up to it the same way as any walk, and then:
+
+- **Gate or door:** it walks on into it until it takes you (`game/portals.js`, `game/doors.js`).
+- **Well, ring or town portal:** it stops in its middle and stands there while it charges.
+
+A locked one (a guardian's or a boss's) says why when you get there, and the order gives up.
+Leaving a fight asks first, as when you walk out yourself. With `?dev=1`, Alt+click takes a
+portal at once.
 
 ## The way
 
@@ -57,4 +76,6 @@ rail either.
 `/testroom leaps` (with `?dev=1`) has a trench to jump, a ledge to jump onto, a tower with a
 ladder, a gap two cells wide down to low ground, steps back up and a pit left by its ladder.
 `tests/clickmove.test.js` walks it, the `climb` room's ladders and random clicks in generated
-cubes. `tests/browser/clickmove.js` plays the same clicks through the game's own update.
+cubes. `tests/browser/clickmove.js` plays the same clicks through the game's own update
+(`runClickMoveChecks`), and clicks a house's door and back, a town gate, a locked well and a ring
+up (`runWayChecks`).

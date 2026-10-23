@@ -1,4 +1,5 @@
-// Mouse orders, Diablo style: click the floor to walk there, click an enemy to go and hit
+// Mouse orders, Diablo style: click the floor to walk there, a way out of the cube (a portal, the
+// town portal, a house's door: game/ways.js) to walk up to it and through, click an enemy to go and hit
 // it (with a bow, crossbow or staff: until it is in range and in sight, then shoot), click an item on the floor (or its label) to go and pick it up, click a treasure chest to
 // go and open it, click a villager to walk up and talk (their quests or wares: game/inventory.js talkTo), click a trial's
 // part (a lever, a runestone, a tablet ...) to walk up and use it, as the action key does (game/trials.js usePart). Holding the button
@@ -23,11 +24,11 @@ import { absent } from '../core/enemies.js';
 import { usePart, canReachPart, partUsable } from './trials.js';
 
 // kind: 'move' (to x, z) | 'attack' (enemy) | 'pickup' (a pickup) | 'chest' (a reward site) |
-// 'trade' (a villager) | 'part' (a trial's part); walk: the way there (physics/playernav.js),
+// 'trade' (a villager) | 'part' (a trial's part) | 'way' (a way out, game/ways.js); walk: the way there (physics/playernav.js),
 // kept from order to order while the hero gets there (a jump or climb under way finishes first)
-export const order = { kind: null, x: 0, z: 0, floor: null, enemy: null, pickup: null, chest: null, villager: null, part: null, walk: null, repath: 0, stuck: 0, lx: 0, lz: 0, hold: 0 };
+export const order = { kind: null, x: 0, z: 0, floor: null, enemy: null, pickup: null, chest: null, villager: null, part: null, way: null, into: false, walk: null, repath: 0, stuck: 0, lx: 0, lz: 0, hold: 0 };
 
-export function clearOrder() { order.kind = null; order.enemy = null; order.pickup = null; order.chest = null; order.villager = null; order.part = null; order.walk = null; }
+export function clearOrder() { order.kind = null; order.enemy = null; order.pickup = null; order.chest = null; order.villager = null; order.part = null; order.way = null; order.walk = null; }
 // Teleports/travel invalidate cube-local targets; a held click must not recreate them.
 export function clearMouseInput() { clearOrder(); pointer.down = false; pointer.mode = null; }
 
@@ -41,7 +42,7 @@ function plan(floor, y = null) {
 }
 function begin(kind) {
   if (order.kind !== kind) Object.assign(order, { stuck: 0, lx: player.x, lz: player.z });
-  order.kind = kind;
+  order.kind = kind; order.into = false;
 }
 
 // hit: a pickFloor() result
@@ -95,6 +96,17 @@ export function orderPart(p) {
   if (canReachPart(p)) { clearOrder(); usePart(p); }
 }
 
+// w: a way out of the cube (game/ways.js); walk up to it, then on into it (a gate, a door) or
+// stand on it while it charges (a well, a ring, the town portal: game/portals.js takes you)
+export function orderWay(w) {
+  begin('way');
+  const at = w.walk;
+  Object.assign(order, { x: at.x, z: at.z, floor: floorOf(groundAt(at.x, at.z, at.y + 0.3, 0).s), enemy: null, pickup: null, chest: null, villager: null, part: null, way: w, repath: 1e9 });
+  plan(order.floor, at.y);
+}
+// (close enough to its spot to go on into a gate or door)
+const INTO = 0.15;
+
 // the held button: keep walking to the cursor, or pick the next enemy under it
 export function holdPointer(dt) {
   if (!pointer.down || state.transitioning || state.inventoryOpen) return;
@@ -146,8 +158,11 @@ export function followOrder(dt) {
   const s = steerWalk(w, dt);
   if (!s) { clearOrder(); return null; }   // on a ladder that is not on the way
   tx = w.x; tz = w.z;   // (moved to the end of the way, when it gets no closer)
-  const left = Math.hypot(tx - player.x, tz - player.z), settle = order.kind === 'move' || order.kind === 'chest' || order.kind === 'trade';
-  if (settle && w.done && left < 0.08) { clearOrder(); return { dx: 0, dz: 0 }; }
+  const left = Math.hypot(tx - player.x, tz - player.z), way = order.way;
+  const settle = order.kind === 'move' || order.kind === 'chest' || order.kind === 'trade' || (order.kind === 'way' && !way.push);
+  if (settle && w.done && left < 0.08) { clearOrder(); return { dx: 0, dz: 0 }; }   // (on a well, a ring, the town portal: it charges)
+  // at a gate or a door: on into it, until it takes us (or, locked, the walking into it gives up)
+  if (order.kind === 'way' && way.push && w.done && (order.into || left < INTO)) { order.into = true; s.dx = way.push[0]; s.dz = way.push[1]; s.end = false; }
   // give up when walking into something for a while (not while climbing or in the air)
   if (player.sword.active || player.stun > 0 || player.climb || !player.grounded || Math.hypot(player.x - order.lx, player.z - order.lz) > 0.2) {
     order.stuck = 0; order.lx = player.x; order.lz = player.z;

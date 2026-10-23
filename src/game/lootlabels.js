@@ -7,7 +7,8 @@
 // with a quest for you (!) or one to hand in (?, core/quests.js giverMark) is always labelled.
 // A trial's parts the action key uses (levers, runestones, braziers, a rune room's tablet ...;
 // game/trials.js usableParts) are hovered too, labelled with what using them does, and clicked to
-// go and use them.
+// go and use them. The ways out of the cube (portals, the town portal, house doors: game/ways.js)
+// too, labelled with where they go, and clicked to walk up to them and through.
 // Labels that would overlap are pushed upwards into a stack. Runs after the camera moved.
 import * as THREE from 'three';
 import { camera, renderer } from '../render/scene.js';
@@ -19,7 +20,8 @@ const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
 import { state } from './state.js';
 import { lootHere } from './loot.js';
 import { pointer, hoveredEnemy } from './pointer.js';
-import { orderPickup, orderChest, orderTrade, orderWalk, orderPart } from './orders.js';
+import { orderPickup, orderChest, orderTrade, orderWalk, orderPart, orderWay } from './orders.js';
+import { waysHere } from './ways.js';
 import { usableParts, partLabel } from './trials.js';
 import { questItemsHere } from './questworld.js';
 import { shopOf } from '../core/shops.js';
@@ -38,7 +40,8 @@ const PICK = 26;             // px: how close the cursor must be to an item to h
 const CHEST_PICK = 40;       // ... and to a chest
 const VILLAGER_PICK = 46;    // ... and to a villager's head
 const PART_PICK = 40;        // ... and to a trial's part
-const PART_COLOR = '#8fd0ff';
+const WAY_PICK = 50;         // ... and to a way out (a gate is big)
+const PART_COLOR = '#8fd0ff', WAY_COLOR = '#c9b8ff';
 // a chest's label colour: a grander site, a rarer colour
 const CHEST_COLOR = { basic: '#d8d2c4', uncommon: RARITY.decent.css, rare: RARITY.unusual.css, exceptional: RARITY.remarkable.css };
 let hovered = null, overLabel = null, cursor = '';
@@ -46,14 +49,15 @@ let hovered = null, overLabel = null, cursor = '';
 // villagers (state.map.villagers) have an outfit, chests (reward sites) a prestige; the trial's
 // usable parts are this frame's usableParts()
 let parts = new Set();
-const isVillager = p => !!p?.outfit, isPart = p => parts.has(p);
-// the pickup under the cursor, the closed chest (a reward site), the trading villager and the trial's part
-export const hoveredPickup = () => hovered && !hovered.prestige && !isVillager(hovered) && !isPart(hovered) ? hovered : null;
+const isVillager = p => !!p?.outfit, isPart = p => parts.has(p), isWay = p => !!p?.way;
+// the pickup under the cursor, the closed chest (a reward site), the trading villager, the trial's part and the way out
+export const hoveredPickup = () => hovered && !hovered.prestige && !isVillager(hovered) && !isPart(hovered) && !isWay(hovered) ? hovered : null;
 export const hoveredChest = () => hovered?.prestige ? hovered : null;
 export const hoveredVillager = () => isVillager(hovered) ? hovered : null;
 export const hoveredPart = () => isPart(hovered) ? hovered : null;
-const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + (p.id ?? p.name) : isPart(p) ? `part:${p.type === 'tablet' ? p.key : p.id}` : p.id;
-const textOf = p => isVillager(p) ? villagerText(p) : isPart(p) ? partLabel(p) : null;   // (labels whose text changes)
+export const hoveredWay = () => isWay(hovered) ? hovered : null;
+const keyOf = p => p.prestige ? 'chest:' + p.id : isVillager(p) ? 'villager:' + (p.id ?? p.name) : isPart(p) ? `part:${p.type === 'tablet' ? p.key : p.id}` : isWay(p) ? 'way:' + p.key : p.id;
+const textOf = p => isVillager(p) ? villagerText(p) : isPart(p) ? partLabel(p) : isWay(p) ? tr(p.label) : null;   // (labels whose text changes)
 // the villagers in this cube with something to say
 const traders = () => peopleHere().filter(talkative);
 // what a villager's label says: the quest mark, their name, their trade
@@ -72,12 +76,12 @@ function label(p) {
   const part = isPart(p);
   el.textContent = textOf(p) ?? (p.prestige ? tr('Treasure chest') : p.questItem ? tr('{thing} · quest', { thing: p.label ? capital(say(p.label)) : displayName(p) })
     : displayName(p) + (p.count > 1 ? ` (${p.count})` : ''));
-  el.style.color = part ? PART_COLOR : isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
+  el.style.color = isWay(p) ? WAY_COLOR : part ? PART_COLOR : isVillager(p) || p.questItem ? '#e6c35a' : p.prestige ? CHEST_COLOR[p.prestige] ?? CHEST_COLOR.basic : p.gen ? rarityOf(p).css : '#d8d2c4';
   if (p.gen) { el.dataset.rarity = rarityOf(p).id; el.classList.toggle('rainbow', !!rarityOf(p).glow?.rainbow); }
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0 || state.inventoryOpen || state.transitioning) return;
     e.preventDefault(); e.stopPropagation();
-    if (part) orderPart(p); else if (isVillager(p)) orderTrade(p); else if (p.prestige) orderChest(p); else if (p.questItem) orderWalk(p.x, p.y, p.z); else orderPickup(p);
+    if (isWay(p)) orderWay(p); else if (part) orderPart(p); else if (isVillager(p)) orderTrade(p); else if (p.prestige) orderChest(p); else if (p.questItem) orderWalk(p.x, p.y, p.z); else orderPickup(p);
   });
   el.addEventListener('pointerenter', () => { overLabel = p; });
   el.addEventListener('pointerleave', () => { if (overLabel === p) overLabel = null; });
@@ -93,6 +97,7 @@ function screen(p, off) {
   if (isVillager(p)) v.set(p.x + off.x, p.y + off.y + 1.05, p.z + off.z).project(camera);
   else if (p.prestige) v.set(p.anchor.x + off.x, p.anchor.y + off.y + 0.75, p.anchor.z + off.z).project(camera);
   else if (isPart(p)) v.set(p.x + off.x, p.y + off.y + 0.9, p.z + off.z).project(camera);
+  else if (isWay(p)) v.set(p.x + off.x, p.y + off.y, p.z + off.z).project(camera);
   else v.set(p.x + off.x, p.y + off.y + (p.gen ? 0.12 : 0.35), p.z + off.z).project(camera);
   if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) return null;
   return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
@@ -102,7 +107,7 @@ export function updateLootLabels() {
   const live = !state.inventoryOpen && !state.transitioning && !!state.world;
   parts = new Set(live && state.mode === 'play' ? usableParts() : []);
   const list = live ? [...parts, ...lootHere().filter(p => labelled(p) && p.toss >= 1 && !p.fly && lootView(p)), ...questItemsHere().filter(lootView),
-    ...closedChests(), ...traders()] : [];
+    ...closedChests(), ...traders(), ...(state.mode === 'play' ? waysHere() : [])] : [];
   const off = state.world?.group.position ?? v.set(0, 0, 0), spots = new Map();
   for (const p of list) { const s = screen(p, off); if (s) spots.set(p, s); }
   // the item under the cursor: a label it points at, else the nearest item on screen
@@ -112,7 +117,7 @@ export function updateLootLabels() {
     const px = (pointer.ndc.x + 1) / 2 * innerWidth, py = (1 - pointer.ndc.y) / 2 * innerHeight;
     let best = Infinity;
     for (const [p, s] of spots) {
-      const d = Math.hypot(s.x - px, s.y - py) / (isVillager(p) ? VILLAGER_PICK : p.prestige ? CHEST_PICK : isPart(p) ? PART_PICK : PICK);   // items win when close
+      const d = Math.hypot(s.x - px, s.y - py) / (isVillager(p) ? VILLAGER_PICK : p.prestige ? CHEST_PICK : isPart(p) ? PART_PICK : isWay(p) ? WAY_PICK : PICK);   // items win when close
       if (d < Math.min(1, best)) { best = d; hovered = p; }
     }
   }
